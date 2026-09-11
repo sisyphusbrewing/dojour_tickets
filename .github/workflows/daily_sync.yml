@@ -2,9 +2,9 @@ name: Daily DoJour Ticket Sync
 
 on:
   schedule:
-    # 13:00 UTC = 8:00 AM Central Time (Daylight Saving Time)
+    # 13:00 UTC = 8:00 AM Central Time
     - cron: '0 13 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install playwright gspread google-auth
+          pip install playwright gspread google-auth requests
           playwright install --with-deps chromium
 
       - name: Run Ticket Sync
