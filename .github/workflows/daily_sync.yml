@@ -1,0 +1,32 @@
+name: Daily DoJour Ticket Sync
+
+on:
+  schedule:
+    # 13:00 UTC = 8:00 AM Central Time (Daylight Saving Time)
+    - cron: '0 13 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright gspread google-auth
+          playwright install --with-deps chromium
+
+      - name: Run Ticket Sync
+        env:
+          DOJOUR_STATE_JSON: ${{ secrets.DOJOUR_STATE }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: |
+          python fetch_tickets.py
