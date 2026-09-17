@@ -15,67 +15,119 @@ if "GOOGLE_SERVICE_ACCOUNT_JSON" in os.environ:
         f.write(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
 
 def get_ticket_data():
-    intercepted_headers = {}
-    initial_data = {}
-    cookies = []
+    all_results = []
+    seen_ids = set()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state="state.json")
+        # Desktop viewport ensures the "Load More" button isn't hidden by mobile styling
+        context = browser.new_context(
+            storage_state="state.json",
+            viewport={"width": 1920, "height": 1080}
+        )
         page = context.new_page()
 
-        def handle_request(request):
-            nonlocal intercepted_headers
-            if "reserve_reports" in request.url:
-                intercepted_headers = request.headers
+        initial_data = {}
 
         def handle_response(response):
             nonlocal initial_data
             if "reserve_reports" in response.url and response.status == 200:
                 try:
-                    initial_data = response.json()
+                    data = response.json()
+                    if not initial_data and "results" in data:
+                        initial_data = data
+
+                    results = data.get("results", [])
+                    for item in results:
+                        # De-duplicate by show identity
+                        item_id = item.get("id") or (
+                            item.get("event", {}).get("title"),
+                            item.get("start_dt"),
+                            item.get("offer", {}).get("id") if item.get("offer") else None
+                        )
+                        if item_id not in seen_ids:
+                            seen_ids.add(item_id)
+                            all_results.append(item)
                 except Exception:
                     pass
 
-        page.on("request", handle_request)
         page.on("response", handle_response)
 
-        print("Opening DoJour to initialize session...")
+        print("Opening DoJour dashboard...")
         page.goto("https://dojour.us/", wait_until="networkidle")
-        time.sleep(2)
+        page.wait_for_timeout(3000)
 
-        # Grab cookies from the authenticated context
-        cookies = context.cookies()
+        if not all_results:
+            page.wait_for_timeout(3000)
+
+        if not all_results:
+            browser.close()
+            raise Exception("Failed to load initial event data. Check if your state.json session secret has expired.")
+
+        print(f"Captured initial batch ({len(all_results)} events).")
+
+        # 1. First, attempt fast pagination via the browser's own fetch context
+        next_url = initial_data.get("next")
+        page_num = 2
+
+        while next_url:
+            print(f"Fetching page {page_num} via browser context...")
+            try:
+                data = page.evaluate("""async (url) => {
+                    const res = await fetch(url, { credentials: 'include' });
+                    if (!res.ok) return { error: res.status };
+                    return await res.json();
+                }""", next_url)
+
+                if not data or "error" in data:
+                    print(f"API fetch returned status {data.get('error') if data else 'unknown'}. Falling back to UI click.")
+                    break
+
+                results = data.get("results", [])
+                if not results:
+                    break
+
+                for item in results:
+                    item_id = item.get("id") or (
+                        item.get("event", {}).get("title"),
+                        item.get("start_dt"),
+                        item.get("offer", {}).get("id") if item.get("offer") else None
+                    )
+                    if item_id not in seen_ids:
+                        seen_ids.add(item_id)
+                        all_results.append(item)
+
+                next_url = data.get("next")
+                page_num += 1
+            except Exception as e:
+                print(f"Browser API pagination ended: {e}")
+                break
+
+        # 2. If events remain behind a UI 'Load More' button, click through the rest
+        load_more_attempts = 0
+        while load_more_attempts < 30:
+            load_more_btn = page.locator("button:has-text('Load More'), a:has-text('Load More'), text=/Load More/i").first
+            if load_more_btn.is_visible():
+                prev_count = len(all_results)
+                print(f"Clicking 'Load More' button (currently at {prev_count} events)...")
+                try:
+                    load_more_btn.scroll_into_view_if_needed()
+                    load_more_btn.click()
+                    page.wait_for_timeout(2500)
+                except Exception:
+                    break
+
+                if len(all_results) == prev_count:
+                    # Give slow AJAX calls an extra moment before giving up
+                    page.wait_for_timeout(2500)
+                    if len(all_results) == prev_count:
+                        print("No additional events returned after clicking 'Load More'.")
+                        break
+                load_more_attempts += 1
+            else:
+                break
+
         browser.close()
-
-    if not initial_data:
-        raise Exception("Failed to load initial event data from DoJour.")
-
-    # Build a requests session with both intercepted headers and browser cookies
-    session = requests.Session()
-    session.headers.update(intercepted_headers)
-    for c in cookies:
-        session.cookies.set(c["name"], c["value"], domain=c.get("domain", "dojour.us"))
-
-    all_results = initial_data.get("results", [])
-    next_url = initial_data.get("next")
-    page_num = 2
-
-    while next_url:
-        print(f"Fetching page {page_num}...")
-        resp = session.get(next_url)
-        if resp.status_code != 200:
-            print(f"Warning: Page {page_num} returned HTTP {resp.status_code}. Stopping pagination.")
-            break
-
-        data = resp.json()
-        results = data.get("results", [])
-        if not results:
-            break
-
-        all_results.extend(results)
-        next_url = data.get("next")
-        page_num += 1
 
     print(f"Total events found across all pages: {len(all_results)}")
 
@@ -105,7 +157,10 @@ def sync_to_sheets():
     sheet = gc.open(SHEET_NAME).sheet1
 
     sheet.clear()
-    sheet.update(rows)
+    try:
+        sheet.update(values=rows)
+    except TypeError:
+        sheet.update(rows)
     print(f"Success! Synced {len(rows)-1} shows to your Google Sheet.")
 
 if __name__ == "__main__":
