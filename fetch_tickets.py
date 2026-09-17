@@ -1,6 +1,6 @@
 import os
+import re
 import time
-import requests
 import gspread
 from playwright.sync_api import sync_playwright
 
@@ -14,20 +14,32 @@ if "GOOGLE_SERVICE_ACCOUNT_JSON" in os.environ:
     with open("service_account.json", "w") as f:
         f.write(os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"])
 
+FORBIDDEN_FETCH_HEADERS = {
+    "accept-charset", "accept-encoding", "access-control-request-headers",
+    "access-control-request-method", "connection", "content-length",
+    "cookie", "cookie2", "date", "dnt", "expect", "host", "keep-alive",
+    "origin", "referer", "set-cookie", "te", "trailer", "transfer-encoding",
+    "upgrade", "via"
+}
+
 def get_ticket_data():
     all_results = []
     seen_ids = set()
+    intercepted_headers = {}
+    initial_data = {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        # Desktop viewport ensures the "Load More" button isn't hidden by mobile styling
         context = browser.new_context(
             storage_state="state.json",
             viewport={"width": 1920, "height": 1080}
         )
         page = context.new_page()
 
-        initial_data = {}
+        def handle_request(request):
+            nonlocal intercepted_headers
+            if "reserve_reports" in request.url:
+                intercepted_headers = request.headers
 
         def handle_response(response):
             nonlocal initial_data
@@ -39,7 +51,6 @@ def get_ticket_data():
 
                     results = data.get("results", [])
                     for item in results:
-                        # De-duplicate by show identity
                         item_id = item.get("id") or (
                             item.get("event", {}).get("title"),
                             item.get("start_dt"),
@@ -51,6 +62,7 @@ def get_ticket_data():
                 except Exception:
                     pass
 
+        page.on("request", handle_request)
         page.on("response", handle_response)
 
         print("Opening DoJour dashboard...")
@@ -66,18 +78,32 @@ def get_ticket_data():
 
         print(f"Captured initial batch ({len(all_results)} events).")
 
-        # 1. First, attempt fast pagination via the browser's own fetch context
+        # Sanitize intercepted headers for browser fetch (keeping auth tokens)
+        clean_headers = {
+            k: v for k, v in intercepted_headers.items()
+            if not k.startswith(":") and k.lower() not in FORBIDDEN_FETCH_HEADERS
+        }
+
+        # 1. Paginate via API using authenticated context and headers
         next_url = initial_data.get("next")
         page_num = 2
 
         while next_url:
-            print(f"Fetching page {page_num} via browser context...")
+            print(f"Fetching page {page_num} via API...")
             try:
-                data = page.evaluate("""async (url) => {
-                    const res = await fetch(url, { credentials: 'include' });
-                    if (!res.ok) return { error: res.status };
-                    return await res.json();
-                }""", next_url)
+                data = page.evaluate("""async ({url, headers}) => {
+                    try {
+                        const res = await fetch(url, {
+                            method: 'GET',
+                            headers: headers,
+                            credentials: 'include'
+                        });
+                        if (!res.ok) return { error: res.status };
+                        return await res.json();
+                    } catch (err) {
+                        return { error: err.message };
+                    }
+                }""", {"url": next_url, "headers": clean_headers})
 
                 if not data or "error" in data:
                     print(f"API fetch returned status {data.get('error') if data else 'unknown'}. Falling back to UI click.")
@@ -103,22 +129,24 @@ def get_ticket_data():
                 print(f"Browser API pagination ended: {e}")
                 break
 
-        # 2. If events remain behind a UI 'Load More' button, click through the rest
+        # 2. Fallback: UI clicking if items remain
         load_more_attempts = 0
         while load_more_attempts < 30:
-            load_more_btn = page.locator("button:has-text('Load More'), a:has-text('Load More'), text=/Load More/i").first
-            if load_more_btn.is_visible():
+            btn = page.locator("button, a, [role='button']").filter(has_text=re.compile(r"load more", re.I)).first
+            if not btn.is_visible():
+                btn = page.get_by_text(re.compile(r"load more", re.I)).first
+
+            if btn.is_visible():
                 prev_count = len(all_results)
                 print(f"Clicking 'Load More' button (currently at {prev_count} events)...")
                 try:
-                    load_more_btn.scroll_into_view_if_needed()
-                    load_more_btn.click()
+                    btn.scroll_into_view_if_needed()
+                    btn.click()
                     page.wait_for_timeout(2500)
                 except Exception:
                     break
 
                 if len(all_results) == prev_count:
-                    # Give slow AJAX calls an extra moment before giving up
                     page.wait_for_timeout(2500)
                     if len(all_results) == prev_count:
                         print("No additional events returned after clicking 'Load More'.")
@@ -158,9 +186,9 @@ def sync_to_sheets():
 
     sheet.clear()
     try:
-        sheet.update(values=rows)
-    except TypeError:
         sheet.update(rows)
+    except Exception:
+        sheet.update(values=rows)
     print(f"Success! Synced {len(rows)-1} shows to your Google Sheet.")
 
 if __name__ == "__main__":
