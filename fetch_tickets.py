@@ -78,13 +78,13 @@ def get_ticket_data():
 
         print(f"Captured initial batch ({len(all_results)} events).")
 
-        # Sanitize intercepted headers for browser fetch (keeping auth tokens)
+        # Strip browser pseudo-headers so in-browser fetch doesn't fail
         clean_headers = {
             k: v for k, v in intercepted_headers.items()
             if not k.startswith(":") and k.lower() not in FORBIDDEN_FETCH_HEADERS
         }
 
-        # 1. Paginate via API using authenticated context and headers
+        # 1. Paginate through API passing captured Authorization headers
         next_url = initial_data.get("next")
         page_num = 2
 
@@ -106,7 +106,7 @@ def get_ticket_data():
                 }""", {"url": next_url, "headers": clean_headers})
 
                 if not data or "error" in data:
-                    print(f"API fetch returned status {data.get('error') if data else 'unknown'}. Falling back to UI click.")
+                    print(f"API fetch status: {data.get('error') if data else 'unknown'}. Falling back to UI click.")
                     break
 
                 results = data.get("results", [])
@@ -129,7 +129,7 @@ def get_ticket_data():
                 print(f"Browser API pagination ended: {e}")
                 break
 
-        # 2. Fallback: UI clicking if items remain
+        # 2. Fallback UI click loop with validated locator syntax
         load_more_attempts = 0
         while load_more_attempts < 30:
             btn = page.locator("button, a, [role='button']").filter(has_text=re.compile(r"load more", re.I)).first
