@@ -16,7 +16,6 @@ DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
 GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
 SHOPIFY_CLIENT_ID = (os.environ.get("SHOPIFY_CLIENT_ID") or "").strip().strip("'\"")
 SHOPIFY_CLIENT_SECRET = (os.environ.get("SHOPIFY_CLIENT_SECRET") or "").strip().strip("'\"")
-SHOPIFY_TOKEN = (os.environ.get("SHOPIFY_TOKEN") or "").strip().strip("'\"")
 
 raw_store = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing").replace("https://", "").replace("http://", "").strip("/").strip("'\"")
 subdomain = raw_store.replace(".myshopify.com", "")
@@ -32,31 +31,27 @@ def get_gspread_client():
 
 
 def fetch_shopify_tickets():
-    token = SHOPIFY_TOKEN
+    if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
+        print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
+        return []
 
-    if not token:
-        if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
-            print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
+    print(f"[Shopify] Requesting access token via Client Credentials from {SHOPIFY_STORE}...")
+    auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
+    auth_payload = {
+        "client_id": SHOPIFY_CLIENT_ID,
+        "client_secret": SHOPIFY_CLIENT_SECRET,
+        "grant_type": "client_credentials"
+    }
+    
+    try:
+        auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
+        if auth_resp.status_code != 200:
+            print(f"[Shopify] Auth rejected ({auth_resp.status_code}): {auth_resp.text[:150]}")
             return []
-
-        print(f"[Shopify] Requesting access token via Client Credentials from {SHOPIFY_STORE}...")
-        auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
-        auth_payload = {
-            "client_id": SHOPIFY_CLIENT_ID,
-            "client_secret": SHOPIFY_CLIENT_SECRET,
-            "grant_type": "client_credentials"
-        }
-        
-        try:
-            auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
-            if auth_resp.status_code == 200:
-                token = auth_resp.json().get("access_token")
-            else:
-                print(f"[Shopify] Client credentials rejected ({auth_resp.status_code}): {auth_resp.text[:150]}")
-                return []
-        except Exception as e:
-            print(f"[Shopify] Connection error: {e}")
-            return []
+        token = auth_resp.json().get("access_token")
+    except Exception as e:
+        print(f"[Shopify] Auth connection error: {e}")
+        return []
 
     headers = {"X-Shopify-Access-Token": token}
     print(f"[Shopify] Fetching newest paid orders from {SHOPIFY_STORE}...")
@@ -64,17 +59,15 @@ def fetch_shopify_tickets():
     
     try:
         resp = requests.get(orders_url, headers=headers, timeout=20)
+        if resp.status_code != 200:
+            print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:150]}")
+            return []
+        orders = resp.json().get("orders", [])
     except Exception as e:
-        print(f"[Shopify] Request failed: {e}")
+        print(f"[Shopify] Orders request failed: {e}")
         return []
 
-    if resp.status_code != 200:
-        print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:150]}")
-        return []
-
-    orders = resp.json().get("orders", [])
     shopify_rows = []
-
     for order in orders:
         if order.get("financial_status") not in ["paid", "authorized"]:
             continue
@@ -134,7 +127,7 @@ def fetch_dojour_data():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state="state.json")
+        context = browser.new_context(storage_state="state.json", viewport={"width": 1280, "height": 1000})
         page = context.new_page()
 
         intercepted_reports = {}
@@ -165,61 +158,72 @@ def fetch_dojour_data():
         time.sleep(2)
 
         # -------------------------------------------------------------
-        # Infinite Scroll & "Load More" Pagination Handler
+        # Infinite Scroll & Dynamic Pagination Handler
         # -------------------------------------------------------------
-        print("[Dojour] Expanding all paginated schedules (scrolling & clicking Load More)...")
-        prev_count = 0
+        print("[Dojour] Expanding all schedules via targeted element scrolling & clicks...")
         stagnant_cycles = 0
+        prev_count = 0
 
-        while stagnant_cycles < 3:
-            # 1. Scroll main window and internal scroll containers to bottom
+        for cycle in range(1, 20):  # Maximum 20 expansion cycles
+            links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
+            curr_count = len(links)
+
+            if curr_count > prev_count:
+                print(f"[Dojour] Found {curr_count} schedules...")
+                prev_count = curr_count
+                stagnant_cycles = 0
+            else:
+                stagnant_cycles += 1
+
+            if stagnant_cycles >= 3:
+                print(f"[Dojour] List fully expanded at {curr_count} schedules.")
+                break
+
+            # 1. Scroll the very last schedule row directly into view
+            if links:
+                try:
+                    links[-1].scroll_into_view_if_needed()
+                except Exception:
+                    pass
+
+            # 2. Issue native mouse wheel scrolls & PageDown keys
+            page.mouse.move(600, 500)
+            for _ in range(4):
+                page.mouse.wheel(0, 1200)
+                time.sleep(0.2)
+            page.keyboard.press("PageDown")
+
+            # 3. Trigger DOM scroll events in any scrollable containers
             page.evaluate("""() => {
                 window.scrollTo(0, document.body.scrollHeight);
-                const containers = document.querySelectorAll('div, table, tbody, main');
-                for (const el of containers) {
+                const elements = document.querySelectorAll('*');
+                for (const el of elements) {
                     if (el.scrollHeight > el.clientHeight && el.clientHeight > 0) {
                         el.scrollTop = el.scrollHeight;
+                        el.dispatchEvent(new Event('scroll', { bubbles: true }));
                     }
                 }
             }""")
             time.sleep(1.5)
 
-            # 2. Check for and click any "Load More" / "Show More" buttons
-            clicked_button = False
-            load_selectors = [
-                "button:has-text('Load More')",
-                "button:has-text('Load more')",
-                "button:has-text('Show More')",
-                "button:has-text('Show more')",
-                "button:has-text('More')",
-                "a:has-text('Load More')",
-                "a:has-text('Show More')",
-                ".load-more",
-                "#load-more"
-            ]
-
-            for sel in load_selectors:
-                try:
-                    btn = page.locator(sel).first
+            # 4. Check for and click any "Load More" / "Show More" buttons
+            load_buttons = page.locator("button, a, div[role='button']").filter(
+                has_text=re.compile(r"load\s*more|show\s*more|see\s*more|view\s*more", re.I)
+            )
+            
+            if load_buttons.count() > 0:
+                for b_idx in range(load_buttons.count()):
+                    btn = load_buttons.nth(b_idx)
                     if btn.is_visible():
-                        btn.scroll_into_view_if_needed()
-                        btn.click(timeout=3000)
-                        clicked_button = True
-                        print("[Dojour] Clicked 'Load More' button.")
-                        time.sleep(2)
-                        break
-                except Exception:
-                    pass
-
-            # 3. Check if new schedule links were loaded
-            curr_count = page.locator("a[href*='/admin-tools/reservations/s/']").count()
-            if curr_count > prev_count or clicked_button:
-                print(f"[Dojour] Loaded {curr_count} schedules so far...")
-                prev_count = curr_count
-                stagnant_cycles = 0
-            else:
-                stagnant_cycles += 1
-                time.sleep(1)
+                        try:
+                            btn.scroll_into_view_if_needed()
+                            btn.click(timeout=2000)
+                            print("[Dojour] Clicked 'Load More' button.")
+                            time.sleep(2)
+                            stagnant_cycles = 0
+                            break
+                        except Exception:
+                            pass
 
         schedule_links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
         schedules = []
@@ -247,9 +251,8 @@ def fetch_dojour_data():
 
             overview_rows.append([show_title, show_date, tickets_sold])
 
-        print(f"[Dojour] Total active schedules found: {len(schedules)}. Querying reserve reports...")
+        print(f"[Dojour] Total schedules to sync: {len(schedules)}. Fetching attendee reports...")
 
-        # Collect attendee reports for every discovered schedule
         for sched in schedules:
             sched_id = sched["id"]
 
@@ -325,7 +328,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
     gc = get_gspread_client()
     spreadsheet = gc.open(SHEET_TITLE)
 
-    # 1. Update Overview Sheet (Sheet 1)
     if overview_rows:
         overview_sheet = spreadsheet.sheet1
         overview_sheet.clear()
@@ -333,13 +335,11 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
         overview_sheet.update(overview_header + overview_rows)
         print(f"[Google Sheets] Updated Sheet 1 with {len(overview_rows)} overview rows.")
 
-    # 2. Get or Create "Door List" Tab
     try:
         door_sheet = spreadsheet.worksheet("Door List")
     except gspread.exceptions.WorksheetNotFound:
         door_sheet = spreadsheet.add_worksheet(title="Door List", rows=1000, cols=10)
 
-    # 3. Preserve Existing Check-In Statuses (Columns H & I)
     existing_data = door_sheet.get_all_values()
     existing_checkins = {}
 
@@ -352,7 +352,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             check_time = row[8] if len(row) > 8 else ""
             existing_checkins[uid] = (checked_in, check_time)
 
-    # 4. Merge Incoming Rows
     all_incoming = attendee_rows + shopify_rows
     final_rows = [[
         "Unique ID", "Show Date", "Show Title", "Guest Name", 
@@ -372,7 +371,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
 
         final_rows.append(row)
 
-    # 5. Overwrite the Door List Tab
     door_sheet.clear()
     door_sheet.update(final_rows)
     print(f"[Google Sheets] Successfully synced {len(final_rows) - 1} total attendees to 'Door List'.")
