@@ -10,52 +10,56 @@ from playwright.sync_api import sync_playwright
 # Configuration & Constants
 SHEET_TITLE = "Dojour Ticket Counts"
 DOJOUR_ADMIN_URL = "https://dojour.us/admin-tools/reservations/"
+DOJOUR_SCHEDULE_URL = "https://dojour.us/admin-tools/reservations/s/{id}"
 
 DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
 GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
-SHOPIFY_CLIENT_ID = os.environ.get("SHOPIFY_CLIENT_ID")
-SHOPIFY_CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET")
-SHOPIFY_STORE = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing.myshopify.com").replace("https://", "").replace("http://", "").strip("/")
+SHOPIFY_CLIENT_ID = (os.environ.get("SHOPIFY_CLIENT_ID") or "").strip().strip("'\"")
+SHOPIFY_CLIENT_SECRET = (os.environ.get("SHOPIFY_CLIENT_SECRET") or "").strip().strip("'\"")
+SHOPIFY_TOKEN = (os.environ.get("SHOPIFY_TOKEN") or "").strip().strip("'\"")
+SHOPIFY_STORE = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing.myshopify.com").replace("https://", "").replace("http://", "").strip("/").strip("'\"")
 
 
 def get_gspread_client():
     if not GOOGLE_CREDENTIALS:
-        print("Error: Neither GOOGLE_SERVICE_ACCOUNT nor GOOGLE_CREDENTIALS environment variable is set.")
+        print("Error: Neither GOOGLE_SERVICE_ACCOUNT nor GOOGLE_CREDENTIALS is set.")
         sys.exit(1)
     creds_dict = json.loads(GOOGLE_CREDENTIALS)
     return gspread.service_account_from_dict(creds_dict)
 
 
 def fetch_shopify_tickets():
-    if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
-        print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
-        return []
+    token = SHOPIFY_TOKEN
 
-    print("[Shopify] Requesting access token via Client Credentials (form-urlencoded)...")
-    auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
-    
-    # Shopify OAuth requires application/x-www-form-urlencoded (data=, NOT json=)
-    auth_payload = {
-        "client_id": SHOPIFY_CLIENT_ID.strip(),
-        "client_secret": SHOPIFY_CLIENT_SECRET.strip(),
-        "grant_type": "client_credentials"
-    }
-    
-    auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
+    # 1. Exchange client credentials if no static shpat_ token is provided
+    if not token:
+        if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
+            print("[Shopify] No credentials found. Skipping Shopify pull.")
+            return []
 
-    if auth_resp.status_code != 200:
-        print(f"[Shopify] Authentication failed ({auth_resp.status_code}): {auth_resp.text}")
-        return []
+        print("[Shopify] Requesting access token via Client Credentials...")
+        auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
+        auth_payload = {
+            "client_id": SHOPIFY_CLIENT_ID,
+            "client_secret": SHOPIFY_CLIENT_SECRET,
+            "grant_type": "client_credentials"
+        }
+        
+        auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
+        if auth_resp.status_code != 200:
+            print(f"[Shopify] Auth Error ({auth_resp.status_code}): Please ensure the app is installed on '{SHOPIFY_STORE}'.")
+            return []
 
-    token = auth_resp.json().get("access_token")
+        token = auth_resp.json().get("access_token")
+
     headers = {"X-Shopify-Access-Token": token}
 
-    print("[Shopify] Fetching newest paid orders (sorted by created_at desc)...")
+    print("[Shopify] Fetching newest paid orders...")
     orders_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json?status=any&limit=250&order=created_at+desc"
     resp = requests.get(orders_url, headers=headers, timeout=20)
     
     if resp.status_code != 200:
-        print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text}")
+        print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:150]}")
         return []
 
     orders = resp.json().get("orders", [])
@@ -75,8 +79,6 @@ def fetch_shopify_tickets():
 
         for item in order.get("line_items", []):
             item_name = item.get("name", "")
-            
-            # Filter non-ticket items
             lower_name = item_name.lower()
             if any(term in lower_name for term in ["tip", "deposit", "gift card"]) and not any(t in lower_name for t in ["ticket", "show", "comedy"]):
                 continue
@@ -125,6 +127,30 @@ def fetch_dojour_data():
         context = browser.new_context(storage_state="state.json")
         page = context.new_page()
 
+        # Intercept auth headers and reserve_report responses live from the browser
+        intercepted_reports = {}
+        captured_auth = {"header": None}
+
+        def on_request(req):
+            if "reserve_report" in req.url:
+                auth = req.headers.get("authorization")
+                if auth and not captured_auth["header"]:
+                    captured_auth["header"] = auth
+                    print(f"[Dojour] Successfully captured live session token.")
+
+        def on_response(res):
+            if "reserve_report" in res.url and res.status == 200:
+                try:
+                    data = res.json()
+                    m = re.search(r"/event_instances/(\d+)/reserve_report", res.url)
+                    if m:
+                        intercepted_reports[m.group(1)] = data
+                except Exception:
+                    pass
+
+        page.on("request", on_request)
+        page.on("response", on_response)
+
         print("[Dojour] Navigating to admin reservations table...")
         page.goto(DOJOUR_ADMIN_URL, wait_until="networkidle")
 
@@ -157,39 +183,40 @@ def fetch_dojour_data():
         print(f"[Dojour] Found {len(schedules)} active schedules. Querying reserve reports...")
 
         for sched in schedules:
-            # Use relative URL and credentials: 'include' to enforce same-origin cookie sending
-            relative_url = f"/api/event_instances/{sched['id']}/reserve_report/"
-            
-            report_data = page.evaluate("""async (url) => {
-                try {
-                    const res = await fetch(url, {
-                        credentials: 'include',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    if (!res.ok) {
-                        return { _error: res.status + " " + res.statusText };
+            sched_id = sched["id"]
+
+            # If we already have the captured auth token, run an in-browser fetch directly
+            if captured_auth["header"]:
+                report_url = f"/api/event_instances/{sched_id}/reserve_report/"
+                auth_val = captured_auth["header"]
+                report_data = page.evaluate("""async ({url, auth}) => {
+                    try {
+                        const res = await fetch(url, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'Authorization': auth
+                            }
+                        });
+                        if (!res.ok) return null;
+                        return await res.json();
+                    } catch(e) {
+                        return null;
                     }
-                    return await res.json();
-                } catch(e) {
-                    return { _error: e.toString() };
-                }
-            }""", relative_url)
+                }""", {"url": report_url, "auth": auth_val})
+                if report_data:
+                    intercepted_reports[sched_id] = report_data
 
-            if not report_data:
-                continue
+            # If not yet captured or fetch failed, navigate directly to trigger browser's internal fetch
+            if sched_id not in intercepted_reports:
+                page.goto(DOJOUR_SCHEDULE_URL.format(id=sched_id), wait_until="networkidle")
+                time.sleep(1)
 
-            if isinstance(report_data, dict) and "_error" in report_data:
-                print(f"[Dojour] Schedule {sched['id']} report error: {report_data['_error']}")
-                continue
-
+            data = intercepted_reports.get(sched_id, {})
             reservations = []
-            if isinstance(report_data, list):
-                reservations = report_data
-            elif isinstance(report_data, dict):
-                reservations = report_data.get("reservation_set") or report_data.get("results") or report_data.get("reservations") or []
+            if isinstance(data, dict):
+                reservations = data.get("reservation_set") or data.get("results") or []
+            elif isinstance(data, list):
+                reservations = data
 
             for res_item in reservations:
                 res_id = res_item.get("id", "")
