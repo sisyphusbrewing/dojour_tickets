@@ -3,6 +3,8 @@ import json
 import re
 import sys
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import requests
 import gspread
 from playwright.sync_api import sync_playwright
@@ -31,6 +33,41 @@ def get_gspread_client():
     return gspread.service_account_from_dict(creds_dict)
 
 
+def parse_iso_to_central(iso_str):
+    if not iso_str or not isinstance(iso_str, str):
+        return ""
+    try:
+        clean_iso = iso_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean_iso)
+        central_dt = dt.astimezone(ZoneInfo("America/Chicago"))
+        return central_dt.strftime("%a, %b %-d • %-I:%M %p")
+    except Exception:
+        return iso_str
+
+
+def parse_dojour_link_text(raw_text):
+    text = (raw_text or "").strip()
+    title = text
+    date_str = ""
+
+    for sep in ["///", "//", " - ", "@"]:
+        if sep in text:
+            parts = text.split(sep, 1)
+            title = parts[0].strip()
+            date_str = parts[1].strip()
+            break
+
+    # Clean trailing tags
+    if title.lower().endswith("comedy"):
+        title = title[:-6].strip()
+    title = title.rstrip("-/@/ ").strip()
+
+    if date_str.lower() in ["comedy", "general admission", "live"]:
+        date_str = ""
+
+    return title or "Comedy Show", date_str
+
+
 def fetch_shopify_tickets():
     token = SHOPIFY_TOKEN
 
@@ -39,7 +76,7 @@ def fetch_shopify_tickets():
             print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
             return []
 
-        print(f"[Shopify] Requesting token from {SHOPIFY_STORE} via Client Credentials...")
+        print(f"[Shopify] Requesting access token from {SHOPIFY_STORE}...")
         auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
         auth_payload = {
             "client_id": SHOPIFY_CLIENT_ID,
@@ -91,7 +128,7 @@ def fetch_shopify_tickets():
             item_name = item.get("name", "")
             lower_name = item_name.lower()
             
-            # Filter fee products and deposits
+            # Filter out ticket fee, tips, deposits
             if re.search(r'\b(fee|fees|tip|tips|deposit|gift card)\b', lower_name):
                 continue
 
@@ -101,13 +138,18 @@ def fetch_shopify_tickets():
             raw_title = item.get("title") or item_name
             variant = (item.get("variant_title") or "").strip()
 
+            # Clean Show Date and Show Title
             if variant and variant.lower() not in ["default title", "default", ""]:
-                show_date = variant
+                d = variant.split(" / ")[0].strip()
+                d = re.sub(r'(?i)\b(general admission|vip|ga)\b', '', d).strip()
+                show_date = d.rstrip("•-/ ").strip()
                 show_title = raw_title.split(" - ")[0].strip() if " - " in raw_title else raw_title
             elif " - " in item_name:
                 parts = item_name.split(" - ")
                 show_title = parts[0].strip()
-                show_date = parts[1].split(" / ")[0].strip() if len(parts) > 1 else ""
+                d = parts[1].split(" / ")[0].strip() if len(parts) > 1 else ""
+                d = re.sub(r'(?i)\b(general admission|vip|ga)\b', '', d).strip()
+                show_date = d.rstrip("•-/ ").strip()
             else:
                 show_title = raw_title
                 show_date = ""
@@ -129,41 +171,6 @@ def fetch_shopify_tickets():
     return shopify_rows
 
 
-def parse_dojour_cells(td_texts):
-    title = ""
-    date_str = ""
-    sold_str = "0"
-
-    for text in td_texts:
-        t = text.strip()
-        if not t:
-            continue
-
-        # Detect the RSVP / capacity cell (e.g., "35/90", "55 spots left")
-        if re.search(r'\d+\s*/\s*\d+', t) or "spots left" in t.lower() or "sold out" in t.lower():
-            m = re.search(r'(\d+)\s*/\s*(\d+)', t)
-            sold_str = m.group(1) if m else t.split("\n")[0].strip()
-            continue
-
-        # Detect date/time cell (contains month names, days of week, or times)
-        has_month = bool(re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\b', t, re.I))
-        has_time = bool(re.search(r'\d+:\d+|\b[AP]M\b', t, re.I))
-        if has_month and (has_time or re.search(r'\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b', t, re.I)):
-            date_str = t
-            continue
-
-        # Otherwise, the cell is the event title
-        if not title:
-            title = t
-
-    if not title and td_texts:
-        title = td_texts[0].strip()
-
-    # Clean title: strip out venue tags and appended date ranges
-    clean_title = title.split("///")[0].split("//")[0].split("@")[0].strip()
-    return clean_title, date_str, sold_str
-
-
 def fetch_dojour_data():
     if not DOJOUR_STATE:
         print("[Dojour] Missing DOJOUR_STATE. Skipping Dojour pull.")
@@ -177,7 +184,6 @@ def fetch_dojour_data():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        # 800px viewport ensures table content overflows and registers scroll events
         context = browser.new_context(storage_state="state.json", viewport={"width": 1280, "height": 800})
         page = context.new_page()
 
@@ -230,60 +236,59 @@ def fetch_dojour_data():
                 print(f"[Dojour] Completed pagination at {curr_count} schedules.")
                 break
 
-            # 1. Scroll the last visible link into view
-            if links:
-                try:
-                    links[-1].scroll_into_view_if_needed()
-                except Exception:
-                    pass
+            # 1. Step-wise scroll over table
+            for _ in range(5):
+                page.mouse.wheel(0, 1000)
+                time.sleep(0.15)
+            page.keyboard.press("PageDown")
 
-            # 2. Position cursor directly over the table and dispatch physical mouse wheel events
-            try:
-                table = page.locator("table, tbody").first
-                if table.is_visible():
-                    table.hover()
-                    page.mouse.wheel(0, 3500)
-            except Exception:
-                page.mouse.wheel(0, 3500)
-
-            # 3. Dispatch scroll events across all scrollable containers
+            # 2. Scroll window and DOM containers
             page.evaluate("""() => {
                 window.scrollTo(0, document.body.scrollHeight);
-                const elements = document.querySelectorAll('*');
-                for (const el of elements) {
-                    if (el.scrollHeight > el.clientHeight && el.clientHeight > 50) {
+                document.querySelectorAll('*').forEach(el => {
+                    if (el.scrollHeight > el.clientHeight && el.clientHeight > 20) {
                         el.scrollTop = el.scrollHeight;
                         el.dispatchEvent(new Event('scroll', { bubbles: true }));
+                    }
+                });
+            }""")
+
+            # 3. Detect and click ANY button or link below or inside the table
+            page.evaluate("""() => {
+                const candidates = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="button"]'));
+                for (const el of candidates) {
+                    const txt = (el.innerText || el.value || '').toLowerCase();
+                    const cls = (el.className || '').toLowerCase();
+                    if (txt.includes('more') || txt.includes('load') || txt.includes('next') || txt.includes('older') || 
+                        cls.includes('more') || cls.includes('load') || cls.includes('next')) {
+                        if (el.offsetParent !== null) {
+                            el.click();
+                            return;
+                        }
+                    }
+                }
+                const table = document.querySelector('table');
+                if (table) {
+                    let sib = table.nextElementSibling;
+                    while (sib) {
+                        const btn = sib.querySelector('button, a, [role="button"]') || (sib.matches('button, a, [role="button"]') ? sib : null);
+                        if (btn && btn.offsetParent !== null) {
+                            btn.click();
+                            return;
+                        }
+                        sib = sib.nextElementSibling;
                     }
                 }
             }""")
 
-            # 4. Click any visible "Load More" or pagination buttons
-            load_candidates = page.locator("button, a, div[role='button'], span").filter(
-                has_text=re.compile(r"load\s*more|show\s*more|view\s*more|more\s*shows|more\s*events|older", re.I)
-            )
-
-            for idx in range(load_candidates.count()):
-                btn = load_candidates.nth(idx)
-                if btn.is_visible():
-                    try:
-                        btn_txt = btn.inner_text().strip()
-                        btn.scroll_into_view_if_needed()
-                        btn.click(timeout=2000)
-                        print(f"[Dojour] Clicked pagination button: '{btn_txt}'")
-                        time.sleep(2)
-                        stagnant_cycles = 0
-                        break
-                    except Exception:
-                        pass
-
-            time.sleep(2.5)
+            time.sleep(2)
 
         # -------------------------------------------------------------
         # Parse Discovered Schedules
         # -------------------------------------------------------------
         schedule_links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
         schedules = []
+        seen_sched_ids = set()
 
         for link in schedule_links:
             href = link.get_attribute("href") or ""
@@ -292,20 +297,31 @@ def fetch_dojour_data():
                 continue
 
             schedule_id = sched_match.group(1)
-            row_el = link.locator("xpath=./ancestor::tr")
-            tds = row_el.locator("td").all()
-            td_texts = [td.inner_text().strip() for td in tds]
+            if schedule_id in seen_sched_ids:
+                continue
+            seen_sched_ids.add(schedule_id)
 
-            clean_title, show_date, tickets_sold = parse_dojour_cells(td_texts)
+            row_el = link.locator("xpath=./ancestor::tr")
+            row_text = row_el.inner_text().split("\t")
+
+            # Extract title and date from row text
+            full_text = " ".join(row_text)
+            clean_title, title_date = parse_dojour_link_text(row_text[0] if row_text else link.inner_text())
+
+            # Tickets sold
+            tickets_sold = "0"
+            sold_match = re.search(r'(\d+)\s*/\s*(\d+)', full_text)
+            if sold_match:
+                tickets_sold = sold_match.group(1)
 
             schedules.append({
                 "id": schedule_id,
                 "title": clean_title,
-                "date": show_date,
+                "date": title_date,
                 "sold": tickets_sold
             })
 
-            overview_rows.append([clean_title, show_date, tickets_sold])
+            overview_rows.append([clean_title, title_date, tickets_sold])
 
         print(f"[Dojour] Total schedules to sync: {len(schedules)}. Querying reserve reports...")
 
@@ -338,10 +354,20 @@ def fetch_dojour_data():
 
             data = intercepted_reports.get(sched_id, {})
             reservations = []
+            report_date = ""
+
             if isinstance(data, dict):
                 reservations = data.get("reservation_set") or data.get("results") or []
+                # Find start datetime in API report
+                for k in ["start", "start_time", "start_datetime", "datetime", "date", "schedule_name"]:
+                    if data.get(k):
+                        report_date = parse_iso_to_central(data.get(k))
+                        break
             elif isinstance(data, list):
                 reservations = data
+
+            # Best date: API report date > title date fallback
+            final_show_date = report_date or sched["date"] or ""
 
             for idx, res_item in enumerate(reservations):
                 res_id = (
@@ -360,14 +386,15 @@ def fetch_dojour_data():
                 email = res_item.get("email", "")
                 tix = res_item.get("num_tickets") or res_item.get("tickets") or res_item.get("quantity") or 1
                 
-                # Use clean show date and clean show title
-                event_date = sched["date"] or res_item.get("schedule_name") or ""
-                event_title = sched["title"]
+                # Check individual reservation item for date if still missing
+                row_date = final_show_date
+                if not row_date and res_item.get("schedule_name"):
+                    row_date = res_item.get("schedule_name")
 
                 attendee_rows.append([
                     uid,
-                    event_date,
-                    event_title,
+                    row_date,
+                    sched["title"],
                     name,
                     email,
                     str(tix),
@@ -398,6 +425,7 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
     except gspread.exceptions.WorksheetNotFound:
         door_sheet = spreadsheet.add_worksheet(title="Door List", rows=1000, cols=10)
 
+    # Preserve Existing Check-In Statuses (Columns H & I)
     existing_data = door_sheet.get_all_values()
     existing_checkins = {}
 
@@ -410,6 +438,7 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             check_time = row[8] if len(row) > 8 else ""
             existing_checkins[uid] = (checked_in, check_time)
 
+    # Merge incoming rows
     all_incoming = attendee_rows + shopify_rows
     final_rows = [[
         "Unique ID", "Show Date", "Show Title", "Guest Name", 
@@ -423,6 +452,7 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             continue
         seen_uids.add(uid)
 
+        # Retain check-in status if guest was previously checked in
         if uid in existing_checkins:
             row[7] = existing_checkins[uid][0]
             row[8] = existing_checkins[uid][1]
