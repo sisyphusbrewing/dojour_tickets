@@ -331,7 +331,7 @@ def sync_to_google_sheet(new_rows: list[list]):
 
     # 3. Overwrite sheet atomically
     worksheet.clear()
-    worksheet.update("A1", final_rows, value_input_option="USER_ENTERED")
+    worksheet.update(final_rows, "A1", value_input_option="USER_ENTERED")
     print(f"[Google Sheets] Updated '{TAB_NAME}' with {len(final_rows) - 1} records.")
 
 # ==========================================
