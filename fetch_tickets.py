@@ -14,8 +14,6 @@ DOJOUR_SCHEDULE_URL = "https://dojour.us/admin-tools/reservations/s/{id}"
 
 DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
 GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
-SHOPIFY_CLIENT_ID = (os.environ.get("SHOPIFY_CLIENT_ID") or "").strip().strip("'\"")
-SHOPIFY_CLIENT_SECRET = (os.environ.get("SHOPIFY_CLIENT_SECRET") or "").strip().strip("'\"")
 SHOPIFY_TOKEN = (os.environ.get("SHOPIFY_TOKEN") or "").strip().strip("'\"")
 SHOPIFY_STORE = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing.myshopify.com").replace("https://", "").replace("http://", "").strip("/").strip("'\"")
 
@@ -29,32 +27,13 @@ def get_gspread_client():
 
 
 def fetch_shopify_tickets():
-    token = SHOPIFY_TOKEN
+    if not SHOPIFY_TOKEN:
+        print("[Shopify] Missing SHOPIFY_TOKEN. Skipping Shopify pull.")
+        return []
 
-    # 1. Exchange client credentials if no static shpat_ token is provided
-    if not token:
-        if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
-            print("[Shopify] No credentials found. Skipping Shopify pull.")
-            return []
+    headers = {"X-Shopify-Access-Token": SHOPIFY_TOKEN}
+    print(f"[Shopify] Fetching newest orders from {SHOPIFY_STORE}...")
 
-        print("[Shopify] Requesting access token via Client Credentials...")
-        auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
-        auth_payload = {
-            "client_id": SHOPIFY_CLIENT_ID,
-            "client_secret": SHOPIFY_CLIENT_SECRET,
-            "grant_type": "client_credentials"
-        }
-        
-        auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
-        if auth_resp.status_code != 200:
-            print(f"[Shopify] Auth Error ({auth_resp.status_code}): Please ensure the app is installed on '{SHOPIFY_STORE}'.")
-            return []
-
-        token = auth_resp.json().get("access_token")
-
-    headers = {"X-Shopify-Access-Token": token}
-
-    print("[Shopify] Fetching newest paid orders...")
     orders_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json?status=any&limit=250&order=created_at+desc"
     resp = requests.get(orders_url, headers=headers, timeout=20)
     
@@ -127,7 +106,6 @@ def fetch_dojour_data():
         context = browser.new_context(storage_state="state.json")
         page = context.new_page()
 
-        # Intercept auth headers and reserve_report responses live from the browser
         intercepted_reports = {}
         captured_auth = {"header": None}
 
@@ -185,7 +163,6 @@ def fetch_dojour_data():
         for sched in schedules:
             sched_id = sched["id"]
 
-            # If we already have the captured auth token, run an in-browser fetch directly
             if captured_auth["header"]:
                 report_url = f"/api/event_instances/{sched_id}/reserve_report/"
                 auth_val = captured_auth["header"]
@@ -206,7 +183,6 @@ def fetch_dojour_data():
                 if report_data:
                     intercepted_reports[sched_id] = report_data
 
-            # If not yet captured or fetch failed, navigate directly to trigger browser's internal fetch
             if sched_id not in intercepted_reports:
                 page.goto(DOJOUR_SCHEDULE_URL.format(id=sched_id), wait_until="networkidle")
                 time.sleep(1)
@@ -218,16 +194,28 @@ def fetch_dojour_data():
             elif isinstance(data, list):
                 reservations = data
 
-            for res_item in reservations:
-                res_id = res_item.get("id", "")
+            for idx, res_item in enumerate(reservations):
+                # Fallback ensures every reservation has an unshakeable unique ID
+                res_id = (
+                    res_item.get("id") or 
+                    res_item.get("reservation_id") or 
+                    res_item.get("order_id") or 
+                    res_item.get("code") or 
+                    res_item.get("pk")
+                )
+                uid = f"dj_{res_id}" if res_id else f"dj_{sched_id}_{idx}"
+
                 name = f"{res_item.get('first_name', '')} {res_item.get('last_name', '')}".strip()
+                if not name:
+                    name = res_item.get("name") or "Dojour Guest"
+
                 email = res_item.get("email", "")
-                tix = res_item.get("num_tickets", 1)
+                tix = res_item.get("num_tickets") or res_item.get("tickets") or res_item.get("quantity") or 1
                 event_date = res_item.get("schedule_name") or sched["date"]
                 event_title = sched["title"]
 
                 attendee_rows.append([
-                    f"dj_{res_id}",
+                    uid,
                     event_date,
                     event_title,
                     name,
@@ -248,7 +236,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
     gc = get_gspread_client()
     spreadsheet = gc.open(SHEET_TITLE)
 
-    # 1. Update Overview Sheet (Sheet 1)
     if overview_rows:
         overview_sheet = spreadsheet.sheet1
         overview_sheet.clear()
@@ -256,13 +243,11 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
         overview_sheet.update(overview_header + overview_rows)
         print(f"[Google Sheets] Updated Sheet 1 with {len(overview_rows)} overview rows.")
 
-    # 2. Get or Create "Door List" Tab
     try:
         door_sheet = spreadsheet.worksheet("Door List")
     except gspread.exceptions.WorksheetNotFound:
         door_sheet = spreadsheet.add_worksheet(title="Door List", rows=1000, cols=10)
 
-    # 3. Read Existing Door List to Preserve Checked-In Statuses
     existing_data = door_sheet.get_all_values()
     existing_checkins = {}
 
@@ -275,7 +260,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             check_time = row[8] if len(row) > 8 else ""
             existing_checkins[uid] = (checked_in, check_time)
 
-    # 4. Merge Incoming Rows
     all_incoming = attendee_rows + shopify_rows
     final_rows = [[
         "Unique ID", "Show Date", "Show Title", "Guest Name", 
@@ -289,14 +273,12 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             continue
         seen_uids.add(uid)
 
-        # Retain check-in status if guest was previously marked
         if uid in existing_checkins:
             row[7] = existing_checkins[uid][0]
             row[8] = existing_checkins[uid][1]
 
         final_rows.append(row)
 
-    # 5. Overwrite the Door List tab with unified rows
     door_sheet.clear()
     door_sheet.update(final_rows)
     print(f"[Google Sheets] Successfully synced {len(final_rows) - 1} total attendees to 'Door List'.")
