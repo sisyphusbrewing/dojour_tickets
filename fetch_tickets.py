@@ -5,28 +5,28 @@ def fetch_shopify_tickets():
     shop = os.environ.get("SHOPIFY_STORE", "sisyphus-brewing.myshopify.com")
     client_id = os.environ.get("SHOPIFY_CLIENT_ID")
     client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET")
-    
+
     if not (client_id and client_secret):
-        print("Shopify credentials not found. Skipping Shopify sync.")
+        print("Shopify API credentials missing. Skipping Shopify sync.")
         return []
 
-    # 1. Exchange Dev Dashboard credentials for access token
+    # 1. Exchange credentials for access token
     auth_url = f"https://{shop}/admin/oauth/access_token"
-    auth_resp = requests.post(auth_url, data={
+    auth_resp = requests.post(auth_url, json={
         "client_id": client_id,
         "client_secret": client_secret,
         "grant_type": "client_credentials"
     })
     
     if auth_resp.status_code != 200:
-        print(f"Shopify auth error: {auth_resp.text}")
+        print(f"Shopify authentication error: {auth_resp.text}")
         return []
-        
-    access_token = auth_resp.json().get("access_token")
-    headers = {"X-Shopify-Access-Token": access_token}
 
-    # 2. Fetch paid orders
-    orders_url = f"https://{shop}/admin/api/2026-07/orders.json?status=any&limit=250"
+    token = auth_resp.json().get("access_token")
+    headers = {"X-Shopify-Access-Token": token}
+
+    # 2. Fetch all paid orders
+    orders_url = f"https://{shop}/admin/api/2024-01/orders.json?status=any&limit=250"
     res = requests.get(orders_url, headers=headers).json()
 
     shopify_rows = []
@@ -44,15 +44,15 @@ def fetch_shopify_tickets():
 
         for item in order.get("line_items", []):
             item_name = item.get("name", "")
-            
-            # Exclude deposits, tips, gift cards, ticket fees
+
+            # Exclude rentals, tips, fees, and gift cards
             if any(term in item_name.lower() for term in ["deposit", "tip", "fee", "gift card"]):
                 continue
 
-            # Parse Show Title and Date from line item name
             raw_title = item.get("title") or item_name
             variant = item.get("variant_title") or ""
-            
+
+            # Extract clean show title and show date
             show_title = raw_title.split(" - ")[0].strip() if " - " in raw_title else raw_title
             show_date = variant if variant else (raw_title.split(" - ")[1].split(" / ")[0].strip() if " - " in raw_title else "")
 
@@ -67,6 +67,6 @@ def fetch_shopify_tickets():
                 "FALSE",
                 ""
             ])
-            
-    print(f"Fetched {len(shopify_rows)} valid ticket rows from Shopify.")
+
+    print(f"Fetched {len(shopify_rows)} paid ticket rows from Shopify.")
     return shopify_rows
