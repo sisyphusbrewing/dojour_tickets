@@ -17,8 +17,10 @@ HEADERS = [
     "Email", "Tickets", "Source", "Checked In", "Check-In Time"
 ]
 
+DOJOUR_RESERVATIONS_URL = "https://dojour.us/admin-tools/reservations/all/?upcoming=true"
+
 # ==========================================
-# 1. SHOPIFY INTEGRATION (WORKING)
+# 1. SHOPIFY INTEGRATION
 # ==========================================
 
 def get_shopify_access_token(shop: str, client_id: str, client_secret: str) -> str:
@@ -206,41 +208,29 @@ def extract_event_meta(data: dict | list, fallback_text: str) -> tuple[str, str]
 
 def discover_all_schedules(page) -> list[dict]:
     """
-    Expands the reservation table past the 9-schedule viewport limit.
+    Loads all upcoming reservations directly and expands the full table.
     """
-    page.goto("https://dojour.us/admin-tools/reservations/", wait_until="networkidle")
+    page.goto(DOJOUR_RESERVATIONS_URL, wait_until="networkidle")
     current_url = page.url
     print(f"[Dojour] Loaded page: {current_url}")
 
     if "login" in current_url.lower():
-        print("[Dojour] ERROR: Redirected to login page! DOJOUR_STATE is expired.")
+        print("[Dojour] ERROR: Redirected to login page. DOJOUR_STATE secret is expired or invalid.")
         return []
 
-    # Check for dedicated Reservations navigation link
-    res_tab = page.locator("a:has-text('Reservations'), [role='tab']:has-text('Reservations')").first
-    if res_tab.count() and res_tab.is_visible() and "reservations" not in current_url.lower():
-        print("[Dojour] Clicking Reservations sub-navigation tab...")
-        try:
-            res_tab.click()
-            page.wait_for_timeout(2000)
-        except Exception:
-            pass
-
-    # Active multi-step expansion loop
     schedules_by_id = {}
     prev_discovered = 0
     no_growth_count = 0
 
-    for attempt in range(1, 15):
-        # 1. Click any explicit "Load More" / "Show More" buttons
+    for attempt in range(1, 20):
+        # 1. Click explicit "Load More" / pagination controls if present
         for sel in [
             "button:has-text('Load More')", "button:has-text('Show More')", "button:has-text('More')",
-            "a:has-text('Load More')", "a:has-text('Show More')", "a:has-text('More')",
-            ".load-more", "[data-action*='load']"
+            "a:has-text('Load More')", "a:has-text('Show More')", ".load-more"
         ]:
             elem = page.locator(sel).first
             if elem.count() and elem.is_visible():
-                print(f"[Dojour] Clicking '{sel}' button on attempt {attempt}")
+                print(f"[Dojour] Clicking '{sel}' on attempt {attempt}")
                 try:
                     elem.click(timeout=2000)
                     page.wait_for_timeout(1500)
@@ -248,7 +238,7 @@ def discover_all_schedules(page) -> list[dict]:
                 except Exception:
                     pass
 
-        # 2. Scroll the last row into view to trigger IntersectionObservers
+        # 2. Scroll the last item into view to trigger lazy loaders
         rows = page.locator("tr, div.reservation-row, [role='row']").all()
         if rows:
             try:
@@ -256,11 +246,7 @@ def discover_all_schedules(page) -> list[dict]:
             except Exception:
                 pass
 
-        # 3. Trigger physical scroll events
-        page.keyboard.press("End")
-        page.keyboard.press("PageDown")
-
-        # 4. Scroll overflow containers in the DOM
+        # 3. Scroll all internal overflow containers
         page.evaluate("""() => {
             window.scrollTo(0, document.body.scrollHeight);
             document.querySelectorAll('*').forEach(el => {
@@ -270,9 +256,9 @@ def discover_all_schedules(page) -> list[dict]:
                 }
             });
         }""")
-        page.wait_for_timeout(1200)
+        page.wait_for_timeout(1000)
 
-        # 5. Extract currently rendered schedules
+        # 4. Extract schedule IDs from table rows
         for row in page.locator("tr, div.reservation-row, [role='row']").all():
             row_text = row.inner_text()
             for link in row.locator("a").all():
@@ -288,29 +274,39 @@ def discover_all_schedules(page) -> list[dict]:
                             "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
                         }
 
-        current_count = len(schedules_by_id)
-        print(f"[Dojour] Expansion pass {attempt}: {current_count} schedules discovered.")
+        # 5. Fallback anchor scan across the whole page
+        if not schedules_by_id:
+            for link in page.locator("a").all():
+                href = link.get_attribute("href") or ""
+                link_text = link.inner_text()
+                if re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE) or "reservations/" in href:
+                    inst_id = extract_instance_id_from_href(href)
+                    if inst_id and inst_id not in schedules_by_id:
+                        schedules_by_id[inst_id] = {
+                            "instance_id": inst_id,
+                            "raw_text": link_text,
+                            "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
+                        }
 
+        current_count = len(schedules_by_id)
         if current_count > prev_discovered:
             prev_discovered = current_count
             no_growth_count = 0
         else:
             no_growth_count += 1
             if no_growth_count >= 3:
-                print("[Dojour] Schedule count stabilized. Proceeding to ticket extraction.")
                 break
 
-    print(f"[Dojour] Total schedules found: {len(schedules_by_id)}")
+    print(f"[Dojour] Discovered {len(schedules_by_id)} upcoming schedules.")
     return list(schedules_by_id.values())
 
 def fetch_dojour_tickets(context) -> list[list]:
     """
-    Fetches reservations via authenticated page context to prevent HTTP 401 errors.
+    Pulls reports from discovered schedules using in-page fetch to bypass 401 errors.
     """
     page = context.new_page()
     page.set_viewport_size({"width": 1920, "height": 1080})
 
-    # Capture authentication headers dispatched by Dojour
     captured_auth_headers = {}
     def on_request(req):
         if "/api/" in req.url:
@@ -327,7 +323,7 @@ def fetch_dojour_tickets(context) -> list[list]:
         report_url = item["report_url"]
         instance_id = item["instance_id"]
 
-        # Strategy 1: Fetch directly within browser engine (bypasses Playwright 401)
+        # In-browser session request
         report_res = page.evaluate("""async ({ url, extraHeaders }) => {
             try {
                 let h = {
@@ -368,7 +364,7 @@ def fetch_dojour_tickets(context) -> list[list]:
             }
         }""", {"url": report_url, "extraHeaders": captured_auth_headers})
 
-        # Strategy 2: Direct browser tab navigation fallback
+        # Fallback tab navigation if evaluate encounters non-200
         if not report_res or report_res.get("status") != 200:
             tab = context.new_page()
             try:
@@ -377,8 +373,8 @@ def fetch_dojour_tickets(context) -> list[list]:
                     raw_text = tab.locator("body").inner_text()
                     report_res = {"status": 200, "data": json.loads(raw_text)}
                 else:
-                    status_val = nav_resp.status if nav_resp else "timeout"
-                    print(f"[Dojour] HTTP {status_val} fetching report for schedule {instance_id}")
+                    status_code = nav_resp.status if nav_resp else "timeout"
+                    print(f"[Dojour] HTTP {status_code} fetching report for schedule {instance_id}")
             except Exception as e:
                 print(f"[Dojour] Tab navigation error for schedule {instance_id}: {e}")
             finally:
@@ -502,7 +498,7 @@ def main():
             dojour_rows = fetch_dojour_tickets(context)
             browser.close()
     else:
-        print("[Dojour] Warning: DOJOUR_STATE is missing. Skipping Dojour extraction.")
+        print("[Dojour] DOJOUR_STATE is missing. Skipping Dojour extraction.")
 
     all_rows = shopify_rows + dojour_rows
     sync_to_google_sheet(all_rows)
