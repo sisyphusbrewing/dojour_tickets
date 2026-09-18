@@ -24,9 +24,11 @@ jobs:
           pip install playwright gspread google-auth requests
           playwright install --with-deps chromium
 
-      - name: Run Ticket Sync
-        env:
-          DOJOUR_STATE_JSON: ${{ secrets.DOJOUR_STATE }}
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        run: |
-          python fetch_tickets.py
+- name: Run ticket sync
+      env:
+        DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+        SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+        SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+      run: python fetch_tickets.py
