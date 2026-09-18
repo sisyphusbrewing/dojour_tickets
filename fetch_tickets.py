@@ -13,7 +13,7 @@ DOJOUR_ADMIN_URL = "https://dojour.us/admin-tools/reservations/"
 DOJOUR_API_REPORT = "https://dojour.us/api/event_instances/{id}/reserve_report/"
 
 DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
-GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_CREDENTIALS")
+GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
 SHOPIFY_CLIENT_ID = os.environ.get("SHOPIFY_CLIENT_ID")
 SHOPIFY_CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET")
 SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "sisyphus-brewing.myshopify.com")
@@ -21,7 +21,7 @@ SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "sisyphus-brewing.myshopify.com"
 
 def get_gspread_client():
     if not GOOGLE_CREDENTIALS:
-        print("Error: GOOGLE_CREDENTIALS environment variable is missing.")
+        print("Error: GOOGLE_SERVICE_ACCOUNT environment variable is missing.")
         sys.exit(1)
     creds_dict = json.loads(GOOGLE_CREDENTIALS)
     return gspread.service_account_from_dict(creds_dict)
