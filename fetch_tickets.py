@@ -5,6 +5,7 @@ import gspread
 from playwright.sync_api import sync_playwright
 
 SHEET_NAME = "Dojour Ticket Counts"
+DOOR_LIST_TAB = "Door List"
 
 if "DOJOUR_STATE_JSON" in os.environ:
     with open("state.json", "w") as f:
@@ -22,9 +23,15 @@ FORBIDDEN_FETCH_HEADERS = {
     "upgrade", "via"
 }
 
-def get_ticket_data():
-    all_results = []
-    seen_ids = set()
+def clean_headers(raw_headers):
+    return {
+        k: v for k, v in raw_headers.items()
+        if not k.startswith(":") and k.lower() not in FORBIDDEN_FETCH_HEADERS
+    }
+
+def run_sync():
+    all_events = []
+    seen_event_ids = set()
     intercepted_headers = {}
     initial_data = {}
 
@@ -48,17 +55,11 @@ def get_ticket_data():
                     data = response.json()
                     if not initial_data and "results" in data:
                         initial_data = data
-
-                    results = data.get("results", [])
-                    for item in results:
-                        item_id = item.get("id") or (
-                            item.get("event", {}).get("title"),
-                            item.get("start_dt"),
-                            item.get("offer", {}).get("id") if item.get("offer") else None
-                        )
-                        if item_id not in seen_ids:
-                            seen_ids.add(item_id)
-                            all_results.append(item)
+                    for item in data.get("results", []):
+                        eid = item.get("id") or item.get("showing")
+                        if eid and eid not in seen_event_ids:
+                            seen_event_ids.add(eid)
+                            all_events.append(item)
                 except Exception:
                     pass
 
@@ -69,100 +70,115 @@ def get_ticket_data():
         page.goto("https://dojour.us/", wait_until="networkidle")
         page.wait_for_timeout(3000)
 
-        if not all_results:
-            page.wait_for_timeout(3000)
+        headers_for_fetch = clean_headers(intercepted_headers)
 
-        if not all_results:
-            browser.close()
-            raise Exception("Failed to load initial event data. Check if your state.json session secret has expired.")
-
-        print(f"Captured initial batch ({len(all_results)} events).")
-
-        # Strip browser pseudo-headers so in-browser fetch doesn't fail
-        clean_headers = {
-            k: v for k, v in intercepted_headers.items()
-            if not k.startswith(":") and k.lower() not in FORBIDDEN_FETCH_HEADERS
-        }
-
-        # 1. Paginate through API passing captured Authorization headers
+        # 1. Paginate dashboard events to discover all schedule IDs
         next_url = initial_data.get("next")
         page_num = 2
-
         while next_url:
-            print(f"Fetching page {page_num} via API...")
+            print(f"Fetching overview page {page_num}...")
             try:
                 data = page.evaluate("""async ({url, headers}) => {
-                    try {
-                        const res = await fetch(url, {
-                            method: 'GET',
-                            headers: headers,
-                            credentials: 'include'
-                        });
-                        if (!res.ok) return { error: res.status };
-                        return await res.json();
-                    } catch (err) {
-                        return { error: err.message };
-                    }
-                }""", {"url": next_url, "headers": clean_headers})
+                    const res = await fetch(url, { headers, credentials: 'include' });
+                    return res.ok ? await res.json() : null;
+                }""", {"url": next_url, "headers": headers_for_fetch})
 
-                if not data or "error" in data:
-                    print(f"API fetch status: {data.get('error') if data else 'unknown'}. Falling back to UI click.")
+                if not data:
                     break
 
-                results = data.get("results", [])
-                if not results:
-                    break
-
-                for item in results:
-                    item_id = item.get("id") or (
-                        item.get("event", {}).get("title"),
-                        item.get("start_dt"),
-                        item.get("offer", {}).get("id") if item.get("offer") else None
-                    )
-                    if item_id not in seen_ids:
-                        seen_ids.add(item_id)
-                        all_results.append(item)
+                for item in data.get("results", []):
+                    eid = item.get("id") or item.get("showing")
+                    if eid and eid not in seen_event_ids:
+                        seen_event_ids.add(eid)
+                        all_events.append(item)
 
                 next_url = data.get("next")
                 page_num += 1
+            except Exception:
+                break
+
+        print(f"Discovered {len(all_events)} active show schedules.")
+
+        # 2. Fetch attendee details for each active schedule
+        door_entries = []
+        for event in all_events:
+            # Try getting schedule ID
+            schedule_id = event.get("showing") or event.get("id")
+            if not schedule_id:
+                continue
+
+            report_url = f"https://dojour.us/api/event_instances/{schedule_id}/reserve_report/"
+            print(f"Fetching attendee list for schedule #{schedule_id}...")
+
+            try:
+                report_data = page.evaluate("""async ({url, headers}) => {
+                    const res = await fetch(url, { headers, credentials: 'include' });
+                    return res.ok ? await res.json() : null;
+                }""", {"url": report_url, "headers": headers_for_fetch})
+
+                if not report_data:
+                    continue
+
+                for res in report_data.get("reservation_set", []):
+                    if res.get("is_cancelled"):
+                        continue
+
+                    order_key = f"dj_{res.get('encrypted_pk')}"
+                    first = res.get("first_name", "")
+                    last = res.get("last_name", "")
+                    name = f"{first} {last}".strip() or "Guest"
+                    email = res.get("email", "")
+                    show_title = res.get("event_title", "Comedy Show")
+                    start_dt = res.get("start_dt", "")[:16].replace("T", " ")
+
+                    # Sum ticket quantity across all selected options
+                    ticket_count = sum(opt.get("count", 0) for opt in res.get("option_set", []))
+                    if ticket_count == 0 and res.get("ticket_set"):
+                        ticket_count = len(res.get("ticket_set"))
+
+                    door_entries.append([
+                        order_key,
+                        start_dt,
+                        show_title,
+                        name,
+                        email,
+                        ticket_count,
+                        "Dojour",
+                        "FALSE",  # Default Checked In status
+                        ""        # Check-in timestamp blank initially
+                    ])
             except Exception as e:
-                print(f"Browser API pagination ended: {e}")
-                break
-
-        # 2. Fallback UI click loop with validated locator syntax
-        load_more_attempts = 0
-        while load_more_attempts < 30:
-            btn = page.locator("button, a, [role='button']").filter(has_text=re.compile(r"load more", re.I)).first
-            if not btn.is_visible():
-                btn = page.get_by_text(re.compile(r"load more", re.I)).first
-
-            if btn.is_visible():
-                prev_count = len(all_results)
-                print(f"Clicking 'Load More' button (currently at {prev_count} events)...")
-                try:
-                    btn.scroll_into_view_if_needed()
-                    btn.click()
-                    page.wait_for_timeout(2500)
-                except Exception:
-                    break
-
-                if len(all_results) == prev_count:
-                    page.wait_for_timeout(2500)
-                    if len(all_results) == prev_count:
-                        print("No additional events returned after clicking 'Load More'.")
-                        break
-                load_more_attempts += 1
-            else:
-                break
+                print(f"Error fetching schedule {schedule_id}: {e}")
 
         browser.close()
 
-    print(f"Total events found across all pages: {len(all_results)}")
+    # 3. Update Google Sheets
+    print(f"Connecting to Google Sheets ('{SHEET_NAME}')...")
+    gc = gspread.service_account(filename="service_account.json")
+    workbook = gc.open(SHEET_NAME)
 
-    rows = [["Event Title", "Date", "Sold", "Remaining", "Limit", "Last Updated"]]
+    # --- Sync Door List (Safe Upsert) ---
+    try:
+        door_sheet = workbook.worksheet(DOOR_LIST_TAB)
+    except gspread.WorksheetNotFound:
+        door_sheet = workbook.add_worksheet(title=DOOR_LIST_TAB, rows=1000, cols=10)
+        door_sheet.append_row(["Unique ID", "Show Date", "Show Title", "Guest Name", "Email", "Tickets", "Source", "Checked In", "Check-In Time"])
+
+    existing_ids = set(door_sheet.col_values(1))  # Column A contains Unique IDs
+    new_rows = [row for row in door_entries if row[0] not in existing_ids]
+
+    if new_rows:
+        door_sheet.append_rows(new_rows)
+        print(f"Added {len(new_rows)} new Dojour attendees to '{DOOR_LIST_TAB}'.")
+    else:
+        print("No new attendees to add. All existing check-in data preserved.")
+
+    # --- Sync Ticket Overview (Sheet 1) ---
+    overview_sheet = workbook.sheet1
+    overview_rows = [["Event Title", "Date", "Sold", "Remaining", "Limit", "Last Updated"]]
     now_str = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    for item in all_results:
+    for item in all_events:
         title = item.get("event", {}).get("title", "Unknown")
         start_dt = item.get("start_dt", "")[:16].replace("T", " ")
         offer = item.get("offer")
@@ -172,24 +188,11 @@ def get_ticket_data():
             limit = offer.get("limit", 0)
         else:
             sold = remaining = limit = "-"
-        rows.append([title, start_dt, sold, remaining, limit, now_str])
+        overview_rows.append([title, start_dt, sold, remaining, limit, now_str])
 
-    return rows
-
-def sync_to_sheets():
-    print("Fetching DoJour ticket data...")
-    rows = get_ticket_data()
-
-    print(f"Connecting to Google Sheets ('{SHEET_NAME}')...")
-    gc = gspread.service_account(filename="service_account.json")
-    sheet = gc.open(SHEET_NAME).sheet1
-
-    sheet.clear()
-    try:
-        sheet.update(rows)
-    except Exception:
-        sheet.update(values=rows)
-    print(f"Success! Synced {len(rows)-1} shows to your Google Sheet.")
+    overview_sheet.clear()
+    overview_sheet.update(overview_rows)
+    print(f"Updated show counts on Sheet 1.")
 
 if __name__ == "__main__":
-    sync_to_sheets()
+    run_sync()
