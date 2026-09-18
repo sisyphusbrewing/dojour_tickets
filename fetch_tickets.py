@@ -207,9 +207,6 @@ def extract_event_meta(data: dict | list, fallback_text: str) -> tuple[str, str]
     return show_title, show_date
 
 def discover_all_schedules(page) -> list[dict]:
-    """
-    Loads all upcoming reservations directly and expands the full table.
-    """
     page.goto(DOJOUR_RESERVATIONS_URL, wait_until="networkidle")
     current_url = page.url
     print(f"[Dojour] Loaded page: {current_url}")
@@ -223,7 +220,6 @@ def discover_all_schedules(page) -> list[dict]:
     no_growth_count = 0
 
     for attempt in range(1, 20):
-        # 1. Click explicit "Load More" / pagination controls if present
         for sel in [
             "button:has-text('Load More')", "button:has-text('Show More')", "button:has-text('More')",
             "a:has-text('Load More')", "a:has-text('Show More')", ".load-more"
@@ -238,7 +234,6 @@ def discover_all_schedules(page) -> list[dict]:
                 except Exception:
                     pass
 
-        # 2. Scroll the last item into view to trigger lazy loaders
         rows = page.locator("tr, div.reservation-row, [role='row']").all()
         if rows:
             try:
@@ -246,7 +241,6 @@ def discover_all_schedules(page) -> list[dict]:
             except Exception:
                 pass
 
-        # 3. Scroll all internal overflow containers
         page.evaluate("""() => {
             window.scrollTo(0, document.body.scrollHeight);
             document.querySelectorAll('*').forEach(el => {
@@ -258,7 +252,6 @@ def discover_all_schedules(page) -> list[dict]:
         }""")
         page.wait_for_timeout(1000)
 
-        # 4. Extract schedule IDs from table rows
         for row in page.locator("tr, div.reservation-row, [role='row']").all():
             row_text = row.inner_text()
             for link in row.locator("a").all():
@@ -274,20 +267,6 @@ def discover_all_schedules(page) -> list[dict]:
                             "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
                         }
 
-        # 5. Fallback anchor scan across the whole page
-        if not schedules_by_id:
-            for link in page.locator("a").all():
-                href = link.get_attribute("href") or ""
-                link_text = link.inner_text()
-                if re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE) or "reservations/" in href:
-                    inst_id = extract_instance_id_from_href(href)
-                    if inst_id and inst_id not in schedules_by_id:
-                        schedules_by_id[inst_id] = {
-                            "instance_id": inst_id,
-                            "raw_text": link_text,
-                            "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
-                        }
-
         current_count = len(schedules_by_id)
         if current_count > prev_discovered:
             prev_discovered = current_count
@@ -300,125 +279,166 @@ def discover_all_schedules(page) -> list[dict]:
     print(f"[Dojour] Discovered {len(schedules_by_id)} upcoming schedules.")
     return list(schedules_by_id.values())
 
+def parse_reservations_from_payload(data) -> list[dict]:
+    """
+    Universally extracts the list of customer reservations regardless of the key Dojour uses.
+    """
+    if isinstance(data, list):
+        return data
+    if not isinstance(data, dict):
+        return []
+
+    # Priority lookup keys used by ticketing APIs
+    priority_keys = [
+        "reserves", "reservations", "reserve_report", "reports", "report",
+        "attendees", "guests", "guest_list", "guestlist", "ticket_holders",
+        "tickets", "rsvps", "orders", "results", "items", "data"
+    ]
+    for key in priority_keys:
+        val = data.get(key)
+        if isinstance(val, list):
+            return val
+        if isinstance(val, dict):
+            nested = parse_reservations_from_payload(val)
+            if nested:
+                return nested
+
+    # Fallback: Find any list of dicts that contains guest/ticket fields
+    for key, val in data.items():
+        if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
+            first = val[0]
+            if any(k in first for k in ("name", "first_name", "last_name", "email", "ticket_count", "quantity", "tickets", "spots")):
+                return val
+
+    return []
+
+def parse_guest_record(res: dict, instance_id: str, index: int, show_date: str, show_title: str) -> list:
+    res_id = str(
+        res.get("id") or
+        res.get("reservation_id") or
+        res.get("reserve_id") or
+        res.get("pk") or
+        index
+    )
+    unique_id = f"dj_{instance_id}_{res_id}"
+
+    # Extract Name
+    name = res.get("name") or res.get("guest_name") or res.get("full_name") or ""
+    if not name:
+        fname = res.get("first_name") or res.get("firstname") or ""
+        lname = res.get("last_name") or res.get("lastname") or ""
+        name = f"{fname} {lname}".strip()
+    if not name and isinstance(res.get("user"), dict):
+        u = res["user"]
+        name = u.get("name") or f"{u.get('first_name', '')} {u.get('last_name', '')}".strip()
+    if not name:
+        name = "Dojour Guest"
+
+    # Extract Email
+    email = res.get("email") or res.get("guest_email") or ""
+    if not email and isinstance(res.get("user"), dict):
+        email = res["user"].get("email") or ""
+    email = email.strip().lower()
+
+    # Extract Tickets
+    tickets = (
+        res.get("ticket_count") or
+        res.get("quantity") or
+        res.get("tickets") or
+        res.get("count") or
+        res.get("spots") or
+        res.get("num_tickets") or
+        1
+    )
+    try:
+        tickets = int(tickets)
+    except (ValueError, TypeError):
+        tickets = 1
+
+    return [
+        unique_id,
+        show_date,
+        show_title,
+        name.strip(),
+        email,
+        tickets,
+        "Dojour",
+        False,
+        ""
+    ]
+
 def fetch_dojour_tickets(context) -> list[list]:
-    """
-    Pulls reports from discovered schedules using in-page fetch to bypass 401 errors.
-    """
     page = context.new_page()
     page.set_viewport_size({"width": 1920, "height": 1080})
 
-    captured_auth_headers = {}
-    def on_request(req):
-        if "/api/" in req.url:
-            for k, v in req.headers.items():
-                if k.lower() in ("authorization", "x-csrftoken", "x-requested-with"):
-                    captured_auth_headers[k] = v
-
-    page.on("request", on_request)
-
     schedules = discover_all_schedules(page)
     dojour_rows = []
+    logged_first_schedule = False
 
-    for item in schedules:
+    for idx, item in enumerate(schedules):
         report_url = item["report_url"]
         instance_id = item["instance_id"]
 
-        # In-browser session request
-        report_res = page.evaluate("""async ({ url, extraHeaders }) => {
+        # Fetch in browser session
+        fetch_result = page.evaluate("""async (url) => {
             try {
-                let h = {
+                const csrfMatch = document.cookie.match(/(?:^|;\s*)(?:csrftoken|csrf)=([^;]+)/);
+                const headers = {
                     'Accept': 'application/json, text/plain, */*',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    ...extraHeaders
+                    'X-Requested-With': 'XMLHttpRequest'
                 };
-                for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i);
-                    const v = localStorage.getItem(k);
-                    if (/token|auth|jwt/i.test(k)) {
-                        try {
-                            const p = JSON.parse(v);
-                            const t = p.token || p.key || p.authToken || p.access_token;
-                            if (t) h['Authorization'] = (t.startsWith('Token ') || t.startsWith('Bearer ')) ? t : `Token ${t}`;
-                        } catch(e) {
-                            const clean = v.replace(/["']/g, '').trim();
-                            if (clean && clean.length > 8) {
-                                h['Authorization'] = (clean.startsWith('Token ') || clean.startsWith('Bearer ')) ? clean : `Token ${clean}`;
-                            }
-                        }
-                    }
-                }
-                const m = document.cookie.match(/(?:^|;\s*)(?:csrftoken|csrf)=([^;]+)/);
-                if (m) h['X-CSRFToken'] = m[1];
+                if (csrfMatch) headers['X-CSRFToken'] = csrfMatch[1];
 
                 const resp = await fetch(url, {
                     method: 'GET',
-                    headers: h,
+                    headers: headers,
                     credentials: 'include'
                 });
-                if (resp.status === 200) {
-                    return { status: 200, data: await resp.json() };
-                }
-                return { status: resp.status, data: null, error: `HTTP ${resp.status}` };
+                const text = await resp.text();
+                return { status: resp.status, text: text };
             } catch (err) {
-                return { status: -1, data: null, error: err.toString() };
+                return { status: -1, text: err.toString() };
             }
-        }""", {"url": report_url, "extraHeaders": captured_auth_headers})
+        }""", report_url)
 
-        # Fallback tab navigation if evaluate encounters non-200
-        if not report_res or report_res.get("status") != 200:
+        status = fetch_result.get("status")
+        raw_text = fetch_result.get("text", "")
+
+        # Fallback tab navigation if in-page fetch receives non-200
+        if status != 200:
             tab = context.new_page()
             try:
-                nav_resp = tab.goto(report_url, wait_until="domcontentloaded", timeout=12000)
-                if nav_resp and nav_resp.status == 200:
+                nav = tab.goto(report_url, wait_until="domcontentloaded", timeout=10000)
+                if nav and nav.status == 200:
+                    status = 200
                     raw_text = tab.locator("body").inner_text()
-                    report_res = {"status": 200, "data": json.loads(raw_text)}
-                else:
-                    status_code = nav_resp.status if nav_resp else "timeout"
-                    print(f"[Dojour] HTTP {status_code} fetching report for schedule {instance_id}")
-            except Exception as e:
-                print(f"[Dojour] Tab navigation error for schedule {instance_id}: {e}")
+            except Exception:
+                pass
             finally:
                 tab.close()
 
-        if not report_res or report_res.get("status") != 200 or not report_res.get("data"):
+        if status != 200:
+            if idx < 3:
+                print(f"[Dojour] HTTP {status} fetching report for schedule {instance_id}")
             continue
 
-        data = report_res["data"]
-        show_title, show_date = extract_event_meta(data, item["raw_text"])
+        try:
+            data = json.loads(raw_text)
+        except Exception:
+            continue
 
-        reservations = []
-        if isinstance(data, list):
-            reservations = data
-        elif isinstance(data, dict):
-            for key in ("reservations", "reports", "items", "results", "orders"):
-                if key in data and isinstance(data[key], list):
-                    reservations = data[key]
-                    break
+        # Diagnostic log on first successfully fetched schedule
+        if not logged_first_schedule:
+            keys = list(data.keys()) if isinstance(data, dict) else f"list(len={len(data)})"
+            print(f"[Dojour Debug] Sample schedule {instance_id} JSON structure: {keys}")
+            logged_first_schedule = True
+
+        show_title, show_date = extract_event_meta(data, item["raw_text"])
+        reservations = parse_reservations_from_payload(data)
 
         for i, res in enumerate(reservations):
-            res_id = str(res.get("id") or res.get("reservation_id") or res.get("pk") or i)
-            unique_id = f"dj_{instance_id}_{res_id}"
-
-            name = (
-                res.get("name") or
-                f"{res.get('first_name', '')} {res.get('last_name', '')}".strip() or
-                res.get("guest_name") or
-                "Dojour Guest"
-            ).strip()
-            email = (res.get("email") or res.get("guest_email") or "").strip().lower()
-            tickets = int(res.get("ticket_count") or res.get("quantity") or res.get("tickets") or res.get("count") or 1)
-
-            dojour_rows.append([
-                unique_id,
-                show_date,
-                show_title,
-                name,
-                email,
-                tickets,
-                "Dojour",
-                False,
-                ""
-            ])
+            row = parse_guest_record(res, instance_id, i, show_date, show_title)
+            dojour_rows.append(row)
 
     page.close()
     print(f"[Dojour] Extracted {len(dojour_rows)} total reservations.")
