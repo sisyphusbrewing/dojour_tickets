@@ -10,18 +10,17 @@ from playwright.sync_api import sync_playwright
 # Configuration & Constants
 SHEET_TITLE = "Dojour Ticket Counts"
 DOJOUR_ADMIN_URL = "https://dojour.us/admin-tools/reservations/"
-DOJOUR_API_REPORT = "https://dojour.us/api/event_instances/{id}/reserve_report/"
 
 DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
 GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
 SHOPIFY_CLIENT_ID = os.environ.get("SHOPIFY_CLIENT_ID")
 SHOPIFY_CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET")
-SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "sisyphus-brewing.myshopify.com")
+SHOPIFY_STORE = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing.myshopify.com").replace("https://", "").replace("http://", "").strip("/")
 
 
 def get_gspread_client():
     if not GOOGLE_CREDENTIALS:
-        print("Error: GOOGLE_SERVICE_ACCOUNT environment variable is missing.")
+        print("Error: Neither GOOGLE_SERVICE_ACCOUNT nor GOOGLE_CREDENTIALS environment variable is set.")
         sys.exit(1)
     creds_dict = json.loads(GOOGLE_CREDENTIALS)
     return gspread.service_account_from_dict(creds_dict)
@@ -32,13 +31,17 @@ def fetch_shopify_tickets():
         print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
         return []
 
-    print("[Shopify] Requesting access token via Client Credentials...")
+    print("[Shopify] Requesting access token via Client Credentials (form-urlencoded)...")
     auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
-    auth_resp = requests.post(auth_url, json={
-        "client_id": SHOPIFY_CLIENT_ID,
-        "client_secret": SHOPIFY_CLIENT_SECRET,
+    
+    # Shopify OAuth requires application/x-www-form-urlencoded (data=, NOT json=)
+    auth_payload = {
+        "client_id": SHOPIFY_CLIENT_ID.strip(),
+        "client_secret": SHOPIFY_CLIENT_SECRET.strip(),
         "grant_type": "client_credentials"
-    }, timeout=15)
+    }
+    
+    auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
 
     if auth_resp.status_code != 200:
         print(f"[Shopify] Authentication failed ({auth_resp.status_code}): {auth_resp.text}")
@@ -47,8 +50,8 @@ def fetch_shopify_tickets():
     token = auth_resp.json().get("access_token")
     headers = {"X-Shopify-Access-Token": token}
 
-    print("[Shopify] Fetching paid orders...")
-    orders_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json?status=any&limit=250"
+    print("[Shopify] Fetching newest paid orders (sorted by created_at desc)...")
+    orders_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json?status=any&limit=250&order=created_at+desc"
     resp = requests.get(orders_url, headers=headers, timeout=20)
     
     if resp.status_code != 200:
@@ -59,7 +62,7 @@ def fetch_shopify_tickets():
     shopify_rows = []
 
     for order in orders:
-        if order.get("financial_status") != "paid":
+        if order.get("financial_status") not in ["paid", "authorized"]:
             continue
 
         customer = order.get("customer") or {}
@@ -73,14 +76,14 @@ def fetch_shopify_tickets():
         for item in order.get("line_items", []):
             item_name = item.get("name", "")
             
-            # Filter non-ticket line items
-            if any(term in item_name.lower() for term in ["deposit", "tip", "fee", "gift card"]):
+            # Filter non-ticket items
+            lower_name = item_name.lower()
+            if any(term in lower_name for term in ["tip", "deposit", "gift card"]) and not any(t in lower_name for t in ["ticket", "show", "comedy"]):
                 continue
 
             raw_title = item.get("title") or item_name
             variant = item.get("variant_title") or ""
 
-            # Extract show title and date
             if " - " in raw_title:
                 parts = raw_title.split(" - ")
                 show_title = parts[0].strip()
@@ -125,7 +128,6 @@ def fetch_dojour_data():
         print("[Dojour] Navigating to admin reservations table...")
         page.goto(DOJOUR_ADMIN_URL, wait_until="networkidle")
 
-        # Parse overview table and gather schedule IDs
         schedule_links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
         schedules = []
 
@@ -140,7 +142,6 @@ def fetch_dojour_data():
             row_text = row_el.inner_text().split("\t")
 
             show_title = link.inner_text().strip()
-            # Default fallback data from row
             show_date = row_text[1].strip() if len(row_text) > 1 else ""
             tickets_sold = row_text[2].strip() if len(row_text) > 2 else "0"
 
@@ -153,22 +154,43 @@ def fetch_dojour_data():
 
             overview_rows.append([show_title, show_date, tickets_sold])
 
-        print(f"[Dojour] Found {len(schedules)} active schedules. Querying individual reserve reports...")
+        print(f"[Dojour] Found {len(schedules)} active schedules. Querying reserve reports...")
 
-        # Fetch attendee report for each schedule
         for sched in schedules:
-            report_url = DOJOUR_API_REPORT.format(id=sched["id"])
+            # Use relative URL and credentials: 'include' to enforce same-origin cookie sending
+            relative_url = f"/api/event_instances/{sched['id']}/reserve_report/"
             
             report_data = page.evaluate("""async (url) => {
-                const res = await fetch(url);
-                if (!res.ok) return null;
-                return await res.json();
-            }""", report_url)
+                try {
+                    const res = await fetch(url, {
+                        credentials: 'include',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!res.ok) {
+                        return { _error: res.status + " " + res.statusText };
+                    }
+                    return await res.json();
+                } catch(e) {
+                    return { _error: e.toString() };
+                }
+            }""", relative_url)
 
             if not report_data:
                 continue
 
-            reservations = report_data.get("reservation_set", [])
+            if isinstance(report_data, dict) and "_error" in report_data:
+                print(f"[Dojour] Schedule {sched['id']} report error: {report_data['_error']}")
+                continue
+
+            reservations = []
+            if isinstance(report_data, list):
+                reservations = report_data
+            elif isinstance(report_data, dict):
+                reservations = report_data.get("reservation_set") or report_data.get("results") or report_data.get("reservations") or []
+
             for res_item in reservations:
                 res_id = res_item.get("id", "")
                 name = f"{res_item.get('first_name', '')} {res_item.get('last_name', '')}".strip()
@@ -240,14 +262,14 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             continue
         seen_uids.add(uid)
 
-        # Restore existing check-in data if the guest was previously marked
+        # Retain check-in status if guest was previously marked
         if uid in existing_checkins:
             row[7] = existing_checkins[uid][0]
             row[8] = existing_checkins[uid][1]
 
         final_rows.append(row)
 
-    # 5. Overwrite the Door List tab with complete unified data
+    # 5. Overwrite the Door List tab with unified rows
     door_sheet.clear()
     door_sheet.update(final_rows)
     print(f"[Google Sheets] Successfully synced {len(final_rows) - 1} total attendees to 'Door List'.")
