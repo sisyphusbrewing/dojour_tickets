@@ -18,14 +18,10 @@ HEADERS = [
 ]
 
 # ==========================================
-# 1. SHOPIFY INTEGRATION
+# 1. SHOPIFY INTEGRATION (WORKING)
 # ==========================================
 
 def get_shopify_access_token(shop: str, client_id: str, client_secret: str) -> str:
-    """
-    Exchanges Client Credentials for an Admin API access token.
-    If client_secret is already an access token (shpat_), returns it directly.
-    """
     if client_secret.startswith("shpat_"):
         return client_secret
 
@@ -40,24 +36,18 @@ def get_shopify_access_token(shop: str, client_id: str, client_secret: str) -> s
     return resp.json()["access_token"]
 
 def parse_shopify_line_item(item: dict) -> tuple[str, str]:
-    """
-    Extracts clean performer name and show date from item title, variant, or properties.
-    """
     title = (item.get("title") or "").strip()
     variant = (item.get("variant_title") or "").strip()
 
-    # Check custom line item properties
     properties = {p.get("name", ""): p.get("value", "") for p in item.get("properties", [])}
     prop_date = properties.get("Show Date") or properties.get("Date") or properties.get("Showtime") or properties.get("Time")
     if prop_date:
         return title, prop_date
 
-    # Variant contains date indicators
     date_markers = ["•", "PM", "AM", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     if any(m in variant for m in date_markers):
         return title, variant
 
-    # Split combined titles (e.g. 'Alex Dragicevich - Fri, Sep 18 • 7:00 PM')
     if " - " in title:
         parts = title.split(" - ", 1)
         return parts[0].strip(), parts[1].strip()
@@ -69,9 +59,6 @@ def parse_shopify_line_item(item: dict) -> tuple[str, str]:
     return title, show_date
 
 def fetch_shopify_tickets() -> list[list]:
-    """
-    Retrieves paid Shopify orders (open, fulfilled, or closed) and extracts ticket lines.
-    """
     client_id = os.environ.get("SHOPIFY_CLIENT_ID", "371d53e3029e519f2e32dfde3eebff14")
     client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET", "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")
     shop = os.environ.get("SHOPIFY_STORE", "sisyphus-brewing.myshopify.com")
@@ -86,7 +73,6 @@ def fetch_shopify_tickets() -> list[list]:
         "Content-Type": "application/json"
     }
 
-    # Query status=any to include closed/fulfilled orders
     url = f"https://{shop}/admin/api/2024-04/orders.json?status=any&limit=250"
     shopify_rows = []
     ignored_patterns = [r"\bticket fee\b", r"\btip\b", r"\bgratuity\b", r"\bdonation\b", r"\bdeposit\b", r"\bservice fee\b"]
@@ -119,7 +105,6 @@ def fetch_shopify_tickets() -> list[list]:
                 raw_title = item.get("title", "")
                 lower_title = raw_title.lower()
 
-                # Filter add-ons without matching real comedy show titles
                 if lower_title == "fee" or any(re.search(pat, lower_title) for pat in ignored_patterns):
                     continue
 
@@ -140,7 +125,6 @@ def fetch_shopify_tickets() -> list[list]:
                     ""
                 ])
 
-        # Link header pagination
         link_header = resp.headers.get("Link")
         url = None
         if link_header:
@@ -181,127 +165,252 @@ def format_dojour_date(raw_date_str: str) -> str:
 def extract_instance_id_from_href(href: str) -> str | None:
     if not href:
         return None
-    # Matches /event_instances/<id>/, /instances/<id>/, or /reservations/<id>/
     m = re.search(r"(?:event_instances|instances|reservations)/(\d+)", href)
     if m:
         return m.group(1)
-    # Fallback to trailing sequence of digits
     nums = re.findall(r"\d{4,}", href)
     return nums[-1] if nums else None
 
+def extract_event_meta(data: dict | list, fallback_text: str) -> tuple[str, str]:
+    title = ""
+    if isinstance(data, dict):
+        title = data.get("event_title") or data.get("title")
+        if not title and isinstance(data.get("event"), dict):
+            title = data["event"].get("title")
+        if not title and isinstance(data.get("event_instance"), dict):
+            title = data["event_instance"].get("title")
+    if not title:
+        title = fallback_text.split("\n")[0]
+    show_title = clean_dojour_title(title)
+
+    raw_time = ""
+    if isinstance(data, dict):
+        raw_time = (
+            data.get("starts_at") or
+            data.get("start_time") or
+            data.get("start") or
+            data.get("date")
+        )
+        if not raw_time and isinstance(data.get("event_instance"), dict):
+            raw_time = data["event_instance"].get("starts_at") or data["event_instance"].get("start_time")
+        if not raw_time and isinstance(data.get("event"), dict):
+            raw_time = data["event"].get("starts_at") or data["event"].get("start_time")
+
+    if raw_time:
+        show_date = format_dojour_date(str(raw_time))
+    else:
+        date_match = re.search(r"([A-Za-z]+\s+\d{1,2}(?:\s*&\s*\d{1,2})?(?:,\s*\d{4})?)", fallback_text)
+        show_date = date_match.group(1).strip() if date_match else "TBD"
+
+    return show_title, show_date
+
 def discover_all_schedules(page) -> list[dict]:
     """
-    Expands the reservation table and extracts schedules by matching instance links or capacity cells.
+    Expands the reservation table past the 9-schedule viewport limit.
     """
     page.goto("https://dojour.us/admin-tools/reservations/", wait_until="networkidle")
     current_url = page.url
     print(f"[Dojour] Loaded page: {current_url}")
 
     if "login" in current_url.lower():
-        print("[Dojour] ERROR: Redirected to login page! DOJOUR_STATE secret has expired or is invalid.")
+        print("[Dojour] ERROR: Redirected to login page! DOJOUR_STATE is expired.")
         return []
 
-    # Scroll down repeatedly to load full infinite-scroll list
-    prev_count = 0
-    stable_iterations = 0
+    # Check for dedicated Reservations navigation link
+    res_tab = page.locator("a:has-text('Reservations'), [role='tab']:has-text('Reservations')").first
+    if res_tab.count() and res_tab.is_visible() and "reservations" not in current_url.lower():
+        print("[Dojour] Clicking Reservations sub-navigation tab...")
+        try:
+            res_tab.click()
+            page.wait_for_timeout(2000)
+        except Exception:
+            pass
 
-    for _ in range(15):
-        # Count all links and table rows to track dynamic expansion
-        total_elements = page.locator("a, tr, div.reservation-row").count()
-        if total_elements > prev_count:
-            prev_count = total_elements
-            stable_iterations = 0
-        else:
-            stable_iterations += 1
+    # Active multi-step expansion loop
+    schedules_by_id = {}
+    prev_discovered = 0
+    no_growth_count = 0
 
-        if stable_iterations >= 3:
-            break
+    for attempt in range(1, 15):
+        # 1. Click any explicit "Load More" / "Show More" buttons
+        for sel in [
+            "button:has-text('Load More')", "button:has-text('Show More')", "button:has-text('More')",
+            "a:has-text('Load More')", "a:has-text('Show More')", "a:has-text('More')",
+            ".load-more", "[data-action*='load']"
+        ]:
+            elem = page.locator(sel).first
+            if elem.count() and elem.is_visible():
+                print(f"[Dojour] Clicking '{sel}' button on attempt {attempt}")
+                try:
+                    elem.click(timeout=2000)
+                    page.wait_for_timeout(1500)
+                    break
+                except Exception:
+                    pass
 
+        # 2. Scroll the last row into view to trigger IntersectionObservers
+        rows = page.locator("tr, div.reservation-row, [role='row']").all()
+        if rows:
+            try:
+                rows[-1].scroll_into_view_if_needed(timeout=2000)
+            except Exception:
+                pass
+
+        # 3. Trigger physical scroll events
+        page.keyboard.press("End")
+        page.keyboard.press("PageDown")
+
+        # 4. Scroll overflow containers in the DOM
         page.evaluate("""() => {
             window.scrollTo(0, document.body.scrollHeight);
-            document.querySelectorAll('div, main, section, table').forEach(el => {
-                if (el.scrollHeight > el.clientHeight) {
+            document.querySelectorAll('*').forEach(el => {
+                if (el.scrollHeight > el.clientHeight && el.clientHeight > 50) {
                     el.scrollTop = el.scrollHeight;
+                    el.dispatchEvent(new Event('scroll', { bubbles: true }));
                 }
             });
         }""")
         page.wait_for_timeout(1200)
 
-    schedules_by_id = {}
+        # 5. Extract currently rendered schedules
+        for row in page.locator("tr, div.reservation-row, [role='row']").all():
+            row_text = row.inner_text()
+            for link in row.locator("a").all():
+                href = link.get_attribute("href") or ""
+                link_text = link.inner_text()
+                is_cap = bool(re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE))
+                inst_id = extract_instance_id_from_href(href)
+                if inst_id and (is_cap or "reservations" in href or "instances" in href):
+                    if inst_id not in schedules_by_id:
+                        schedules_by_id[inst_id] = {
+                            "instance_id": inst_id,
+                            "raw_text": row_text,
+                            "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
+                        }
 
-    # Strategy A: Inspect table rows
-    rows = page.locator("tr, div.reservation-row, [role='row']").all()
-    print(f"[Dojour] Inspecting {len(rows)} rendered DOM rows...")
+        current_count = len(schedules_by_id)
+        print(f"[Dojour] Expansion pass {attempt}: {current_count} schedules discovered.")
 
-    for row in rows:
-        row_text = row.inner_text()
-        links = row.locator("a").all()
+        if current_count > prev_discovered:
+            prev_discovered = current_count
+            no_growth_count = 0
+        else:
+            no_growth_count += 1
+            if no_growth_count >= 3:
+                print("[Dojour] Schedule count stabilized. Proceeding to ticket extraction.")
+                break
 
-        for link in links:
-            href = link.get_attribute("href") or ""
-            link_text = link.inner_text()
-            
-            # Identify link either by capacity text pattern or instance ID in href
-            is_capacity_link = bool(re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE))
-            instance_id = extract_instance_id_from_href(href)
-
-            if instance_id and (is_capacity_link or "reservations" in href):
-                if instance_id not in schedules_by_id:
-                    schedules_by_id[instance_id] = {
-                        "instance_id": instance_id,
-                        "raw_text": row_text,
-                        "report_url": f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
-                    }
-
-    # Strategy B: If table rows didn't capture links, scan all anchors on the page
-    if not schedules_by_id:
-        print("[Dojour] Table row inspection found 0, scanning all <a> tags on page...")
-        for link in page.locator("a").all():
-            href = link.get_attribute("href") or ""
-            link_text = link.inner_text()
-            if re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE) or "reservations/" in href:
-                instance_id = extract_instance_id_from_href(href)
-                if instance_id and instance_id not in schedules_by_id:
-                    schedules_by_id[instance_id] = {
-                        "instance_id": instance_id,
-                        "raw_text": link_text,
-                        "report_url": f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
-                    }
-
-    print(f"[Dojour] Discovered {len(schedules_by_id)} unique schedules.")
+    print(f"[Dojour] Total schedules found: {len(schedules_by_id)}")
     return list(schedules_by_id.values())
 
 def fetch_dojour_tickets(context) -> list[list]:
     """
-    Pulls reports from discovered schedules and standardizes to the 9-column schema.
+    Fetches reservations via authenticated page context to prevent HTTP 401 errors.
     """
     page = context.new_page()
+    page.set_viewport_size({"width": 1920, "height": 1080})
+
+    # Capture authentication headers dispatched by Dojour
+    captured_auth_headers = {}
+    def on_request(req):
+        if "/api/" in req.url:
+            for k, v in req.headers.items():
+                if k.lower() in ("authorization", "x-csrftoken", "x-requested-with"):
+                    captured_auth_headers[k] = v
+
+    page.on("request", on_request)
+
     schedules = discover_all_schedules(page)
     dojour_rows = []
 
     for item in schedules:
         report_url = item["report_url"]
-        response = context.request.get(report_url)
-        if response.status != 200:
-            print(f"[Dojour] HTTP {response.status} fetching report: {report_url}")
+        instance_id = item["instance_id"]
+
+        # Strategy 1: Fetch directly within browser engine (bypasses Playwright 401)
+        report_res = page.evaluate("""async ({ url, extraHeaders }) => {
+            try {
+                let h = {
+                    'Accept': 'application/json, text/plain, */*',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...extraHeaders
+                };
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    const v = localStorage.getItem(k);
+                    if (/token|auth|jwt/i.test(k)) {
+                        try {
+                            const p = JSON.parse(v);
+                            const t = p.token || p.key || p.authToken || p.access_token;
+                            if (t) h['Authorization'] = (t.startsWith('Token ') || t.startsWith('Bearer ')) ? t : `Token ${t}`;
+                        } catch(e) {
+                            const clean = v.replace(/["']/g, '').trim();
+                            if (clean && clean.length > 8) {
+                                h['Authorization'] = (clean.startsWith('Token ') || clean.startsWith('Bearer ')) ? clean : `Token ${clean}`;
+                            }
+                        }
+                    }
+                }
+                const m = document.cookie.match(/(?:^|;\s*)(?:csrftoken|csrf)=([^;]+)/);
+                if (m) h['X-CSRFToken'] = m[1];
+
+                const resp = await fetch(url, {
+                    method: 'GET',
+                    headers: h,
+                    credentials: 'include'
+                });
+                if (resp.status === 200) {
+                    return { status: 200, data: await resp.json() };
+                }
+                return { status: resp.status, data: null, error: `HTTP ${resp.status}` };
+            } catch (err) {
+                return { status: -1, data: null, error: err.toString() };
+            }
+        }""", {"url": report_url, "extraHeaders": captured_auth_headers})
+
+        # Strategy 2: Direct browser tab navigation fallback
+        if not report_res or report_res.get("status") != 200:
+            tab = context.new_page()
+            try:
+                nav_resp = tab.goto(report_url, wait_until="domcontentloaded", timeout=12000)
+                if nav_resp and nav_resp.status == 200:
+                    raw_text = tab.locator("body").inner_text()
+                    report_res = {"status": 200, "data": json.loads(raw_text)}
+                else:
+                    status_val = nav_resp.status if nav_resp else "timeout"
+                    print(f"[Dojour] HTTP {status_val} fetching report for schedule {instance_id}")
+            except Exception as e:
+                print(f"[Dojour] Tab navigation error for schedule {instance_id}: {e}")
+            finally:
+                tab.close()
+
+        if not report_res or report_res.get("status") != 200 or not report_res.get("data"):
             continue
 
-        data = response.json()
-        raw_title = data.get("event_title") or data.get("title") or item["raw_text"].split("\n")[0]
-        show_title = clean_dojour_title(raw_title)
+        data = report_res["data"]
+        show_title, show_date = extract_event_meta(data, item["raw_text"])
 
-        raw_time = data.get("starts_at") or data.get("start_time") or ""
-        show_date = format_dojour_date(raw_time)
+        reservations = []
+        if isinstance(data, list):
+            reservations = data
+        elif isinstance(data, dict):
+            for key in ("reservations", "reports", "items", "results", "orders"):
+                if key in data and isinstance(data[key], list):
+                    reservations = data[key]
+                    break
 
-        reservations = data if isinstance(data, list) else data.get("reservations", data.get("reports", []))
+        for i, res in enumerate(reservations):
+            res_id = str(res.get("id") or res.get("reservation_id") or res.get("pk") or i)
+            unique_id = f"dj_{instance_id}_{res_id}"
 
-        for res in reservations:
-            res_id = str(res.get("id") or res.get("reservation_id") or "")
-            unique_id = f"dj_{item['instance_id']}_{res_id}"
-
-            name = (res.get("name") or f"{res.get('first_name', '')} {res.get('last_name', '')}").strip()
-            email = (res.get("email") or "").strip().lower()
-            tickets = int(res.get("ticket_count") or res.get("quantity") or 1)
+            name = (
+                res.get("name") or
+                f"{res.get('first_name', '')} {res.get('last_name', '')}".strip() or
+                res.get("guest_name") or
+                "Dojour Guest"
+            ).strip()
+            email = (res.get("email") or res.get("guest_email") or "").strip().lower()
+            tickets = int(res.get("ticket_count") or res.get("quantity") or res.get("tickets") or res.get("count") or 1)
 
             dojour_rows.append([
                 unique_id,
@@ -316,7 +425,7 @@ def fetch_dojour_tickets(context) -> list[list]:
             ])
 
     page.close()
-    print(f"[Dojour] Extracted {len(dojour_rows)} reservations.")
+    print(f"[Dojour] Extracted {len(dojour_rows)} total reservations.")
     return dojour_rows
 
 # ==========================================
@@ -343,7 +452,6 @@ def sync_to_google_sheet(new_rows: list[list]):
     spreadsheet = client.open_by_key(sheet_id) if sheet_id else client.open(SHEET_NAME)
     worksheet = spreadsheet.worksheet(TAB_NAME)
 
-    # 1. Fetch current rows to preserve check-in states
     existing_records = worksheet.get_all_values()
     check_in_memory = {}
 
@@ -355,7 +463,6 @@ def sync_to_google_sheet(new_rows: list[list]):
                 check_in_time = row[8].strip()
                 check_in_memory[u_id] = (checked_in, check_in_time)
 
-    # 2. Reconcile check-in data into incoming rows
     final_rows = [HEADERS]
     for row in new_rows:
         if len(row) != 9:
@@ -369,7 +476,6 @@ def sync_to_google_sheet(new_rows: list[list]):
 
         final_rows.append(row)
 
-    # 3. Update worksheet with correct argument names
     worksheet.clear()
     worksheet.update(values=final_rows, range_name="A1", value_input_option="USER_ENTERED")
     print(f"[Google Sheets] Updated '{TAB_NAME}' with {len(final_rows) - 1} records.")
@@ -396,7 +502,7 @@ def main():
             dojour_rows = fetch_dojour_tickets(context)
             browser.close()
     else:
-        print("[Dojour] DOJOUR_STATE is missing. Skipping Dojour extraction.")
+        print("[Dojour] Warning: DOJOUR_STATE is missing. Skipping Dojour extraction.")
 
     all_rows = shopify_rows + dojour_rows
     sync_to_google_sheet(all_rows)
