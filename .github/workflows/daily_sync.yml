@@ -30,4 +30,4 @@ jobs:
           SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
           SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
-        run: python fetch_tickets.py
+       run: python diagnose_dojour.py
