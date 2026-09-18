@@ -1,15 +1,14 @@
-name: Daily DoJour Ticket Sync
+name: Sync Ticket Sales
 
 on:
-  schedule:
-    # 13:00 UTC = 8:00 AM Central Time
-    - cron: '0 13 * * *'
   workflow_dispatch:
+  schedule:
+    # Daily sync at 13:00 UTC (8:00 AM Central)
+    - cron: '0 13 * * *'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,14 +20,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install playwright gspread google-auth requests
+          python -m pip install --upgrade pip
+          pip install requests gspread playwright
           playwright install --with-deps chromium
 
-- name: Run ticket sync
-      env:
-        DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
-        GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
-        SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
-        SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
-      run: python fetch_tickets.py
+      - name: Run ticket sync
+        env:
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+        run: python fetch_tickets.py
