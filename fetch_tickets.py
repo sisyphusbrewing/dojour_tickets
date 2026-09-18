@@ -16,6 +16,7 @@ DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
 GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
 SHOPIFY_CLIENT_ID = (os.environ.get("SHOPIFY_CLIENT_ID") or "").strip().strip("'\"")
 SHOPIFY_CLIENT_SECRET = (os.environ.get("SHOPIFY_CLIENT_SECRET") or "").strip().strip("'\"")
+SHOPIFY_TOKEN = (os.environ.get("SHOPIFY_TOKEN") or "").strip().strip("'\"")
 
 raw_store = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing").replace("https://", "").replace("http://", "").strip("/").strip("'\"")
 subdomain = raw_store.replace(".myshopify.com", "")
@@ -31,27 +32,31 @@ def get_gspread_client():
 
 
 def fetch_shopify_tickets():
-    if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
-        print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
-        return []
+    token = SHOPIFY_TOKEN
 
-    print(f"[Shopify] Requesting access token via Client Credentials from {SHOPIFY_STORE}...")
-    auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
-    auth_payload = {
-        "client_id": SHOPIFY_CLIENT_ID,
-        "client_secret": SHOPIFY_CLIENT_SECRET,
-        "grant_type": "client_credentials"
-    }
-    
-    try:
-        auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
-        if auth_resp.status_code != 200:
-            print(f"[Shopify] Auth rejected ({auth_resp.status_code}): {auth_resp.text[:150]}")
+    if not token:
+        if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
+            print("[Shopify] Missing client ID or secret. Skipping Shopify pull.")
             return []
-        token = auth_resp.json().get("access_token")
-    except Exception as e:
-        print(f"[Shopify] Auth connection error: {e}")
-        return []
+
+        print(f"[Shopify] Requesting token from {SHOPIFY_STORE} via Client Credentials...")
+        auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
+        auth_payload = {
+            "client_id": SHOPIFY_CLIENT_ID,
+            "client_secret": SHOPIFY_CLIENT_SECRET,
+            "grant_type": "client_credentials"
+        }
+        
+        try:
+            auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
+            if auth_resp.status_code == 200:
+                token = auth_resp.json().get("access_token")
+            else:
+                print(f"[Shopify] Client credentials rejected ({auth_resp.status_code}): {auth_resp.text[:150]}")
+                return []
+        except Exception as e:
+            print(f"[Shopify] Connection error: {e}")
+            return []
 
     headers = {"X-Shopify-Access-Token": token}
     print(f"[Shopify] Fetching newest paid orders from {SHOPIFY_STORE}...")
@@ -59,15 +64,17 @@ def fetch_shopify_tickets():
     
     try:
         resp = requests.get(orders_url, headers=headers, timeout=20)
-        if resp.status_code != 200:
-            print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:150]}")
-            return []
-        orders = resp.json().get("orders", [])
     except Exception as e:
-        print(f"[Shopify] Orders request failed: {e}")
+        print(f"[Shopify] Request failed: {e}")
         return []
 
+    if resp.status_code != 200:
+        print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:150]}")
+        return []
+
+    orders = resp.json().get("orders", [])
     shopify_rows = []
+
     for order in orders:
         if order.get("financial_status") not in ["paid", "authorized"]:
             continue
@@ -80,37 +87,48 @@ def fetch_shopify_tickets():
         email = order.get("email") or customer.get("email", "")
         order_num = order.get("name", "")
 
-        for item in order.get("line_items", []):
+        for idx, item in enumerate(order.get("line_items", [])):
             item_name = item.get("name", "")
             lower_name = item_name.lower()
-            if any(term in lower_name for term in ["tip", "deposit", "gift card"]) and not any(t in lower_name for t in ["ticket", "show", "comedy"]):
+            
+            # 1. Accurately filter fees, tips, and deposits without skipping comedians (e.g. Geoffrey Asmus)
+            if re.search(r'\b(fee|fees|tip|tips|deposit|gift card)\b', lower_name):
                 continue
 
-            raw_title = item.get("title") or item_name
-            variant = item.get("variant_title") or ""
+            # 2. Unique ID includes line item ID so orders with multiple shows never overwrite each other
+            item_id = item.get("id") or idx
+            uid = f"shopify_{order_num}_{item_id}"
 
-            if " - " in raw_title:
-                parts = raw_title.split(" - ")
+            raw_title = item.get("title") or item_name
+            variant = (item.get("variant_title") or "").strip()
+
+            # 3. Clean Show Title and Show Date
+            if variant and variant.lower() not in ["default title", "default", ""]:
+                show_date = variant
+                show_title = raw_title.split(" - ")[0].strip() if " - " in raw_title else raw_title
+            elif " - " in item_name:
+                parts = item_name.split(" - ")
                 show_title = parts[0].strip()
-                date_part = parts[1].split(" / ")[0].strip()
-                show_date = variant if variant else date_part
+                show_date = parts[1].split(" / ")[0].strip() if len(parts) > 1 else ""
             else:
                 show_title = raw_title
-                show_date = variant
+                show_date = ""
 
+            qty = item.get("quantity", 1)
             shopify_rows.append([
-                f"shopify_{order_num}",
+                uid,
                 show_date,
                 show_title,
                 guest_name,
                 email,
-                str(item.get("quantity", 1)),
+                str(qty),
                 "Website",
                 "FALSE",
                 ""
             ])
+            print(f"[Shopify Ticket] {guest_name} | {qty} tix | {show_title} ({show_date})")
 
-    print(f"[Shopify] Processed {len(shopify_rows)} ticket items from {len(orders)} orders.")
+    print(f"[Shopify] Successfully processed {len(shopify_rows)} actual tickets from {len(orders)} orders.")
     return shopify_rows
 
 
@@ -127,7 +145,8 @@ def fetch_dojour_data():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state="state.json", viewport={"width": 1280, "height": 1000})
+        # Desktop viewport ensures responsive layouts don't hide pagination or load buttons
+        context = browser.new_context(storage_state="state.json", viewport={"width": 1920, "height": 1080})
         page = context.new_page()
 
         intercepted_reports = {}
@@ -139,6 +158,9 @@ def fetch_dojour_data():
                 if auth and not captured_auth["header"]:
                     captured_auth["header"] = auth
                     print("[Dojour] Successfully captured live session token.")
+            elif any(k in req.url.lower() for k in ["schedule", "event_instance", "reservation"]):
+                # Log background pagination requests for diagnostics
+                print(f"[Dojour Net] {req.method} {req.url[:120]}")
 
         def on_response(res):
             if "reserve_report" in res.url and res.status == 200:
@@ -155,16 +177,16 @@ def fetch_dojour_data():
 
         print("[Dojour] Navigating to admin reservations table...")
         page.goto(DOJOUR_ADMIN_URL, wait_until="networkidle")
-        time.sleep(2)
+        time.sleep(3)
 
         # -------------------------------------------------------------
-        # Infinite Scroll & Dynamic Pagination Handler
+        # Infinite Scroll & "Load More" Pagination Engine
         # -------------------------------------------------------------
-        print("[Dojour] Expanding all schedules via targeted element scrolling & clicks...")
+        print("[Dojour] Expanding all schedules (scrolling & clicking Load More)...")
         stagnant_cycles = 0
         prev_count = 0
 
-        for cycle in range(1, 20):  # Maximum 20 expansion cycles
+        for cycle in range(1, 25):
             links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
             curr_count = len(links)
 
@@ -175,7 +197,7 @@ def fetch_dojour_data():
             else:
                 stagnant_cycles += 1
 
-            if stagnant_cycles >= 3:
+            if stagnant_cycles >= 5:
                 print(f"[Dojour] List fully expanded at {curr_count} schedules.")
                 break
 
@@ -186,44 +208,44 @@ def fetch_dojour_data():
                 except Exception:
                     pass
 
-            # 2. Issue native mouse wheel scrolls & PageDown keys
-            page.mouse.move(600, 500)
-            for _ in range(4):
-                page.mouse.wheel(0, 1200)
-                time.sleep(0.2)
-            page.keyboard.press("PageDown")
-
-            # 3. Trigger DOM scroll events in any scrollable containers
+            # 2. Scroll the window and any internal table containers
             page.evaluate("""() => {
                 window.scrollTo(0, document.body.scrollHeight);
-                const elements = document.querySelectorAll('*');
-                for (const el of elements) {
-                    if (el.scrollHeight > el.clientHeight && el.clientHeight > 0) {
+                const all = document.querySelectorAll('*');
+                for (const el of all) {
+                    if (el.scrollHeight > el.clientHeight && el.clientHeight > 50) {
                         el.scrollTop = el.scrollHeight;
                         el.dispatchEvent(new Event('scroll', { bubbles: true }));
                     }
                 }
             }""")
-            time.sleep(1.5)
 
-            # 4. Check for and click any "Load More" / "Show More" buttons
-            load_buttons = page.locator("button, a, div[role='button']").filter(
-                has_text=re.compile(r"load\s*more|show\s*more|see\s*more|view\s*more", re.I)
+            # 3. Simulate natural user keys at the bottom of the page
+            page.keyboard.press("End")
+            page.keyboard.press("PageDown")
+
+            # 4. Detect and click ANY "Load More", "Show More", or pagination button
+            load_candidates = page.locator("button, a, div[role='button'], span").filter(
+                has_text=re.compile(r"load\s*more|show\s*more|view\s*more|more\s*shows|more\s*events", re.I)
             )
-            
-            if load_buttons.count() > 0:
-                for b_idx in range(load_buttons.count()):
-                    btn = load_buttons.nth(b_idx)
-                    if btn.is_visible():
-                        try:
-                            btn.scroll_into_view_if_needed()
-                            btn.click(timeout=2000)
-                            print("[Dojour] Clicked 'Load More' button.")
-                            time.sleep(2)
-                            stagnant_cycles = 0
-                            break
-                        except Exception:
-                            pass
+
+            clicked_button = False
+            for idx in range(load_candidates.count()):
+                btn = load_candidates.nth(idx)
+                if btn.is_visible():
+                    try:
+                        btn_text = btn.inner_text().strip()
+                        btn.scroll_into_view_if_needed()
+                        btn.click(timeout=3000)
+                        print(f"[Dojour] Clicked pagination button: '{btn_text}'")
+                        clicked_button = True
+                        time.sleep(3)
+                        break
+                    except Exception:
+                        pass
+
+            # Wait 3 seconds per cycle to allow asynchronous AJAX requests to finish rendering
+            time.sleep(3)
 
         schedule_links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
         schedules = []
@@ -328,6 +350,7 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
     gc = get_gspread_client()
     spreadsheet = gc.open(SHEET_TITLE)
 
+    # 1. Update Overview Sheet (Sheet 1)
     if overview_rows:
         overview_sheet = spreadsheet.sheet1
         overview_sheet.clear()
@@ -335,11 +358,13 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
         overview_sheet.update(overview_header + overview_rows)
         print(f"[Google Sheets] Updated Sheet 1 with {len(overview_rows)} overview rows.")
 
+    # 2. Get or Create "Door List" Tab
     try:
         door_sheet = spreadsheet.worksheet("Door List")
     except gspread.exceptions.WorksheetNotFound:
         door_sheet = spreadsheet.add_worksheet(title="Door List", rows=1000, cols=10)
 
+    # 3. Preserve Existing Check-In Statuses (Columns H & I)
     existing_data = door_sheet.get_all_values()
     existing_checkins = {}
 
@@ -352,6 +377,7 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             check_time = row[8] if len(row) > 8 else ""
             existing_checkins[uid] = (checked_in, check_time)
 
+    # 4. Merge Incoming Rows
     all_incoming = attendee_rows + shopify_rows
     final_rows = [[
         "Unique ID", "Show Date", "Show Title", "Guest Name", 
@@ -365,12 +391,14 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             continue
         seen_uids.add(uid)
 
+        # Restore existing check-in data if the guest was previously marked
         if uid in existing_checkins:
             row[7] = existing_checkins[uid][0]
             row[8] = existing_checkins[uid][1]
 
         final_rows.append(row)
 
+    # 5. Overwrite the Door List tab with unified rows
     door_sheet.clear()
     door_sheet.update(final_rows)
     print(f"[Google Sheets] Successfully synced {len(final_rows) - 1} total attendees to 'Door List'.")
