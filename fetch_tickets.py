@@ -46,13 +46,13 @@ def parse_shopify_line_item(item: dict) -> tuple[str, str]:
     title = (item.get("title") or "").strip()
     variant = (item.get("variant_title") or "").strip()
 
-    # Check custom line item properties first
+    # Check custom line item properties
     properties = {p.get("name", ""): p.get("value", "") for p in item.get("properties", [])}
     prop_date = properties.get("Show Date") or properties.get("Date") or properties.get("Showtime") or properties.get("Time")
     if prop_date:
         return title, prop_date
 
-    # Variant contains date indicators (e.g. 'Fri, Sep 18 • 7:00 PM')
+    # Variant contains date indicators
     date_markers = ["•", "PM", "AM", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     if any(m in variant for m in date_markers):
         return title, variant
@@ -70,7 +70,7 @@ def parse_shopify_line_item(item: dict) -> tuple[str, str]:
 
 def fetch_shopify_tickets() -> list[list]:
     """
-    Retrieves paid Shopify orders, filters out fee add-ons, and returns 9-column rows.
+    Retrieves paid Shopify orders (open, fulfilled, or closed) and extracts ticket lines.
     """
     client_id = os.environ.get("SHOPIFY_CLIENT_ID", "371d53e3029e519f2e32dfde3eebff14")
     client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET", "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")
@@ -86,18 +86,23 @@ def fetch_shopify_tickets() -> list[list]:
         "Content-Type": "application/json"
     }
 
-    url = f"https://{shop}/admin/api/2024-04/orders.json?status=open&financial_status=paid&limit=250"
+    # Query status=any to include closed/fulfilled orders
+    url = f"https://{shop}/admin/api/2024-04/orders.json?status=any&limit=250"
     shopify_rows = []
-    ignored_addons = {"ticket fee", "fee", "tip", "gratuity", "donation", "deposit", "service fee"}
+    ignored_patterns = [r"\bticket fee\b", r"\btip\b", r"\bgratuity\b", r"\bdonation\b", r"\bdeposit\b", r"\bservice fee\b"]
+    total_orders_seen = 0
 
     while url:
         resp = requests.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         orders = data.get("orders", [])
+        total_orders_seen += len(orders)
 
         for order in orders:
             if order.get("cancelled_at"):
+                continue
+            if order.get("financial_status") not in ("paid", "authorized"):
                 continue
 
             order_num = str(order.get("order_number") or order.get("id"))
@@ -112,7 +117,10 @@ def fetch_shopify_tickets() -> list[list]:
 
             for item in order.get("line_items", []):
                 raw_title = item.get("title", "")
-                if any(addon in raw_title.lower() for addon in ignored_addons):
+                lower_title = raw_title.lower()
+
+                # Filter add-ons without matching real comedy show titles
+                if lower_title == "fee" or any(re.search(pat, lower_title) for pat in ignored_patterns):
                     continue
 
                 show_title, show_date = parse_shopify_line_item(item)
@@ -132,7 +140,7 @@ def fetch_shopify_tickets() -> list[list]:
                     ""
                 ])
 
-        # Follow cursor pagination via Link header
+        # Link header pagination
         link_header = resp.headers.get("Link")
         url = None
         if link_header:
@@ -140,7 +148,7 @@ def fetch_shopify_tickets() -> list[list]:
             if match:
                 url = match.group(1)
 
-    print(f"[Shopify] Extracted {len(shopify_rows)} ticket lines.")
+    print(f"[Shopify] Scanned {total_orders_seen} orders, extracted {len(shopify_rows)} ticket lines.")
     return shopify_rows
 
 # ==========================================
@@ -148,17 +156,11 @@ def fetch_shopify_tickets() -> list[list]:
 # ==========================================
 
 def clean_dojour_title(raw_title: str) -> str:
-    """
-    Cleans Dojour title strings and strips ticket/capacity counts.
-    """
     cleaned = re.sub(r"\d+/\d+.*?(spots left|remaining)?", "", raw_title, flags=re.IGNORECASE)
     cleaned = cleaned.split("///")[0]
     return re.sub(r"\s+", " ", cleaned).strip()
 
 def format_dojour_date(raw_date_str: str) -> str:
-    """
-    Normalizes timestamps to Central Time: 'Fri, Sep 18 • 7:00 PM'.
-    """
     if not raw_date_str:
         return "TBD"
 
@@ -167,31 +169,53 @@ def format_dojour_date(raw_date_str: str) -> str:
         dt_central = dt.astimezone(CENTRAL_TZ)
         return dt_central.strftime("%a, %b %-d • %-I:%M %p")
     except Exception:
-        try:
-            dt = datetime.strptime(raw_date_str.strip(), "%b %d, %Y %I:%M %p")
-            dt_central = dt.replace(tzinfo=CENTRAL_TZ)
-            return dt_central.strftime("%a, %b %-d • %-I:%M %p")
-        except Exception:
-            return raw_date_str.strip()
+        for fmt in ["%b %d, %Y %I:%M %p", "%Y-%m-%d %H:%M:%S", "%a, %b %d, %Y %I:%M %p"]:
+            try:
+                dt = datetime.strptime(raw_date_str.strip(), fmt)
+                dt_central = dt.replace(tzinfo=CENTRAL_TZ) if not dt.tzinfo else dt.astimezone(CENTRAL_TZ)
+                return dt_central.strftime("%a, %b %-d • %-I:%M %p")
+            except Exception:
+                continue
+        return raw_date_str.strip()
+
+def extract_instance_id_from_href(href: str) -> str | None:
+    if not href:
+        return None
+    # Matches /event_instances/<id>/, /instances/<id>/, or /reservations/<id>/
+    m = re.search(r"(?:event_instances|instances|reservations)/(\d+)", href)
+    if m:
+        return m.group(1)
+    # Fallback to trailing sequence of digits
+    nums = re.findall(r"\d{4,}", href)
+    return nums[-1] if nums else None
 
 def discover_all_schedules(page) -> list[dict]:
     """
-    Overcomes the 9-schedule limit by continuously scrolling document and internal wrappers.
+    Expands the reservation table and extracts schedules by matching instance links or capacity cells.
     """
     page.goto("https://dojour.us/admin-tools/reservations/", wait_until="networkidle")
+    current_url = page.url
+    print(f"[Dojour] Loaded page: {current_url}")
 
-    last_count = 0
-    stable_cycles = 0
+    if "login" in current_url.lower():
+        print("[Dojour] ERROR: Redirected to login page! DOJOUR_STATE secret has expired or is invalid.")
+        return []
 
-    while stable_cycles < 3:
-        links = page.locator("a[href*='/api/event_instances/'], a[href*='/reserve_report/']").all()
-        current_count = len(links)
+    # Scroll down repeatedly to load full infinite-scroll list
+    prev_count = 0
+    stable_iterations = 0
 
-        if current_count > last_count:
-            last_count = current_count
-            stable_cycles = 0
+    for _ in range(15):
+        # Count all links and table rows to track dynamic expansion
+        total_elements = page.locator("a, tr, div.reservation-row").count()
+        if total_elements > prev_count:
+            prev_count = total_elements
+            stable_iterations = 0
         else:
-            stable_cycles += 1
+            stable_iterations += 1
+
+        if stable_iterations >= 3:
+            break
 
         page.evaluate("""() => {
             window.scrollTo(0, document.body.scrollHeight);
@@ -201,36 +225,55 @@ def discover_all_schedules(page) -> list[dict]:
                 }
             });
         }""")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1200)
 
-    schedules = []
-    rows = page.locator("tr, div.reservation-row, .event-instance-row").all()
+    schedules_by_id = {}
+
+    # Strategy A: Inspect table rows
+    rows = page.locator("tr, div.reservation-row, [role='row']").all()
+    print(f"[Dojour] Inspecting {len(rows)} rendered DOM rows...")
 
     for row in rows:
-        text = row.inner_text()
-        report_link = row.locator("a[href*='reserve_report']").first
-        if not report_link.count():
-            continue
+        row_text = row.inner_text()
+        links = row.locator("a").all()
 
-        href = report_link.get_attribute("href")
-        instance_match = re.search(r"/event_instances/(\d+)/", href)
-        if not instance_match:
-            continue
+        for link in links:
+            href = link.get_attribute("href") or ""
+            link_text = link.inner_text()
+            
+            # Identify link either by capacity text pattern or instance ID in href
+            is_capacity_link = bool(re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE))
+            instance_id = extract_instance_id_from_href(href)
 
-        instance_id = instance_match.group(1)
-        schedules.append({
-            "instance_id": instance_id,
-            "raw_text": text,
-            "report_url": f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
-        })
+            if instance_id and (is_capacity_link or "reservations" in href):
+                if instance_id not in schedules_by_id:
+                    schedules_by_id[instance_id] = {
+                        "instance_id": instance_id,
+                        "raw_text": row_text,
+                        "report_url": f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
+                    }
 
-    unique_schedules = {s["instance_id"]: s for s in schedules}.values()
-    print(f"[Dojour] Discovered {len(unique_schedules)} unique schedules.")
-    return list(unique_schedules)
+    # Strategy B: If table rows didn't capture links, scan all anchors on the page
+    if not schedules_by_id:
+        print("[Dojour] Table row inspection found 0, scanning all <a> tags on page...")
+        for link in page.locator("a").all():
+            href = link.get_attribute("href") or ""
+            link_text = link.inner_text()
+            if re.search(r"\d+/\d+|spots left", link_text, re.IGNORECASE) or "reservations/" in href:
+                instance_id = extract_instance_id_from_href(href)
+                if instance_id and instance_id not in schedules_by_id:
+                    schedules_by_id[instance_id] = {
+                        "instance_id": instance_id,
+                        "raw_text": link_text,
+                        "report_url": f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
+                    }
+
+    print(f"[Dojour] Discovered {len(schedules_by_id)} unique schedules.")
+    return list(schedules_by_id.values())
 
 def fetch_dojour_tickets(context) -> list[list]:
     """
-    Extracts reservations from all discovered Dojour schedules into the 9-column schema.
+    Pulls reports from discovered schedules and standardizes to the 9-column schema.
     """
     page = context.new_page()
     schedules = discover_all_schedules(page)
@@ -240,6 +283,7 @@ def fetch_dojour_tickets(context) -> list[list]:
         report_url = item["report_url"]
         response = context.request.get(report_url)
         if response.status != 200:
+            print(f"[Dojour] HTTP {response.status} fetching report: {report_url}")
             continue
 
         data = response.json()
@@ -280,10 +324,6 @@ def fetch_dojour_tickets(context) -> list[list]:
 # ==========================================
 
 def sync_to_google_sheet(new_rows: list[list]):
-    """
-    Loads existing data, preserves Columns H (Checked In) and I (Check-In Time),
-    and atomically refreshes the 'Door List' worksheet.
-    """
     sa_env = os.environ.get("GOOGLE_SERVICE_ACCOUNT")
     if not sa_env:
         raise ValueError("Missing GOOGLE_SERVICE_ACCOUNT secret.")
@@ -303,7 +343,7 @@ def sync_to_google_sheet(new_rows: list[list]):
     spreadsheet = client.open_by_key(sheet_id) if sheet_id else client.open(SHEET_NAME)
     worksheet = spreadsheet.worksheet(TAB_NAME)
 
-    # 1. Fetch current rows to preserve door check-in states
+    # 1. Fetch current rows to preserve check-in states
     existing_records = worksheet.get_all_values()
     check_in_memory = {}
 
@@ -315,7 +355,7 @@ def sync_to_google_sheet(new_rows: list[list]):
                 check_in_time = row[8].strip()
                 check_in_memory[u_id] = (checked_in, check_in_time)
 
-    # 2. Reconcile check-in data into the newly scraped rows
+    # 2. Reconcile check-in data into incoming rows
     final_rows = [HEADERS]
     for row in new_rows:
         if len(row) != 9:
@@ -329,9 +369,9 @@ def sync_to_google_sheet(new_rows: list[list]):
 
         final_rows.append(row)
 
-    # 3. Overwrite sheet atomically
+    # 3. Update worksheet with correct argument names
     worksheet.clear()
-    worksheet.update(final_rows, "A1", value_input_option="USER_ENTERED")
+    worksheet.update(values=final_rows, range_name="A1", value_input_option="USER_ENTERED")
     print(f"[Google Sheets] Updated '{TAB_NAME}' with {len(final_rows) - 1} records.")
 
 # ==========================================
@@ -339,10 +379,8 @@ def sync_to_google_sheet(new_rows: list[list]):
 # ==========================================
 
 def main():
-    # 1. Fetch Shopify ticket records
     shopify_rows = fetch_shopify_tickets()
 
-    # 2. Fetch Dojour ticket records
     dojour_state = os.environ.get("DOJOUR_STATE")
     dojour_rows = []
 
@@ -358,9 +396,8 @@ def main():
             dojour_rows = fetch_dojour_tickets(context)
             browser.close()
     else:
-        print("[Dojour] Warning: DOJOUR_STATE is missing. Skipping Dojour extraction.")
+        print("[Dojour] DOJOUR_STATE is missing. Skipping Dojour extraction.")
 
-    # 3. Consolidate and sync
     all_rows = shopify_rows + dojour_rows
     sync_to_google_sheet(all_rows)
 
