@@ -3,7 +3,6 @@ name: Sync Ticket Sales
 on:
   workflow_dispatch:
   schedule:
-    # Daily sync at 13:00 UTC (8:00 AM Central)
     - cron: '0 13 * * *'
 
 jobs:
@@ -20,14 +19,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-            pip install requests gspread playwright
-            playwright install chromium
-            
-      - name: Run ticket sync
+          pip install requests gspread playwright
+          playwright install chromium
+
+      - name: Run diagnostic check
         env:
           DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
           SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
           SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
-       run: python diagnose_dojour.py
+        run: python diagnose_dojour.py
