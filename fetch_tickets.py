@@ -91,18 +91,16 @@ def fetch_shopify_tickets():
             item_name = item.get("name", "")
             lower_name = item_name.lower()
             
-            # 1. Accurately filter fees, tips, and deposits without skipping comedians (e.g. Geoffrey Asmus)
+            # Filter fee products and deposits
             if re.search(r'\b(fee|fees|tip|tips|deposit|gift card)\b', lower_name):
                 continue
 
-            # 2. Unique ID includes line item ID so orders with multiple shows never overwrite each other
             item_id = item.get("id") or idx
             uid = f"shopify_{order_num}_{item_id}"
 
             raw_title = item.get("title") or item_name
             variant = (item.get("variant_title") or "").strip()
 
-            # 3. Clean Show Title and Show Date
             if variant and variant.lower() not in ["default title", "default", ""]:
                 show_date = variant
                 show_title = raw_title.split(" - ")[0].strip() if " - " in raw_title else raw_title
@@ -126,10 +124,44 @@ def fetch_shopify_tickets():
                 "FALSE",
                 ""
             ])
-            print(f"[Shopify Ticket] {guest_name} | {qty} tix | {show_title} ({show_date})")
 
-    print(f"[Shopify] Successfully processed {len(shopify_rows)} actual tickets from {len(orders)} orders.")
+    print(f"[Shopify] Successfully processed {len(shopify_rows)} tickets from {len(orders)} orders.")
     return shopify_rows
+
+
+def parse_dojour_cells(td_texts):
+    title = ""
+    date_str = ""
+    sold_str = "0"
+
+    for text in td_texts:
+        t = text.strip()
+        if not t:
+            continue
+
+        # Detect the RSVP / capacity cell (e.g., "35/90", "55 spots left")
+        if re.search(r'\d+\s*/\s*\d+', t) or "spots left" in t.lower() or "sold out" in t.lower():
+            m = re.search(r'(\d+)\s*/\s*(\d+)', t)
+            sold_str = m.group(1) if m else t.split("\n")[0].strip()
+            continue
+
+        # Detect date/time cell (contains month names, days of week, or times)
+        has_month = bool(re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\b', t, re.I))
+        has_time = bool(re.search(r'\d+:\d+|\b[AP]M\b', t, re.I))
+        if has_month and (has_time or re.search(r'\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b', t, re.I)):
+            date_str = t
+            continue
+
+        # Otherwise, the cell is the event title
+        if not title:
+            title = t
+
+    if not title and td_texts:
+        title = td_texts[0].strip()
+
+    # Clean title: strip out venue tags and appended date ranges
+    clean_title = title.split("///")[0].split("//")[0].split("@")[0].strip()
+    return clean_title, date_str, sold_str
 
 
 def fetch_dojour_data():
@@ -145,8 +177,8 @@ def fetch_dojour_data():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        # Desktop viewport ensures responsive layouts don't hide pagination or load buttons
-        context = browser.new_context(storage_state="state.json", viewport={"width": 1920, "height": 1080})
+        # 800px viewport ensures table content overflows and registers scroll events
+        context = browser.new_context(storage_state="state.json", viewport={"width": 1280, "height": 800})
         page = context.new_page()
 
         intercepted_reports = {}
@@ -157,10 +189,7 @@ def fetch_dojour_data():
                 auth = req.headers.get("authorization")
                 if auth and not captured_auth["header"]:
                     captured_auth["header"] = auth
-                    print("[Dojour] Successfully captured live session token.")
-            elif any(k in req.url.lower() for k in ["schedule", "event_instance", "reservation"]):
-                # Log background pagination requests for diagnostics
-                print(f"[Dojour Net] {req.method} {req.url[:120]}")
+                    print("[Dojour] Captured live session token.")
 
         def on_response(res):
             if "reserve_report" in res.url and res.status == 200:
@@ -182,37 +211,46 @@ def fetch_dojour_data():
         # -------------------------------------------------------------
         # Infinite Scroll & "Load More" Pagination Engine
         # -------------------------------------------------------------
-        print("[Dojour] Expanding all schedules (scrolling & clicking Load More)...")
+        print("[Dojour] Expanding all schedules...")
         stagnant_cycles = 0
         prev_count = 0
 
-        for cycle in range(1, 25):
+        for cycle in range(1, 30):
             links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
             curr_count = len(links)
 
             if curr_count > prev_count:
-                print(f"[Dojour] Found {curr_count} schedules...")
+                print(f"[Dojour] Loaded {curr_count} schedules...")
                 prev_count = curr_count
                 stagnant_cycles = 0
             else:
                 stagnant_cycles += 1
 
-            if stagnant_cycles >= 5:
-                print(f"[Dojour] List fully expanded at {curr_count} schedules.")
+            if stagnant_cycles >= 6:
+                print(f"[Dojour] Completed pagination at {curr_count} schedules.")
                 break
 
-            # 1. Scroll the very last schedule row directly into view
+            # 1. Scroll the last visible link into view
             if links:
                 try:
                     links[-1].scroll_into_view_if_needed()
                 except Exception:
                     pass
 
-            # 2. Scroll the window and any internal table containers
+            # 2. Position cursor directly over the table and dispatch physical mouse wheel events
+            try:
+                table = page.locator("table, tbody").first
+                if table.is_visible():
+                    table.hover()
+                    page.mouse.wheel(0, 3500)
+            except Exception:
+                page.mouse.wheel(0, 3500)
+
+            # 3. Dispatch scroll events across all scrollable containers
             page.evaluate("""() => {
                 window.scrollTo(0, document.body.scrollHeight);
-                const all = document.querySelectorAll('*');
-                for (const el of all) {
+                const elements = document.querySelectorAll('*');
+                for (const el of elements) {
                     if (el.scrollHeight > el.clientHeight && el.clientHeight > 50) {
                         el.scrollTop = el.scrollHeight;
                         el.dispatchEvent(new Event('scroll', { bubbles: true }));
@@ -220,33 +258,30 @@ def fetch_dojour_data():
                 }
             }""")
 
-            # 3. Simulate natural user keys at the bottom of the page
-            page.keyboard.press("End")
-            page.keyboard.press("PageDown")
-
-            # 4. Detect and click ANY "Load More", "Show More", or pagination button
+            # 4. Click any visible "Load More" or pagination buttons
             load_candidates = page.locator("button, a, div[role='button'], span").filter(
-                has_text=re.compile(r"load\s*more|show\s*more|view\s*more|more\s*shows|more\s*events", re.I)
+                has_text=re.compile(r"load\s*more|show\s*more|view\s*more|more\s*shows|more\s*events|older", re.I)
             )
 
-            clicked_button = False
             for idx in range(load_candidates.count()):
                 btn = load_candidates.nth(idx)
                 if btn.is_visible():
                     try:
-                        btn_text = btn.inner_text().strip()
+                        btn_txt = btn.inner_text().strip()
                         btn.scroll_into_view_if_needed()
-                        btn.click(timeout=3000)
-                        print(f"[Dojour] Clicked pagination button: '{btn_text}'")
-                        clicked_button = True
-                        time.sleep(3)
+                        btn.click(timeout=2000)
+                        print(f"[Dojour] Clicked pagination button: '{btn_txt}'")
+                        time.sleep(2)
+                        stagnant_cycles = 0
                         break
                     except Exception:
                         pass
 
-            # Wait 3 seconds per cycle to allow asynchronous AJAX requests to finish rendering
-            time.sleep(3)
+            time.sleep(2.5)
 
+        # -------------------------------------------------------------
+        # Parse Discovered Schedules
+        # -------------------------------------------------------------
         schedule_links = page.locator("a[href*='/admin-tools/reservations/s/']").all()
         schedules = []
 
@@ -258,22 +293,21 @@ def fetch_dojour_data():
 
             schedule_id = sched_match.group(1)
             row_el = link.locator("xpath=./ancestor::tr")
-            row_text = row_el.inner_text().split("\t")
+            tds = row_el.locator("td").all()
+            td_texts = [td.inner_text().strip() for td in tds]
 
-            show_title = link.inner_text().strip()
-            show_date = row_text[1].strip() if len(row_text) > 1 else ""
-            tickets_sold = row_text[2].strip() if len(row_text) > 2 else "0"
+            clean_title, show_date, tickets_sold = parse_dojour_cells(td_texts)
 
             schedules.append({
                 "id": schedule_id,
-                "title": show_title,
+                "title": clean_title,
                 "date": show_date,
                 "sold": tickets_sold
             })
 
-            overview_rows.append([show_title, show_date, tickets_sold])
+            overview_rows.append([clean_title, show_date, tickets_sold])
 
-        print(f"[Dojour] Total schedules to sync: {len(schedules)}. Fetching attendee reports...")
+        print(f"[Dojour] Total schedules to sync: {len(schedules)}. Querying reserve reports...")
 
         for sched in schedules:
             sched_id = sched["id"]
@@ -325,7 +359,9 @@ def fetch_dojour_data():
 
                 email = res_item.get("email", "")
                 tix = res_item.get("num_tickets") or res_item.get("tickets") or res_item.get("quantity") or 1
-                event_date = res_item.get("schedule_name") or sched["date"]
+                
+                # Use clean show date and clean show title
+                event_date = sched["date"] or res_item.get("schedule_name") or ""
                 event_title = sched["title"]
 
                 attendee_rows.append([
@@ -350,7 +386,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
     gc = get_gspread_client()
     spreadsheet = gc.open(SHEET_TITLE)
 
-    # 1. Update Overview Sheet (Sheet 1)
     if overview_rows:
         overview_sheet = spreadsheet.sheet1
         overview_sheet.clear()
@@ -358,13 +393,11 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
         overview_sheet.update(overview_header + overview_rows)
         print(f"[Google Sheets] Updated Sheet 1 with {len(overview_rows)} overview rows.")
 
-    # 2. Get or Create "Door List" Tab
     try:
         door_sheet = spreadsheet.worksheet("Door List")
     except gspread.exceptions.WorksheetNotFound:
         door_sheet = spreadsheet.add_worksheet(title="Door List", rows=1000, cols=10)
 
-    # 3. Preserve Existing Check-In Statuses (Columns H & I)
     existing_data = door_sheet.get_all_values()
     existing_checkins = {}
 
@@ -377,7 +410,6 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             check_time = row[8] if len(row) > 8 else ""
             existing_checkins[uid] = (checked_in, check_time)
 
-    # 4. Merge Incoming Rows
     all_incoming = attendee_rows + shopify_rows
     final_rows = [[
         "Unique ID", "Show Date", "Show Title", "Guest Name", 
@@ -391,14 +423,12 @@ def sync_to_google_sheets(overview_rows, attendee_rows, shopify_rows):
             continue
         seen_uids.add(uid)
 
-        # Restore existing check-in data if the guest was previously marked
         if uid in existing_checkins:
             row[7] = existing_checkins[uid][0]
             row[8] = existing_checkins[uid][1]
 
         final_rows.append(row)
 
-    # 5. Overwrite the Door List tab with unified rows
     door_sheet.clear()
     door_sheet.update(final_rows)
     print(f"[Google Sheets] Successfully synced {len(final_rows) - 1} total attendees to 'Door List'.")
