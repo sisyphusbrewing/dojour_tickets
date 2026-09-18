@@ -27,7 +27,6 @@ jobs:
         env:
           DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
-          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SHOPIFY_TOKEN: ${{ secrets.SHOPIFY_TOKEN }}
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
         run: python fetch_tickets.py
