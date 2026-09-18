@@ -14,8 +14,13 @@ DOJOUR_SCHEDULE_URL = "https://dojour.us/admin-tools/reservations/s/{id}"
 
 DOJOUR_STATE = os.environ.get("DOJOUR_STATE")
 GOOGLE_CREDENTIALS = os.environ.get("GOOGLE_SERVICE_ACCOUNT") or os.environ.get("GOOGLE_CREDENTIALS")
-SHOPIFY_TOKEN = (os.environ.get("SHOPIFY_TOKEN") or "").strip().strip("'\"")
-SHOPIFY_STORE = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing.myshopify.com").replace("https://", "").replace("http://", "").strip("/").strip("'\"")
+SHOPIFY_CLIENT_ID = (os.environ.get("SHOPIFY_CLIENT_ID") or "").strip().strip("'\"")
+SHOPIFY_CLIENT_SECRET = (os.environ.get("SHOPIFY_CLIENT_SECRET") or "").strip().strip("'\"")
+
+# Normalize store domain to ensure clean subdomain.myshopify.com format
+raw_store = (os.environ.get("SHOPIFY_STORE") or "sisyphus-brewing").replace("https://", "").replace("http://", "").strip("/").strip("'\"")
+subdomain = raw_store.replace(".myshopify.com", "")
+SHOPIFY_STORE = f"{subdomain}.myshopify.com"
 
 
 def get_gspread_client():
@@ -27,18 +32,41 @@ def get_gspread_client():
 
 
 def fetch_shopify_tickets():
-    if not SHOPIFY_TOKEN:
-        print("[Shopify] Missing SHOPIFY_TOKEN. Skipping Shopify pull.")
+    if not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
+        print("[Shopify] Missing SHOPIFY_CLIENT_ID or SHOPIFY_CLIENT_SECRET. Skipping Shopify pull.")
         return []
 
-    headers = {"X-Shopify-Access-Token": SHOPIFY_TOKEN}
-    print(f"[Shopify] Fetching newest orders from {SHOPIFY_STORE}...")
+    print(f"[Shopify] Requesting token from {SHOPIFY_STORE} via Client Credentials...")
+    auth_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
+    auth_payload = {
+        "client_id": SHOPIFY_CLIENT_ID,
+        "client_secret": SHOPIFY_CLIENT_SECRET,
+        "grant_type": "client_credentials"
+    }
 
+    try:
+        auth_resp = requests.post(auth_url, data=auth_payload, timeout=15)
+    except Exception as e:
+        print(f"[Shopify] Connection error during auth: {e}")
+        return []
+
+    if auth_resp.status_code != 200:
+        print(f"[Shopify] Auth Failed ({auth_resp.status_code}): {auth_resp.text}")
+        return []
+
+    data = auth_resp.json()
+    token = data.get("access_token")
+    if not token:
+        print(f"[Shopify] No access_token returned in payload: {data}")
+        return []
+
+    print("[Shopify] Successfully acquired access token. Fetching newest orders...")
+    headers = {"X-Shopify-Access-Token": token}
     orders_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/orders.json?status=any&limit=250&order=created_at+desc"
-    resp = requests.get(orders_url, headers=headers, timeout=20)
     
+    resp = requests.get(orders_url, headers=headers, timeout=20)
     if resp.status_code != 200:
-        print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:150]}")
+        print(f"[Shopify] Error fetching orders ({resp.status_code}): {resp.text[:200]}")
         return []
 
     orders = resp.json().get("orders", [])
@@ -114,7 +142,7 @@ def fetch_dojour_data():
                 auth = req.headers.get("authorization")
                 if auth and not captured_auth["header"]:
                     captured_auth["header"] = auth
-                    print(f"[Dojour] Successfully captured live session token.")
+                    print("[Dojour] Successfully captured live session token.")
 
         def on_response(res):
             if "reserve_report" in res.url and res.status == 200:
@@ -195,7 +223,6 @@ def fetch_dojour_data():
                 reservations = data
 
             for idx, res_item in enumerate(reservations):
-                # Fallback ensures every reservation has an unshakeable unique ID
                 res_id = (
                     res_item.get("id") or 
                     res_item.get("reservation_id") or 
