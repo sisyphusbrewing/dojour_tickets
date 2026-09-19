@@ -142,7 +142,7 @@ def fetch_shopify_tickets() -> list[list]:
 
 def clean_dojour_performer(raw_title: str) -> str:
     """
-    Cleans raw Dojour titles:
+    Cleans Dojour performer titles:
     'Alex Dragicevich /// Comedy - September 18 & 19' -> 'Alex Dragicevich'
     'CANCELED: Emma Dalenberg /// Comedy - September 19' -> 'Emma Dalenberg'
     """
@@ -150,80 +150,41 @@ def clean_dojour_performer(raw_title: str) -> str:
     t = re.sub(r"^(?:CANCELED|CANCELLED|POSTPONED)\s*:\s*", "", t, flags=re.IGNORECASE).strip()
     if "///" in t:
         t = t.split("///")[0].strip()
-    if " - Comedy" in t or " ///" in t:
-        t = re.split(r"\s+[-–—]\s+Comedy", t, flags=re.IGNORECASE)[0].strip()
+    if " - " in t:
+        parts = t.split(" - ")
+        if any(w in parts[1].lower() for w in ["comedy", "september", "october", "november", "december", "january", "february", "march", "april", "may"]):
+            t = parts[0].strip()
     return t
 
-def parse_dojour_datetime(date_str: str) -> str:
+def parse_dojour_date_cell(date_cell_text: str) -> str:
     """
-    Normalizes strings like:
-    'Saturday, September 19th | 7:00pm - 9:00pm'
-    into:
-    'Sat, Sep 19 • 7:00 PM'
+    Parses Dojour table cell (td[1]):
+    'Saturday, September 19th | 7:00pm - 9:00pm' -> 'Sat, Sep 19 • 7:00 PM'
+    'Sunday, September 20th | 6:00pm - 8:00pm'   -> 'Sun, Sep 20 • 6:00 PM'
     """
-    if not date_str:
+    if not date_cell_text:
         return "TBD"
 
-    cleaned = date_str.strip()
-
-    # If already formatted, preserve it
-    if re.match(r"^[A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{1,2}\s+•\s+\d{1,2}:\d{2}\s+(?:AM|PM)$", cleaned):
-        return cleaned
-
-    # Strip ordinal suffixes: 1st, 2nd, 3rd, 19th, 20th
+    cleaned = date_cell_text.strip()
     cleaned_no_ord = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", cleaned)
 
-    # Match: DayOfWeek, Month Day ... StartTime
     m = re.search(
-        r"([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2})(?:,\s*(\d{4}))?\s*(?:[|\n\r•\t-]+)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))?",
+        r"([A-Za-z]+),\s+([A-Za-z]+)\s+(\d{1,2}).*?(\d{1,2}(?::\d{2})?\s*(?:am|pm))",
         cleaned_no_ord,
-        re.IGNORECASE
+        re.IGNORECASE | re.DOTALL
     )
-
-    now = datetime.now()
-    current_year = now.year
-
     if m:
-        date_part = m.group(1).strip()
-        year_part = m.group(2)
-        time_part = m.group(3)
+        day_of_week = m.group(1)[:3].title()
+        month = m.group(2)[:3].title()
+        day_num = m.group(3)
+        raw_time = m.group(4).strip().upper()
 
-        if not time_part:
-            tm = re.search(r"(\d{1,2}(?::\d{2})?\s*(?:am|pm))", cleaned_no_ord, re.IGNORECASE)
-            time_part = tm.group(1) if tm else "7:00 PM"
-
-        time_part = time_part.strip().upper()
-        if ":" not in time_part:
-            time_part = re.sub(r"(\d+)\s*(AM|PM)", r"\1:00 \2", time_part)
+        if ":" not in raw_time:
+            raw_time = re.sub(r"(\d+)\s*(AM|PM)", r"\1:00 \2", raw_time)
         else:
-            time_part = re.sub(r"(\d+:\d{2})\s*(AM|PM)", r"\1 \2", time_part)
+            raw_time = re.sub(r"(\d+:\d{2})\s*(AM|PM)", r"\1 \2", raw_time)
 
-        if not year_part:
-            try:
-                month_name = date_part.split(",")[1].strip().split()[0]
-                parsed_month = datetime.strptime(month_name, "%B").month
-                year = current_year + 1 if parsed_month < now.month - 2 else current_year
-            except Exception:
-                year = current_year
-        else:
-            year = int(year_part)
-
-        full_str = f"{date_part} {year} {time_part}"
-        for fmt in ["%A, %B %d %Y %I:%M %p", "%A, %b %d %Y %I:%M %p"]:
-            try:
-                dt = datetime.strptime(full_str, fmt)
-                dt_central = dt.replace(tzinfo=CENTRAL_TZ)
-                return dt_central.strftime("%a, %b %-d • %-I:%M %p")
-            except ValueError:
-                continue
-
-    # Fallback to ISO timestamps
-    try:
-        dt = datetime.fromisoformat(cleaned.replace("Z", "+00:00"))
-        dt_central = dt.astimezone(CENTRAL_TZ) if dt.tzinfo else dt.replace(tzinfo=CENTRAL_TZ)
-        return dt_central.strftime("%a, %b %-d • %-I:%M %p")
-    except Exception:
-        pass
+        return f"{day_of_week}, {month} {day_num} • {raw_time}"
 
     return cleaned
 
@@ -317,9 +278,6 @@ def parse_guest_record(res: dict, instance_id: str, index: int, show_date: str, 
     ]
 
 def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
-    """
-    Scrapes the upcoming table and extracts title and showtime from td[0] and td[1].
-    """
     page = context.new_page()
     page.set_viewport_size({"width": 1920, "height": 1080})
 
@@ -333,7 +291,6 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
     page.on("request", on_request)
     page.goto(DOJOUR_RESERVATIONS_URL, wait_until="networkidle")
 
-    # Expand full list
     prev_count = 0
     no_growth = 0
     for _ in range(15):
@@ -375,7 +332,6 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
         raw_title = tds[0].inner_text().strip()
         raw_date = tds[1].inner_text().strip()
 
-        # Find schedule link (e.g. /admin-tools/reservations/s/79963)
         links = row.locator("a").all()
         inst_id = None
         for link in links:
@@ -386,7 +342,7 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
 
         if inst_id and inst_id not in schedules_by_id:
             show_title = clean_dojour_performer(raw_title)
-            show_date = parse_dojour_datetime(raw_date)
+            show_date = parse_dojour_date_cell(raw_date)
 
             schedules_by_id[inst_id] = {
                 "instance_id": inst_id,
@@ -396,7 +352,7 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
             }
 
     page.close()
-    print(f"[Dojour] Discovered and parsed {len(schedules_by_id)} upcoming schedules.")
+    print(f"[Dojour] Discovered {len(schedules_by_id)} upcoming schedules with clean dates.")
     return list(schedules_by_id.values()), captured_token
 
 def fetch_dojour_tickets_with_session(token: str, schedules: list[dict]) -> list[list]:
