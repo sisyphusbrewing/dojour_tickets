@@ -137,56 +137,48 @@ def fetch_shopify_tickets() -> list[list]:
     return shopify_rows
 
 # ==========================================
-# 2. DOJOUR NORMALIZATION & EXTRACTION
+# 2. DOJOUR EXTRACTION (FIXED ROW PARSING)
 # ==========================================
 
-def clean_dojour_performer(raw_title: str) -> str:
+def extract_meta_from_row_text(row_text: str) -> tuple[str, str]:
     """
-    Cleans Dojour performer titles:
-    'Alex Dragicevich /// Comedy - September 18 & 19' -> 'Alex Dragicevich'
-    'CANCELED: Emma Dalenberg /// Comedy - September 19' -> 'Emma Dalenberg'
+    Extracts the performer and clean show date from the row text.
+    Example: 'Alex Dragicevich /// Comedy - September 18 & 19\\tSaturday, September 19th | 7:00pm - 9:00pm'
+    Returns: ('Alex Dragicevich', 'Sat, Sep 19 • 7:00 PM')
     """
-    t = raw_title.strip().lstrip("/").strip()
-    t = re.sub(r"^(?:CANCELED|CANCELLED|POSTPONED)\s*:\s*", "", t, flags=re.IGNORECASE).strip()
-    if "///" in t:
-        t = t.split("///")[0].strip()
-    if " - " in t:
-        parts = t.split(" - ")
-        if any(w in parts[1].lower() for w in ["comedy", "september", "october", "november", "december", "january", "february", "march", "april", "may"]):
-            t = parts[0].strip()
-    return t
+    # 1. Clean Title (first segment before tabs/newlines)
+    first_part = re.split(r"[\t\n\r]+", row_text)[0].strip()
+    first_part = first_part.lstrip("/").strip()
+    first_part = re.sub(r"^(?:CANCELED|CANCELLED|POSTPONED)\s*:\s*", "", first_part, flags=re.IGNORECASE)
+    if "///" in first_part:
+        first_part = first_part.split("///")[0].strip()
+    if " - " in first_part:
+        parts = first_part.split(" - ")
+        first_part = parts[0].strip()
+    title = first_part
 
-def parse_dojour_date_cell(date_cell_text: str) -> str:
-    """
-    Parses Dojour table cell (td[1]):
-    'Saturday, September 19th | 7:00pm - 9:00pm' -> 'Sat, Sep 19 • 7:00 PM'
-    'Sunday, September 20th | 6:00pm - 8:00pm'   -> 'Sun, Sep 20 • 6:00 PM'
-    """
-    if not date_cell_text:
-        return "TBD"
+    # 2. Extract Date from the row text (e.g. 'Saturday, September 19th | 7:00pm - 9:00pm')
+    clean_date = "TBD"
+    cleaned_no_ord = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", row_text)
 
-    cleaned = date_cell_text.strip()
-    cleaned_no_ord = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", cleaned)
-
+    # Match DayOfWeek, Month Day ... StartTime
     m = re.search(
         r"([A-Za-z]+),\s+([A-Za-z]+)\s+(\d{1,2}).*?(\d{1,2}(?::\d{2})?\s*(?:am|pm))",
         cleaned_no_ord,
         re.IGNORECASE | re.DOTALL
     )
     if m:
-        day_of_week = m.group(1)[:3].title()
-        month = m.group(2)[:3].title()
-        day_num = m.group(3)
+        dow = m.group(1)[:3].title()
+        mon = m.group(2)[:3].title()
+        day = m.group(3)
         raw_time = m.group(4).strip().upper()
-
         if ":" not in raw_time:
             raw_time = re.sub(r"(\d+)\s*(AM|PM)", r"\1:00 \2", raw_time)
         else:
             raw_time = re.sub(r"(\d+:\d{2})\s*(AM|PM)", r"\1 \2", raw_time)
+        clean_date = f"{dow}, {mon} {day} • {raw_time}"
 
-        return f"{day_of_week}, {month} {day_num} • {raw_time}"
-
-    return cleaned
+    return title, clean_date
 
 def extract_instance_id_from_href(href: str) -> str | None:
     if not href:
@@ -278,6 +270,10 @@ def parse_guest_record(res: dict, instance_id: str, index: int, show_date: str, 
     ]
 
 def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
+    """
+    Loads upcoming reservations and extracts clean title and show date
+    directly from the complete inner_text of each row.
+    """
     page = context.new_page()
     page.set_viewport_size({"width": 1920, "height": 1080})
 
@@ -291,6 +287,7 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
     page.on("request", on_request)
     page.goto(DOJOUR_RESERVATIONS_URL, wait_until="networkidle")
 
+    # Expand list via scrolling and clicking 'Load More'
     prev_count = 0
     no_growth = 0
     for _ in range(15):
@@ -304,7 +301,7 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
                 except Exception:
                     pass
 
-        rows = page.locator("tr, [role='row']").all()
+        rows = page.locator("tr, div.reservation-row, [role='row']").all()
         if rows:
             try:
                 rows[-1].scroll_into_view_if_needed(timeout=1500)
@@ -323,14 +320,15 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
             if no_growth >= 3:
                 break
 
+    # Parse metadata directly from row inner_text
     schedules_by_id = {}
-    for row in page.locator("tr, [role='row']").all():
-        tds = row.locator("td").all()
-        if len(tds) < 2:
-            continue
+    rows = page.locator("tr, div.reservation-row, [role='row']").all()
+    print(f"[Dojour] Inspecting {len(rows)} rendered DOM rows for dates & titles...")
 
-        raw_title = tds[0].inner_text().strip()
-        raw_date = tds[1].inner_text().strip()
+    for row in rows:
+        row_text = row.inner_text().strip()
+        if not row_text:
+            continue
 
         links = row.locator("a").all()
         inst_id = None
@@ -340,10 +338,13 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
             if inst_id:
                 break
 
-        if inst_id and inst_id not in schedules_by_id:
-            show_title = clean_dojour_performer(raw_title)
-            show_date = parse_dojour_date_cell(raw_date)
+        if not inst_id:
+            continue
 
+        show_title, show_date = extract_meta_from_row_text(row_text)
+
+        # Only register if new or updating a placeholder
+        if inst_id not in schedules_by_id or schedules_by_id[inst_id]["show_date"] == "TBD":
             schedules_by_id[inst_id] = {
                 "instance_id": inst_id,
                 "show_title": show_title,
@@ -351,8 +352,12 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
                 "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
             }
 
+    sample_items = list(schedules_by_id.values())[:3]
+    for s in sample_items:
+        print(f"[Dojour Debug] Schedule {s['instance_id']} -> Date: '{s['show_date']}' | Performer: '{s['show_title']}'")
+
     page.close()
-    print(f"[Dojour] Discovered {len(schedules_by_id)} upcoming schedules with clean dates.")
+    print(f"[Dojour] Discovered {len(schedules_by_id)} schedules with parsed dates.")
     return list(schedules_by_id.values()), captured_token
 
 def fetch_dojour_tickets_with_session(token: str, schedules: list[dict]) -> list[list]:
