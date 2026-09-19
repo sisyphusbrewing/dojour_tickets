@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import time
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -138,31 +137,95 @@ def fetch_shopify_tickets() -> list[list]:
     return shopify_rows
 
 # ==========================================
-# 2. DOJOUR INTEGRATION
+# 2. DOJOUR NORMALIZATION & EXTRACTION
 # ==========================================
 
-def clean_dojour_title(raw_title: str) -> str:
-    cleaned = re.sub(r"\d+/\d+.*?(spots left|remaining)?", "", raw_title, flags=re.IGNORECASE)
-    cleaned = cleaned.split("///")[0]
-    return re.sub(r"\s+", " ", cleaned).strip()
+def clean_dojour_performer(raw_title: str) -> str:
+    """
+    Cleans raw Dojour titles:
+    'Alex Dragicevich /// Comedy - September 18 & 19' -> 'Alex Dragicevich'
+    'CANCELED: Emma Dalenberg /// Comedy - September 19' -> 'Emma Dalenberg'
+    """
+    t = raw_title.strip().lstrip("/").strip()
+    t = re.sub(r"^(?:CANCELED|CANCELLED|POSTPONED)\s*:\s*", "", t, flags=re.IGNORECASE).strip()
+    if "///" in t:
+        t = t.split("///")[0].strip()
+    if " - Comedy" in t or " ///" in t:
+        t = re.split(r"\s+[-–—]\s+Comedy", t, flags=re.IGNORECASE)[0].strip()
+    return t
 
-def format_dojour_date(raw_date_str: str) -> str:
-    if not raw_date_str:
+def parse_dojour_datetime(date_str: str) -> str:
+    """
+    Normalizes strings like:
+    'Saturday, September 19th | 7:00pm - 9:00pm'
+    into:
+    'Sat, Sep 19 • 7:00 PM'
+    """
+    if not date_str:
         return "TBD"
 
+    cleaned = date_str.strip()
+
+    # If already formatted, preserve it
+    if re.match(r"^[A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{1,2}\s+•\s+\d{1,2}:\d{2}\s+(?:AM|PM)$", cleaned):
+        return cleaned
+
+    # Strip ordinal suffixes: 1st, 2nd, 3rd, 19th, 20th
+    cleaned_no_ord = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", cleaned)
+
+    # Match: DayOfWeek, Month Day ... StartTime
+    m = re.search(
+        r"([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2})(?:,\s*(\d{4}))?\s*(?:[|\n\r•\t-]+)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))?",
+        cleaned_no_ord,
+        re.IGNORECASE
+    )
+
+    now = datetime.now()
+    current_year = now.year
+
+    if m:
+        date_part = m.group(1).strip()
+        year_part = m.group(2)
+        time_part = m.group(3)
+
+        if not time_part:
+            tm = re.search(r"(\d{1,2}(?::\d{2})?\s*(?:am|pm))", cleaned_no_ord, re.IGNORECASE)
+            time_part = tm.group(1) if tm else "7:00 PM"
+
+        time_part = time_part.strip().upper()
+        if ":" not in time_part:
+            time_part = re.sub(r"(\d+)\s*(AM|PM)", r"\1:00 \2", time_part)
+        else:
+            time_part = re.sub(r"(\d+:\d{2})\s*(AM|PM)", r"\1 \2", time_part)
+
+        if not year_part:
+            try:
+                month_name = date_part.split(",")[1].strip().split()[0]
+                parsed_month = datetime.strptime(month_name, "%B").month
+                year = current_year + 1 if parsed_month < now.month - 2 else current_year
+            except Exception:
+                year = current_year
+        else:
+            year = int(year_part)
+
+        full_str = f"{date_part} {year} {time_part}"
+        for fmt in ["%A, %B %d %Y %I:%M %p", "%A, %b %d %Y %I:%M %p"]:
+            try:
+                dt = datetime.strptime(full_str, fmt)
+                dt_central = dt.replace(tzinfo=CENTRAL_TZ)
+                return dt_central.strftime("%a, %b %-d • %-I:%M %p")
+            except ValueError:
+                continue
+
+    # Fallback to ISO timestamps
     try:
-        dt = datetime.fromisoformat(raw_date_str.replace("Z", "+00:00"))
-        dt_central = dt.astimezone(CENTRAL_TZ)
+        dt = datetime.fromisoformat(cleaned.replace("Z", "+00:00"))
+        dt_central = dt.astimezone(CENTRAL_TZ) if dt.tzinfo else dt.replace(tzinfo=CENTRAL_TZ)
         return dt_central.strftime("%a, %b %-d • %-I:%M %p")
     except Exception:
-        for fmt in ["%b %d, %Y %I:%M %p", "%Y-%m-%d %H:%M:%S", "%a, %b %d, %Y %I:%M %p"]:
-            try:
-                dt = datetime.strptime(raw_date_str.strip(), fmt)
-                dt_central = dt.replace(tzinfo=CENTRAL_TZ) if not dt.tzinfo else dt.astimezone(CENTRAL_TZ)
-                return dt_central.strftime("%a, %b %-d • %-I:%M %p")
-            except Exception:
-                continue
-        return raw_date_str.strip()
+        pass
+
+    return cleaned
 
 def extract_instance_id_from_href(href: str) -> str | None:
     if not href:
@@ -172,39 +235,6 @@ def extract_instance_id_from_href(href: str) -> str | None:
         return m.group(1)
     nums = re.findall(r"\d{4,}", href)
     return nums[-1] if nums else None
-
-def extract_event_meta(data: dict | list, fallback_text: str) -> tuple[str, str]:
-    title = ""
-    if isinstance(data, dict):
-        title = data.get("event_title") or data.get("title")
-        if not title and isinstance(data.get("event"), dict):
-            title = data["event"].get("title")
-        if not title and isinstance(data.get("event_instance"), dict):
-            title = data["event_instance"].get("title")
-    if not title:
-        title = fallback_text.split("\n")[0]
-    show_title = clean_dojour_title(title)
-
-    raw_time = ""
-    if isinstance(data, dict):
-        raw_time = (
-            data.get("starts_at") or
-            data.get("start_time") or
-            data.get("start") or
-            data.get("date")
-        )
-        if not raw_time and isinstance(data.get("event_instance"), dict):
-            raw_time = data["event_instance"].get("starts_at") or data["event_instance"].get("start_time")
-        if not raw_time and isinstance(data.get("event"), dict):
-            raw_time = data["event"].get("starts_at") or data["event"].get("start_time")
-
-    if raw_time:
-        show_date = format_dojour_date(str(raw_time))
-    else:
-        date_match = re.search(r"([A-Za-z]+\s+\d{1,2}(?:\s*&\s*\d{1,2})?(?:,\s*\d{4})?)", fallback_text)
-        show_date = date_match.group(1).strip() if date_match else "TBD"
-
-    return show_title, show_date
 
 def parse_reservations_from_payload(data) -> list[dict]:
     if isinstance(data, list):
@@ -229,7 +259,7 @@ def parse_reservations_from_payload(data) -> list[dict]:
     for key, val in data.items():
         if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
             first = val[0]
-            if any(k in first for k in ("name", "first_name", "last_name", "email", "ticket_count", "quantity", "tickets", "spots")):
+            if any(k in first for k in ("name", "first_name", "last_name", "email", "ticket_count", "quantity", "tickets")):
                 return val
 
     return []
@@ -244,7 +274,6 @@ def parse_guest_record(res: dict, instance_id: str, index: int, show_date: str, 
     )
     unique_id = f"dj_{instance_id}_{res_id}"
 
-    # Name
     name = res.get("name") or res.get("guest_name") or res.get("full_name") or ""
     if not name:
         fname = res.get("first_name") or res.get("firstname") or ""
@@ -256,13 +285,11 @@ def parse_guest_record(res: dict, instance_id: str, index: int, show_date: str, 
     if not name:
         name = "Dojour Guest"
 
-    # Email
     email = res.get("email") or res.get("guest_email") or ""
     if not email and isinstance(res.get("user"), dict):
         email = res["user"].get("email") or ""
     email = email.strip().lower()
 
-    # Tickets
     tickets = (
         res.get("ticket_count") or
         res.get("quantity") or
@@ -289,71 +316,14 @@ def parse_guest_record(res: dict, instance_id: str, index: int, show_date: str, 
         ""
     ]
 
-def extract_dojour_token(storage_state: dict) -> str | None:
-    # 1. From usertoken cookie
-    for cookie in storage_state.get("cookies", []):
-        if cookie.get("name") == "usertoken":
-            token = cookie.get("value", "").strip('"').strip("'")
-            if token:
-                return token
-    return None
-
-def fetch_dojour_tickets_with_session(token: str, schedules: list[dict]) -> list[list]:
-    """
-    Directly fetches all reservation reports via HTTP using Dojour's Token Authentication.
-    """
-    session = requests.Session()
-    session.headers.update({
-        "Authorization": f"Token {token}",
-        "Referer": "https://dojour.us/admin-tools/reservations/all/?upcoming=true",
-        "Accept": "application/json, text/plain, */*",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    })
-
-    dojour_rows = []
-    logged_first = False
-
-    for idx, item in enumerate(schedules):
-        instance_id = item["instance_id"]
-        report_url = item["report_url"]
-
-        try:
-            resp = session.get(report_url, timeout=15)
-        except Exception as e:
-            print(f"[Dojour] Network error for schedule {instance_id}: {e}")
-            continue
-
-        if resp.status_code != 200:
-            if idx < 3:
-                print(f"[Dojour] HTTP {resp.status_code} fetching report for schedule {instance_id}")
-            continue
-
-        try:
-            data = resp.json()
-        except Exception:
-            continue
-
-        if not logged_first:
-            keys = list(data.keys()) if isinstance(data, dict) else f"list(len={len(data)})"
-            print(f"[Dojour Debug] Sample schedule {instance_id} JSON structure: {keys}")
-            logged_first = True
-
-        show_title, show_date = extract_event_meta(data, item["raw_text"])
-        reservations = parse_reservations_from_payload(data)
-
-        for i, res in enumerate(reservations):
-            row = parse_guest_record(res, instance_id, i, show_date, show_title)
-            dojour_rows.append(row)
-
-    print(f"[Dojour] Extracted {len(dojour_rows)} total reservations across {len(schedules)} schedules.")
-    return dojour_rows
-
 def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
+    """
+    Scrapes the upcoming table and extracts title and showtime from td[0] and td[1].
+    """
     page = context.new_page()
     page.set_viewport_size({"width": 1920, "height": 1080})
 
     captured_token = None
-
     def on_request(req):
         nonlocal captured_token
         auth_header = req.headers.get("authorization")
@@ -363,12 +333,10 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
     page.on("request", on_request)
     page.goto(DOJOUR_RESERVATIONS_URL, wait_until="networkidle")
 
-    # Expand list
-    prev_discovered = 0
-    no_growth_count = 0
-
-    for attempt in range(1, 20):
-        # Click "Load More"
+    # Expand full list
+    prev_count = 0
+    no_growth = 0
+    for _ in range(15):
         for sel in ["button:has-text('Load More')", "a:has-text('Load More')", ".load-more"]:
             elem = page.locator(sel).first
             if elem.count() and elem.is_visible():
@@ -379,53 +347,89 @@ def discover_schedules_playwright(context) -> tuple[list[dict], str | None]:
                 except Exception:
                     pass
 
-        rows = page.locator("tr, div.reservation-row, [role='row']").all()
+        rows = page.locator("tr, [role='row']").all()
         if rows:
             try:
                 rows[-1].scroll_into_view_if_needed(timeout=1500)
             except Exception:
                 pass
 
-        page.evaluate("""() => {
-            window.scrollTo(0, document.body.scrollHeight);
-            document.querySelectorAll('*').forEach(el => {
-                if (el.scrollHeight > el.clientHeight && el.clientHeight > 50) {
-                    el.scrollTop = el.scrollHeight;
-                    el.dispatchEvent(new Event('scroll', { bubbles: true }));
-                }
-            });
-        }""")
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         page.wait_for_timeout(1000)
 
-        # Count schedules
-        current_rows = len(page.locator("tr, div.reservation-row, [role='row']").all())
-        if current_rows > prev_discovered:
-            prev_discovered = current_rows
-            no_growth_count = 0
+        current_count = len(rows)
+        if current_count > prev_count:
+            prev_count = current_count
+            no_growth = 0
         else:
-            no_growth_count += 1
-            if no_growth_count >= 3:
+            no_growth += 1
+            if no_growth >= 3:
                 break
 
-    # Extract schedule info
     schedules_by_id = {}
-    for row in page.locator("tr, div.reservation-row, [role='row']").all():
-        row_text = row.inner_text()
-        for link in row.locator("a").all():
+    for row in page.locator("tr, [role='row']").all():
+        tds = row.locator("td").all()
+        if len(tds) < 2:
+            continue
+
+        raw_title = tds[0].inner_text().strip()
+        raw_date = tds[1].inner_text().strip()
+
+        # Find schedule link (e.g. /admin-tools/reservations/s/79963)
+        links = row.locator("a").all()
+        inst_id = None
+        for link in links:
             href = link.get_attribute("href") or ""
-            link_text = link.inner_text()
             inst_id = extract_instance_id_from_href(href)
-            if inst_id and ("reservations" in href or "spots" in link_text or "/" in link_text):
-                if inst_id not in schedules_by_id:
-                    schedules_by_id[inst_id] = {
-                        "instance_id": inst_id,
-                        "raw_text": row_text,
-                        "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
-                    }
+            if inst_id:
+                break
+
+        if inst_id and inst_id not in schedules_by_id:
+            show_title = clean_dojour_performer(raw_title)
+            show_date = parse_dojour_datetime(raw_date)
+
+            schedules_by_id[inst_id] = {
+                "instance_id": inst_id,
+                "show_title": show_title,
+                "show_date": show_date,
+                "report_url": f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
+            }
 
     page.close()
-    print(f"[Dojour] Discovered {len(schedules_by_id)} upcoming schedules.")
+    print(f"[Dojour] Discovered and parsed {len(schedules_by_id)} upcoming schedules.")
     return list(schedules_by_id.values()), captured_token
+
+def fetch_dojour_tickets_with_session(token: str, schedules: list[dict]) -> list[list]:
+    session = requests.Session()
+    session.headers.update({
+        "Authorization": f"Token {token}",
+        "Referer": "https://dojour.us/admin-tools/reservations/all/?upcoming=true",
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    })
+
+    dojour_rows = []
+    for item in schedules:
+        instance_id = item["instance_id"]
+        report_url = item["report_url"]
+        show_title = item["show_title"]
+        show_date = item["show_date"]
+
+        try:
+            resp = session.get(report_url, timeout=15)
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+        except Exception:
+            continue
+
+        reservations = parse_reservations_from_payload(data)
+        for i, res in enumerate(reservations):
+            row = parse_guest_record(res, instance_id, i, show_date, show_title)
+            dojour_rows.append(row)
+
+    print(f"[Dojour] Extracted {len(dojour_rows)} total reservations across {len(schedules)} schedules.")
+    return dojour_rows
 
 # ==========================================
 # 3. GOOGLE SHEETS STATE-PRESERVING SYNC
@@ -484,10 +488,8 @@ def sync_to_google_sheet(new_rows: list[list]):
 # ==========================================
 
 def main():
-    # 1. Fetch Shopify Tickets
     shopify_rows = fetch_shopify_tickets()
 
-    # 2. Fetch Dojour Tickets
     dojour_state = os.environ.get("DOJOUR_STATE")
     dojour_rows = []
 
@@ -497,7 +499,12 @@ def main():
         except Exception:
             storage_state = dojour_state
 
-        token = extract_dojour_token(storage_state) if isinstance(storage_state, dict) else None
+        token = None
+        if isinstance(storage_state, dict):
+            for cookie in storage_state.get("cookies", []):
+                if cookie.get("name") == "usertoken":
+                    token = cookie.get("value", "").strip('"').strip("'")
+                    break
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -507,14 +514,11 @@ def main():
 
         active_token = captured_token or token
         if active_token:
-            print(f"[Dojour] Authenticating using Token: {active_token[:8]}...")
+            print(f"[Dojour] Authenticated with token: {active_token[:8]}...")
             dojour_rows = fetch_dojour_tickets_with_session(active_token, schedules)
         else:
-            print("[Dojour] ERROR: Could not resolve Dojour auth token.")
-    else:
-        print("[Dojour] Warning: DOJOUR_STATE is missing.")
+            print("[Dojour] Error: Could not resolve auth token.")
 
-    # 3. Consolidate and Sync to Google Sheet
     all_rows = shopify_rows + dojour_rows
     sync_to_google_sheet(all_rows)
 
