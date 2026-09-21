@@ -6,7 +6,6 @@ import requests
 from datetime import datetime, timezone
 import zoneinfo
 
-# Google Sheets client
 try:
     import gspread
     from google.oauth2.service_account import Credentials
@@ -18,12 +17,12 @@ CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
 
 
 # ==============================================================================
-# 1. Date & Title Formatting Helpers (Zero External Dependencies)
+# 1. Text & Date Normalization Helpers
 # ==============================================================================
 
 def clean_show_title(raw_title: str) -> str:
     """
-    Normalizes multi-line and multi-day Dojour/Shopify titles to clean comic names:
+    Normalizes multi-line and multi-day Dojour/Shopify titles to comic names:
     'Alex Dragicevich /// Comedy - September 18 & 19' -> 'Alex Dragicevich'
     'Geoffrey Asmus // Sisyphus Brewing' -> 'Geoffrey Asmus'
     """
@@ -31,6 +30,10 @@ def clean_show_title(raw_title: str) -> str:
         return ""
 
     title = raw_title.strip()
+
+    # If the title is just a generic category, discard it
+    if title.lower() in ["comedy show", "comedy", "stand-up comedy", "show"]:
+        return ""
 
     for delimiter in ["///", "//", " - Comedy", " – Comedy"]:
         if delimiter in title:
@@ -109,7 +112,7 @@ def format_show_date(date_val: str) -> str:
 
 
 # ==============================================================================
-# 2. Dojour Ticket Fetcher
+# 2. Dojour Ticket & Schedule Fetcher
 # ==============================================================================
 
 def get_dojour_token() -> str:
@@ -141,66 +144,162 @@ def get_dojour_token() -> str:
     raise ValueError("Could not find 'usertoken' cookie in DOJOUR_STATE or DOJOUR_TOKEN.")
 
 
-def extract_reservations_list(data) -> list:
-    """Extracts the list of reservations from various Dojour payload shapes."""
-    if not data:
-        return []
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict):
-        for key in [
-            "reserves",
-            "reservations",
-            "reserve_list",
-            "reserve_reports",
-            "attendees",
-            "guests",
-            "orders",
-            "tickets",
-            "results",
-            "data",
-            "items"
-        ]:
-            if key in data and isinstance(data[key], list):
-                return data[key]
+def extract_instance_metadata(item: dict) -> dict:
+    """
+    Extracts instance_id, clean title, start date, and sold count from a Dojour item.
+    Handles nested 'event_instance', 'event', and top-level fields.
+    """
+    ei = item.get("event_instance") if isinstance(item.get("event_instance"), dict) else {}
+    ev = item.get("event") if isinstance(item.get("event"), dict) else {}
 
-        # Dynamic inspection: look for any list containing dictionaries
-        for v in data.values():
-            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
-                return v
-
-        for v in data.values():
-            if isinstance(v, list):
-                return v
-
-    return []
-
-
-def get_instance_id_from_item(item: dict) -> str:
-    """Extracts instance/schedule ID from Dojour API objects or URLs."""
+    # 1. Instance ID
+    inst_id = ""
     for url_key in ["url", "link", "admin_url", "report_url"]:
         u = str(item.get(url_key, ""))
         m = re.search(r'/(?:s|event_instances)/(\d+)', u)
         if m:
-            return m.group(1)
+            inst_id = m.group(1)
+            break
 
-    for key in ["event_instance", "instance", "schedule"]:
-        val = item.get(key)
-        if isinstance(val, dict) and "id" in val:
-            return str(val["id"])
-        elif isinstance(val, (int, str)) and str(val).isdigit():
-            return str(val)
+    if not inst_id and ei.get("id"):
+        inst_id = str(ei["id"])
+    elif not inst_id and item.get("event_instance_id"):
+        inst_id = str(item["event_instance_id"])
+    elif not inst_id and item.get("id"):
+        inst_id = str(item["id"])
 
-    for key in ["event_instance_id", "instance_id", "schedule_id", "id"]:
-        val = item.get(key)
-        if isinstance(val, (int, str)) and str(val).isdigit():
-            return str(val)
+    # 2. Show Title (prioritize parent event title over generic instance category)
+    raw_title = (
+        ev.get("title")
+        or ev.get("name")
+        or item.get("event_title")
+        or ""
+    )
+    if not raw_title or raw_title.lower() in ["comedy show", "comedy", "show"]:
+        fallback_title = item.get("title") or item.get("name") or ""
+        if fallback_title.lower() not in ["comedy show", "comedy", "show"]:
+            raw_title = fallback_title
 
-    return ""
+    show_title = clean_show_title(raw_title)
+
+    # 3. Show Date (search nested event_instance, readable_time, and root)
+    raw_date = (
+        ei.get("start")
+        or ei.get("start_datetime")
+        or ei.get("starts_at")
+        or ei.get("readable_time")
+        or ei.get("start_time")
+        or ei.get("date")
+        or item.get("start")
+        or item.get("start_datetime")
+        or item.get("starts_at")
+        or item.get("readable_time")
+        or item.get("start_time")
+        or item.get("date")
+        or item.get("date_string")
+    )
+    show_date = format_show_date(raw_date)
+
+    # 4. Dojour Sold Count
+    sold_count = (
+        item.get("reserved_count")
+        or item.get("reserves_count")
+        or item.get("sold")
+        or item.get("num_reserves")
+        or item.get("count")
+        or 0
+    )
+    try:
+        sold_count = int(sold_count)
+    except (ValueError, TypeError):
+        sold_count = 0
+
+    return {
+        "instance_id": inst_id,
+        "show_title": show_title,
+        "show_date": show_date,
+        "sold_count": sold_count
+    }
 
 
-def parse_dojour_reservation(res: dict, instance_id: str, idx: int, show_date: str, show_title: str) -> list:
-    """Maps a Dojour reservation dict to the 9-column sheet schema."""
+def fetch_dojour_schedules(token: str) -> dict:
+    """
+    Fetches all upcoming Dojour show metadata using the reserve_reports API.
+    """
+    headers = {
+        "Authorization": f"Token {token}",
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    schedules = {}
+    api_url = "https://dojour.us/api/event_instances/reserve_reports/?page_size=100&upcoming=true"
+
+    try:
+        while api_url:
+            resp = requests.get(api_url, headers=headers, timeout=20)
+            if resp.status_code != 200:
+                print(f"Notice: Dojour reserve_reports returned status {resp.status_code}")
+                break
+            data = resp.json()
+            results = data.get("results", []) if isinstance(data, dict) else data
+
+            for item in results:
+                meta = extract_instance_metadata(item)
+                inst_id = meta["instance_id"]
+                if inst_id:
+                    schedules[inst_id] = meta
+
+            api_url = data.get("next") if isinstance(data, dict) else None
+    except Exception as e:
+        print(f"Error querying Dojour reserve_reports: {e}")
+
+    # Fallback to HTML parsing if API returned nothing
+    if not schedules:
+        try:
+            page_url = "https://dojour.us/admin-tools/reservations/all/?upcoming=true"
+            session = requests.Session()
+            session.cookies.set("usertoken", token, domain="dojour.us")
+            resp = session.get(page_url, timeout=20)
+            if resp.status_code == 200:
+                html_text = resp.text
+                rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html_text, flags=re.DOTALL | re.IGNORECASE)
+                for r in rows:
+                    link_match = re.search(r'/admin-tools/reservations/s/(\d+)', r)
+                    if not link_match:
+                        continue
+                    inst_id = link_match.group(1)
+                    clean_text = re.sub(r'<[^>]+>', '\t', r)
+                    tokens = [t.strip() for t in clean_text.split('\t') if t.strip()]
+
+                    row_title = ""
+                    row_date = ""
+                    sold = 0
+                    for t in tokens:
+                        if "|" in t and re.search(r'(am|pm)', t, re.IGNORECASE):
+                            row_date = format_show_date(t)
+                        elif re.search(r'(\d+)/\d+', t):
+                            m_sold = re.search(r'(\d+)/\d+', t)
+                            if m_sold:
+                                sold = int(m_sold.group(1))
+                        elif not row_title and t.lower() not in ["comedy show", "comedy"] and t != "|":
+                            row_title = clean_show_title(t)
+
+                    if inst_id:
+                        schedules[inst_id] = {
+                            "instance_id": inst_id,
+                            "show_title": row_title,
+                            "show_date": row_date,
+                            "sold_count": sold
+                        }
+        except Exception as e:
+            print(f"Notice: HTML fallback encountered: {e}")
+
+    print(f"Found {len(schedules)} upcoming Dojour show schedules.")
+    return schedules
+
+
+def parse_attendee_record(res: dict, instance_id: str, idx: int, show_date: str, show_title: str) -> list:
+    """Extracts attendee name, email, and tickets from a Dojour reservation."""
     res_id = str(res.get("id") or res.get("reserve_id") or res.get("reservation_id") or idx)
     unique_id = f"dj_{instance_id}_{res_id}"
 
@@ -235,8 +334,6 @@ def parse_dojour_reservation(res: dict, instance_id: str, idx: int, show_date: s
             or ""
         ).strip()
         guest_name = f"{first} {last}".strip()
-    if not guest_name:
-        guest_name = "Guest"
 
     email = (
         res.get("email")
@@ -267,7 +364,7 @@ def parse_dojour_reservation(res: dict, instance_id: str, idx: int, show_date: s
         unique_id,
         show_date,
         show_title,
-        guest_name,
+        guest_name if guest_name else "Dojour Guest",
         email,
         tickets_count,
         "Dojour",
@@ -276,93 +373,76 @@ def parse_dojour_reservation(res: dict, instance_id: str, idx: int, show_date: s
     ]
 
 
-def fetch_dojour_tickets() -> list:
+def fetch_dojour_tickets_and_schedules():
+    """
+    Queries Dojour schedules and individual reservation reports for attendees.
+    Returns: (dojour_door_rows, schedules_dict)
+    """
     token = get_dojour_token()
+    schedules = fetch_dojour_schedules(token)
     headers = {
         "Authorization": f"Token {token}",
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
-    schedules = {}
-    api_url = "https://dojour.us/api/event_instances/reserve_reports/?page_size=100&upcoming=true"
-
-    try:
-        while api_url:
-            resp = requests.get(api_url, headers=headers, timeout=20)
-            if resp.status_code != 200:
-                print(f"Notice: Dojour reserve_reports returned status {resp.status_code}")
-                break
-            data = resp.json()
-            results = data.get("results", []) if isinstance(data, dict) else data
-
-            for item in results:
-                inst_id = get_instance_id_from_item(item)
-                if not inst_id:
-                    continue
-
-                raw_title = ""
-                if isinstance(item.get("event"), dict):
-                    raw_title = item["event"].get("title") or item["event"].get("name") or ""
-                if not raw_title:
-                    raw_title = item.get("title") or item.get("name") or item.get("event_title") or ""
-
-                raw_date = (
-                    item.get("start")
-                    or item.get("start_datetime")
-                    or item.get("starts_at")
-                    or item.get("start_time")
-                    or item.get("date")
-                    or item.get("datetime")
-                    or item.get("date_string")
-                )
-
-                schedules[inst_id] = {
-                    "show_title": clean_show_title(raw_title),
-                    "show_date": format_show_date(raw_date),
-                    "embedded_reserves": extract_reservations_list(item)
-                }
-
-            api_url = data.get("next") if isinstance(data, dict) else None
-    except Exception as e:
-        print(f"Error querying Dojour reserve_reports: {e}")
-
-    dojour_rows = []
+    dojour_door_rows = []
 
     for instance_id, meta in schedules.items():
         show_date = meta["show_date"]
         show_title = meta["show_title"]
-        reservations = meta.get("embedded_reserves", [])
+        sold_count = meta["sold_count"]
 
-        # If reservations were not inlined in the list endpoint, fetch the instance report
-        if not reservations:
-            report_url = f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
-            try:
-                resp = requests.get(report_url, headers=headers, timeout=20)
-                if resp.status_code == 404:
-                    resp = requests.get(
-                        f"https://dojour.us/api/event_instances/{instance_id}/reserve_report",
-                        headers=headers,
-                        timeout=20
-                    )
+        # If 0 tickets sold, skip calling report
+        if sold_count == 0:
+            continue
 
-                if resp.status_code == 200:
-                    report_data = resp.json()
-                    reservations = extract_reservations_list(report_data)
-                elif resp.status_code != 200:
-                    print(f"Notice: Instance {instance_id} ({show_title}) returned status {resp.status_code}")
-            except Exception as e:
-                print(f"Error fetching reserve report for instance {instance_id}: {e}")
+        report_url = f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
+        try:
+            resp = requests.get(report_url, headers=headers, timeout=20)
+            if resp.status_code == 404:
+                resp = requests.get(
+                    f"https://dojour.us/api/event_instances/{instance_id}/reserve_report",
+                    headers=headers,
+                    timeout=20
+                )
+            if resp.status_code != 200:
                 continue
+
+            report_data = resp.json()
+        except Exception as e:
+            print(f"Error fetching report for instance {instance_id}: {e}")
+            continue
+
+        # Extract actual reservations (ignoring ticket_types/tiers)
+        reservations = []
+        if isinstance(report_data, list):
+            reservations = report_data
+        elif isinstance(report_data, dict):
+            # Check if report payload contains show date update
+            if not show_date:
+                report_meta = extract_instance_metadata(report_data)
+                if report_meta["show_date"]:
+                    show_date = report_meta["show_date"]
+                    schedules[instance_id]["show_date"] = show_date
+
+            for key in ["reserves", "reservations", "reserve_list", "attendees", "guests", "orders"]:
+                if key in report_data and isinstance(report_data[key], list):
+                    reservations = report_data[key]
+                    break
 
         for idx, res in enumerate(reservations):
             if not isinstance(res, dict):
                 continue
-            row = parse_dojour_reservation(res, instance_id, idx, show_date, show_title)
-            dojour_rows.append(row)
+            # Filter out non-attendee items like ticket_types
+            if "price" in res and "party_size" not in res and "email" not in res and "name" not in res:
+                continue
 
-    print(f"Retrieved {len(dojour_rows)} tickets from Dojour across {len(schedules)} shows.")
-    return dojour_rows
+            row = parse_attendee_record(res, instance_id, idx, show_date, show_title)
+            dojour_door_rows.append(row)
+
+    print(f"Retrieved {len(dojour_door_rows)} guest reservations from Dojour.")
+    return dojour_door_rows, schedules
 
 
 # ==============================================================================
@@ -370,10 +450,7 @@ def fetch_dojour_tickets() -> list:
 # ==============================================================================
 
 def get_shopify_access_token() -> str:
-    direct_token = (
-        os.environ.get("SHOPIFY_ACCESS_TOKEN")
-        or os.environ.get("SHOPIFY_ADMIN_API_TOKEN")
-    )
+    direct_token = os.environ.get("SHOPIFY_ACCESS_TOKEN") or os.environ.get("SHOPIFY_ADMIN_API_TOKEN")
     if direct_token:
         return direct_token.strip()
 
@@ -445,9 +522,9 @@ def fetch_shopify_tickets() -> list:
                     item_title = item.get("title") or ""
                     variant_title = item.get("variant_title") or ""
 
-                    # Ignore tips, fees, gratuity, and donations
+                    # Filter out tips, donations, and rental fees
                     full_desc = f"{item_title} {variant_title}".lower()
-                    if any(term in full_desc for term in ["tip", "donation", "fee", "gratuity", "service charge"]):
+                    if any(term in full_desc for term in ["tip", "donation", "fee", "gratuity", "service charge", "room rental", "event deposit"]):
                         continue
 
                     show_title = clean_show_title(item_title)
@@ -499,14 +576,10 @@ def fetch_shopify_tickets() -> list:
 
 
 # ==============================================================================
-# 4. Google Sheets Sync (Auto-Discovery & State Persistence)
+# 4. Google Sheets Sync (Door List + Sheet1 Summary)
 # ==============================================================================
 
-def get_spreadsheet_and_worksheet(gc):
-    """
-    Locates the target spreadsheet using IDs, names, or automatic search
-    across all sheets shared with the service account.
-    """
+def open_target_spreadsheet(gc):
     sheet_id = (
         os.environ.get("SPREADSHEET_ID")
         or os.environ.get("GOOGLE_SHEET_ID")
@@ -515,10 +588,8 @@ def get_spreadsheet_and_worksheet(gc):
         or os.environ.get("SPREADSHEET_KEY")
     )
     sheet_name = os.environ.get("GOOGLE_SHEET_NAME") or os.environ.get("SPREADSHEET_NAME")
-
     doc = None
 
-    # 1. Open by ID or URL if specified
     if sheet_id:
         sheet_id = sheet_id.strip()
         try:
@@ -526,74 +597,34 @@ def get_spreadsheet_and_worksheet(gc):
                 doc = gc.open_by_url(sheet_id)
             else:
                 doc = gc.open_by_key(sheet_id)
-        except Exception as e:
-            print(f"Notice: Could not open via ID/URL '{sheet_id}': {e}")
+        except Exception:
+            pass
 
-    # 2. Open by explicit document name
     if not doc and sheet_name:
         try:
             doc = gc.open(sheet_name.strip())
-        except Exception as e:
-            print(f"Notice: Could not open via sheet name '{sheet_name}': {e}")
+        except Exception:
+            pass
 
-    # 3. Fallback: Search all spreadsheets shared with the Service Account
     if not doc:
         try:
             all_docs = gc.openall()
-            print(f"Found {len(all_docs)} spreadsheet(s) shared with service account.")
-
-            # Search for a spreadsheet containing a "Door List" worksheet
             for d in all_docs:
-                try:
-                    titles = [w.title.strip().lower() for w in d.worksheets()]
-                    if "door list" in titles:
-                        doc = d
-                        print(f"Auto-selected spreadsheet with 'Door List' tab: '{doc.title}'")
-                        break
-                except Exception:
-                    continue
-
-            # Check document titles for relevant keywords
-            if not doc:
-                for d in all_docs:
-                    if any(k in d.title.lower() for k in ["door list", "sisyphus", "ticket", "check"]):
-                        doc = d
-                        print(f"Auto-selected spreadsheet by title: '{doc.title}'")
-                        break
-
-            # If only one spreadsheet is shared with this service account, use it
-            if not doc and len(all_docs) == 1:
+                titles = [w.title.strip().lower() for w in d.worksheets()]
+                if "door list" in titles:
+                    doc = d
+                    break
+            if not doc and len(all_docs) > 0:
                 doc = all_docs[0]
-                print(f"Using single shared spreadsheet: '{doc.title}'")
-            elif not doc and len(all_docs) > 0:
-                doc = all_docs[0]
-                print(f"Defaulting to first shared spreadsheet: '{doc.title}'")
-        except Exception as e:
-            print(f"Notice: Could not search shared spreadsheets: {e}")
+        except Exception:
+            pass
 
     if not doc:
-        raise ValueError(
-            "Could not locate Google Spreadsheet. Please ensure the spreadsheet is shared with "
-            "the service account email and optionally set SPREADSHEET_ID in repository secrets."
-        )
-
-    # Find the "Door List" tab
-    ws = None
-    try:
-        ws = doc.worksheet("Door List")
-    except Exception:
-        for w in doc.worksheets():
-            if w.title.strip().lower() == "door list":
-                ws = w
-                break
-        if not ws:
-            ws = doc.get_worksheet(0)
-            print(f"Warning: 'Door List' tab not found, falling back to first tab '{ws.title}'.")
-
-    return doc, ws
+        raise ValueError("Could not locate Google Spreadsheet. Please verify service account permissions.")
+    return doc
 
 
-def sync_to_google_sheet(tickets: list):
+def sync_to_google_sheet(tickets: list, schedules: dict):
     if not gspread or not Credentials:
         raise ImportError("gspread and google-auth are required for Google Sheet sync.")
 
@@ -613,12 +644,18 @@ def sync_to_google_sheet(tickets: list):
         creds = Credentials.from_service_account_info(info, scopes=scopes)
 
     gc = gspread.authorize(creds)
-    _, ws = get_spreadsheet_and_worksheet(gc)
+    doc = open_target_spreadsheet(gc)
 
-    # Read existing rows to preserve check-in states (Cols H and I)
-    existing_data = ws.get_all_values()
+    # --------------------------------------------------------------------------
+    # Sync Tab 1: "Door List" (Guest Check-In)
+    # --------------------------------------------------------------------------
+    try:
+        ws_door = doc.worksheet("Door List")
+    except Exception:
+        ws_door = doc.get_worksheet(0)
+
+    existing_data = ws_door.get_all_values()
     checkin_map = {}
-
     if len(existing_data) > 1:
         for row in existing_data[1:]:
             if not row or not row[0]:
@@ -626,24 +663,22 @@ def sync_to_google_sheet(tickets: list):
             uid = row[0].strip()
             checked_in = row[7].strip().upper() if len(row) > 7 else "FALSE"
             checkin_time = row[8].strip() if len(row) > 8 else ""
-
             is_checked = checked_in in ["TRUE", "YES", "1"]
             checkin_map[uid] = (is_checked, checkin_time)
 
-    # Merge preserved check-in states
-    merged_rows = []
+    merged_door_rows = []
     for t in tickets:
         row_copy = list(t)
         uid = row_copy[0]
         if uid in checkin_map:
             row_copy[7] = checkin_map[uid][0]
             row_copy[8] = checkin_map[uid][1]
-        merged_rows.append(row_copy)
+        merged_door_rows.append(row_copy)
 
-    # Sort tickets by Show Date, Show Title, then Guest Name
-    merged_rows.sort(key=lambda r: (r[1], r[2], r[3].lower()))
+    # Sort door list by Show Date, Show Title, then Guest Name
+    merged_door_rows.sort(key=lambda r: (r[1], r[2], r[3].lower()))
 
-    headers = [
+    door_headers = [
         "Unique ID",
         "Show Date",
         "Show Title",
@@ -655,29 +690,59 @@ def sync_to_google_sheet(tickets: list):
         "Check-In Time"
     ]
 
-    payload = [headers] + merged_rows
-    ws.clear()
-
-    # Supports gspread v5 and v6
+    door_payload = [door_headers] + merged_door_rows
+    ws_door.clear()
     try:
-        ws.update(values=payload, range_name="A1", value_input_option="USER_ENTERED")
+        ws_door.update(values=door_payload, range_name="A1", value_input_option="USER_ENTERED")
     except TypeError:
         try:
-            ws.update("A1", payload, value_input_option="USER_ENTERED")
+            ws_door.update("A1", door_payload, value_input_option="USER_ENTERED")
         except Exception:
-            ws.update(payload)
+            ws_door.update(door_payload)
 
-    print(f"Successfully synced {len(merged_rows)} records to '{ws.title}' tab.")
+    print(f"Successfully synced {len(merged_door_rows)} records to '{ws_door.title}'.")
+
+    # --------------------------------------------------------------------------
+    # Sync Tab 2: "Sheet1" (Show Title, Show Date, Dojour Sold)
+    # --------------------------------------------------------------------------
+    ws_summary = None
+    for w in doc.worksheets():
+        if w.title.strip().lower() == "sheet1":
+            ws_summary = w
+            break
+
+    if ws_summary:
+        summary_rows = []
+        for inst_id, meta in schedules.items():
+            stitle = meta["show_title"]
+            sdate = meta["show_date"]
+            sold = meta["sold_count"]
+            summary_rows.append([stitle, sdate, sold])
+
+        summary_rows.sort(key=lambda r: (r[1], r[0]))
+        summary_payload = [["Show Title", "Show Date", "Dojour Sold"]] + summary_rows
+
+        ws_summary.clear()
+        try:
+            ws_summary.update(values=summary_payload, range_name="A1", value_input_option="USER_ENTERED")
+        except TypeError:
+            try:
+                ws_summary.update("A1", summary_payload, value_input_option="USER_ENTERED")
+            except Exception:
+                ws_summary.update(summary_payload)
+
+        print(f"Successfully synced {len(summary_rows)} show counts to 'Sheet1'.")
 
 
 # ==============================================================================
-# 5. Entry Point
+# 5. Main Execution Entry Point
 # ==============================================================================
 
 def main():
     print("Starting Sisyphus Brewing Ticket Consolidation...")
     shopify_tickets = []
     dojour_tickets = []
+    dojour_schedules = {}
 
     try:
         shopify_tickets = fetch_shopify_tickets()
@@ -685,19 +750,19 @@ def main():
         print(f"Warning: Shopify sync error: {e}")
 
     try:
-        dojour_tickets = fetch_dojour_tickets()
+        dojour_tickets, dojour_schedules = fetch_dojour_tickets_and_schedules()
     except Exception as e:
         print(f"Warning: Dojour sync error: {e}")
 
     all_tickets = shopify_tickets + dojour_tickets
-    print(f"Consolidated total: {len(all_tickets)} tickets.")
+    print(f"Consolidated total: {len(all_tickets)} door list tickets.")
 
-    if not all_tickets:
-        print("No tickets found from either source. Skipping sheet overwrite.")
+    if not all_tickets and not dojour_schedules:
+        print("No ticket records or schedules found. Skipping update.")
         return
 
-    sync_to_google_sheet(all_tickets)
-    print("Ticket sync complete.")
+    sync_to_google_sheet(all_tickets, dojour_schedules)
+    print("Consolidation process complete.")
 
 
 if __name__ == "__main__":
