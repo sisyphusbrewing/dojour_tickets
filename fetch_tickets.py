@@ -21,17 +21,11 @@ CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
 # ==============================================================================
 
 def clean_show_title(raw_title: str) -> str:
-    """
-    Normalizes multi-line and multi-day Dojour/Shopify titles to comic names:
-    'Alex Dragicevich /// Comedy - September 18 & 19' -> 'Alex Dragicevich'
-    'Geoffrey Asmus // Sisyphus Brewing' -> 'Geoffrey Asmus'
-    """
+    """Normalizes titles to clean comic names."""
     if not raw_title:
         return ""
 
     title = raw_title.strip()
-
-    # If the title is just a generic category, discard it
     if title.lower() in ["comedy show", "comedy", "stand-up comedy", "show"]:
         return ""
 
@@ -39,7 +33,6 @@ def clean_show_title(raw_title: str) -> str:
         if delimiter in title:
             title = title.split(delimiter)[0].strip()
 
-    # Strip trailing date ranges (e.g. ' - September 18 & 19' or ' - 9/18')
     title = re.sub(
         r'\s*[-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d+.*$',
         '',
@@ -47,21 +40,17 @@ def clean_show_title(raw_title: str) -> str:
         flags=re.IGNORECASE
     )
     title = re.sub(r'\s*[-–]\s*\d{1,2}/\d{1,2}.*$', '', title)
-
     return title.strip()
 
 
 def format_show_date(date_val: str) -> str:
-    """
-    Converts ISO timestamps or DOM date strings into the unified format:
-    'Sat, Sep 19 • 7:00 PM' (America/Chicago time).
-    """
+    """Converts timestamps to 'Sat, Sep 19 • 7:00 PM' (America/Chicago)."""
     if not date_val:
         return ""
 
     raw_str = str(date_val).strip()
 
-    # 1. Parse DOM-style string: "Saturday, September 19th | 7:00pm - 9:00pm" or "Sat, Sep 19 • 7:00 PM"
+    # Match DOM formatted strings: "Saturday, September 19th | 7:00pm - 9:00pm"
     dom_match = re.search(
         r'(?:([A-Za-z]+),\s+)?([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+\d{4})?\s*(?:[|@•\-]\s*|\s+at\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
         raw_str,
@@ -89,7 +78,7 @@ def format_show_date(date_val: str) -> str:
             return f"{weekday}, {month} {day} • {hour}:{minute} {ampm}"
         return f"{month} {day} • {hour}:{minute} {ampm}"
 
-    # 2. Parse ISO-8601 timestamps (handles 'Z', offsets, and naive formats)
+    # Match ISO-8601 timestamps
     try:
         iso_str = raw_str.replace("Z", "+00:00")
         dt = datetime.fromisoformat(iso_str)
@@ -145,74 +134,69 @@ def get_dojour_token() -> str:
 
 
 def extract_instance_metadata(item: dict) -> dict:
-    """
-    Extracts instance_id, clean title, start date, and sold count from a Dojour item.
-    Handles nested 'event_instance', 'event', and top-level fields.
-    """
+    """Extracts instance ID, clean title, start date, and sold count."""
     ei = item.get("event_instance") if isinstance(item.get("event_instance"), dict) else {}
+    sched = item.get("schedule") if isinstance(item.get("schedule"), dict) else {}
     ev = item.get("event") if isinstance(item.get("event"), dict) else {}
 
-    # 1. Instance ID
+    # Extract instance / schedule ID
     inst_id = ""
     for url_key in ["url", "link", "admin_url", "report_url"]:
-        u = str(item.get(url_key, ""))
-        m = re.search(r'/(?:s|event_instances)/(\d+)', u)
-        if m:
-            inst_id = m.group(1)
+        for src in [item, ei, sched]:
+            u = str(src.get(url_key, ""))
+            m = re.search(r'/(?:s|event_instances|schedules)/(\d+)', u)
+            if m:
+                inst_id = m.group(1)
+                break
+        if inst_id:
             break
 
-    if not inst_id and ei.get("id"):
-        inst_id = str(ei["id"])
-    elif not inst_id and item.get("event_instance_id"):
-        inst_id = str(item["event_instance_id"])
-    elif not inst_id and item.get("id"):
-        inst_id = str(item["id"])
+    if not inst_id:
+        for src in [ei, sched, item]:
+            for k in ["event_instance_id", "schedule_id", "instance_id", "id"]:
+                val = src.get(k)
+                if isinstance(val, (int, str)) and str(val).isdigit():
+                    inst_id = str(val)
+                    break
+            if inst_id:
+                break
 
-    # 2. Show Title (prioritize parent event title over generic instance category)
-    raw_title = (
-        ev.get("title")
-        or ev.get("name")
-        or item.get("event_title")
-        or ""
-    )
-    if not raw_title or raw_title.lower() in ["comedy show", "comedy", "show"]:
-        fallback_title = item.get("title") or item.get("name") or ""
-        if fallback_title.lower() not in ["comedy show", "comedy", "show"]:
-            raw_title = fallback_title
+    # Extract clean title
+    raw_title = ""
+    for src in [ev, item, ei, sched]:
+        for k in ["title", "name", "event_title", "headline"]:
+            val = src.get(k)
+            if val and isinstance(val, str) and val.strip().lower() not in ["comedy show", "comedy", "show"]:
+                raw_title = val.strip()
+                break
+        if raw_title:
+            break
 
     show_title = clean_show_title(raw_title)
 
-    # 3. Show Date (search nested event_instance, readable_time, and root)
-    raw_date = (
-        ei.get("start")
-        or ei.get("start_datetime")
-        or ei.get("starts_at")
-        or ei.get("readable_time")
-        or ei.get("start_time")
-        or ei.get("date")
-        or item.get("start")
-        or item.get("start_datetime")
-        or item.get("starts_at")
-        or item.get("readable_time")
-        or item.get("start_time")
-        or item.get("date")
-        or item.get("date_string")
-    )
+    # Extract date/time
+    raw_date = ""
+    for src in [ei, sched, item, ev]:
+        for k in ["start", "start_datetime", "starts_at", "readable_time", "start_time", "datetime", "date"]:
+            val = src.get(k)
+            if val and isinstance(val, str) and len(val.strip()) > 3:
+                raw_date = val.strip()
+                break
+        if raw_date:
+            break
+
     show_date = format_show_date(raw_date)
 
-    # 4. Dojour Sold Count
-    sold_count = (
-        item.get("reserved_count")
-        or item.get("reserves_count")
-        or item.get("sold")
-        or item.get("num_reserves")
-        or item.get("count")
-        or 0
-    )
-    try:
-        sold_count = int(sold_count)
-    except (ValueError, TypeError):
-        sold_count = 0
+    # Extract sold count
+    sold_count = 0
+    for k in ["reserved_count", "reserves_count", "num_reserves", "sold", "sold_count", "count"]:
+        v = item.get(k)
+        if isinstance(v, int):
+            sold_count = v
+            break
+        elif isinstance(v, str) and v.isdigit():
+            sold_count = int(v)
+            break
 
     return {
         "instance_id": inst_id,
@@ -222,84 +206,49 @@ def extract_instance_metadata(item: dict) -> dict:
     }
 
 
-def fetch_dojour_schedules(token: str) -> dict:
-    """
-    Fetches all upcoming Dojour show metadata using the reserve_reports API.
-    """
-    headers = {
-        "Authorization": f"Token {token}",
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    schedules = {}
-    api_url = "https://dojour.us/api/event_instances/reserve_reports/?page_size=100&upcoming=true"
+def is_attendee_dict(d: dict) -> bool:
+    """Verifies that a dictionary is an attendee/reservation record."""
+    if not isinstance(d, dict):
+        return False
+    for nested in ["user", "guest", "customer"]:
+        if isinstance(d.get(nested), dict):
+            return True
+    for field in ["name", "guest_name", "full_name", "first_name", "last_name", "email", "guest_email", "party_size", "tickets", "quantity", "num_tickets"]:
+        if field in d:
+            return True
+    return False
 
-    try:
-        while api_url:
-            resp = requests.get(api_url, headers=headers, timeout=20)
-            if resp.status_code != 200:
-                print(f"Notice: Dojour reserve_reports returned status {resp.status_code}")
-                break
-            data = resp.json()
-            results = data.get("results", []) if isinstance(data, dict) else data
 
-            for item in results:
-                meta = extract_instance_metadata(item)
-                inst_id = meta["instance_id"]
-                if inst_id:
-                    schedules[inst_id] = meta
+def extract_reservations_flexible(report_data) -> list:
+    """Extracts attendee lists regardless of whether DRF wrapped them in 'results', 'reserves', etc."""
+    if not report_data:
+        return []
+    if isinstance(report_data, list):
+        return [item for item in report_data if isinstance(item, dict) and is_attendee_dict(item)]
 
-            api_url = data.get("next") if isinstance(data, dict) else None
-    except Exception as e:
-        print(f"Error querying Dojour reserve_reports: {e}")
+    if isinstance(report_data, dict):
+        # Check standard DRF list keys
+        for key in ["results", "reserves", "reservations", "reserve_list", "attendees", "guests", "orders", "tickets", "data", "items"]:
+            val = report_data.get(key)
+            if isinstance(val, list) and len(val) > 0:
+                attendees = [item for item in val if isinstance(item, dict) and is_attendee_dict(item)]
+                if attendees:
+                    return attendees
+                if any(isinstance(x, dict) for x in val):
+                    return [x for x in val if isinstance(x, dict)]
 
-    # Fallback to HTML parsing if API returned nothing
-    if not schedules:
-        try:
-            page_url = "https://dojour.us/admin-tools/reservations/all/?upcoming=true"
-            session = requests.Session()
-            session.cookies.set("usertoken", token, domain="dojour.us")
-            resp = session.get(page_url, timeout=20)
-            if resp.status_code == 200:
-                html_text = resp.text
-                rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html_text, flags=re.DOTALL | re.IGNORECASE)
-                for r in rows:
-                    link_match = re.search(r'/admin-tools/reservations/s/(\d+)', r)
-                    if not link_match:
-                        continue
-                    inst_id = link_match.group(1)
-                    clean_text = re.sub(r'<[^>]+>', '\t', r)
-                    tokens = [t.strip() for t in clean_text.split('\t') if t.strip()]
+        # Search all dictionary values for a list of dicts
+        for val in report_data.values():
+            if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
+                attendees = [item for item in val if is_attendee_dict(item)]
+                if attendees:
+                    return attendees
 
-                    row_title = ""
-                    row_date = ""
-                    sold = 0
-                    for t in tokens:
-                        if "|" in t and re.search(r'(am|pm)', t, re.IGNORECASE):
-                            row_date = format_show_date(t)
-                        elif re.search(r'(\d+)/\d+', t):
-                            m_sold = re.search(r'(\d+)/\d+', t)
-                            if m_sold:
-                                sold = int(m_sold.group(1))
-                        elif not row_title and t.lower() not in ["comedy show", "comedy"] and t != "|":
-                            row_title = clean_show_title(t)
-
-                    if inst_id:
-                        schedules[inst_id] = {
-                            "instance_id": inst_id,
-                            "show_title": row_title,
-                            "show_date": row_date,
-                            "sold_count": sold
-                        }
-        except Exception as e:
-            print(f"Notice: HTML fallback encountered: {e}")
-
-    print(f"Found {len(schedules)} upcoming Dojour show schedules.")
-    return schedules
+    return []
 
 
 def parse_attendee_record(res: dict, instance_id: str, idx: int, show_date: str, show_title: str) -> list:
-    """Extracts attendee name, email, and tickets from a Dojour reservation."""
+    """Maps an attendee reservation record into the 9-column sheet schema."""
     res_id = str(res.get("id") or res.get("reserve_id") or res.get("reservation_id") or idx)
     unique_id = f"dj_{instance_id}_{res_id}"
 
@@ -319,20 +268,8 @@ def parse_attendee_record(res: dict, instance_id: str, idx: int, show_date: str,
         or ""
     )
     if not guest_name:
-        first = (
-            res.get("first_name")
-            or user.get("first_name")
-            or guest.get("first_name")
-            or customer.get("first_name")
-            or ""
-        ).strip()
-        last = (
-            res.get("last_name")
-            or user.get("last_name")
-            or guest.get("last_name")
-            or customer.get("last_name")
-            or ""
-        ).strip()
+        first = (res.get("first_name") or user.get("first_name") or guest.get("first_name") or customer.get("first_name") or "").strip()
+        last = (res.get("last_name") or user.get("last_name") or guest.get("last_name") or customer.get("last_name") or "").strip()
         guest_name = f"{first} {last}".strip()
 
     email = (
@@ -373,73 +310,91 @@ def parse_attendee_record(res: dict, instance_id: str, idx: int, show_date: str,
     ]
 
 
+def fetch_instance_reservations(instance_id: str, headers: dict) -> list:
+    """Attempts candidate endpoints with pagination support to fetch all reservations."""
+    candidate_urls = [
+        f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/",
+        f"https://dojour.us/api/event_instances/reserve_reports/{instance_id}/",
+        f"https://dojour.us/api/schedules/{instance_id}/reserve_report/",
+        f"https://dojour.us/api/event_instances/{instance_id}/reserve_report"
+    ]
+
+    for url in candidate_urls:
+        try:
+            resp = requests.get(url, headers=headers, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                results = extract_reservations_flexible(data)
+
+                # Follow pagination if present
+                next_url = data.get("next") if isinstance(data, dict) else None
+                while next_url:
+                    page_resp = requests.get(next_url, headers=headers, timeout=15)
+                    if page_resp.status_code == 200:
+                        page_data = page_resp.json()
+                        results.extend(extract_reservations_flexible(page_data))
+                        next_url = page_data.get("next") if isinstance(page_data, dict) else None
+                    else:
+                        break
+                return results
+        except Exception:
+            continue
+
+    return []
+
+
 def fetch_dojour_tickets_and_schedules():
-    """
-    Queries Dojour schedules and individual reservation reports for attendees.
-    Returns: (dojour_door_rows, schedules_dict)
-    """
     token = get_dojour_token()
-    schedules = fetch_dojour_schedules(token)
     headers = {
         "Authorization": f"Token {token}",
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
+    schedules = {}
+    api_url = "https://dojour.us/api/event_instances/reserve_reports/?page_size=100&upcoming=true"
+
+    try:
+        while api_url:
+            resp = requests.get(api_url, headers=headers, timeout=20)
+            if resp.status_code != 200:
+                print(f"Notice: Dojour reserve_reports returned status {resp.status_code}")
+                break
+            data = resp.json()
+            results = data.get("results", []) if isinstance(data, dict) else data
+
+            for item in results:
+                meta = extract_instance_metadata(item)
+                inst_id = meta["instance_id"]
+                if inst_id:
+                    schedules[inst_id] = meta
+
+            api_url = data.get("next") if isinstance(data, dict) else None
+    except Exception as e:
+        print(f"Error querying Dojour reserve_reports: {e}")
+
+    print(f"Found {len(schedules)} upcoming Dojour show schedules.")
     dojour_door_rows = []
 
-    for instance_id, meta in schedules.items():
+    # Fetch attendee reports for every upcoming show
+    for idx, (instance_id, meta) in enumerate(schedules.items()):
         show_date = meta["show_date"]
         show_title = meta["show_title"]
-        sold_count = meta["sold_count"]
 
-        # If 0 tickets sold, skip calling report
-        if sold_count == 0:
-            continue
+        raw_attendees = fetch_instance_reservations(instance_id, headers)
 
-        report_url = f"https://dojour.us/api/event_instances/{instance_id}/reserve_report/"
-        try:
-            resp = requests.get(report_url, headers=headers, timeout=20)
-            if resp.status_code == 404:
-                resp = requests.get(
-                    f"https://dojour.us/api/event_instances/{instance_id}/reserve_report",
-                    headers=headers,
-                    timeout=20
-                )
-            if resp.status_code != 200:
-                continue
+        if raw_attendees:
+            # Update sold count from actual reservations if report had data
+            actual_tickets = sum(int(r.get("party_size") or r.get("tickets") or r.get("quantity") or 1) for r in raw_attendees if isinstance(r, dict))
+            if actual_tickets > meta["sold_count"]:
+                meta["sold_count"] = actual_tickets
 
-            report_data = resp.json()
-        except Exception as e:
-            print(f"Error fetching report for instance {instance_id}: {e}")
-            continue
+            for a_idx, res in enumerate(raw_attendees):
+                if isinstance(res, dict):
+                    row = parse_attendee_record(res, instance_id, a_idx, show_date, show_title)
+                    dojour_door_rows.append(row)
 
-        # Extract actual reservations (ignoring ticket_types/tiers)
-        reservations = []
-        if isinstance(report_data, list):
-            reservations = report_data
-        elif isinstance(report_data, dict):
-            # Check if report payload contains show date update
-            if not show_date:
-                report_meta = extract_instance_metadata(report_data)
-                if report_meta["show_date"]:
-                    show_date = report_meta["show_date"]
-                    schedules[instance_id]["show_date"] = show_date
-
-            for key in ["reserves", "reservations", "reserve_list", "attendees", "guests", "orders"]:
-                if key in report_data and isinstance(report_data[key], list):
-                    reservations = report_data[key]
-                    break
-
-        for idx, res in enumerate(reservations):
-            if not isinstance(res, dict):
-                continue
-            # Filter out non-attendee items like ticket_types
-            if "price" in res and "party_size" not in res and "email" not in res and "name" not in res:
-                continue
-
-            row = parse_attendee_record(res, instance_id, idx, show_date, show_title)
-            dojour_door_rows.append(row)
+            print(f"  [{idx+1}/{len(schedules)}] {show_title or 'Show'} ({show_date or instance_id}): {len(raw_attendees)} reservations ({actual_tickets} tickets)")
 
     print(f"Retrieved {len(dojour_door_rows)} guest reservations from Dojour.")
     return dojour_door_rows, schedules
@@ -522,7 +477,7 @@ def fetch_shopify_tickets() -> list:
                     item_title = item.get("title") or ""
                     variant_title = item.get("variant_title") or ""
 
-                    # Filter out tips, donations, and rental fees
+                    # Filter out non-event line items
                     full_desc = f"{item_title} {variant_title}".lower()
                     if any(term in full_desc for term in ["tip", "donation", "fee", "gratuity", "service charge", "room rental", "event deposit"]):
                         continue
@@ -675,7 +630,6 @@ def sync_to_google_sheet(tickets: list, schedules: dict):
             row_copy[8] = checkin_map[uid][1]
         merged_door_rows.append(row_copy)
 
-    # Sort door list by Show Date, Show Title, then Guest Name
     merged_door_rows.sort(key=lambda r: (r[1], r[2], r[3].lower()))
 
     door_headers = [
