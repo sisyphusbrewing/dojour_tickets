@@ -20,16 +20,58 @@
     const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
     
+    // SHA-256 hash of the door PIN. 
+    // Default PIN: "1234" (hash: 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4)
+    // To generate a new hash, open DevTools console and run:
+    // crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_NEW_PIN')).then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
+    const DOOR_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+
     // Use supabaseClient to prevent shadowing the CDN's window.supabase library object
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.supabaseClient = supabaseClient;
   </script>
 
+  <div id="lockModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-xl">
+        🔒
+      </div>
+      <div>
+        <h2 class="text-base font-bold text-slate-100">Sisyphus Door Access</h2>
+        <p class="text-xs text-slate-400 mt-1">Enter door staff PIN to proceed</p>
+      </div>
+
+      <form id="pinForm" onsubmit="handlePinSubmit(event)" class="space-y-3">
+        <input 
+          id="pinInput"
+          type="password" 
+          inputmode="numeric" 
+          placeholder="Enter PIN"
+          maxlength="16"
+          autocomplete="off"
+          class="w-full text-center tracking-widest text-xl bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+          autofocus
+        />
+        <div id="pinError" class="hidden text-xs font-semibold text-rose-400">Incorrect PIN. Try again.</div>
+        <button 
+          type="submit" 
+          class="touch-target w-full bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-bold rounded-xl text-sm py-3 shadow-lg shadow-amber-500/10">
+          Unlock Door
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Sticky Top Header -->
   <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-md">
     <div class="max-w-2xl mx-auto space-y-2">
       <div class="flex items-center justify-between">
-        <h1 class="text-lg font-black tracking-wide text-amber-400">SISYPHUS DOOR</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg font-black tracking-wide text-amber-400">SISYPHUS DOOR</h1>
+          <button onclick="lockScreen()" title="Lock Screen" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded border border-slate-700">
+            🔒 Lock
+          </button>
+        </div>
         <div id="statsBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">
           Loading...
         </div>
@@ -278,28 +320,75 @@
 
     document.getElementById('showSelector').addEventListener('change', loadTicketsForCurrentShow);
 
-    // Real-Time Multi-Device Subscription with safety guard
-    if (supabaseClient && typeof supabaseClient.channel === 'function') {
-      try {
-        supabaseClient
-          .channel('schema-db-changes')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, (payload) => {
-            const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
-            if (idx !== -1) {
-              tickets[idx].checked_in = payload.new.checked_in;
-              tickets[idx].checked_in_count = payload.new.checked_in_count;
-              tickets[idx].check_in_time = payload.new.check_in_time;
-              renderList();
-              updateStats();
-            }
-          })
-          .subscribe();
-      } catch (err) {
-        console.warn('Realtime subscription could not be established:', err);
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function handlePinSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('pinInput');
+      const errorMsg = document.getElementById('pinError');
+      const hash = await sha256(input.value.trim());
+
+      if (hash === DOOR_PIN_HASH) {
+        sessionStorage.setItem('sisyphus_door_auth', 'true');
+        document.getElementById('lockModal').classList.add('hidden');
+        errorMsg.classList.add('hidden');
+        input.value = '';
+        initApp();
+      } else {
+        errorMsg.classList.remove('hidden');
+        input.value = '';
+        input.focus();
       }
     }
 
-    loadShows();
+    function lockScreen() {
+      sessionStorage.removeItem('sisyphus_door_auth');
+      document.getElementById('lockModal').classList.remove('hidden');
+      document.getElementById('pinInput').focus();
+    }
+
+    function checkAuthOnLoad() {
+      if (sessionStorage.getItem('sisyphus_door_auth') === 'true') {
+        document.getElementById('lockModal').classList.add('hidden');
+        initApp();
+      } else {
+        document.getElementById('lockModal').classList.remove('hidden');
+        document.getElementById('pinInput').focus();
+      }
+    }
+
+    // Real-Time Multi-Device Subscription with safety guard
+    function initRealtime() {
+      if (supabaseClient && typeof supabaseClient.channel === 'function') {
+        try {
+          supabaseClient
+            .channel('schema-db-changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, (payload) => {
+              const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
+              if (idx !== -1) {
+                tickets[idx].checked_in = payload.new.checked_in;
+                tickets[idx].checked_in_count = payload.new.checked_in_count;
+                tickets[idx].check_in_time = payload.new.check_in_time;
+                renderList();
+                updateStats();
+              }
+            })
+            .subscribe();
+        } catch (err) {
+          console.warn('Realtime subscription could not be established:', err);
+        }
+      }
+    }
+
+    function initApp() {
+      loadShows();
+      initRealtime();
+    }
+
+    checkAuthOnLoad();
   </script>
 </body>
 </html>
