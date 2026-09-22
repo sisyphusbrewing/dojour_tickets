@@ -22,11 +22,12 @@ jobs:
           pip install requests gspread playwright
           playwright install chromium
 
-      - name: Run diagnostic check
+      - name: Run Ticket Scraper
         env:
           DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
-          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
-        run: python fetch_tickets.py
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+        # Add these two new lines:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: python fetch_tickets.py
