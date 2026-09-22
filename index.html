@@ -72,8 +72,21 @@
             🔒 Lock
           </button>
         </div>
-        <div id="statsBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">
-          Loading...
+        <div class="flex items-center gap-2">
+          <div id="statsBadge" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300">
+            Loading...
+          </div>
+          <!-- Manual Refresh Button -->
+          <button 
+            id="refreshBtn" 
+            onclick="manualRefresh()" 
+            title="Refresh guest list for last-minute purchases" 
+            class="touch-target flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-400 hover:text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
+            <svg id="refreshIcon" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span id="refreshLabel">Sync</span>
+          </button>
         </div>
       </div>
 
@@ -103,6 +116,11 @@
       <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
     </div>
   </main>
+
+  <!-- Mobile Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-amber-400 text-slate-950 px-4 py-2 rounded-full font-black text-xs shadow-2xl flex items-center gap-1.5">
+    <span id="toastMsg">Sync complete</span>
+  </div>
 
   <script>
     let tickets = [];
@@ -170,8 +188,24 @@
       } catch (e) {}
     }
 
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2500);
+    }
+
     // Load available shows
-    async function loadShows() {
+    async function loadShows(preserveSelection = false) {
+      const select = document.getElementById('showSelector');
+      const prevVal = select.value;
+
       const { data, error } = await supabaseClient
         .from('tickets')
         .select('show_date, show_title');
@@ -207,7 +241,6 @@
       // Strict chronological sort (earliest upcoming first)
       uniqueShows.sort((a, b) => a.timestamp - b.timestamp || a.show_title.localeCompare(b.show_title));
 
-      const select = document.getElementById('showSelector');
       if (uniqueShows.length === 0) {
         select.innerHTML = '<option value="">No upcoming shows scheduled</option>';
         document.getElementById('guestList').innerHTML = '<div class="text-center text-slate-500 py-10">No upcoming shows found.</div>';
@@ -218,8 +251,12 @@
         `<option value="${encodeURIComponent(JSON.stringify({ show_date: s.show_date, show_title: s.show_title }))}">${s.label}</option>`
       ).join('');
 
-      select.value = encodeURIComponent(JSON.stringify({ show_date: uniqueShows[0].show_date, show_title: uniqueShows[0].show_title }));
-      loadTicketsForCurrentShow();
+      if (preserveSelection && prevVal && uniqueShows.some(s => encodeURIComponent(JSON.stringify({ show_date: s.show_date, show_title: s.show_title })) === prevVal)) {
+        select.value = prevVal;
+      } else {
+        select.value = encodeURIComponent(JSON.stringify({ show_date: uniqueShows[0].show_date, show_title: uniqueShows[0].show_title }));
+      }
+      await loadTicketsForCurrentShow();
     }
 
     // Load tickets for selected show
@@ -239,9 +276,43 @@
         console.error('Error fetching tickets:', error);
         return;
       }
-      tickets = data;
+      tickets = data || [];
       renderList();
       updateStats();
+    }
+
+    // On-Demand Force Refresh
+    async function manualRefresh() {
+      const btn = document.getElementById('refreshBtn');
+      const icon = document.getElementById('refreshIcon');
+      const label = document.getElementById('refreshLabel');
+
+      icon.classList.add('animate-spin');
+      label.textContent = 'Syncing...';
+      btn.disabled = true;
+
+      const previousCount = tickets.length;
+
+      try {
+        await loadShows(true);
+        const diff = tickets.length - previousCount;
+
+        if (diff > 0) {
+          showToast(`+${diff} last-minute guest${diff > 1 ? 's' : ''} added!`);
+          playChime(true);
+        } else {
+          showToast('Guest list is up to date');
+        }
+      } catch (err) {
+        console.error('Refresh error:', err);
+        showToast('Refresh failed. Check connection.');
+      } finally {
+        setTimeout(() => {
+          icon.classList.remove('animate-spin');
+          label.textContent = 'Sync';
+          btn.disabled = false;
+        }, 400);
+      }
     }
 
     // Check-in mutations
@@ -430,12 +501,35 @@
         try {
           supabaseClient
             .channel('schema-db-changes')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, (payload) => {
-              const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
-              if (idx !== -1) {
-                tickets[idx].checked_in = payload.new.checked_in;
-                tickets[idx].checked_in_count = payload.new.checked_in_count;
-                tickets[idx].check_in_time = payload.new.check_in_time;
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+              const select = document.getElementById('showSelector');
+              const currentShow = select.value ? JSON.parse(decodeURIComponent(select.value)) : null;
+
+              if (payload.eventType === 'UPDATE') {
+                const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
+                if (idx !== -1) {
+                  tickets[idx].checked_in = payload.new.checked_in;
+                  tickets[idx].checked_in_count = payload.new.checked_in_count;
+                  tickets[idx].check_in_time = payload.new.check_in_time;
+                  renderList();
+                  updateStats();
+                }
+              } else if (payload.eventType === 'INSERT') {
+                // If a new ticket is purchased for the currently active show, insert it automatically!
+                if (currentShow && 
+                    payload.new.show_date === currentShow.show_date && 
+                    payload.new.show_title === currentShow.show_title) {
+                  if (!tickets.some(t => t.unique_id === payload.new.unique_id)) {
+                    tickets.push(payload.new);
+                    tickets.sort((a, b) => a.guest_name.localeCompare(b.guest_name));
+                    renderList();
+                    updateStats();
+                    showToast(`+ New ticket: ${payload.new.guest_name}`);
+                    playChime(true);
+                  }
+                }
+              } else if (payload.eventType === 'DELETE') {
+                tickets = tickets.filter(t => t.unique_id !== payload.old.unique_id);
                 renderList();
                 updateStats();
               }
