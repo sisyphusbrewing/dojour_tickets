@@ -6,6 +6,12 @@ import requests
 from datetime import datetime, timezone, timedelta
 import zoneinfo
 
+# Optional gspread import for Service Account setup
+try:
+    import gspread
+except ImportError:
+    gspread = None
+
 CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
 
 # Events that ended more than GRACE_HOURS ago are excluded
@@ -341,7 +347,8 @@ def fetch_dojour_tickets():
                 "guest_name": guest_name,
                 "email": email,
                 "tickets": tickets,
-                "source": "Dojour"
+                "source": "Dojour",
+                "_sort_dt": r_dt or detected_dt
             })
 
     print(f"Retrieved {len(dojour_tickets)} upcoming Dojour attendee reservations.")
@@ -467,7 +474,8 @@ def fetch_shopify_tickets() -> list:
                         "guest_name": guest_name,
                         "email": email,
                         "tickets": tickets_count,
-                        "source": "Website"
+                        "source": "Website",
+                        "_sort_dt": show_dt
                     })
 
             link_header = resp.headers.get("Link", "")
@@ -490,6 +498,83 @@ def fetch_shopify_tickets() -> list:
 # ==============================================================================
 # 4. Supabase Upsert Sync & Cleanup
 # ==============================================================================
+
+def sync_to_google_sheets(tickets: list):
+    """
+    Syncs the consolidated ticket list to Google Sheets.
+    Supports either:
+      1. GOOGLE_SHEET_WEBHOOK_URL (Google Apps Script Web App - simplest, no GCP keys)
+      2. gspread with GOOGLE_SHEET_ID and service account credentials
+    """
+    if not tickets:
+        return
+
+    # Method A: Google Apps Script Webhook (Recommended & Simplest)
+    webhook_url = os.environ.get("GOOGLE_SHEET_WEBHOOK_URL")
+    if webhook_url:
+        print("Syncing ticket roster to Google Sheets via Webhook...")
+        try:
+            resp = requests.post(webhook_url, json={"tickets": tickets}, timeout=30)
+            if resp.status_code == 200:
+                print("Successfully synced records to Google Sheets via Webhook.")
+                return
+            else:
+                print(f"Google Sheet Webhook returned status {resp.status_code}: {resp.text}")
+        except Exception as e:
+            print(f"Error calling Google Sheet Webhook: {e}")
+
+    # Method B: gspread with Service Account
+    sheet_id = os.environ.get("GOOGLE_SHEET_ID") or os.environ.get("GOOGLE_SHEET_NAME")
+    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+
+    if not sheet_id:
+        print("Note: Set GOOGLE_SHEET_WEBHOOK_URL or GOOGLE_SHEET_ID to enable Google Sheets export.")
+        return
+
+    if not gspread:
+        print("gspread library not installed. Run 'pip install gspread' or use GOOGLE_SHEET_WEBHOOK_URL.")
+        return
+
+    try:
+        if sa_json:
+            if os.path.exists(sa_json):
+                gc = gspread.service_account(filename=sa_json)
+            else:
+                sa_data = json.loads(sa_json)
+                gc = gspread.service_account_from_dict(sa_data)
+        elif os.path.exists("credentials.json"):
+            gc = gspread.service_account(filename="credentials.json")
+        else:
+            print("No service account credentials found for gspread.")
+            return
+
+        # Open sheet by key or name
+        if sheet_id.isalnum() and len(sheet_id) > 25:
+            sh = gc.open_by_key(sheet_id)
+        else:
+            sh = gc.open(sheet_id)
+
+        worksheet = sh.get_worksheet(0)
+        worksheet.clear()
+
+        headers = ["Unique ID", "Show Date", "Show Title", "Guest Name", "Email", "Tickets", "Source"]
+        rows = [headers]
+        for t in tickets:
+            rows.append([
+                t.get("unique_id", ""),
+                t.get("show_date", ""),
+                t.get("show_title", ""),
+                t.get("guest_name", ""),
+                t.get("email", ""),
+                t.get("tickets", 1),
+                t.get("source", "")
+            ])
+
+        worksheet.update(rows)
+        print(f"Successfully wrote {len(tickets)} rows to Google Sheet '{sh.title}'.")
+    except Exception as e:
+        print(f"Error syncing to Google Sheet via gspread: {e}")
+
 
 def sync_to_supabase(tickets: list):
     supabase_url = os.environ.get("SUPABASE_URL")
@@ -567,7 +652,7 @@ def cleanup_past_shows_from_supabase():
 # ==============================================================================
 
 def main():
-    print("Starting Sisyphus Ticket Consolidation to Supabase...")
+    print("Starting Sisyphus Ticket Consolidation to Supabase & Google Sheets...")
     shopify_tickets = []
     dojour_tickets = []
 
@@ -582,16 +667,29 @@ def main():
         print(f"Dojour sync error: {e}")
 
     all_tickets = shopify_tickets + dojour_tickets
-    print(f"Consolidated upcoming total: {len(all_tickets)} tickets.")
+
+    # Sort strictly chronologically by show date so earlier shows come first
+    # and 2027 shows appear at the very bottom
+    max_future_dt = datetime.max.replace(tzinfo=CENTRAL_TZ)
+    all_tickets.sort(key=lambda t: t.get("_sort_dt") or max_future_dt)
+
+    # Clean up the internal sorting key before database & sheets insertion
+    for t in all_tickets:
+        t.pop("_sort_dt", None)
+
+    print(f"Consolidated upcoming total: {len(all_tickets)} tickets (chronologically ordered).")
 
     if all_tickets:
+        # Sync to Supabase
         sync_to_supabase(all_tickets)
+        # Sync to Google Sheets
+        sync_to_google_sheets(all_tickets)
     else:
         print("No upcoming ticket records found.")
 
     # Clean up past shows so the door staff doesn't see old shows in the dropdown
     cleanup_past_shows_from_supabase()
-    print("Database sync complete!")
+    print("Database and Sheet sync complete!")
 
 
 if __name__ == "__main__":
