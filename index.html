@@ -108,6 +108,56 @@
     let tickets = [];
     let audioCtx = null;
 
+    function parseShowDateToMillis(dateStr) {
+      if (!dateStr) return Number.MAX_SAFE_INTEGER;
+      const raw = String(dateStr).trim();
+
+      // Check for explicit 4-digit year (e.g., 2026, 2027)
+      const yearMatch = raw.match(/\b(20\d{2})\b/);
+      const currentYear = new Date().getFullYear();
+      const year = yearMatch ? parseInt(yearMatch[1], 10) : currentYear;
+
+      const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+      const monthMatch = raw.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i);
+      
+      if (!monthMatch) {
+        const parsed = Date.parse(raw);
+        return isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
+      }
+
+      const monthIdx = monthNames.findIndex(m => monthMatch[1].toLowerCase().startsWith(m));
+
+      // Match day number
+      const dayMatch = raw.match(new RegExp(monthMatch[1] + '\\s+(\\d{1,2})(?:st|nd|rd|th)?', 'i'))
+                    || raw.match(new RegExp('(\\d{1,2})(?:st|nd|rd|th)?\\s+' + monthMatch[1], 'i'))
+                    || raw.match(/\b(\d{1,2})\b/);
+      const day = dayMatch ? parseInt(dayMatch[1], 10) : 1;
+
+      // Match time (e.g. 7:00 PM or 8:30pm)
+      const timeMatch = raw.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+      let hour = 19;
+      let minute = 0;
+      if (timeMatch) {
+        hour = parseInt(timeMatch[1], 10);
+        minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+        const ampm = timeMatch[3].toLowerCase();
+        if (ampm === 'pm' && hour < 12) hour += 12;
+        if (ampm === 'am' && hour === 12) hour = 0;
+      }
+
+      let d = new Date(year, monthIdx, day, hour, minute);
+
+      // If no year was in the string and date is >90 days in past, roll over to next year
+      if (!yearMatch) {
+        const now = new Date();
+        if (d.getTime() < now.getTime() - (90 * 24 * 60 * 60 * 1000)) {
+          d.setFullYear(year + 1);
+        }
+      }
+
+      return d.getTime();
+    }
+
     // Web Audio Chime & Mobile Haptics
     function playChime(success = true) {
       if ('vibrate' in navigator) navigator.vibrate(success ? 40 : [30, 50, 30]);
@@ -129,8 +179,7 @@
     async function loadShows() {
       const { data, error } = await supabaseClient
         .from('tickets')
-        .select('show_date, show_title')
-        .order('show_date');
+        .select('show_date, show_title');
 
       if (error || !data) {
         console.error('Error fetching shows:', error);
@@ -140,20 +189,29 @@
       const uniqueShows = [];
       const seen = new Set();
       data.forEach(d => {
+        if (!d.show_date) return;
         const key = `${d.show_date} • ${d.show_title}`;
         if (!seen.has(key)) {
           seen.add(key);
-          uniqueShows.push({ show_date: d.show_date, show_title: d.show_title, label: key });
+          uniqueShows.push({
+            show_date: d.show_date,
+            show_title: d.show_title,
+            label: key,
+            timestamp: parseShowDateToMillis(d.show_date)
+          });
         }
       });
 
+      // Strict chronological sort (earliest upcoming first, 2027 at the bottom)
+      uniqueShows.sort((a, b) => a.timestamp - b.timestamp || a.show_title.localeCompare(b.show_title));
+
       const select = document.getElementById('showSelector');
       select.innerHTML = uniqueShows.map(s => 
-        `<option value="${encodeURIComponent(JSON.stringify(s))}">${s.label}</option>`
+        `<option value="${encodeURIComponent(JSON.stringify({ show_date: s.show_date, show_title: s.show_title }))}">${s.label}</option>`
       ).join('');
 
       if (uniqueShows.length > 0) {
-        select.value = encodeURIComponent(JSON.stringify(uniqueShows[0]));
+        select.value = encodeURIComponent(JSON.stringify({ show_date: uniqueShows[0].show_date, show_title: uniqueShows[0].show_title }));
         loadTicketsForCurrentShow();
       }
     }
