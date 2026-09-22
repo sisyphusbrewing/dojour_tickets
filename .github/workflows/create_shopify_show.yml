@@ -1,0 +1,71 @@
+name: Create Shopify Show Tickets
+
+on:
+  workflow_dispatch:
+    inputs:
+      comedian_name:
+        description: 'Comedian / Show Title'
+        required: true
+        type: string
+      show_date:
+        description: 'Show Date (e.g. Oct 24 or 2026-10-24)'
+        required: true
+        type: string
+      schedule_layout:
+        description: 'Showtimes Preset'
+        required: true
+        type: choice
+        default: '1 - Standard 2-Night Run (Fri 7pm, Fri 9pm, Sat 7pm, Sat 9pm)'
+        options:
+          - '1 - Standard 2-Night Run (Fri 7pm, Fri 9pm, Sat 7pm, Sat 9pm)'
+          - '2 - Standard 2-Night Single Shows (Fri 7pm, Sat 7pm)'
+          - '3 - Single Night Double Header (Sat 7pm, Sat 9pm)'
+          - '4 - Single Show Only (7pm)'
+      ticket_price:
+        description: 'Ticket Price USD'
+        required: true
+        default: '20.00'
+        type: string
+      room_capacity:
+        description: 'Room Capacity / Ticket Limit per showtime'
+        required: true
+        default: '75'
+        type: string
+      bio:
+        description: 'Comedian Bio / Blurb'
+        required: false
+        type: string
+      image_url:
+        description: 'Comedian Headshot / Promo Image URL'
+        required: false
+        type: string
+
+jobs:
+  create_show:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Ticket Product Builder
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SHOW_TITLE: ${{ inputs.comedian_name }}
+          SHOW_DATE: ${{ inputs.show_date }}
+          SHOW_LAYOUT: ${{ inputs.schedule_layout }}
+          SHOW_PRICE: ${{ inputs.ticket_price }}
+          SHOW_CAPACITY: ${{ inputs.room_capacity }}
+          SHOW_BIO: ${{ inputs.bio }}
+          SHOW_IMAGE_URL: ${{ inputs.image_url }}
+        run: python ticket_product_builder.py
