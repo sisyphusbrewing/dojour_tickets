@@ -4,39 +4,30 @@ on:
   workflow_dispatch:
     inputs:
       comedian_name:
-        description: 'Comedian / Show Title'
+        description: 'Event / Comedian / Class Title'
         required: true
         type: string
-      show_date:
-        description: 'Show Date (e.g. Oct 24 or 2026-10-24)'
+      showtimes:
+        description: 'Showtimes / Passes (e.g. "Oct 11 5pm" or "Oct 24 7pm, Oct 24 9pm" or "Full 5-Week Class Pass")'
         required: true
         type: string
-      schedule_layout:
-        description: 'Showtimes Preset'
-        required: true
-        type: choice
-        default: '1 - Standard 2-Night Run (Fri 7pm, Fri 9pm, Sat 7pm, Sat 9pm)'
-        options:
-          - '1 - Standard 2-Night Run (Fri 7pm, Fri 9pm, Sat 7pm, Sat 9pm)'
-          - '2 - Standard 2-Night Single Shows (Fri 7pm, Sat 7pm)'
-          - '3 - Single Night Double Header (Sat 7pm, Sat 9pm)'
-          - '4 - Single Show Only (7pm)'
+        default: 'Oct 24 7pm, Oct 24 9pm, Oct 25 7pm, Oct 25 9pm'
       ticket_price:
-        description: 'Ticket Price USD'
+        description: 'Ticket / Registration Price USD'
         required: true
         default: '20.00'
         type: string
       room_capacity:
-        description: 'Room Capacity / Ticket Limit per showtime'
+        description: 'Room Capacity / Ticket Limit per variant'
         required: true
         default: '75'
         type: string
       bio:
-        description: 'Comedian Bio / Blurb'
+        description: 'Event Description / Bio / Class Details'
         required: false
         type: string
       image_url:
-        description: 'Comedian Headshot / Promo Image URL'
+        description: 'Promo Image / Headshot URL'
         required: false
         type: string
 
@@ -62,8 +53,7 @@ jobs:
           SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
           SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           SHOW_TITLE: ${{ inputs.comedian_name }}
-          SHOW_DATE: ${{ inputs.show_date }}
-          SHOW_LAYOUT: ${{ inputs.schedule_layout }}
+          SHOWTIMES_INPUT: ${{ inputs.showtimes }}
           SHOW_PRICE: ${{ inputs.ticket_price }}
           SHOW_CAPACITY: ${{ inputs.room_capacity }}
           SHOW_BIO: ${{ inputs.bio }}
