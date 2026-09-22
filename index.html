@@ -1,1 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sisyphus Door Check-In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .touch-target { min-height: 48px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans pb-10">
 
+  <!-- CONFIGURATION: Paste your Supabase credentials here -->
+  <script>
+    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+  <!-- Sticky Top Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-md">
+    <div class="max-w-2xl mx-auto space-y-2">
+      <div class="flex items-center justify-between">
+        <h1 class="text-lg font-black tracking-wide text-amber-400">SISYPHUS DOOR</h1>
+        <div id="statsBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">
+          Loading...
+        </div>
+      </div>
+
+      <!-- Show Selector -->
+      <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
+        <option value="">Loading upcoming shows...</option>
+      </select>
+
+      <!-- Instant Search -->
+      <div class="relative">
+        <input 
+          id="searchInput" 
+          type="text" 
+          placeholder="Search guest name or email..." 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+          autocomplete="off"
+          autocorrect="off"
+        >
+        <button id="clearSearch" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-sm font-bold">✕</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Guest List -->
+  <main class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
+    <div id="guestList" class="space-y-3">
+      <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
+    </div>
+  </main>
+
+  <script>
+    let tickets = [];
+    let audioCtx = null;
+
+    // Web Audio Chime & Mobile Haptics
+    function playChime(success = true) {
+      if ('vibrate' in navigator) navigator.vibrate(success ? 40 : [30, 50, 30]);
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(success ? 880 : 300, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    // Load available shows
+    async function loadShows() {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('show_date, show_title')
+        .order('show_date');
+
+      if (error || !data) return;
+
+      const uniqueShows = [];
+      const seen = new Set();
+      data.forEach(d => {
+        const key = `${d.show_date} • ${d.show_title}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueShows.push({ show_date: d.show_date, show_title: d.show_title, label: key });
+        }
+      });
+
+      const select = document.getElementById('showSelector');
+      select.innerHTML = uniqueShows.map(s => 
+        `<option value="${encodeURIComponent(JSON.stringify(s))}">${s.label}</option>`
+      ).join('');
+
+      if (uniqueShows.length > 0) {
+        select.value = encodeURIComponent(JSON.stringify(uniqueShows[0]));
+        loadTicketsForCurrentShow();
+      }
+    }
+
+    // Load tickets for selected show
+    async function loadTicketsForCurrentShow() {
+      const select = document.getElementById('showSelector');
+      if (!select.value) return;
+      const show = JSON.parse(decodeURIComponent(select.value));
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('show_date', show.show_date)
+        .eq('show_title', show.show_title)
+        .order('guest_name');
+
+      if (error) return;
+      tickets = data;
+      renderList();
+      updateStats();
+    }
+
+    // Check-in mutations
+    async function updateCheckIn(uniqueId, newCount) {
+      const record = tickets.find(t => t.unique_id === uniqueId);
+      if (!record) return;
+
+      const checkedIn = newCount > 0;
+      const checkInTime = checkedIn ? new Date().toISOString() : null;
+
+      // Optimistic Local UI Update
+      record.checked_in_count = newCount;
+      record.checked_in = checkedIn;
+      record.check_in_time = checkInTime;
+      renderList();
+      updateStats();
+      playChime(checkedIn);
+
+      // Persist to Supabase
+      await supabase
+        .from('tickets')
+        .update({
+          checked_in_count: newCount,
+          checked_in: checkedIn,
+          check_in_time: checkInTime
+        })
+        .eq('unique_id', uniqueId);
+    }
+
+    // Render guest list
+    function renderList() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const container = document.getElementById('guestList');
+
+      const filtered = tickets.filter(t => 
+        t.guest_name.toLowerCase().includes(query) ||
+        (t.email && t.email.toLowerCase().includes(query)) ||
+        t.unique_id.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-500 py-10">No guests match "${query}"</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const isComplete = t.checked_in_count >= t.tickets;
+        const isPartial = t.checked_in_count > 0 && !isComplete;
+
+        return `
+          <div class="p-3.5 rounded-xl border transition-all ${
+            isComplete 
+              ? 'bg-emerald-950/30 border-emerald-800/60' 
+              : isPartial 
+              ? 'bg-amber-950/30 border-amber-800/60' 
+              : 'bg-slate-900 border-slate-800'
+          }">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="font-bold text-base text-slate-100">${t.guest_name}</div>
+                <div class="text-xs text-slate-400">${t.email || 'No email provided'}</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                    t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300' : 'bg-orange-900/60 text-orange-300'
+                  }">${t.source}</span>
+                  <span class="text-xs font-semibold text-slate-300">
+                    ${t.tickets} Ticket${t.tickets > 1 ? 's' : ''}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Interactive Check-In Controls -->
+              <div class="flex items-center gap-1.5">
+                ${t.tickets === 1 ? `
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}',${t.checked_in ? 0 : 1})"
+                    class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold shadow ${
+                      t.checked_in 
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                    }">
+                    ${t.checked_in ? '✓ In' : 'Check In'}
+                  </button>
+                ` : `
+                  <!-- Stepper for Party / Group Arrivals -->
+                  <div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-1">
+                    <button 
+                      onclick="updateCheckIn('${t.unique_id}', Math.max(0,${t.checked_in_count} - 1))"
+                      class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center">
+                      -
+                    </button>
+                    <span class="w-12 text-center text-xs font-extrabold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}">
+                      ${t.checked_in_count}/${t.tickets}
+                    </span>
+                    <button 
+                      onclick="updateCheckIn('${t.unique_id}', Math.min(${t.tickets},${t.checked_in_count} + 1))"
+                      class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center">
+                      +
+                    </button>
+                  </div>
+                  ${t.checked_in_count < t.tickets ? `
+                    <button 
+                      onclick="updateCheckIn('${t.unique_id}', ${t.tickets})"
+                      class="touch-target px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-lg">
+                      All
+                    </button>
+                  ` : ''}
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateStats() {
+      const totalSold = tickets.reduce((acc, t) => acc + t.tickets, 0);
+      const totalChecked = tickets.reduce((acc, t) => acc + t.checked_in_count, 0);
+      const pct = totalSold ? Math.round((totalChecked / totalSold) * 100) : 0;
+      document.getElementById('statsBadge').textContent = `${totalChecked} / ${totalSold} In (${pct}%)`;
+    }
+
+    // Search events
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearch');
+    searchInput.addEventListener('input', (e) => {
+      clearBtn.classList.toggle('hidden', !e.target.value);
+      renderList();
+    });
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      clearBtn.classList.add('hidden');
+      renderList();
+      searchInput.focus();
+    });
+
+    document.getElementById('showSelector').addEventListener('change', loadTicketsForCurrentShow);
+
+    // Real-Time Multi-Device Subscription
+    supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, (payload) => {
+        const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
+        if (idx !== -1) {
+          tickets[idx].checked_in = payload.new.checked_in;
+          tickets[idx].checked_in_count = payload.new.checked_in_count;
+          tickets[idx].check_in_time = payload.new.check_in_time;
+          renderList();
+          updateStats();
+        }
+      })
+      .subscribe();
+
+    loadShows();
+  </script>
+</body>
+</html>
