@@ -15,9 +15,14 @@
 
   <!-- CONFIGURATION: Paste your Supabase credentials here -->
   <script>
-    const SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/";
+    // Project root URL (stripped of any trailing /rest/v1/)
+    const RAW_SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
+    const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Use supabaseClient to prevent shadowing the CDN's window.supabase library object
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = supabaseClient;
   </script>
 
   <!-- Sticky Top Header -->
@@ -80,12 +85,15 @@
 
     // Load available shows
     async function loadShows() {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tickets')
         .select('show_date, show_title')
         .order('show_date');
 
-      if (error || !data) return;
+      if (error || !data) {
+        console.error('Error fetching shows:', error);
+        return;
+      }
 
       const uniqueShows = [];
       const seen = new Set();
@@ -114,14 +122,17 @@
       if (!select.value) return;
       const show = JSON.parse(decodeURIComponent(select.value));
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('tickets')
         .select('*')
         .eq('show_date', show.show_date)
         .eq('show_title', show.show_title)
         .order('guest_name');
 
-      if (error) return;
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        return;
+      }
       tickets = data;
       renderList();
       updateStats();
@@ -144,7 +155,7 @@
       playChime(checkedIn);
 
       // Persist to Supabase
-      await supabase
+      const { error } = await supabaseClient
         .from('tickets')
         .update({
           checked_in_count: newCount,
@@ -152,6 +163,10 @@
           check_in_time: checkInTime
         })
         .eq('unique_id', uniqueId);
+
+      if (error) {
+        console.error('Failed to update ticket in Supabase:', error);
+      }
     }
 
     // Render guest list
@@ -263,20 +278,26 @@
 
     document.getElementById('showSelector').addEventListener('change', loadTicketsForCurrentShow);
 
-    // Real-Time Multi-Device Subscription
-    supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, (payload) => {
-        const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
-        if (idx !== -1) {
-          tickets[idx].checked_in = payload.new.checked_in;
-          tickets[idx].checked_in_count = payload.new.checked_in_count;
-          tickets[idx].check_in_time = payload.new.check_in_time;
-          renderList();
-          updateStats();
-        }
-      })
-      .subscribe();
+    // Real-Time Multi-Device Subscription with safety guard
+    if (supabaseClient && typeof supabaseClient.channel === 'function') {
+      try {
+        supabaseClient
+          .channel('schema-db-changes')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, (payload) => {
+            const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
+            if (idx !== -1) {
+              tickets[idx].checked_in = payload.new.checked_in;
+              tickets[idx].checked_in_count = payload.new.checked_in_count;
+              tickets[idx].check_in_time = payload.new.check_in_time;
+              renderList();
+              updateStats();
+            }
+          })
+          .subscribe();
+      } catch (err) {
+        console.warn('Realtime subscription could not be established:', err);
+      }
+    }
 
     loadShows();
   </script>
