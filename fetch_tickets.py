@@ -64,22 +64,22 @@ def parse_show_datetime(date_val) -> datetime | None:
     raw_str = str(date_val).strip()
     now = datetime.now(CENTRAL_TZ)
 
-    # Formats like: "Sat, Sep 19 • 7:00 PM"
+    # Formats like: "Sat, Sep 19 • 7:00 PM" or "Sat, Nov 14, 2027 • 7:00 PM"
     m_formatted = re.match(
-        r'^[A-Z][a-z]{2},\s+([A-Z][a-z]{2})\s+(\d{1,2})\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
+        r'^[A-Z][a-z]{2},\s+([A-Z][a-z]{2})\s+(\d{1,2})(?:,?\s+(\d{4}))?\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
         raw_str,
         re.IGNORECASE
     )
     if m_formatted:
-        month_s, day_s, hour_s, min_s, ampm = m_formatted.groups()
+        month_s, day_s, year_s, hour_s, min_s, ampm = m_formatted.groups()
         try:
-            year = now.year
+            year = int(year_s) if year_s else now.year
             dt_cand = datetime.strptime(
                 f"{year} {month_s} {day_s} {hour_s}:{min_s} {ampm.upper()}",
                 "%Y %b %d %I:%M %p"
             ).replace(tzinfo=CENTRAL_TZ)
-            # If date is more than 6 months in the past, it might belong to next year
-            if dt_cand < now - timedelta(days=180):
+            # If date is omitted and is >90 days in past, belongs to next year
+            if not year_s and dt_cand < now - timedelta(days=90):
                 dt_cand = dt_cand.replace(year=year + 1)
             return dt_cand
         except Exception:
@@ -136,6 +136,10 @@ def parse_show_datetime(date_val) -> datetime | None:
 def format_show_date(dt: datetime | None) -> str:
     if not dt:
         return ""
+    now = datetime.now(CENTRAL_TZ)
+    # If the show is in a future year (e.g. 2027), retain the year in the label
+    if dt.year != now.year:
+        return dt.strftime("%a, %b %-d, %Y • %-I:%M %p")
     return dt.strftime("%a, %b %-d • %-I:%M %p")
 
 
