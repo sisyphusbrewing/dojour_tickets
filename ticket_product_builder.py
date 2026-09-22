@@ -10,7 +10,7 @@ import zoneinfo
 CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
 
 # Sisyphus Brewing venue capacity & ticket defaults
-DEFAULT_ROOM_CAPACITY = 75       # Standard theater seat capacity per showtime
+DEFAULT_ROOM_CAPACITY = 90       # Standard theater seat capacity per showtime
 DEFAULT_TICKET_PRICE = "20.00"   # Default GA ticket price in USD
 VENUE_COLLECTION_HANDLE = "comedy-and-events"
 VENUE_DISCLAIMER_HTML = """
