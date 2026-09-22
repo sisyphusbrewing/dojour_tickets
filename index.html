@@ -112,10 +112,10 @@
       if (!dateStr) return Number.MAX_SAFE_INTEGER;
       const raw = String(dateStr).trim();
 
-      // Check for explicit 4-digit year (e.g., 2026, 2027)
+      // Check for explicit 4-digit year (e.g., 2026)
       const yearMatch = raw.match(/\b(20\d{2})\b/);
-      const currentYear = new Date().getFullYear();
-      const year = yearMatch ? parseInt(yearMatch[1], 10) : currentYear;
+      const now = new Date();
+      let year = yearMatch ? parseInt(yearMatch[1], 10) : now.getFullYear();
 
       const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
       const monthMatch = raw.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i);
@@ -145,17 +145,12 @@
         if (ampm === 'am' && hour === 12) hour = 0;
       }
 
-      let d = new Date(year, monthIdx, day, hour, minute);
-
-      // If no year was in the string and date is >90 days in past, roll over to next year
-      if (!yearMatch) {
-        const now = new Date();
-        if (d.getTime() < now.getTime() - (90 * 24 * 60 * 60 * 1000)) {
-          d.setFullYear(year + 1);
-        }
+      // Only advance year if currently Oct/Nov/Dec and show is Jan/Feb
+      if (!yearMatch && monthIdx < now.getMonth() && (now.getMonth() - monthIdx) >= 8) {
+        year += 1;
       }
 
-      return d.getTime();
+      return new Date(year, monthIdx, day, hour, minute).getTime();
     }
 
     // Web Audio Chime & Mobile Haptics
@@ -188,32 +183,43 @@
 
       const uniqueShows = [];
       const seen = new Set();
+      // Keep shows that ended within the last 12 hours so tonight's door check-in stays open
+      const cutoff = Date.now() - (12 * 60 * 60 * 1000);
+
       data.forEach(d => {
         if (!d.show_date) return;
         const key = `${d.show_date} • ${d.show_title}`;
         if (!seen.has(key)) {
           seen.add(key);
-          uniqueShows.push({
-            show_date: d.show_date,
-            show_title: d.show_title,
-            label: key,
-            timestamp: parseShowDateToMillis(d.show_date)
-          });
+          const timestamp = parseShowDateToMillis(d.show_date);
+          // Strictly exclude events that are already over
+          if (timestamp >= cutoff) {
+            uniqueShows.push({
+              show_date: d.show_date,
+              show_title: d.show_title,
+              label: key,
+              timestamp: timestamp
+            });
+          }
         }
       });
 
-      // Strict chronological sort (earliest upcoming first, 2027 at the bottom)
+      // Strict chronological sort (earliest upcoming first)
       uniqueShows.sort((a, b) => a.timestamp - b.timestamp || a.show_title.localeCompare(b.show_title));
 
       const select = document.getElementById('showSelector');
+      if (uniqueShows.length === 0) {
+        select.innerHTML = '<option value="">No upcoming shows scheduled</option>';
+        document.getElementById('guestList').innerHTML = '<div class="text-center text-slate-500 py-10">No upcoming shows found.</div>';
+        return;
+      }
+
       select.innerHTML = uniqueShows.map(s => 
         `<option value="${encodeURIComponent(JSON.stringify({ show_date: s.show_date, show_title: s.show_title }))}">${s.label}</option>`
       ).join('');
 
-      if (uniqueShows.length > 0) {
-        select.value = encodeURIComponent(JSON.stringify({ show_date: uniqueShows[0].show_date, show_title: uniqueShows[0].show_title }));
-        loadTicketsForCurrentShow();
-      }
+      select.value = encodeURIComponent(JSON.stringify({ show_date: uniqueShows[0].show_date, show_title: uniqueShows[0].show_title }));
+      loadTicketsForCurrentShow();
     }
 
     // Load tickets for selected show
