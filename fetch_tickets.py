@@ -45,10 +45,10 @@ def clean_show_title(raw_title: str) -> str:
     return title.strip()
 
 
-def parse_show_datetime(date_val) -> datetime | None:
+def parse_show_datetime(date_val, order_created_at: datetime | None = None) -> datetime | None:
     """
-    Parses various date formats (epochs, ISO strings, human strings) into a
-    timezone-aware datetime in America/Chicago.
+    Parses various date formats into a timezone-aware datetime in Central Time.
+    Never artificially rolls past events into next year.
     """
     if not date_val:
         return None
@@ -64,59 +64,7 @@ def parse_show_datetime(date_val) -> datetime | None:
     raw_str = str(date_val).strip()
     now = datetime.now(CENTRAL_TZ)
 
-    # Formats like: "Sat, Sep 19 • 7:00 PM" or "Sat, Nov 14, 2027 • 7:00 PM"
-    m_formatted = re.match(
-        r'^[A-Z][a-z]{2},\s+([A-Z][a-z]{2})\s+(\d{1,2})(?:,?\s+(\d{4}))?\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
-        raw_str,
-        re.IGNORECASE
-    )
-    if m_formatted:
-        month_s, day_s, year_s, hour_s, min_s, ampm = m_formatted.groups()
-        try:
-            year = int(year_s) if year_s else now.year
-            dt_cand = datetime.strptime(
-                f"{year} {month_s} {day_s} {hour_s}:{min_s} {ampm.upper()}",
-                "%Y %b %d %I:%M %p"
-            ).replace(tzinfo=CENTRAL_TZ)
-            # If date is omitted and is >90 days in past, belongs to next year
-            if not year_s and dt_cand < now - timedelta(days=90):
-                dt_cand = dt_cand.replace(year=year + 1)
-            return dt_cand
-        except Exception:
-            pass
-
-    # DOM/Natural text: 'Saturday, September 19th | 7:00pm - 9:00pm' or 'Fri, Sep 18 • 8:00 PM'
-    dom_match = re.search(
-        r'(?:([A-Za-z]+),\s+)?([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\s*(?:[|@•\-,\s]\s*|\s+at\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
-        raw_str,
-        re.IGNORECASE
-    )
-    if dom_match:
-        weekday_raw, month_raw, day_raw, year_raw, hour_raw, min_raw, ampm_raw = dom_match.groups()
-        try:
-            month = month_raw[:3].capitalize()
-            day = int(day_raw)
-            hour = int(hour_raw)
-            minute = int(min_raw) if min_raw else 0
-            year = int(year_raw) if year_raw else now.year
-            ampm = ampm_raw.upper()
-
-            if ampm == "PM" and hour < 12:
-                hour += 12
-            elif ampm == "AM" and hour == 12:
-                hour = 0
-
-            month_num = datetime.strptime(month, "%b").month
-            dt_cand = datetime(year, month_num, day, hour, minute, tzinfo=CENTRAL_TZ)
-
-            # Year boundary adjustment when year is omitted
-            if not year_raw and dt_cand < now - timedelta(days=180):
-                dt_cand = dt_cand.replace(year=year + 1)
-            return dt_cand
-        except Exception:
-            pass
-
-    # ISO-8601 timestamps (handles +00:00, Z, etc.)
+    # 1. ISO-8601 timestamps (Dojour and standard timestamps)
     try:
         iso_str = raw_str.replace("Z", "+00:00")
         if re.search(r'[+-]\d{4}$', iso_str):
@@ -130,6 +78,76 @@ def parse_show_datetime(date_val) -> datetime | None:
     except Exception:
         pass
 
+    # 2. Formatted string: e.g. "Sat, Sep 19 • 7:00 PM" or "Sat, Nov 14, 2026 • 7:00 PM"
+    m_formatted = re.match(
+        r'^[A-Z][a-z]{2},\s+([A-Z][a-z]{2})\s+(\d{1,2})(?:,?\s+(\d{4}))?\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
+        raw_str,
+        re.IGNORECASE
+    )
+    if m_formatted:
+        month_s, day_s, year_s, hour_s, min_s, ampm = m_formatted.groups()
+        try:
+            month_num = datetime.strptime(month_s.capitalize()[:3], "%b").month
+            day = int(day_s)
+            hour = int(hour_s)
+            minute = int(min_s)
+            if ampm.upper() == "PM" and hour < 12:
+                hour += 12
+            elif ampm.upper() == "AM" and hour == 12:
+                hour = 0
+
+            if year_s:
+                year = int(year_s)
+            elif order_created_at:
+                year = order_created_at.year
+                if month_num < order_created_at.month and (order_created_at.month - month_num) >= 6:
+                    year += 1
+            else:
+                year = now.year
+                # Only advance year if current month is late in year (Oct/Nov/Dec) and show is Jan/Feb
+                if month_num < now.month and (now.month - month_num) >= 8:
+                    year += 1
+
+            return datetime(year, month_num, day, hour, minute, tzinfo=CENTRAL_TZ)
+        except Exception:
+            pass
+
+    # 3. Natural DOM text: 'Saturday, September 19th | 7:00pm' or 'Friday, Feb 15 at 8pm'
+    dom_match = re.search(
+        r'(?:([A-Za-z]+),\s+)?([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\s*(?:[|@•\-,\s]\s*|\s+at\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
+        raw_str,
+        re.IGNORECASE
+    )
+    if dom_match:
+        weekday_raw, month_raw, day_raw, year_raw, hour_raw, min_raw, ampm_raw = dom_match.groups()
+        try:
+            month = month_raw[:3].capitalize()
+            month_num = datetime.strptime(month, "%b").month
+            day = int(day_raw)
+            hour = int(hour_raw)
+            minute = int(min_raw) if min_raw else 0
+            ampm = ampm_raw.upper()
+
+            if ampm == "PM" and hour < 12:
+                hour += 12
+            elif ampm == "AM" and hour == 12:
+                hour = 0
+
+            if year_raw:
+                year = int(year_raw)
+            elif order_created_at:
+                year = order_created_at.year
+                if month_num < order_created_at.month and (order_created_at.month - month_num) >= 6:
+                    year += 1
+            else:
+                year = now.year
+                if month_num < now.month and (now.month - month_num) >= 8:
+                    year += 1
+
+            return datetime(year, month_num, day, hour, minute, tzinfo=CENTRAL_TZ)
+        except Exception:
+            pass
+
     return None
 
 
@@ -137,7 +155,6 @@ def format_show_date(dt: datetime | None) -> str:
     if not dt:
         return ""
     now = datetime.now(CENTRAL_TZ)
-    # If the show is in a future year (e.g. 2027), retain the year in the label
     if dt.year != now.year:
         return dt.strftime("%a, %b %-d, %Y • %-I:%M %p")
     return dt.strftime("%a, %b %-d • %-I:%M %p")
@@ -146,7 +163,7 @@ def format_show_date(dt: datetime | None) -> str:
 def is_past_event(dt: datetime | None) -> bool:
     """Returns True if the event occurred before current Central Time minus grace period."""
     if not dt:
-        return False
+        return True  # If no date could be parsed, do not allow it to leak into the door list
     cutoff = datetime.now(CENTRAL_TZ) - timedelta(hours=GRACE_HOURS)
     return dt < cutoff
 
@@ -226,7 +243,6 @@ def fetch_dojour_tickets():
         "User-Agent": "Mozilla/5.0"
     }
 
-    # Discover upcoming instance IDs
     api_url = "https://dojour.us/api/event_instances/reserve_reports/?page_size=100&upcoming=true"
     instance_ids = []
     initial_meta = {}
@@ -294,7 +310,6 @@ def fetch_dojour_tickets():
                     detected_dt = parse_show_datetime(r["start_dt"])
                     break
 
-        # Double check past date
         if is_past_event(detected_dt):
             continue
 
@@ -362,7 +377,6 @@ def fetch_dojour_tickets():
 # ==============================================================================
 # 3. Shopify Ticket Fetcher (With Strict Past Event Filtering)
 # ==============================================================================
-
 def get_shopify_access_token() -> str:
     direct_token = os.environ.get("SHOPIFY_ACCESS_TOKEN") or os.environ.get("SHOPIFY_ADMIN_API_TOKEN")
     if direct_token:
@@ -407,7 +421,7 @@ def fetch_shopify_tickets() -> list:
         "Content-Type": "application/json"
     }
 
-    # Only look at orders from the last 90 days to avoid scanning years of history
+    # Only look at orders from the last 90 days
     created_at_min = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
     url = f"https://{store}/admin/api/2024-01/orders.json?status=any&limit=250&created_at_min={created_at_min}"
     shopify_tickets = []
@@ -426,6 +440,14 @@ def fetch_shopify_tickets() -> list:
                     continue
 
                 order_id = str(order.get("id"))
+                order_created_str = order.get("created_at")
+                order_dt = None
+                if order_created_str:
+                    try:
+                        order_dt = datetime.fromisoformat(order_created_str.replace("Z", "+00:00")).astimezone(CENTRAL_TZ)
+                    except Exception:
+                        pass
+
                 customer = order.get("customer") or {}
                 guest_name = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
                 if not guest_name:
@@ -444,7 +466,6 @@ def fetch_shopify_tickets() -> list:
 
                     show_title = clean_show_title(item_title)
 
-                    # Gather candidates to resolve show date
                     date_cands = [variant_title]
                     for prop in item.get("properties", []):
                         if any(k in prop.get("name", "").lower() for k in ["date", "time", "show"]):
@@ -453,17 +474,13 @@ def fetch_shopify_tickets() -> list:
 
                     show_dt = None
                     for cand in date_cands:
-                        parsed = parse_show_datetime(cand)
+                        parsed = parse_show_datetime(cand, order_created_at=order_dt)
                         if parsed:
                             show_dt = parsed
                             break
 
-                    # CRITICAL FILTER: Skip if the show is already in the past!
-                    if is_past_event(show_dt):
-                        continue
-
-                    # If date couldn't be parsed at all, also avoid leaking stale products
-                    if not show_dt:
+                    # Strictly discard if show date is missing or already occurred
+                    if not show_dt or is_past_event(show_dt):
                         continue
 
                     formatted_date = format_show_date(show_dt)
@@ -500,9 +517,8 @@ def fetch_shopify_tickets() -> list:
 
 
 # ==============================================================================
-# 4. Supabase Upsert Sync & Cleanup
+# 4. Supabase Upsert Sync & Comprehensive Past-Event Purge
 # ==============================================================================
-
 def sync_to_google_sheets(tickets: list):
     """
     Syncs the consolidated ticket list to Google Sheets.
@@ -607,10 +623,11 @@ def sync_to_supabase(tickets: list):
     print(f"Successfully upserted {len(tickets)} records into Supabase.")
 
 
-def cleanup_past_shows_from_supabase():
+def cleanup_past_shows_from_supabase(active_upcoming_tickets: list):
     """
-    Scans the tickets table in Supabase and deletes rows for shows that are
-    now in the past so the door dropdown only contains current and upcoming shows.
+    Purges any shows from Supabase that are not part of the active upcoming roster,
+    or whose parsed date is in the past. This immediately eliminates past shows
+    like Emma Dalenberg, Alex D, and any lingering 2027 test artifacts.
     """
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
@@ -624,29 +641,42 @@ def cleanup_past_shows_from_supabase():
     }
 
     try:
-        # Fetch distinct shows currently in Supabase
-        endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?select=show_date"
+        # Fetch all distinct show titles & dates currently recorded in Supabase
+        endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?select=show_date,show_title"
         resp = requests.get(endpoint, headers=headers, timeout=20)
         if resp.status_code != 200:
             return
 
-        all_dates = set(r["show_date"] for r in resp.json() if r.get("show_date"))
-        past_dates = []
+        active_show_keys = set(f"{t['show_date']} • {t['show_title']}" for t in active_upcoming_tickets)
+        existing_rows = resp.json() or []
+        shows_to_remove = set()
 
-        for d_str in all_dates:
-            dt = parse_show_datetime(d_str)
-            if dt and is_past_event(dt):
-                past_dates.append(d_str)
+        for r in existing_rows:
+            s_date = r.get("show_date") or ""
+            s_title = r.get("show_title") or ""
+            key = f"{s_date} • {s_title}"
 
-        if not past_dates:
+            # 1. Not in active upcoming batch
+            if key not in active_show_keys:
+                shows_to_remove.add((s_date, s_title))
+                continue
+
+            # 2. Date parses to past
+            parsed_dt = parse_show_datetime(s_date)
+            if is_past_event(parsed_dt):
+                shows_to_remove.add((s_date, s_title))
+
+        if not shows_to_remove:
+            print("Supabase door database is clean (no past shows detected).")
             return
 
-        print(f"Purging {len(past_dates)} expired show dates from Supabase door list...")
-        for p_date in past_dates:
-            del_url = f"{supabase_url.rstrip('/')}/rest/v1/tickets?show_date=eq.{requests.utils.quote(p_date)}"
+        print(f"Purging {len(shows_to_remove)} past/stale shows from Supabase...")
+        for s_date, s_title in shows_to_remove:
+            query = f"show_date=eq.{requests.utils.quote(s_date)}&show_title=eq.{requests.utils.quote(s_title)}"
+            del_url = f"{supabase_url.rstrip('/')}/rest/v1/tickets?{query}"
             del_resp = requests.delete(del_url, headers=headers, timeout=20)
             if del_resp.status_code in [200, 204]:
-                print(f"  - Removed past show: {p_date}")
+                print(f"  ✓ Purged past show: {s_date} • {s_title}")
     except Exception as e:
         print(f"Notice during past show cleanup: {e}")
 
@@ -672,27 +702,23 @@ def main():
 
     all_tickets = shopify_tickets + dojour_tickets
 
-    # Sort strictly chronologically by show date so earlier shows come first
-    # and 2027 shows appear at the very bottom
+    # Sort strictly chronologically
     max_future_dt = datetime.max.replace(tzinfo=CENTRAL_TZ)
     all_tickets.sort(key=lambda t: t.get("_sort_dt") or max_future_dt)
 
-    # Clean up the internal sorting key before database & sheets insertion
     for t in all_tickets:
         t.pop("_sort_dt", None)
 
-    print(f"Consolidated upcoming total: {len(all_tickets)} tickets (chronologically ordered).")
+    print(f"Consolidated upcoming total: {len(all_tickets)} tickets (strictly upcoming).")
 
     if all_tickets:
-        # Sync to Supabase
         sync_to_supabase(all_tickets)
-        # Sync to Google Sheets
         sync_to_google_sheets(all_tickets)
     else:
         print("No upcoming ticket records found.")
 
-    # Clean up past shows so the door staff doesn't see old shows in the dropdown
-    cleanup_past_shows_from_supabase()
+    # Purge any shows that have ended from Supabase
+    cleanup_past_shows_from_supabase(all_tickets)
     print("Database and Sheet sync complete!")
 
 
