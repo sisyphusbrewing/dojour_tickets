@@ -1,108 +1,74 @@
 import os
 import json
-import re
-from playwright.sync_api import sync_playwright
+import requests
 
-def run_diagnostics():
-    dojour_state = os.environ.get("DOJOUR_STATE")
-    if not dojour_state:
-        print("ERROR: DOJOUR_STATE environment variable is missing.")
+def run_github_diagnostic():
+    # 1. Grab token from DOJOUR_STATE secret just like the main script does
+    state_str = os.environ.get("DOJOUR_STATE", "")
+    token = ""
+    
+    if state_str:
+        try:
+            state_data = json.loads(state_str)
+            for c in state_data.get("cookies", []):
+                if c.get("name") == "usertoken":
+                    token = c.get("value")
+                    break
+        except Exception:
+            pass
+            
+    if not token:
+        token = os.environ.get("DOJOUR_TOKEN", "")
+
+    if not token:
+        print("DIAGNOSTIC FAILED: Could not find usertoken in DOJOUR_STATE secret.")
         return
 
-    try:
-        storage_state = json.loads(dojour_state)
-    except Exception:
-        storage_state = dojour_state
+    headers = {
+        "Authorization": f"Token {token}",
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0"
+    }
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(storage_state=storage_state)
-        page = context.new_page()
+    # 2. Query a specific, known upcoming instance ID (Advice Column)
+    INSTANCE_ID = "83455"
+    print(f"=== TESTING INSTANCE {INSTANCE_ID} ===")
 
-        # 1. Inspect cookies & session storage
-        print("\n=== 1. AUTH & SESSION CHECK ===")
-        cookies = context.cookies()
-        print(f"Stored cookies: {[c['name'] + ' (' + c['domain'] + ')' for c in cookies]}")
+    # Test Detail Endpoint
+    url_detail = f"https://dojour.us/api/event_instances/{INSTANCE_ID}/"
+    resp_detail = requests.get(url_detail, headers=headers)
+    print(f"\n1. GET {url_detail} -> Status {resp_detail.status_code}")
+    if resp_detail.status_code == 200:
+        data = resp_detail.json()
+        print("   Top-level keys:", list(data.keys()))
+        for k in ["start", "start_datetime", "readable_time", "created_at", "title", "name"]:
+            if k in data:
+                print(f"   {k}: {data[k]}")
 
-        # 2. Intercept all background API requests
-        api_requests = []
-        def track_request(req):
-            if any(term in req.url for term in ["api", "reserve", "report", "instances"]):
-                api_requests.append({
-                    "url": req.url,
-                    "method": req.method,
-                    "headers": {k: v for k, v in req.headers.items() if k.lower() in ["authorization", "x-csrftoken", "cookie", "referer"]}
-                })
-        page.on("request", track_request)
-
-        # 3. Navigate to upcoming reservations
-        target_url = "https://dojour.us/admin-tools/reservations/all/?upcoming=true"
-        print(f"\n=== 2. LOADING PAGE: {target_url} ===")
-        response = page.goto(target_url, wait_until="networkidle")
-        print(f"Final URL: {page.url}")
-        print(f"Page Title: {page.title()}")
-
-        # Check localStorage tokens inside the browser
-        storage = page.evaluate("""() => {
-            let items = {};
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i);
-                items[k] = localStorage.getItem(k);
-            }
-            return items;
-        }""")
-        print(f"localStorage keys: {list(storage.keys())}")
-        for k, v in storage.items():
-            if any(t in k.lower() for t in ["token", "auth", "user", "session"]):
-                print(f"  -> {k}: {v[:80]}...")
-
-        # 4. Inspect links and buttons in the first 3 rows
-        print("\n=== 3. DOM ROW & LINK INSPECTION ===")
-        rows = page.locator("tr, div.reservation-row, [role='row']").all()
-        print(f"Total rows found: {len(rows)}")
-
-        clicked = False
-        for idx, row in enumerate(rows[:5]):
-            text = row.inner_text().replace("\n", " | ").strip()
-            links = row.locator("a, button").all()
-            print(f"\nRow {idx + 1}: {text[:100]}...")
-            
-            for elem in links:
-                tag = elem.evaluate("el => el.tagName")
-                elem_text = elem.inner_text().strip()
-                href = elem.get_attribute("href") or ""
-                onclick = elem.get_attribute("onclick") or ""
-                classes = elem.get_attribute("class") or ""
-                print(f"   [{tag}] text='{elem_text}' href='{href}' class='{classes}' onclick='{onclick}'")
-
-                # Try clicking the capacity link or view button on the first row
-                if not clicked and (re.search(r"\d+/\d+|spots", elem_text, re.IGNORECASE) or "reserve" in href):
-                    print(f"\n=== 4. CLICKING ELEMENT TO REVEAL REAL API ENDPOINT ===")
-                    print(f"Clicking on: {elem_text} ({href})")
-                    api_requests.clear()
-                    try:
-                        elem.click(timeout=3000)
-                        page.wait_for_timeout(3000)
-                        clicked = True
-                    except Exception as e:
-                        print(f"Click failed: {e}")
-
-        # 5. Log all requests fired after the click
-        print("\n=== 5. CAPTURED NETWORK REQUESTS ON INTERACTION ===")
-        if not api_requests:
-            print("No background API requests captured during click.")
-        for req in api_requests:
-            print(f"[{req['method']}] {req['url']}")
-            print(f"   Headers: {req['headers']}")
-
-        # 6. Check if click opened a modal or navigated
-        print(f"\nCurrent URL after click: {page.url}")
-        modal = page.locator(".modal, [role='dialog'], .reservations-list, table").first
-        if modal.count() and modal.is_visible():
-            print("\nModal/Guest List visible in DOM after click!")
-            print(modal.inner_text()[:400])
-
-        browser.close()
+    # Test Reserve Report Endpoint
+    url_report = f"https://dojour.us/api/event_instances/{INSTANCE_ID}/reserve_report/"
+    resp_report = requests.get(url_report, headers=headers)
+    print(f"\n2. GET {url_report} -> Status {resp_report.status_code}")
+    
+    if resp_report.status_code == 200:
+        report_data = resp_report.json()
+        
+        if isinstance(report_data, dict):
+            print("   Report Dict Keys:", list(report_data.keys()))
+            for k, v in report_data.items():
+                if isinstance(v, list):
+                    print(f"   Key '{k}' is a list with {len(v)} items.")
+                    if v and isinstance(v[0], dict):
+                        print(f"     -> First item keys in '{k}': {list(v[0].keys())}")
+                        # Print the first 300 characters of a real reservation so we can see the exact schema
+                        print(f"     -> First item sample: {json.dumps(v[0])[:300]}")
+        elif isinstance(report_data, list):
+            print(f"   Report is a direct LIST of {len(report_data)} items.")
+            if report_data and isinstance(report_data[0], dict):
+                print("   First item keys:", list(report_data[0].keys()))
+                print("   First item sample:", json.dumps(report_data[0])[:300])
+    else:
+        print("   Response text:", resp_report.text[:300])
 
 if __name__ == "__main__":
-    run_diagnostics()
+    run_github_diagnostic()
