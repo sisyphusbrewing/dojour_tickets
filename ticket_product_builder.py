@@ -249,6 +249,160 @@ def set_variant_inventory(store: str, headers: dict, variant_id: int, inventory_
         print(f"  (Notice) Could not set inventory capacity: {e}")
 
 
+def auto_sort_collection_chronologically(store: str, headers: dict, collection_handle: str = "comedy-and-events"):
+    """
+    Finds the comedy collection and automatically rearranges all show products 
+    in true chronological order (closest upcoming show at the top).
+    """
+    print(f"\n--- Chronologically Sorting Collection: '{collection_handle}' ---")
+    graphql_url = f"https://{store}/admin/api/2024-01/graphql.json"
+
+    # 1. Fetch collection products and their variant showtimes
+    query = """
+    query getComedyCollection {
+      collections(first: 20) {
+        nodes {
+          id
+          title
+          handle
+          sortOrder
+          products(first: 100) {
+            nodes {
+              id
+              title
+              variants(first: 20) {
+                nodes {
+                  title
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    try:
+        resp = requests.post(graphql_url, headers=headers, json={"query": query}, timeout=20)
+        if resp.status_code != 200:
+            print(f"Could not query collection for sorting ({resp.status_code}): {resp.text}")
+            return
+
+        data = resp.json().get("data", {})
+        collections = data.get("collections", {}).get("nodes", [])
+
+        # Locate the comedy collection
+        target_collection = None
+        for col in collections:
+            if col.get("handle") == collection_handle or "comedy" in col.get("title", "").lower():
+                target_collection = col
+                break
+
+        if not target_collection:
+            print(f"Collection '{collection_handle}' not found in Shopify. Skipping auto-sort.")
+            return
+
+        collection_id = target_collection["id"]
+        products = target_collection.get("products", {}).get("nodes", [])
+
+        if not products:
+            print("No products currently in the collection to sort.")
+            return
+
+        # 2. Ensure collection sortOrder is set to MANUAL so custom order takes effect
+        if target_collection.get("sortOrder") != "MANUAL":
+            update_mutation = """
+            mutation makeCollectionManual($input: CollectionInput!) {
+              collectionUpdate(input: $input) {
+                collection {
+                  id
+                  sortOrder
+                }
+                userErrors {
+                  field
+                  message
+                }
+              }
+            }
+            """
+            requests.post(graphql_url, headers=headers, json={
+                "query": update_mutation,
+                "variables": {"input": {"id": collection_id, "sortOrder": "MANUAL"}}
+            }, timeout=15)
+
+        # 3. Determine earliest show date for every product in the collection
+        parsed_products = []
+        now = datetime.now(CENTRAL_TZ)
+        future_boundary = datetime.max.replace(tzinfo=CENTRAL_TZ)
+
+        for prod in products:
+            p_id = prod["id"]
+            p_title = prod["title"]
+            earliest_dt = future_boundary
+
+            # Check variant dates
+            for v in prod.get("variants", {}).get("nodes", []):
+                v_title = v.get("title", "")
+                dt = parse_single_datetime(v_title)
+                if dt and dt < earliest_dt:
+                    earliest_dt = dt
+
+            # If not in variants, check product title
+            if earliest_dt == future_boundary:
+                dt_title = parse_single_datetime(p_title)
+                if dt_title:
+                    earliest_dt = dt_title
+
+            parsed_products.append({
+                "id": p_id,
+                "title": p_title,
+                "dt": earliest_dt
+            })
+
+        # Sort products: earliest upcoming shows first, non-dated items at bottom
+        parsed_products.sort(key=lambda p: p["dt"])
+
+        print("Target Chronological Order on Live Store:")
+        moves = []
+        for idx, p in enumerate(parsed_products):
+            date_label = p["dt"].strftime("%b %-d, %Y") if p["dt"] != future_boundary else "Non-dated/Pass"
+            print(f"  {idx + 1}. {p['title']} ({date_label})")
+            moves.append({
+                "id": p["id"],
+                "newPosition": str(idx)
+            })
+
+        # 4. Apply reordering to Shopify
+        reorder_mutation = """
+        mutation reorderProducts($id: ID!, $moves: [MoveInput!]!) {
+          collectionReorderProducts(id: $id, moves: $moves) {
+            job {
+              id
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        reorder_resp = requests.post(graphql_url, headers=headers, json={
+            "query": reorder_mutation,
+            "variables": {
+                "id": collection_id,
+                "moves": moves
+            }
+        }, timeout=20)
+
+        if reorder_resp.status_code == 200:
+            print("✓ Successfully sorted collection chronologically on your live store!")
+        else:
+            print(f"Reorder API response ({reorder_resp.status_code}): {reorder_resp.text}")
+
+    except Exception as e:
+        print(f"Notice: Auto-sort encountered an exception: {e}")
+
+
 def publish_to_shopify(payload: dict, capacity: int) -> dict:
     store, headers = get_shopify_headers()
     api_url = f"https://{store}/admin/api/2024-01/products.json"
@@ -270,6 +424,12 @@ def publish_to_shopify(payload: dict, capacity: int) -> dict:
         set_variant_inventory(store, headers, v.get("id"), v.get("inventory_item_id"), capacity)
 
     print(f"✓ Set inventory capacity to {capacity} per showtime/ticket option.")
+
+    # Automatically re-sort the comedy collection so the new show slots in chronologically!
+    import time
+    time.sleep(2)  # Give Shopify 2 seconds to index the newly created product
+    auto_sort_collection_chronologically(store, headers)
+
     return created_product
 
 
