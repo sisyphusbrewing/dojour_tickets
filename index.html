@@ -73,6 +73,19 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
+          <!-- View Toggle: Door Check-In vs Agent Reports -->
+          <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs font-bold">
+            <button id="tabDoorBtn" onclick="switchTab('door')" class="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 transition-all">
+              Door
+            </button>
+            <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+              📊 Reports
+            </button>
+            <button id="tabCreateBtn" onclick="switchTab('create')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+              ➕ Create Show
+            </button>
+          </div>
+
           <div id="statsBadge" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300">
             Loading...
           </div>
@@ -90,30 +103,209 @@
         </div>
       </div>
 
-      <!-- Show Selector -->
-      <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
-        <option value="">Loading upcoming shows...</option>
-      </select>
+      <!-- Door Controls (Hidden when in Reports View) -->
+      <div id="doorControls" class="space-y-2">
+        <!-- Show Selector -->
+        <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
+          <option value="">Loading upcoming shows...</option>
+        </select>
 
-      <!-- Instant Search -->
-      <div class="relative">
-        <input 
-          id="searchInput" 
-          type="text" 
-          placeholder="Search guest name or email..." 
-          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
-          autocomplete="off"
-          autocorrect="off"
-        >
-        <button id="clearSearch" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-sm font-bold">✕</button>
+        <!-- Instant Search -->
+        <div class="relative">
+          <input 
+            id="searchInput" 
+            type="text" 
+            placeholder="Search guest name or email..." 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+            autocomplete="off"
+            autocorrect="off"
+          >
+          <button id="clearSearch" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-sm font-bold">✕</button>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Guest List -->
-  <main class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
+  <!-- Main Guest List (Door View) -->
+  <main id="doorView" class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
     <div id="guestList" class="space-y-3">
       <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
+    </div>
+  </main>
+
+  <!-- Agent Reports View -->
+  <main id="reportsView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow">
+      <div>
+        <h2 class="text-base font-bold text-slate-100">Agent Ticket Summaries</h2>
+        <p class="text-xs text-slate-400">Copy ticket counts or email updates to agents in one click.</p>
+      </div>
+      <button 
+        onclick="copyAllShowsSummary()" 
+        class="touch-target px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+        📋 Copy All Shows Overview
+      </button>
+    </div>
+
+    <!-- Container for show summary cards -->
+    <div id="reportsList" class="space-y-3">
+      <div class="text-center text-slate-500 py-10">Loading upcoming show summaries...</div>
+    </div>
+  </main>
+
+  <!-- Create Show View (Visual Date Picker, Rich Description, Desktop Image Upload) -->
+  <main id="createView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-5">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
+      <div class="border-b border-slate-800 pb-3">
+        <h2 class="text-base font-bold text-slate-100">Create Shopify Ticketed Show</h2>
+        <p class="text-xs text-slate-400">Build dates with the visual picker, upload flyers from your desktop, and preserve clean formatting.</p>
+      </div>
+
+      <!-- 1. Comedian / Show Title -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event / Comedian / Class Title *</label>
+        <input 
+          id="newTitle" 
+          type="text" 
+          placeholder="e.g. Khadijah Cooper - Stand-Up Comedy Class" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-semibold"
+        />
+      </div>
+
+      <!-- 2. Interactive Date Picker & Showtime Builder -->
+      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+        <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+          📅 Date Picker & Showtimes
+        </label>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <div class="sm:col-span-5">
+            <input 
+              id="calendarPicker" 
+              type="date" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+          <div class="sm:col-span-4">
+            <select id="timePicker" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
+              <option value="19:00">7:00 PM</option>
+              <option value="21:00">9:00 PM</option>
+              <option value="17:00">5:00 PM</option>
+              <option value="20:00">8:00 PM</option>
+              <option value="pass">Full Pass / Registration</option>
+            </select>
+          </div>
+          <div class="sm:col-span-3">
+            <button 
+              type="button" 
+              onclick="addSelectedShowtime()" 
+              class="w-full h-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs py-2 transition-all">
+              + Add Time
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Weekend Preset Shortcuts -->
+        <div class="flex flex-wrap gap-1.5 pt-1 text-[11px]">
+          <span class="text-slate-500 self-center">Presets:</span>
+          <button type="button" onclick="applyWeekendPreset('2night_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 & 9 PM</button>
+          <button type="button" onclick="applyWeekendPreset('2night_single')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 PM</button>
+          <button type="button" onclick="applyWeekendPreset('sat_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Sat 7 & 9 PM</button>
+        </div>
+
+        <!-- Active Showtimes List -->
+        <div id="showtimesTagContainer" class="flex flex-wrap gap-1.5 pt-2">
+          <span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above.</span>
+        </div>
+      </div>
+
+      <!-- 3. Price & Room Capacity -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($)</label>
+          <input 
+            id="newPrice" 
+            type="text" 
+            value="20.00" 
+            placeholder="20.00" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Room Limit (Capacity)</label>
+          <input 
+            id="newCapacity" 
+            type="number" 
+            value="75" 
+            placeholder="75" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+      </div>
+
+      <!-- 4. Direct Desktop Image Upload to Supabase -->
+      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+            🖼️ Upload Promo Flyer / Image
+          </label>
+          <span id="uploadStatusText" class="text-[11px] text-slate-400">Direct from desktop to Supabase</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="flex-1 cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-xl p-3 bg-slate-900/60 transition-all text-center">
+            <span class="text-xs font-semibold text-slate-300">Choose Image File from Desktop</span>
+            <span class="text-[10px] text-slate-500 mt-0.5">JPG, PNG, WebP supported</span>
+            <input id="desktopImageFile" type="file" accept="image/*" class="hidden" onchange="handleDesktopImageSelected(this)" />
+          </label>
+
+          <!-- Image Preview Thumbnail -->
+          <div id="imagePreviewContainer" class="hidden w-16 h-16 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden relative flex-shrink-0">
+            <img id="imagePreviewThumb" src="" alt="Promo preview" class="w-full h-full object-cover" />
+          </div>
+        </div>
+
+        <input 
+          id="uploadedImageUrl" 
+          type="url" 
+          placeholder="Or paste an image URL directly..." 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+        />
+      </div>
+
+      <!-- 5. Formatted Bio & Description with Formatting Helper -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event Description / Bio</label>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <button type="button" onclick="insertFormatTag('b')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">B</button>
+            <button type="button" onclick="insertFormatTag('i')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 italic hover:bg-slate-700">I</button>
+            <button type="button" onclick="insertFormatTag('bullet')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">• List</button>
+          </div>
+        </div>
+        <textarea 
+          id="newBio" 
+          rows="6" 
+          placeholder="Paste your comedian bio or class schedule here. Blank lines between paragraphs will be preserved cleanly in Shopify!" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-mono leading-relaxed"
+        ></textarea>
+      </div>
+
+      <!-- Submit & Publish Controls -->
+      <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
+        <button 
+          id="publishShowBtn" 
+          onclick="submitNewShowToPipeline()" 
+          class="touch-target w-full sm:w-auto flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-black rounded-xl text-sm py-3 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+          🚀 Publish Show to Shopify
+        </button>
+        <button 
+          type="button" 
+          onclick="copyActionInputs()" 
+          class="touch-target w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all">
+          📋 Copy Details
+        </button>
+      </div>
     </div>
   </main>
 
@@ -125,194 +317,356 @@
   <script>
     let tickets = [];
     let audioCtx = null;
+    let currentTab = 'door';
+    let allUpcomingShows = [];
+    let showSummaryData = [];
+    let agentDirectory = {}; // { showKey: { name: "", email: "" } }
+    let configuredShowtimes = [];
 
-    function parseShowDateToMillis(dateStr) {
-      if (!dateStr) return Number.MAX_SAFE_INTEGER;
-      const raw = String(dateStr).trim();
+    try {
+      agentDirectory = JSON.parse(localStorage.getItem('sisyphus_agent_directory') || '{}');
+    } catch(e) {}
 
-      // Check for explicit 4-digit year (e.g., 2026)
-      const yearMatch = raw.match(/\b(20\d{2})\b/);
-      const now = new Date();
-      let year = yearMatch ? parseInt(yearMatch[1], 10) : now.getFullYear();
+    function switchTab(tab) {
+      currentTab = tab;
+      const doorView = document.getElementById('doorView');
+      const reportsView = document.getElementById('reportsView');
+      const createView = document.getElementById('createView');
+      const doorControls = document.getElementById('doorControls');
+      const tabDoorBtn = document.getElementById('tabDoorBtn');
+      const tabReportsBtn = document.getElementById('tabReportsBtn');
+      const tabCreateBtn = document.getElementById('tabCreateBtn');
 
-      const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-      const monthMatch = raw.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i);
-      
-      if (!monthMatch) {
-        const parsed = Date.parse(raw);
-        return isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
-      }
+      // Reset tabs styling
+      tabDoorBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+      tabReportsBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+      tabCreateBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
 
-      const monthIdx = monthNames.findIndex(m => monthMatch[1].toLowerCase().startsWith(m));
+      doorView.classList.add('hidden');
+      reportsView.classList.add('hidden');
+      createView.classList.add('hidden');
+      doorControls.classList.add('hidden');
 
-      // Match day number
-      const dayMatch = raw.match(new RegExp(monthMatch[1] + '\\s+(\\d{1,2})(?:st|nd|rd|th)?', 'i'))
-                    || raw.match(new RegExp('(\\d{1,2})(?:st|nd|rd|th)?\\s+' + monthMatch[1], 'i'))
-                    || raw.match(/\b(\d{1,2})\b/);
-      const day = dayMatch ? parseInt(dayMatch[1], 10) : 1;
-
-      // Match time (e.g. 7:00 PM or 8:30pm)
-      const timeMatch = raw.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
-      let hour = 19;
-      let minute = 0;
-      if (timeMatch) {
-        hour = parseInt(timeMatch[1], 10);
-        minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-        const ampm = timeMatch[3].toLowerCase();
-        if (ampm === 'pm' && hour < 12) hour += 12;
-        if (ampm === 'am' && hour === 12) hour = 0;
-      }
-
-      // Only advance year if currently Oct/Nov/Dec and show is Jan/Feb
-      if (!yearMatch && monthIdx < now.getMonth() && (now.getMonth() - monthIdx) >= 8) {
-        year += 1;
-      }
-
-      return new Date(year, monthIdx, day, hour, minute).getTime();
-    }
-
-    // Web Audio Chime & Mobile Haptics
-    function playChime(success = true) {
-      if ('vibrate' in navigator) navigator.vibrate(success ? 40 : [30, 50, 30]);
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(success ? 880 : 300, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
-      } catch (e) {}
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toastMsg');
-      if (!toast || !toastMsg) return;
-      toastMsg.textContent = msg;
-      toast.classList.remove('opacity-0');
-      toast.classList.add('opacity-100');
-      setTimeout(() => {
-        toast.classList.remove('opacity-100');
-        toast.classList.add('opacity-0');
-      }, 2500);
-    }
-
-    // Load available shows
-    async function loadShows(preserveSelection = false) {
-      const select = document.getElementById('showSelector');
-      const prevVal = select.value;
-
-      const { data, error } = await supabaseClient
-        .from('tickets')
-        .select('show_date, show_title');
-
-      if (error || !data) {
-        console.error('Error fetching shows:', error);
-        return;
-      }
-
-      const uniqueShows = [];
-      const seen = new Set();
-      // Keep shows that ended within the last 12 hours so tonight's door check-in stays open
-      const cutoff = Date.now() - (12 * 60 * 60 * 1000);
-
-      data.forEach(d => {
-        if (!d.show_date) return;
-        const key = `${d.show_date} • ${d.show_title}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          const timestamp = parseShowDateToMillis(d.show_date);
-          // Strictly exclude events that are already over
-          if (timestamp >= cutoff) {
-            uniqueShows.push({
-              show_date: d.show_date,
-              show_title: d.show_title,
-              label: key,
-              timestamp: timestamp
-            });
-          }
+      if (tab === 'reports') {
+        reportsView.classList.remove('hidden');
+        tabReportsBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
+        loadAllShowsReport();
+      } else if (tab === 'create') {
+        createView.classList.remove('hidden');
+        tabCreateBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
+        // Pre-fill calendar picker with tomorrow's date if empty
+        const picker = document.getElementById('calendarPicker');
+        if (!picker.value) {
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          picker.value = d.toISOString().split('T')[0];
         }
-      });
-
-      // Strict chronological sort (earliest upcoming first)
-      uniqueShows.sort((a, b) => a.timestamp - b.timestamp || a.show_title.localeCompare(b.show_title));
-
-      if (uniqueShows.length === 0) {
-        select.innerHTML = '<option value="">No upcoming shows scheduled</option>';
-        document.getElementById('guestList').innerHTML = '<div class="text-center text-slate-500 py-10">No upcoming shows found.</div>';
-        return;
-      }
-
-      select.innerHTML = uniqueShows.map(s => 
-        `<option value="${encodeURIComponent(JSON.stringify({ show_date: s.show_date, show_title: s.show_title }))}">${s.label}</option>`
-      ).join('');
-
-      if (preserveSelection && prevVal && uniqueShows.some(s => encodeURIComponent(JSON.stringify({ show_date: s.show_date, show_title: s.show_title })) === prevVal)) {
-        select.value = prevVal;
       } else {
-        select.value = encodeURIComponent(JSON.stringify({ show_date: uniqueShows[0].show_date, show_title: uniqueShows[0].show_title }));
+        doorControls.classList.remove('hidden');
+        doorView.classList.remove('hidden');
+        tabDoorBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
       }
-      await loadTicketsForCurrentShow();
     }
 
-    // Load tickets for selected show
-    async function loadTicketsForCurrentShow() {
-      const select = document.getElementById('showSelector');
-      if (!select.value) return;
-      const show = JSON.parse(decodeURIComponent(select.value));
+    // ==========================================
+    // SHOW CREATOR LOGIC (Date Picker, Upload & Formatting)
+    // ==========================================
+    function formatPickerVariant(dateStr, timeStr) {
+      if (timeStr === 'pass') {
+        return 'Full Pass / Class Registration';
+      }
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hour, minute] = timeStr.split(':').map(Number);
+      const dt = new Date(year, month - 1, day, hour, minute);
+      
+      const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const dispHour = hour % 12 === 0 ? 12 : hour % 12;
+      const dispMin = String(minute).padStart(2, '0');
+      
+      return `${weekdays[dt.getDay()]}, ${months[dt.getMonth()]} ${dt.getDate()} • ${dispHour}:${dispMin} ${ampm}`;
+    }
 
-      const { data, error } = await supabaseClient
-        .from('tickets')
-        .select('*')
-        .eq('show_date', show.show_date)
-        .eq('show_title', show.show_title)
-        .order('guest_name');
-
-      if (error) {
-        console.error('Error fetching tickets:', error);
+    function addSelectedShowtime() {
+      const dateVal = document.getElementById('calendarPicker').value;
+      const timeVal = document.getElementById('timePicker').value;
+      if (!dateVal && timeVal !== 'pass') {
+        showToast('Please select a date on the calendar first');
         return;
       }
-      tickets = data || [];
-      renderList();
-      updateStats();
+      const label = formatPickerVariant(dateVal, timeVal);
+      if (!configuredShowtimes.includes(label)) {
+        configuredShowtimes.push(label);
+        renderShowtimeTags();
+      }
     }
 
-    // On-Demand Force Refresh
-    async function manualRefresh() {
-      const btn = document.getElementById('refreshBtn');
-      const icon = document.getElementById('refreshIcon');
-      const label = document.getElementById('refreshLabel');
+    function removeShowtime(index) {
+      configuredShowtimes.splice(index, 1);
+      renderShowtimeTags();
+    }
 
-      icon.classList.add('animate-spin');
-      label.textContent = 'Syncing...';
-      btn.disabled = true;
+    function renderShowtimeTags() {
+      const container = document.getElementById('showtimesTagContainer');
+      if (configuredShowtimes.length === 0) {
+        container.innerHTML = '<span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above.</span>';
+        return;
+      }
+      container.innerHTML = configuredShowtimes.map((item, idx) => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+          ${item}
+          <button type="button" onclick="removeShowtime(${idx})" class="text-amber-400 hover:text-white font-bold">×</button>
+        </span>
+      `).join('');
+    }
 
-      const previousCount = tickets.length;
+    function applyWeekendPreset(presetType) {
+      const dateVal = document.getElementById('calendarPicker').value;
+      if (!dateVal) {
+        showToast('Select starting date on calendar first');
+        return;
+      }
+      const [year, month, day] = dateVal.split('-').map(Number);
+      const baseDate = new Date(year, month - 1, day);
+
+      const addDateShow = (offsetDays, timeStr) => {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + offsetDays);
+        const yStr = d.getFullYear();
+        const mStr = String(d.getMonth() + 1).padStart(2, '0');
+        const dStr = String(d.getDate()).padStart(2, '0');
+        return formatPickerVariant(`${yStr}-${mStr}-${dStr}`, timeStr);
+      };
+
+      if (presetType === '2night_double') {
+        configuredShowtimes = [
+          addDateShow(0, '19:00'),
+          addDateShow(0, '21:00'),
+          addDateShow(1, '19:00'),
+          addDateShow(1, '21:00')
+        ];
+      } else if (presetType === '2night_single') {
+        configuredShowtimes = [
+          addDateShow(0, '19:00'),
+          addDateShow(1, '19:00')
+        ];
+      } else if (presetType === 'sat_double') {
+        configuredShowtimes = [
+          addDateShow(0, '19:00'),
+          addDateShow(0, '21:00')
+        ];
+      }
+      renderShowtimeTags();
+      showToast('Showtimes populated!');
+    }
+
+    // Direct Desktop Image Upload to Supabase Storage
+    async function handleDesktopImageSelected(inputEl) {
+      const file = inputEl.files[0];
+      if (!file) return;
+
+      const statusEl = document.getElementById('uploadStatusText');
+      const thumb = document.getElementById('imagePreviewThumb');
+      const thumbContainer = document.getElementById('imagePreviewContainer');
+      const urlInput = document.getElementById('uploadedImageUrl');
+
+      // Local preview immediately
+      thumb.src = URL.createObjectURL(file);
+      thumbContainer.classList.remove('hidden');
+
+      statusEl.textContent = 'Uploading to Supabase...';
+      statusEl.className = 'text-[11px] text-amber-400 animate-pulse';
 
       try {
-        await loadShows(true);
-        const diff = tickets.length - previousCount;
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `posters/${Date.now()}_${cleanName}`;
 
-        if (diff > 0) {
-          showToast(`+${diff} last-minute guest${diff > 1 ? 's' : ''} added!`);
+        // Upload to 'show-posters' bucket in Supabase Storage
+        const { data, error } = await supabaseClient
+          .storage
+          .from('show-posters')
+          .upload(filePath, file, { upsert: true });
+
+        if (error) {
+          // If bucket doesn't exist yet, warn gracefully
+          console.warn('Supabase storage upload notice:', error);
+          statusEl.textContent = 'Uploaded locally (Create "show-posters" public bucket in Supabase)';
+          statusEl.className = 'text-[11px] text-amber-400';
+          return;
+        }
+
+        const { data: pubData } = supabaseClient
+          .storage
+          .from('show-posters')
+          .getPublicUrl(filePath);
+
+        if (pubData && pubData.publicUrl) {
+          urlInput.value = pubData.publicUrl;
+          statusEl.textContent = '✓ Ready on Supabase Storage!';
+          statusEl.className = 'text-[11px] text-emerald-400 font-bold';
+          showToast('Image uploaded to Supabase!');
           playChime(true);
-        } else {
-          showToast('Guest list is up to date');
         }
       } catch (err) {
-        console.error('Refresh error:', err);
-        showToast('Refresh failed. Check connection.');
-      } finally {
-        setTimeout(() => {
-          icon.classList.remove('animate-spin');
-          label.textContent = 'Sync';
-          btn.disabled = false;
-        }, 400);
+        console.error('File upload exception:', err);
+        statusEl.textContent = 'Upload failed. Check Supabase Storage permissions.';
+        statusEl.className = 'text-[11px] text-rose-400';
       }
+    }
+
+    function insertFormatTag(tag) {
+      const textarea = document.getElementById('newBio');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
+
+      let replacement = '';
+      if (tag === 'b') replacement = `<strong>${selected || 'bold text'}</strong>`;
+      if (tag === 'i') replacement = `<em>${selected || 'italic text'}</em>`;
+      if (tag === 'bullet') replacement = `\n• ${selected || 'Key detail or policy'}`;
+
+      textarea.setRangeText(replacement, start, end, 'end');
+      textarea.focus();
+    }
+
+    // Convert raw pasted text into semantic HTML with paragraphs & bullet lists
+    function formatDescriptionToHtml(rawText) {
+      if (!rawText || !rawText.trim()) return '<p>Live stand-up comedy and events at Sisyphus Brewing.</p>';
+      const clean = rawText.trim();
+      
+      // If already HTML, return directly
+      if (clean.includes('<p>') || clean.includes('<br')) return clean;
+
+      const paragraphs = clean.split(/\n\s*\n/);
+      return paragraphs.map(para => {
+        const lines = para.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0 && lines.every(l => l.startsWith('•') || l.startsWith('-') || l.startsWith('*'))) {
+          const listItems = lines.map(l => `<li>${l.replace(/^[-*•]\s*/, '')}</li>`).join('');
+          return `<ul style="margin: 8px 0; padding-left: 20px;">${listItems}</ul>`;
+        }
+        return `<p style="margin-bottom: 12px; line-height: 1.6;">${lines.join('<br/>')}</p>`;
+      }).join('\n');
+    }
+
+    async function submitNewShowToPipeline() {
+      const title = document.getElementById('newTitle').value.trim();
+      const price = document.getElementById('newPrice').value.trim() || '20.00';
+      const capacity = parseInt(document.getElementById('newCapacity').value, 10) || 75;
+      const imageUrl = document.getElementById('uploadedImageUrl').value.trim();
+      const rawBio = document.getElementById('newBio').value.trim();
+
+      if (!title) {
+        showToast('Please enter an event or comedian title');
+        return;
+      }
+      if (configuredShowtimes.length === 0) {
+        showToast('Please add at least one showtime using the date picker');
+        return;
+      }
+
+      const formattedHtml = formatDescriptionToHtml(rawBio);
+      const btn = document.getElementById('publishShowBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Saving to Show Queue...';
+
+      try {
+        // Save to Supabase 'show_queue' table so Python builder or GitHub Action picks it up
+        const { error } = await supabaseClient
+          .from('show_queue')
+          .insert([{
+            title: title,
+            showtimes: configuredShowtimes.join(', '),
+            price: price,
+            capacity: capacity,
+            bio_html: formattedHtml,
+            image_url: imageUrl,
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }]);
+
+        if (error) {
+          console.warn('Queue insert warning (table might need to be created):', error);
+          // Fallback: Copy ready-to-run params to clipboard for 1-click GitHub run
+          copyActionInputs();
+          showToast('Copied parameters! Run workflow in GitHub Actions');
+        } else {
+          showToast(`✓ "${title}" queued for Shopify!`);
+          playChime(true);
+        }
+      } catch (e) {
+        copyActionInputs();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Publish Show to Shopify';
+      }
+    }
+
+    function copyActionInputs() {
+      const title = document.getElementById('newTitle').value.trim() || 'Show Title';
+      const showtimes = configuredShowtimes.join(', ') || 'Oct 24 7pm, Oct 24 9pm';
+      const price = document.getElementById('newPrice').value.trim() || '20.00';
+      const capacity = document.getElementById('newCapacity').value.trim() || '75';
+      const imageUrl = document.getElementById('uploadedImageUrl').value.trim();
+      const bio = document.getElementById('newBio').value.trim();
+
+      const blurb = `Show Title: ${title}\n` +
+                    `Showtimes: ${showtimes}\n` +
+                    `Price: ${price}\n` +
+                    `Capacity: ${capacity}\n` +
+                    `Image URL: ${imageUrl}\n\n` +
+                    `Description:\n${bio}`;
+
+      const tempArea = document.createElement("textarea");
+      tempArea.value = blurb;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast('Show details copied to clipboard!');
+      playChime(true);
+    }
+
+    function emailAgent(safeKey) {
+      const key = decodeURIComponent(safeKey);
+      const s = showSummaryData.find(item => `${item.show_date} • ${item.show_title}` === key);
+      if (!s) return;
+
+      const agent = agentDirectory[key] || { email: "" };
+      const recipient = agent.email || "";
+      const subject = encodeURIComponent(`Ticket Count Update: ${s.show_title} (${s.show_date}) - Sisyphus Brewing`);
+      const body = encodeURIComponent(
+        `Hi,\n\nHere is the current ticket count for ${s.show_title} at Sisyphus Brewing:\n\n` +
+        `• Show: ${s.show_title}\n` +
+        `• Date: ${s.show_date}\n` +
+        `• Total Tickets Sold: ${s.totalTickets}\n` +
+        `  - Website: ${s.websiteTickets}\n` +
+        `  - Dojour: ${s.dojourTickets}\n\n` +
+        `Let us know if you have any questions!\n\nBest,\nSisyphus Brewing`
+      );
+
+      window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+    }
+
+    function copyAllShowsSummary() {
+      if (showSummaryData.length === 0) return;
+
+      let report = `SISYPHUS BREWING - UPCOMING COMEDY SHOW COUNTS (${new Date().toLocaleDateString()}):\n\n`;
+      showSummaryData.forEach(s => {
+        report += `• ${s.show_title} (${s.show_date}): ${s.totalTickets} sold (Web: ${s.websiteTickets}, Dojour: ${s.dojourTickets})\n`;
+      });
+
+      const tempArea = document.createElement("textarea");
+      report += `\nGenerated via Sisyphus Door System.`;
+      tempArea.value = report;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast("Copied all shows overview to clipboard!");
+      playChime(true);
     }
 
     // Check-in mutations
