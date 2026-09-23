@@ -57,5 +57,7 @@ jobs:
           SHOW_PRICE: ${{ inputs.ticket_price }}
           SHOW_CAPACITY: ${{ inputs.room_capacity }}
           SHOW_BIO: ${{ inputs.bio }}
-          SHOW_IMAGE_URL: ${{ inputs.image_url }}
+          SHOW_IMAGE_URL: ${{ inputs.image_url }}      
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: python ticket_product_builder.py
