@@ -669,6 +669,333 @@
       playChime(true);
     }
 
+    // ==========================================
+    // CORE DATABASE LOADERS & HELPERS
+    // ==========================================
+    function playChime(success = true) {
+      if ('vibrate' in navigator) navigator.vibrate(success ? 40 : [30, 50, 30]);
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(success ? 880 : 300, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2200);
+    }
+
+    function parseShowDateToMillis(str) {
+      if (!str) return 0;
+      const now = new Date();
+      const currentYear = now.getFullYear();
+
+      const mMatch = str.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b/i);
+      const dMatch = str.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+      const yMatch = str.match(/\b(20\d{2})\b/);
+      const tMatch = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+
+      if (!mMatch || !dMatch) return 0;
+
+      const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+      const month = months[mMatch[1].toLowerCase().slice(0, 3)];
+      const day = parseInt(dMatch[1], 10);
+      let year = yMatch ? parseInt(yMatch[1], 10) : currentYear;
+
+      let hours = 19;
+      let mins = 0;
+      if (tMatch) {
+        hours = parseInt(tMatch[1], 10);
+        mins = tMatch[2] ? parseInt(tMatch[2], 10) : 0;
+        const ampm = tMatch[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+      }
+
+      if (!yMatch && month < now.getMonth() && (now.getMonth() - month) >= 8) {
+        year += 1;
+      }
+
+      return new Date(year, month, day, hours, mins).getTime();
+    }
+
+    async function loadShows() {
+      const select = document.getElementById('showSelector');
+      const previousSelectedValue = select.value;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('tickets')
+          .select('show_date, show_title');
+
+        if (error) {
+          console.error("Supabase loadShows error:", error);
+          document.getElementById('statsBadge').textContent = 'DB Error';
+          select.innerHTML = '<option value="">Database connection error</option>';
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          select.innerHTML = '<option value="">No shows found</option>';
+          document.getElementById('statsBadge').textContent = '0 Shows';
+          return;
+        }
+
+        const uniqueShows = [];
+        const seen = new Set();
+        const now = Date.now();
+        const GRACE_PERIOD_MS = 12 * 60 * 60 * 1000;
+
+        data.forEach(d => {
+          const key = `${d.show_date} • ${d.show_title}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            const timestamp = parseShowDateToMillis(d.show_date);
+            if (timestamp && timestamp < (now - GRACE_PERIOD_MS)) {
+              return;
+            }
+            uniqueShows.push({
+              show_date: d.show_date,
+              show_title: d.show_title,
+              label: key,
+              timestamp: timestamp || Number.MAX_SAFE_INTEGER
+            });
+          }
+        });
+
+        uniqueShows.sort((a, b) => a.timestamp - b.timestamp);
+        allUpcomingShows = uniqueShows;
+
+        if (uniqueShows.length === 0) {
+          select.innerHTML = '<option value="">No upcoming shows found</option>';
+          document.getElementById('statsBadge').textContent = '0 Shows';
+          return;
+        }
+
+        select.innerHTML = uniqueShows.map(s => 
+          `<option value="${encodeURIComponent(JSON.stringify(s))}">${s.label}</option>`
+        ).join('');
+
+        let matchedOption = false;
+        if (previousSelectedValue) {
+          for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === previousSelectedValue) {
+              select.selectedIndex = i;
+              matchedOption = true;
+              break;
+            }
+          }
+        }
+
+        if (!matchedOption) {
+          select.selectedIndex = 0;
+        }
+
+        await loadTicketsForCurrentShow();
+      } catch (err) {
+        console.error("Exception loading shows:", err);
+        document.getElementById('statsBadge').textContent = 'Error';
+      }
+    }
+
+    async function loadTicketsForCurrentShow() {
+      const select = document.getElementById('showSelector');
+      if (!select.value) return;
+
+      try {
+        const show = JSON.parse(decodeURIComponent(select.value));
+
+        const { data, error } = await supabaseClient
+          .from('tickets')
+          .select('*')
+          .eq('show_date', show.show_date)
+          .eq('show_title', show.show_title)
+          .order('guest_name');
+
+        if (error) {
+          console.error("Supabase loadTickets error:", error);
+          return;
+        }
+
+        tickets = data || [];
+        renderList();
+        updateStats();
+      } catch (err) {
+        console.error("Exception in loadTicketsForCurrentShow:", err);
+      }
+    }
+
+    async function manualRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      const label = document.getElementById('refreshLabel');
+      if (icon) icon.classList.add('animate-spin');
+      if (label) label.textContent = 'Syncing...';
+
+      const oldCount = tickets.length;
+      await loadShows();
+
+      if (icon) icon.classList.remove('animate-spin');
+      if (label) label.textContent = 'Sync';
+
+      const diff = tickets.length - oldCount;
+      if (diff > 0) {
+        showToast(`+${diff} new ticket${diff > 1 ? 's' : ''} synced!`);
+        playChime(true);
+      } else {
+        showToast('Guest list is up to date');
+      }
+    }
+
+    async function loadAllShowsReport() {
+      const container = document.getElementById('reportsList');
+      container.innerHTML = '<div class="text-center text-slate-500 py-10">Loading ticket counts...</div>';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('tickets')
+          .select('show_date, show_title, tickets, source');
+
+        if (error || !data) {
+          container.innerHTML = '<div class="text-center text-rose-500 py-10">Failed to load report data from Supabase.</div>';
+          return;
+        }
+
+        const showMap = {};
+        const now = Date.now();
+        const GRACE_PERIOD_MS = 12 * 60 * 60 * 1000;
+
+        data.forEach(t => {
+          const dateStr = t.show_date || '';
+          const titleStr = t.show_title || '';
+          if (!dateStr || !titleStr) return;
+
+          const key = `${dateStr} • ${titleStr}`;
+          const ts = parseShowDateToMillis(dateStr);
+          if (ts && ts < (now - GRACE_PERIOD_MS)) return;
+
+          if (!showMap[key]) {
+            showMap[key] = {
+              show_date: dateStr,
+              show_title: titleStr,
+              timestamp: ts || Number.MAX_SAFE_INTEGER,
+              totalTickets: 0,
+              websiteTickets: 0,
+              dojourTickets: 0
+            };
+          }
+
+          const count = parseInt(t.tickets, 10) || 1;
+          showMap[key].totalTickets += count;
+          if (t.source === 'Website') {
+            showMap[key].websiteTickets += count;
+          } else {
+            showMap[key].dojourTickets += count;
+          }
+        });
+
+        showSummaryData = Object.values(showMap);
+        showSummaryData.sort((a, b) => a.timestamp - b.timestamp);
+
+        if (showSummaryData.length === 0) {
+          container.innerHTML = '<div class="text-center text-slate-500 py-10">No upcoming shows found.</div>';
+          return;
+        }
+
+        container.innerHTML = showSummaryData.map(s => {
+          const safeKey = encodeURIComponent(`${s.show_date} • ${s.show_title}`);
+          const agent = agentDirectory[`${s.show_date} • ${s.show_title}`] || { name: '', email: '' };
+
+          return `
+            <div class="p-4 rounded-xl border bg-slate-900 border-slate-800 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-base text-slate-100">${s.show_title}</div>
+                  <div class="text-xs text-amber-400 font-semibold">${s.show_date}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-slate-100">${s.totalTickets}</div>
+                  <div class="text-[10px] uppercase font-bold text-slate-400">Total Sold</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                <div>🌐 Web: <span class="font-bold text-indigo-400">${s.websiteTickets}</span></div>
+                <div>🎟 Dojour: <span class="font-bold text-orange-400">${s.dojourTickets}</span></div>
+              </div>
+
+              <div class="pt-1 flex items-center justify-between gap-2">
+                <input 
+                  type="email" 
+                  placeholder="Agent email..."
+                  value="${agent.email || ''}"
+                  onchange="saveAgentEmail('${safeKey}', this.value)"
+                  class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                />
+                <button 
+                  onclick="emailAgent('${safeKey}')"
+                  class="touch-target px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
+                  ✉️ Email
+                </button>
+                <button 
+                  onclick="copySingleShowSummary('${safeKey}')"
+                  class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all">
+                  📋 Copy
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("Exception loading reports:", err);
+        container.innerHTML = '<div class="text-center text-rose-500 py-10">Error loading report summary.</div>';
+      }
+    }
+
+    function saveAgentEmail(safeKey, email) {
+      const key = decodeURIComponent(safeKey);
+      if (!agentDirectory[key]) agentDirectory[key] = {};
+      agentDirectory[key].email = email.trim();
+      localStorage.setItem('sisyphus_agent_directory', JSON.stringify(agentDirectory));
+      showToast('Saved agent email');
+    }
+
+    function copySingleShowSummary(safeKey) {
+      const key = decodeURIComponent(safeKey);
+      const s = showSummaryData.find(item => `${item.show_date} • ${item.show_title}` === key);
+      if (!s) return;
+
+      const blurb = `Ticket Count: ${s.show_title} (${s.show_date})\n` +
+                    `• Total Sold: ${s.totalTickets}\n` +
+                    `  - Website: ${s.websiteTickets}\n` +
+                    `  - Dojour: ${s.dojourTickets}`;
+
+      const tempArea = document.createElement("textarea");
+      tempArea.value = blurb;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast('Copied ticket update!');
+      playChime(true);
+    }
+
     // Check-in mutations
     async function updateCheckIn(uniqueId, newCount) {
       const record = tickets.find(t => t.unique_id === uniqueId);
