@@ -211,7 +211,7 @@ def build_shopify_product_payload(comedian_name: str, bio_text: str, variants: l
             "tags": "Comedy, Tickets, Will Call, Minneapolis",
             "options": [
                 {
-                    "name": "Date & Time / Ticket Type"
+                    "name": "Date & Time"
                 }
             ],
             "variants": product_variants
