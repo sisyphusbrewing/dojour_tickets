@@ -13,10 +13,10 @@ DEFAULT_ROOM_CAPACITY = 75
 DEFAULT_TICKET_PRICE = "20.00"
 VENUE_DISCLAIMER_HTML = """
 <p><strong>🎟 100% Will-Call:</strong> No paper tickets needed. Check in under your name at the door.</p>
-<hr/>
+<hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;"/>
 {bio_html}
-<hr/>
-<p style="font-size: 0.9em; color: #64748b;">
+<hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;"/>
+<p style="font-size: 0.9em; color: #64748b; line-height: 1.5;">
 <strong>Venue Information & Policies:</strong><br/>
 • Sisyphus Brewing Comedy Club & Taproom (712 Ontario Ave W, Minneapolis, MN).<br/>
 • Must be 18+ to attend comedy shows.<br/>
@@ -24,6 +24,40 @@ VENUE_DISCLAIMER_HTML = """
 • You will receive an email confirmation upon purchase. Just give your name at the door upon arrival.
 </p>
 """.strip()
+
+
+def format_bio_html(bio_text: str) -> str:
+    """
+    Preserves text formatting, multiple paragraphs, and bullet points.
+    Converts raw double newlines into clean semantic <p> blocks and
+    dashed/bulleted lines into proper <ul><li> HTML lists.
+    """
+    if not bio_text or not bio_text.strip():
+        return "<p>Live stand-up comedy and events at Sisyphus Brewing.</p>"
+
+    clean = bio_text.strip()
+
+    # If it already contains HTML tags from the web creator, preserve directly
+    if "<p>" in clean or "<div>" in clean or "<br" in clean or "<ul>" in clean:
+        return clean
+
+    paragraphs = re.split(r'\n\s*\n', clean)
+    html_blocks = []
+
+    for para in paragraphs:
+        lines = [line.strip() for line in para.split('\n') if line.strip()]
+        if not lines:
+            continue
+
+        # Check if this paragraph is a bulleted list
+        if all(re.match(r'^[-*•]\s+', l) for l in lines):
+            items = "".join(f"<li>{re.sub(r'^[-*•]\s+', '', l)}</li>" for l in lines)
+            html_blocks.append(f"<ul style='margin: 8px 0; padding-left: 20px; line-height: 1.6;'>{items}</ul>")
+        else:
+            para_content = "<br/>".join(lines)
+            html_blocks.append(f"<p style='margin-bottom: 14px; line-height: 1.6;'>{para_content}</p>")
+
+    return "\n".join(html_blocks)
 
 
 def get_shopify_headers() -> tuple[str, dict]:
@@ -184,7 +218,7 @@ def parse_freeform_showtimes(input_str: str) -> list[dict]:
 
 
 def build_shopify_product_payload(comedian_name: str, bio_text: str, variants: list[dict], price: str, capacity: int, image_url: str = None) -> dict:
-    bio_html = f"<p>{bio_text.strip()}</p>" if bio_text.strip() else "<p>Live stand-up comedy and events at Sisyphus Brewing.</p>"
+    bio_html = format_bio_html(bio_text)
     body_html = VENUE_DISCLAIMER_HTML.format(bio_html=bio_html)
 
     product_variants = []
@@ -222,6 +256,56 @@ def build_shopify_product_payload(comedian_name: str, bio_text: str, variants: l
         payload["product"]["images"] = [{"src": image_url}]
 
     return payload
+
+
+def check_and_process_supabase_queue():
+    """
+    Checks if there are pending shows created via the web app in Supabase
+    and processes them directly into Shopify.
+    """
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    if not supabase_url or not supabase_key:
+        return False
+
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        url = f"{supabase_url.rstrip('/')}/rest/v1/show_queue?status=eq.pending&order=created_at.asc&limit=1"
+        resp = requests.get(url, headers=headers, timeout=15)
+        if resp.status_code != 200:
+            return False
+
+        jobs = resp.json() or []
+        if not jobs:
+            return False
+
+        job = jobs[0]
+        job_id = job.get("id")
+        title = job.get("title")
+        showtimes_raw = job.get("showtimes") or "Oct 24 7pm"
+        price = str(job.get("price") or DEFAULT_TICKET_PRICE)
+        capacity = int(job.get("capacity") or DEFAULT_ROOM_CAPACITY)
+        bio_html = job.get("bio_html") or ""
+        image_url = job.get("image_url") or ""
+
+        print(f"\n[Supabase Queue] Found pending show: '{title}'")
+        variants = parse_freeform_showtimes(showtimes_raw)
+        payload = build_shopify_product_payload(title, bio_html, variants, price, capacity, image_url)
+        publish_to_shopify(payload, capacity)
+
+        # Mark completed
+        patch_url = f"{supabase_url.rstrip('/')}/rest/v1/show_queue?id=eq.{job_id}"
+        requests.patch(patch_url, headers=headers, json={"status": "published"}, timeout=15)
+        print(f"[Supabase Queue] Successfully processed show '{title}'.")
+        return True
+    except Exception as e:
+        print(f"[Supabase Queue] Notice: {e}")
+        return False
 
 
 def set_variant_inventory(store: str, headers: dict, variant_id: int, inventory_item_id: int, capacity: int):
@@ -438,7 +522,11 @@ def main():
     print("  SISYPHUS BREWING • FLEXIBLE SHOPIFY TICKET BUILDER     ")
     print("==========================================================")
 
-    # Check environment input (GitHub Actions Web Form)
+    # 1. First check if a show was queued from the Web App via Supabase
+    if check_and_process_supabase_queue():
+        return
+
+    # 2. Check environment input (GitHub Actions Web Form)
     title = os.environ.get("SHOW_TITLE", "").strip()
 
     if title:
@@ -462,7 +550,7 @@ def main():
         publish_to_shopify(payload, capacity)
         return
 
-    # Interactive Terminal fallback
+    # 3. Interactive Terminal fallback
     comedian = input("\nEvent / Comedian / Show Title: ").strip()
     if not comedian:
         print("Title is required.")
