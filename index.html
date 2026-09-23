@@ -26,6 +26,27 @@
     // crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_NEW_PIN')).then(b => console.log(Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')))
     const DOOR_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 
+    // Suppress sandbox-level WebSocket security warnings in embedded preview iframes
+    window.addEventListener('error', (event) => {
+      if (event && event.message && event.message.includes('WebSocket')) {
+        event.preventDefault();
+      }
+    });
+
+    // Detect if running in an iframe sandbox (like Canvas preview) where WebSockets are blocked
+    function canUseRealtimeWebSocket() {
+      try {
+        if (typeof WebSocket === 'undefined') return false;
+        // In preview environments, window.self !== window.top and hostname is not production
+        if (window.self !== window.top && window.location.hostname !== 'sisyphusbrewing.github.io') {
+          return false;
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     // Use supabaseClient to prevent shadowing the CDN's window.supabase library object
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.supabaseClient = supabaseClient;
@@ -322,6 +343,7 @@
     let showSummaryData = [];
     let agentDirectory = {}; // { showKey: { name: "", email: "" } }
     let configuredShowtimes = [];
+    let checkedInCollapsed = true;
 
     try {
       agentDirectory = JSON.parse(localStorage.getItem('sisyphus_agent_directory') || '{}');
@@ -1027,10 +1049,101 @@
       }
     }
 
-    // Render guest list
+    function toggleCheckedInTray() {
+      checkedInCollapsed = !checkedInCollapsed;
+      renderList();
+    }
+
+    // Helper to render individual ticket cards consistently
+    function renderTicketCard(t) {
+      const isComplete = t.checked_in_count >= t.tickets;
+      const isPartial = t.checked_in_count > 0 && !isComplete;
+
+      return `
+        <div class="p-3.5 rounded-xl border transition-all ${
+          isComplete 
+            ? 'bg-emerald-950/20 border-emerald-800/40 opacity-90' 
+            : isPartial 
+            ? 'bg-amber-950/30 border-amber-800/60' 
+            : 'bg-slate-900 border-slate-800 shadow-sm'
+        }">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-bold text-base text-slate-100 flex items-center gap-1.5">
+                ${isComplete ? '<span class="text-emerald-400 text-sm">✓</span>' : ''}
+                ${t.guest_name}
+              </div>
+              <div class="text-xs text-slate-400">${t.email || 'No email provided'}</div>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                  t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300' : 'bg-orange-900/60 text-orange-300'
+                }">${t.source}</span>
+                <span class="text-xs font-semibold text-slate-300">
+                  ${t.tickets} Ticket${t.tickets > 1 ? 's' : ''}
+                </span>
+                ${isComplete && t.check_in_time ? `
+                  <span class="text-[10px] text-slate-500 font-medium">
+                    In at ${new Date(t.check_in_time).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'})}
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Interactive Check-In Controls -->
+            <div class="flex items-center gap-1.5">
+              ${t.tickets === 1 ? `
+                <button 
+                  onclick="updateCheckIn('${t.unique_id}',${t.checked_in ? 0 : 1})"
+                  class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow ${
+                    t.checked_in 
+                      ? 'bg-emerald-600/90 hover:bg-emerald-500 text-white' 
+                      : 'bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700'
+                  }">
+                  ${t.checked_in ? '✓ In' : 'Check In'}
+                </button>
+              ` : `
+                <!-- Stepper for Party / Group Arrivals -->
+                <div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-1">
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}', Math.max(0,${t.checked_in_count} - 1))"
+                    title="Remove 1 guest"
+                    class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center active:scale-95 transition-all">
+                    -
+                  </button>
+                  <span class="w-12 text-center text-xs font-extrabold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}">
+                    ${t.checked_in_count}/${t.tickets}
+                  </span>
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}', Math.min(${t.tickets},${t.checked_in_count} + 1))"
+                    title="Add 1 guest"
+                    class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center active:scale-95 transition-all">
+                    +
+                  </button>
+                </div>
+                ${t.checked_in_count < t.tickets ? `
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}', ${t.tickets})"
+                    title="Check in entire party"
+                    class="touch-target px-3 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-black rounded-lg transition-all shadow-sm">
+                    All
+                  </button>
+                ` : ''}
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Render guest list partitioned into Pending (awaiting arrival) and Completed
     function renderList() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       const container = document.getElementById('guestList');
+
+      if (!tickets || tickets.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-500 py-10">No guests found for this show.</div>`;
+        return;
+      }
 
       const filtered = tickets.filter(t => 
         t.guest_name.toLowerCase().includes(query) ||
@@ -1043,74 +1156,71 @@
         return;
       }
 
-      container.innerHTML = filtered.map(t => {
-        const isComplete = t.checked_in_count >= t.tickets;
-        const isPartial = t.checked_in_count > 0 && !isComplete;
+      // Split into active/pending vs completely checked in
+      const pendingGuests = filtered.filter(t => t.checked_in_count < t.tickets);
+      const completedGuests = filtered.filter(t => t.checked_in_count >= t.tickets);
 
-        return `
-          <div class="p-3.5 rounded-xl border transition-all ${
-            isComplete 
-              ? 'bg-emerald-950/30 border-emerald-800/60' 
-              : isPartial 
-              ? 'bg-amber-950/30 border-amber-800/60' 
-              : 'bg-slate-900 border-slate-800'
-          }">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <div class="font-bold text-base text-slate-100">${t.guest_name}</div>
-                <div class="text-xs text-slate-400">${t.email || 'No email provided'}</div>
-                <div class="flex items-center gap-2 mt-1.5">
-                  <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                    t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300' : 'bg-orange-900/60 text-orange-300'
-                  }">${t.source}</span>
-                  <span class="text-xs font-semibold text-slate-300">
-                    ${t.tickets} Ticket${t.tickets > 1 ? 's' : ''}
-                  </span>
-                </div>
-              </div>
+      const totalCompletedTickets = completedGuests.reduce((sum, t) => sum + t.tickets, 0);
 
-              <!-- Interactive Check-In Controls -->
-              <div class="flex items-center gap-1.5">
-                ${t.tickets === 1 ? `
-                  <button 
-                    onclick="updateCheckIn('${t.unique_id}',${t.checked_in ? 0 : 1})"
-                    class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold shadow ${
-                      t.checked_in 
-                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                    }">
-                    ${t.checked_in ? '✓ In' : 'Check In'}
-                  </button>
-                ` : `
-                  <!-- Stepper for Party / Group Arrivals -->
-                  <div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-1">
-                    <button 
-                      onclick="updateCheckIn('${t.unique_id}', Math.max(0,${t.checked_in_count} - 1))"
-                      class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center">
-                      -
-                    </button>
-                    <span class="w-12 text-center text-xs font-extrabold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}">
-                      ${t.checked_in_count}/${t.tickets}
-                    </span>
-                    <button 
-                      onclick="updateCheckIn('${t.unique_id}', Math.min(${t.tickets},${t.checked_in_count} + 1))"
-                      class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center">
-                      +
-                    </button>
-                  </div>
-                  ${t.checked_in_count < t.tickets ? `
-                    <button 
-                      onclick="updateCheckIn('${t.unique_id}', ${t.tickets})"
-                      class="touch-target px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-lg">
-                      All
-                    </button>
-                  ` : ''}
-                `}
+      // Auto-expand if the door staff is searching so matching results are immediately visible
+      const isExpanded = query.length > 0 ? true : !checkedInCollapsed;
+
+      let html = '';
+
+      // 1. Pending Arrivals Section
+      if (pendingGuests.length > 0) {
+        html += `
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Awaiting Arrival (${pendingGuests.length} ${pendingGuests.length === 1 ? 'party' : 'parties'})
+              </span>
+            </div>
+            ${pendingGuests.map(t => renderTicketCard(t)).join('')}
+          </div>
+        `;
+      } else if (!query) {
+        html += `
+          <div class="bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-6 text-center space-y-2">
+            <div class="text-3xl">🎉</div>
+            <div class="font-bold text-emerald-300 text-base">All Guests Checked In!</div>
+            <div class="text-xs text-slate-400">Everyone on the door list has arrived.</div>
+          </div>
+        `;
+      }
+
+      // 2. Collapsible Checked-In Tray
+      if (completedGuests.length > 0) {
+        html += `
+          <div class="pt-4 border-t border-slate-800/80 space-y-2.5">
+            <button 
+              type="button"
+              onclick="toggleCheckedInTray()" 
+              class="w-full flex items-center justify-between bg-slate-900/90 hover:bg-slate-900 border border-slate-800 px-3.5 py-2.5 rounded-xl transition-all select-none">
+              <div class="flex items-center gap-2">
+                <span class="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                  ✓
+                </span>
+                <span class="text-xs font-bold text-slate-300">Checked In</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/60">
+                  ${completedGuests.length} ${completedGuests.length === 1 ? 'party' : 'parties'} • ${totalCompletedTickets} ${totalCompletedTickets === 1 ? 'ticket' : 'tickets'}
+                </span>
               </div>
+              <div class="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                <span>${isExpanded ? 'Hide' : 'Show'}</span>
+                <span class="transform transition-transform text-[10px] ${isExpanded ? 'rotate-180' : ''}">▼</span>
+              </div>
+            </button>
+
+            <!-- Collapsible Items Container -->
+            <div class="${isExpanded ? 'space-y-2.5' : 'hidden'}">
+              ${completedGuests.map(t => renderTicketCard(t)).join('')}
             </div>
           </div>
         `;
-      }).join('');
+      }
+
+      container.innerHTML = html;
     }
 
     function updateStats() {
@@ -1176,8 +1286,25 @@
       }
     }
 
-    // Real-Time Multi-Device Subscription with safety guard
+    let pollTimer = null;
+    function startPollingFallback() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        // Poll for ticket updates periodically if authenticated and on door view
+        if (sessionStorage.getItem('sisyphus_door_auth') === 'true' && currentTab === 'door') {
+          await loadTicketsForCurrentShow();
+        }
+      }, 25000);
+    }
+
+    // Real-Time Multi-Device Subscription with environment safety guard
     function initRealtime() {
+      if (!canUseRealtimeWebSocket()) {
+        console.log("Sandboxed environment detected: WebSockets disabled, using polling mode.");
+        startPollingFallback();
+        return;
+      }
+
       if (supabaseClient && typeof supabaseClient.channel === 'function') {
         try {
           supabaseClient
@@ -1215,9 +1342,15 @@
                 updateStats();
               }
             })
-            .subscribe();
+            .subscribe((status, err) => {
+              if (err || status === 'CHANNEL_ERROR') {
+                console.warn('Realtime channel error, falling back to polling:', err);
+                startPollingFallback();
+              }
+            });
         } catch (err) {
-          console.warn('Realtime subscription could not be established:', err);
+          console.warn('Realtime subscription could not be established, falling back to polling:', err);
+          startPollingFallback();
         }
       }
     }
