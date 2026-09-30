@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import requests
 
 # ---------------------------------------------------------------------------
-# CONFIGURATION & ENVIRONMENT (Accepts SHOPIFY_CLIENT_SECRET automatically)
+# CONFIGURATION & ENVIRONMENT
 # ---------------------------------------------------------------------------
 raw_store = os.environ.get("SHOPIFY_STORE", "").replace("https://", "").replace("/", "").strip()
 if raw_store and not raw_store.endswith(".myshopify.com"):
@@ -14,12 +14,8 @@ if raw_store and not raw_store.endswith(".myshopify.com"):
 else:
     SHOPIFY_STORE = raw_store
 
-# Use SHOPIFY_ACCESS_TOKEN if present, otherwise fall back to SHOPIFY_CLIENT_SECRET
-SHOPIFY_ACCESS_TOKEN = (
-    os.environ.get("SHOPIFY_ACCESS_TOKEN") or 
-    os.environ.get("SHOPIFY_CLIENT_SECRET") or 
-    ""
-).strip()
+SHOPIFY_CLIENT_ID = os.environ.get("SHOPIFY_CLIENT_ID", "").strip()
+SHOPIFY_CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET", "").strip()
 
 SHOW_TITLE = os.environ.get("SHOW_TITLE", "").strip()
 SHOWTIMES_INPUT = os.environ.get("SHOW_DATE", "").strip() or os.environ.get("SHOWTIMES", "").strip()
@@ -42,6 +38,56 @@ STANDARD_POLICY_HTML = """
   </ul>
 </div>
 """
+
+# Cached access token in memory during runtime
+ACTIVE_ACCESS_TOKEN = None
+
+# ---------------------------------------------------------------------------
+# SHOPIFY TOKEN EXCHANGE (Client Credentials Grant)
+# ---------------------------------------------------------------------------
+def get_shopify_access_token():
+    global ACTIVE_ACCESS_TOKEN
+    if ACTIVE_ACCESS_TOKEN:
+        return ACTIVE_ACCESS_TOKEN
+
+    direct_token = os.environ.get("SHOPIFY_ACCESS_TOKEN", "").strip()
+    if direct_token.startswith("shpat_"):
+        ACTIVE_ACCESS_TOKEN = direct_token
+        return ACTIVE_ACCESS_TOKEN
+
+    if not SHOPIFY_CLIENT_ID or not SHOPIFY_CLIENT_SECRET:
+        print("❌ Error: Missing SHOPIFY_CLIENT_ID or SHOPIFY_CLIENT_SECRET environment variables.")
+        sys.exit(1)
+
+    print("Authenticating with Shopify via Client Credentials...")
+    token_url = f"https://{SHOPIFY_STORE}/admin/oauth/access_token"
+    payload = {
+        "client_id": SHOPIFY_CLIENT_ID,
+        "client_secret": SHOPIFY_CLIENT_SECRET,
+        "grant_type": "client_credentials"
+    }
+
+    resp = requests.post(token_url, data=payload)
+    if resp.status_code != 200:
+        # Fallback to JSON payload if form-encoded is rejected
+        resp = requests.post(token_url, json=payload)
+
+    if resp.status_code == 200:
+        data = resp.json()
+        ACTIVE_ACCESS_TOKEN = data.get("access_token")
+        print("  ✓ Authenticated successfully with Shopify Admin API!")
+        return ACTIVE_ACCESS_TOKEN
+    else:
+        print(f"❌ Failed to authenticate with Shopify ({resp.status_code}): {resp.text}")
+        sys.exit(1)
+
+def get_shopify_headers():
+    token = get_shopify_access_token()
+    return {
+        "X-Shopify-Access-Token": token,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
 
 # ---------------------------------------------------------------------------
 # TEXT & BIO FORMATTER
@@ -173,15 +219,8 @@ def generate_variants(showtimes_raw):
     return variants
 
 # ---------------------------------------------------------------------------
-# SHOPIFY API CLIENT
+# SHOPIFY INVENTORY & COLLECTION HELPERS
 # ---------------------------------------------------------------------------
-def get_shopify_headers():
-    return {
-        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
-
 def get_primary_location_id():
     url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/locations.json"
     resp = requests.get(url, headers=get_shopify_headers())
@@ -207,11 +246,8 @@ def set_variant_inventory(inventory_item_id, location_id, capacity):
             "available": int(capacity)
         })
     except Exception as e:
-        print(f"  ⚠️️ Could not set inventory: {e}")
+        print(f"  ⚠️ Could not set inventory: {e}")
 
-# ---------------------------------------------------------------------------
-# CHRONOLOGICAL COLLECTION REORDERING (GraphQL)
-# ---------------------------------------------------------------------------
 def reorder_collection_chronologically():
     print(f"\nSorting '{COLLECTION_HANDLE}' collection chronologically...")
     col_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/custom_collections.json?handle={COLLECTION_HANDLE}"
@@ -315,15 +351,15 @@ def main():
     print("  SISYPHUS BREWING • SHOPIFY TICKET BUILDER               ")
     print("==========================================================")
 
-    if not SHOPIFY_STORE or not SHOPIFY_ACCESS_TOKEN:
-        if not SHOPIFY_STORE:
-            print("❌ Error: SHOPIFY_STORE secret is missing from environment.")
-        if not SHOPIFY_ACCESS_TOKEN:
-            print("❌ Error: SHOPIFY_CLIENT_SECRET or SHOPIFY_ACCESS_TOKEN secret is missing.")
+    if not SHOPIFY_STORE:
+        print("❌ Error: SHOPIFY_STORE environment variable is missing.")
         sys.exit(1)
 
     print(f"Store target: https://{SHOPIFY_STORE}")
-    print(f"Token present: {'Yes' if SHOPIFY_ACCESS_TOKEN else 'No'}")
+    print(f"Client ID: {SHOPIFY_CLIENT_ID[:6]}... (present)" if SHOPIFY_CLIENT_ID else "Client ID: Missing")
+
+    # Authenticate immediately
+    get_shopify_access_token()
 
     title = SHOW_TITLE or "Stand-Up Comedy Show"
     raw_showtimes = SHOWTIMES_INPUT or "Oct 24 7pm"
