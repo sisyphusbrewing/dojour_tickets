@@ -1,587 +1,352 @@
 import os
+import sys
 import re
-import csv
 import json
 from datetime import datetime, timedelta
-import zoneinfo
 import requests
 
-CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
+# ---------------------------------------------------------------------------
+# CONFIGURATION & ENVIRONMENT
+# ---------------------------------------------------------------------------
+SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "").replace("https://", "").replace("/", "").strip()
+SHOPIFY_ACCESS_TOKEN = os.environ.get("SHOPIFY_ACCESS_TOKEN", "").strip()
 
-# Sisyphus Brewing Venue Defaults
-DEFAULT_ROOM_CAPACITY = 75
-DEFAULT_TICKET_PRICE = "20.00"
-VENUE_DISCLAIMER_HTML = """
-<p><strong>🎟 100% Will-Call:</strong> No paper tickets needed. Check in under your name at the door.</p>
-<hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;"/>
-{bio_html}
-<hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;"/>
-<p style="font-size: 0.9em; color: #64748b; line-height: 1.5;">
-<strong>Venue Information & Policies:</strong><br/>
-• Sisyphus Brewing Comedy Club & Taproom (712 Ontario Ave W, Minneapolis, MN).<br/>
-• Must be 18+ to attend comedy shows.<br/>
-• All sales are final unless the event is cancelled or rescheduled.<br/>
-• You will receive an email confirmation upon purchase. Just give your name at the door upon arrival.
-</p>
-""".strip()
+# Form inputs passed from GitHub Actions or CLI
+SHOW_TITLE = os.environ.get("SHOW_TITLE", "").strip()
+SHOWTIMES_INPUT = os.environ.get("SHOW_DATE", "").strip() or os.environ.get("SHOWTIMES", "").strip()
+SHOW_PRICE = os.environ.get("SHOW_PRICE", "20.00").strip()
+SHOW_CAPACITY = os.environ.get("SHOW_CAPACITY", "75").strip()
+SHOW_BIO = os.environ.get("SHOW_BIO", "").strip()
+SHOW_IMAGE_URL = os.environ.get("SHOW_IMAGE_URL", "").strip()
 
+VENUE_NAME = "Sisyphus Brewing"
+COLLECTION_HANDLE = "comedy-and-events"
 
-def format_bio_html(bio_text: str) -> str:
-    """
-    Preserves text formatting, multiple paragraphs, and bullet points.
-    Converts raw double newlines into clean semantic <p> blocks and
-    dashed/bulleted lines into proper <ul><li> HTML lists.
-    """
-    if not bio_text or not bio_text.strip():
+STANDARD_POLICY_HTML = """
+<div style="margin-top: 24px; padding: 14px; border: 1px solid #334155; border-radius: 8px; background-color: #0f172a; color: #cbd5e1; font-size: 13px; line-height: 1.5;">
+  <p style="margin: 0 0 6px 0; font-weight: bold; color: #f59e0b;">🎟️ Will-Call & Venue Policies:</p>
+  <ul style="margin: 0; padding-left: 18px;">
+    <li>All tickets are <strong>Will-Call</strong>. No physical tickets will be mailed.</li>
+    <li>Simply check in at the door under the purchaser's name upon arrival.</li>
+    <li>18+ recommended. Valid ID required for craft beer purchases.</li>
+    <li>Location: Sisyphus Brewing Taproom & Comedy Theater (712 Ontario Ave W #100, Minneapolis, MN 55403).</li>
+  </ul>
+</div>
+"""
+
+# ---------------------------------------------------------------------------
+# TEXT & BIO FORMATTER (Preserves Paragraphs & Bullets without f-string backslashes)
+# ---------------------------------------------------------------------------
+def format_bio_html(raw_text):
+    if not raw_text or not raw_text.strip():
         return "<p>Live stand-up comedy and events at Sisyphus Brewing.</p>"
 
-    clean = bio_text.strip()
-
-    # If it already contains HTML tags from the web creator, preserve directly
-    if "<p>" in clean or "<div>" in clean or "<br" in clean or "<ul>" in clean:
+    clean = raw_text.strip()
+    if "<p>" in clean or "<br" in clean:
         return clean
 
     paragraphs = re.split(r'\n\s*\n', clean)
-    html_blocks = []
+    html_parts = []
 
     for para in paragraphs:
-        lines = [line.strip() for line in para.split('\n') if line.strip()]
+        lines = [l.strip() for l in para.split('\n') if l.strip()]
         if not lines:
             continue
 
-        # Check if this paragraph is a bulleted list
-        if all(re.match(r'^[-*•]\s+', l) for l in lines):
-            items = "".join(f"<li>{re.sub(r'^[-*•]\s+', '', l)}</li>" for l in lines)
-            html_blocks.append(f"<ul style='margin: 8px 0; padding-left: 20px; line-height: 1.6;'>{items}</ul>")
+        if all(l.startswith(('•', '-', '*')) for l in lines):
+            items = []
+            for l in lines:
+                cleaned_line = re.sub(r'^[-*•]\s*', '', l)
+                items.append(f"<li>{cleaned_line}</li>")
+            html_parts.append(f'<ul style="margin: 8px 0; padding-left: 20px;">{"".join(items)}</ul>')
         else:
-            para_content = "<br/>".join(lines)
-            html_blocks.append(f"<p style='margin-bottom: 14px; line-height: 1.6;'>{para_content}</p>")
+            br_joined = "<br/>".join(lines)
+            html_parts.append(f'<p style="margin-bottom: 12px; line-height: 1.6;">{br_joined}</p>')
 
-    return "\n".join(html_blocks)
+    return "\n".join(html_parts)
 
+# ---------------------------------------------------------------------------
+# SHOWTIME PARSER
+# ---------------------------------------------------------------------------
+def parse_single_showtime(raw_str):
+    raw_str = raw_str.strip()
+    if not raw_str:
+        return None
 
-def get_shopify_headers() -> tuple[str, dict]:
-    store = os.environ.get("SHOPIFY_STORE", "").strip()
-    if not store:
-        store = input("Enter myshopify store (e.g. sisyphusbrewing.myshopify.com): ").strip()
+    # Pass / Class registration
+    if any(k in raw_str.lower() for k in ['pass', 'registration', 'general admission', 'class series']):
+        return raw_str
 
-    if not store.endswith(".myshopify.com"):
-        store = f"{store}.myshopify.com"
+    # Already formatted: "Fri, Oct 24 • 7:00 PM"
+    if " • " in raw_str and any(ampm in raw_str.upper() for ampm in ["AM", "PM"]):
+        return raw_str
 
-    token = os.environ.get("SHOPIFY_ACCESS_TOKEN") or os.environ.get("SHOPIFY_ADMIN_API_TOKEN")
+    now = datetime.now()
+    cur_year = now.year
 
-    if not token:
-        client_id = os.environ.get("SHOPIFY_CLIENT_ID")
-        client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET")
-        if client_id and client_secret:
-            token_url = f"https://{store}/admin/oauth/access_token"
-            resp = requests.post(token_url, json={
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "grant_type": "client_credentials"
-            }, timeout=15)
-            resp.raise_for_status()
-            token = resp.json().get("access_token")
+    time_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', raw_str, re.IGNORECASE)
+    hours, mins, ampm = 19, 0, "PM"
+    if time_match:
+        h = int(time_match.group(1))
+        m = int(time_match.group(2)) if time_match.group(2) else 0
+        ap = time_match.group(3).upper() if time_match.group(3) else None
+        if ap:
+            ampm = ap
+            hours = h
+        elif h in [7, 8, 9, 10, 11]:
+            hours, ampm = h, "PM"
+        elif h >= 12:
+            hours, ampm = h % 12 or 12, "PM"
+        else:
+            hours = h
+        mins = m
 
-    if not token:
-        raise ValueError("Missing SHOPIFY_ACCESS_TOKEN or SHOPIFY_CLIENT_ID / SECRET.")
+    date_part = raw_str
+    if time_match:
+        date_part = raw_str[:time_match.start()] + raw_str[time_match.end():]
+    date_part = date_part.strip().strip(",").strip("•").strip("-")
 
-    headers = {
-        "X-Shopify-Access-Token": token.strip(),
+    month_match = re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b', date_part, re.IGNORECASE)
+    day_match = re.search(r'\b(\d{1,2})(?:st|nd|rd|th)?\b', date_part)
+    year_match = re.search(r'\b(20\d{2})\b', date_part)
+
+    if month_match and day_match:
+        month_str = month_match.group(1).capitalize()
+        day = int(day_match.group(1))
+        year = int(year_match.group(1)) if year_match else cur_year
+
+        month_num = datetime.strptime(month_str, "%b").month
+        try:
+            dt = datetime(year, month_num, day)
+            weekday_str = dt.strftime("%a")
+            formatted_time = f"{hours}:{mins:02d} {ampm}"
+            return f"{weekday_str}, {month_str} {day} • {formatted_time}"
+        except ValueError:
+            pass
+
+    return raw_str
+
+def generate_variants(showtimes_raw):
+    raw_entries = re.split(r'[,;\n]+', showtimes_raw)
+    variants = []
+    seen = set()
+
+    for item in raw_entries:
+        item = item.strip()
+        if not item:
+            continue
+
+        if "weekend" in item.lower():
+            clean_date = re.sub(r'weekend', '', item, flags=re.IGNORECASE).strip()
+            v1 = parse_single_showtime(f"{clean_date} 7pm")
+            v2 = parse_single_showtime(f"{clean_date} 9pm")
+            try:
+                m_match = re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b', clean_date, re.IGNORECASE)
+                d_match = re.search(r'\b(\d{1,2})\b', clean_date)
+                if m_match and d_match:
+                    dt = datetime(datetime.now().year, datetime.strptime(m_match.group(1).capitalize(), "%b").month, int(d_match.group(1)))
+                    sat_dt = dt + timedelta(days=1)
+                    sat_str = sat_dt.strftime("%b %d")
+                    v3 = parse_single_showtime(f"{sat_str} 7pm")
+                    v4 = parse_single_showtime(f"{sat_str} 9pm")
+                    for v in [v1, v2, v3, v4]:
+                        if v and v not in seen:
+                            seen.add(v)
+                            variants.append(v)
+                    continue
+            except Exception:
+                pass
+
+        parsed = parse_single_showtime(item)
+        if parsed and parsed not in seen:
+            seen.add(parsed)
+            variants.append(parsed)
+
+    if not variants:
+        variants = ["General Admission"]
+    return variants
+
+# ---------------------------------------------------------------------------
+# SHOPIFY API CLIENT
+# ---------------------------------------------------------------------------
+def get_shopify_headers():
+    return {
+        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
-    return store, headers
 
+def get_primary_location_id():
+    url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/locations.json"
+    resp = requests.get(url, headers=get_shopify_headers())
+    if resp.status_code == 200:
+        locs = resp.json().get("locations", [])
+        if locs:
+            return locs[0]["id"]
+    return None
 
-def format_variant_datetime(dt: datetime) -> str:
-    now = datetime.now(CENTRAL_TZ)
-    if dt.year != now.year:
-        return dt.strftime("%a, %b %-d, %Y • %-I:%M %p")
-    return dt.strftime("%a, %b %-d • %-I:%M %p")
-
-
-def parse_time_str(time_str: str) -> tuple[int, int, str]:
-    clean = time_str.strip().upper()
-    match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?', clean)
-    if not match:
-        return 19, 0, "PM"
-    h = int(match.group(1))
-    m = int(match.group(2) or 0)
-    ampm = match.group(3) or "PM"
-    if ampm == "PM" and h < 12:
-        h += 12
-    elif ampm == "AM" and h == 12:
-        h = 0
-    return h, m, ampm
-
-
-def parse_single_datetime(text: str) -> datetime | None:
-    """Parses arbitrary strings like 'Oct 11 5pm', '2026-10-24 19:00', 'Nov 15 at 5:00 PM' into Central datetime."""
-    now = datetime.now(CENTRAL_TZ)
-    raw = text.strip()
-
-    # Match month and day: e.g. Oct 11, October 11, 10/11
-    month = None
-    day = None
-    year = now.year
-
-    month_match = re.search(r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b', raw, re.IGNORECASE)
-    day_match = re.search(r'\b(\d{1,2})(?:st|nd|rd|th)?\b', raw)
-
-    # Check 4-digit year
-    year_match = re.search(r'\b(20\d{2})\b', raw)
-    if year_match:
-        year = int(year_match.group(1))
-
-    if month_match and day_match:
-        m_str = month_match.group(1)[:3].capitalize()
-        month = datetime.strptime(m_str, "%b").month
-        day = int(day_match.group(1))
-    else:
-        # Try MM/DD
-        num_date = re.search(r'\b(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b', raw)
-        if num_date:
-            month = int(num_date.group(1))
-            day = int(num_date.group(2))
-            if num_date.group(3):
-                y = int(num_date.group(3))
-                year = y if y > 100 else y + 2000
-
-    if not month or not day:
-        return None
-
-    # Resolve hour and minute
-    time_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)', raw, re.IGNORECASE)
-    if time_match:
-        h = int(time_match.group(1))
-        m = int(time_match.group(2) or 0)
-        ampm = time_match.group(3).upper()
-        if ampm == "PM" and h < 12:
-            h += 12
-        elif ampm == "AM" and h == 12:
-            h = 0
-    else:
-        # Default to 7:00 PM if time omitted
-        h, m = 19, 0
-
-    if not year_match and month < now.month and (now.month - month) >= 8:
-        year += 1
-
+def set_variant_inventory(inventory_item_id, location_id, capacity):
+    if not inventory_item_id or not location_id:
+        return
     try:
-        return datetime(year, month, day, h, m, tzinfo=CENTRAL_TZ)
-    except Exception:
-        return None
-
-
-def parse_freeform_showtimes(input_str: str) -> list[dict]:
-    """
-    Handles:
-    - Lists: "Oct 11 5pm, Oct 18 5pm" or multi-line entries
-    - Weekend shorthand: "Oct 24 weekend" -> Fri 7/9, Sat 7/9
-    - Named passes: "Full 5-Week Class Pass" -> kept as titled variant
-    """
-    raw_entries = [line.strip() for line in re.split(r'[,\n;]+', input_str) if line.strip()]
-    variants = []
-
-    for entry in raw_entries:
-        # Shortcut: "Oct 24 weekend"
-        if "weekend" in entry.lower():
-            parsed_dt = parse_single_datetime(entry)
-            if parsed_dt:
-                friday = parsed_dt
-                saturday = friday + timedelta(days=1)
-                for dt_base in [friday, saturday]:
-                    for h, m in [(19, 0), (21, 0)]:
-                        dt_show = dt_base.replace(hour=h, minute=m)
-                        variants.append({
-                            "title": format_variant_datetime(dt_show),
-                            "datetime": dt_show
-                        })
-                continue
-
-        parsed_dt = parse_single_datetime(entry)
-        if parsed_dt:
-            variants.append({
-                "title": format_variant_datetime(parsed_dt),
-                "datetime": parsed_dt
-            })
-        else:
-            # Custom pass / General Admission / Non-dated item
-            clean_title = entry.strip()
-            variants.append({
-                "title": clean_title,
-                "datetime": datetime.now(CENTRAL_TZ)
-            })
-
-    return variants
-
-
-def build_shopify_product_payload(comedian_name: str, bio_text: str, variants: list[dict], price: str, capacity: int, image_url: str = None) -> dict:
-    bio_html = format_bio_html(bio_text)
-    body_html = VENUE_DISCLAIMER_HTML.format(bio_html=bio_html)
-
-    product_variants = []
-    for idx, v in enumerate(variants):
-        sku_date = v['datetime'].strftime('%m%d%H%M') if 'datetime' in v else str(idx)
-        sku = f"SISY-{re.sub(r'[^A-Z0-9]', '', comedian_name.upper())[:8]}-{sku_date}"
-
-        product_variants.append({
-            "option1": v["title"],
-            "price": price,
-            "sku": sku,
-            "inventory_management": "shopify",
-            "inventory_policy": "deny",
-            "requires_shipping": False,   # 100% Digital / Will-Call
-            "taxable": True
+        connect_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/inventory_levels/connect.json"
+        requests.post(connect_url, headers=get_shopify_headers(), json={
+            "location_id": location_id,
+            "inventory_item_id": inventory_item_id
         })
-
-    payload = {
-        "product": {
-            "title": comedian_name.strip(),
-            "body_html": body_html,
-            "vendor": "Sisyphus Brewing",
-            "product_type": "Comedy",
-            "tags": "Comedy, Tickets, Will Call, Minneapolis",
-            "options": [
-                {
-                    "name": "Date & Time"
-                }
-            ],
-            "variants": product_variants
-        }
-    }
-
-    if image_url and image_url.startswith("http"):
-        payload["product"]["images"] = [{"src": image_url}]
-
-    return payload
-
-
-def check_and_process_supabase_queue():
-    """
-    Checks if there are pending shows created via the web app in Supabase
-    and processes them directly into Shopify.
-    """
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
-        return False
-
-    headers = {
-        "apikey": supabase_key,
-        "Authorization": f"Bearer {supabase_key}",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        url = f"{supabase_url.rstrip('/')}/rest/v1/show_queue?status=eq.pending&order=created_at.asc&limit=1"
-        resp = requests.get(url, headers=headers, timeout=15)
-        if resp.status_code != 200:
-            return False
-
-        jobs = resp.json() or []
-        if not jobs:
-            return False
-
-        job = jobs[0]
-        job_id = job.get("id")
-        title = job.get("title")
-        showtimes_raw = job.get("showtimes") or "Oct 24 7pm"
-        price = str(job.get("price") or DEFAULT_TICKET_PRICE)
-        capacity = int(job.get("capacity") or DEFAULT_ROOM_CAPACITY)
-        bio_html = job.get("bio_html") or ""
-        image_url = job.get("image_url") or ""
-
-        print(f"\n[Supabase Queue] Found pending show: '{title}'")
-        variants = parse_freeform_showtimes(showtimes_raw)
-        payload = build_shopify_product_payload(title, bio_html, variants, price, capacity, image_url)
-        publish_to_shopify(payload, capacity)
-
-        # Mark completed
-        patch_url = f"{supabase_url.rstrip('/')}/rest/v1/show_queue?id=eq.{job_id}"
-        requests.patch(patch_url, headers=headers, json={"status": "published"}, timeout=15)
-        print(f"[Supabase Queue] Successfully processed show '{title}'.")
-        return True
-    except Exception as e:
-        print(f"[Supabase Queue] Notice: {e}")
-        return False
-
-
-def set_variant_inventory(store: str, headers: dict, variant_id: int, inventory_item_id: int, capacity: int):
-    try:
-        loc_resp = requests.get(f"https://{store}/admin/api/2024-01/locations.json", headers=headers, timeout=15)
-        if loc_resp.status_code != 200:
-            return
-        locations = loc_resp.json().get("locations", [])
-        if not locations:
-            return
-        location_id = locations[0]["id"]
-
-        inv_payload = {
+        set_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/inventory_levels/set.json"
+        requests.post(set_url, headers=get_shopify_headers(), json={
             "location_id": location_id,
             "inventory_item_id": inventory_item_id,
-            "available": capacity
-        }
-        requests.post(
-            f"https://{store}/admin/api/2024-01/inventory_levels/set.json",
-            headers=headers,
-            json=inv_payload,
-            timeout=15
-        )
+            "available": int(capacity)
+        })
     except Exception as e:
-        print(f"  (Notice) Could not set inventory capacity: {e}")
+        print(f"  ⚠️ Could not set inventory: {e}")
 
+# ---------------------------------------------------------------------------
+# CHRONOLOGICAL COLLECTION REORDERING (GraphQL)
+# ---------------------------------------------------------------------------
+def reorder_collection_chronologically():
+    print(f"\nSorting '{COLLECTION_HANDLE}' collection chronologically...")
+    col_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/custom_collections.json?handle={COLLECTION_HANDLE}"
+    resp = requests.get(col_url, headers=get_shopify_headers())
+    if resp.status_code != 200 or not resp.json().get("custom_collections"):
+        col_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/smart_collections.json?handle={COLLECTION_HANDLE}"
+        resp = requests.get(col_url, headers=get_shopify_headers())
 
-def auto_sort_collection_chronologically(store: str, headers: dict, collection_handle: str = "comedy-and-events"):
-    """
-    Finds the comedy collection and automatically rearranges all show products 
-    in true chronological order (closest upcoming show at the top).
-    """
-    print(f"\n--- Chronologically Sorting Collection: '{collection_handle}' ---")
-    graphql_url = f"https://{store}/admin/api/2024-01/graphql.json"
+    cols = resp.json().get("custom_collections") or resp.json().get("smart_collections") or []
+    if not cols:
+        print(f"  ℹ️ Collection '{COLLECTION_HANDLE}' not found; skipping collection reorder.")
+        return
 
-    # 1. Fetch collection products and their variant showtimes
-    query = """
-    query getComedyCollection {
-      collections(first: 20) {
-        nodes {
-          id
-          title
-          handle
-          sortOrder
-          products(first: 100) {
-            nodes {
-              id
-              title
-              variants(first: 20) {
-                nodes {
-                  title
-                }
-              }
-            }
-          }
+    collection_id = cols[0]["id"]
+    products_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/collections/{collection_id}/products.json?limit=250"
+    p_resp = requests.get(products_url, headers=get_shopify_headers())
+    if p_resp.status_code != 200:
+        return
+
+    products = p_resp.json().get("products", [])
+    now = datetime.now()
+    cur_year = now.year
+
+    def get_product_timestamp(prod):
+        for var in prod.get("variants", []):
+            title = var.get("title", "")
+            m_match = re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b', title, re.IGNORECASE)
+            d_match = re.search(r'\b(\d{1,2})\b', title)
+            y_match = re.search(r'\b(20\d{2})\b', title)
+            if m_match and d_match:
+                m = datetime.strptime(m_match.group(1).capitalize(), "%b").month
+                d = int(d_match.group(1))
+                y = int(y_match.group(1)) if y_match else cur_year
+                try:
+                    return datetime(y, m, d).timestamp()
+                except ValueError:
+                    pass
+        return float('inf')
+
+    products.sort(key=get_product_timestamp)
+    reordered_ids = [f"gid://shopify/Product/{p['id']}" for p in products]
+
+    mutation = """
+    mutation collectionReorderProducts($id: ID!, $moves: [MoveInput!]!) {
+      collectionReorderProducts(id: $id, moves: $moves) {
+        userErrors {
+          field
+          message
         }
       }
     }
     """
-
-    try:
-        resp = requests.post(graphql_url, headers=headers, json={"query": query}, timeout=20)
-        if resp.status_code != 200:
-            print(f"Could not query collection for sorting ({resp.status_code}): {resp.text}")
-            return
-
-        data = resp.json().get("data", {})
-        collections = data.get("collections", {}).get("nodes", [])
-
-        # Locate the comedy collection
-        target_collection = None
-        for col in collections:
-            if col.get("handle") == collection_handle or "comedy" in col.get("title", "").lower():
-                target_collection = col
-                break
-
-        if not target_collection:
-            print(f"Collection '{collection_handle}' not found in Shopify. Skipping auto-sort.")
-            return
-
-        collection_id = target_collection["id"]
-        products = target_collection.get("products", {}).get("nodes", [])
-
-        if not products:
-            print("No products currently in the collection to sort.")
-            return
-
-        # 2. Ensure collection sortOrder is set to MANUAL so custom order takes effect
-        if target_collection.get("sortOrder") != "MANUAL":
-            update_mutation = """
-            mutation makeCollectionManual($input: CollectionInput!) {
-              collectionUpdate(input: $input) {
-                collection {
-                  id
-                  sortOrder
-                }
-                userErrors {
-                  field
-                  message
-                }
-              }
-            }
-            """
-            requests.post(graphql_url, headers=headers, json={
-                "query": update_mutation,
-                "variables": {"input": {"id": collection_id, "sortOrder": "MANUAL"}}
-            }, timeout=15)
-
-        # 3. Determine earliest show date for every product in the collection
-        parsed_products = []
-        now = datetime.now(CENTRAL_TZ)
-        future_boundary = datetime.max.replace(tzinfo=CENTRAL_TZ)
-
-        for prod in products:
-            p_id = prod["id"]
-            p_title = prod["title"]
-            earliest_dt = future_boundary
-
-            # Check variant dates
-            for v in prod.get("variants", {}).get("nodes", []):
-                v_title = v.get("title", "")
-                dt = parse_single_datetime(v_title)
-                if dt and dt < earliest_dt:
-                    earliest_dt = dt
-
-            # If not in variants, check product title
-            if earliest_dt == future_boundary:
-                dt_title = parse_single_datetime(p_title)
-                if dt_title:
-                    earliest_dt = dt_title
-
-            parsed_products.append({
-                "id": p_id,
-                "title": p_title,
-                "dt": earliest_dt
-            })
-
-        # Sort products: earliest upcoming shows first, non-dated items at bottom
-        parsed_products.sort(key=lambda p: p["dt"])
-
-        print("Target Chronological Order on Live Store:")
-        moves = []
-        for idx, p in enumerate(parsed_products):
-            date_label = p["dt"].strftime("%b %-d, %Y") if p["dt"] != future_boundary else "Non-dated/Pass"
-            print(f"  {idx + 1}. {p['title']} ({date_label})")
-            moves.append({
-                "id": p["id"],
-                "newPosition": str(idx)
-            })
-
-        # 4. Apply reordering to Shopify
-        reorder_mutation = """
-        mutation reorderProducts($id: ID!, $moves: [MoveInput!]!) {
-          collectionReorderProducts(id: $id, moves: $moves) {
-            job {
-              id
-            }
-            userErrors {
-              field
-              message
-            }
-          }
+    moves = [{"id": pid, "newPosition": str(idx)} for idx, pid in enumerate(reordered_ids)]
+    graphql_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/graphql.json"
+    g_resp = requests.post(graphql_url, headers=get_shopify_headers(), json={
+        "query": mutation,
+        "variables": {
+            "id": f"gid://shopify/Collection/{collection_id}",
+            "moves": moves
         }
-        """
-        reorder_resp = requests.post(graphql_url, headers=headers, json={
-            "query": reorder_mutation,
-            "variables": {
-                "id": collection_id,
-                "moves": moves
-            }
-        }, timeout=20)
+    })
 
-        if reorder_resp.status_code == 200:
-            print("✓ Successfully sorted collection chronologically on your live store!")
-        else:
-            print(f"Reorder API response ({reorder_resp.status_code}): {reorder_resp.text}")
+    if g_resp.status_code == 200 and not g_resp.json().get("errors"):
+        print(f"  ✓ Collection '{COLLECTION_HANDLE}' successfully sorted chronologically!")
+    else:
+        print(f"  ℹ️ Collection reorder response: {g_resp.text[:120]}")
 
-    except Exception as e:
-        print(f"Notice: Auto-sort encountered an exception: {e}")
+# ---------------------------------------------------------------------------
+# PUBLISH PRODUCT
+# ---------------------------------------------------------------------------
+def publish_to_shopify(payload, capacity):
+    create_url = f"https://{SHOPIFY_STORE}/admin/api/2024-01/products.json"
+    headers = get_shopify_headers()
 
-
-def publish_to_shopify(payload: dict, capacity: int) -> dict:
-    store, headers = get_shopify_headers()
-    api_url = f"https://{store}/admin/api/2024-01/products.json"
-
-    print(f"\nPublishing '{payload['product']['title']}' to https://{store}...")
-    resp = requests.post(api_url, headers=headers, json=payload, timeout=30)
-
-    if resp.status_code not in [200, 201]:
+    print(f"\nPublishing '{payload['product']['title']}' to https://{SHOPIFY_STORE}...")
+    resp = requests.post(create_url, headers=headers, json=payload)
+    if resp.status_code not in (200, 201):
         print(f"Shopify Error ({resp.status_code}): {resp.text}")
         resp.raise_for_status()
 
-    created_product = resp.json().get("product", {})
-    handle = created_product.get("handle")
-    live_url = f"https://{store}/products/{handle}"
+    created_prod = resp.json()["product"]
+    prod_id = created_prod["id"]
+    print(f"  ✓ Live product created! (ID: {prod_id})")
 
-    print(f"✓ Successfully published! Live at: {live_url}")
+    loc_id = get_primary_location_id()
+    if loc_id:
+        for v in created_prod.get("variants", []):
+            inv_id = v.get("inventory_item_id")
+            set_variant_inventory(inv_id, loc_id, capacity)
+        print(f"  ✓ Inventory capacity set to {capacity} tickets per variant.")
 
-    for v in created_product.get("variants", []):
-        set_variant_inventory(store, headers, v.get("id"), v.get("inventory_item_id"), capacity)
+    reorder_collection_chronologically()
+    print(f"\n🎉 Successfully created and scheduled: {created_prod['title']}")
+    print(f"👉 View live: https://{SHOPIFY_STORE}/products/{created_prod['handle']}")
 
-    print(f"✓ Set inventory capacity to {capacity} per showtime/ticket option.")
-
-    # Automatically re-sort the comedy collection so the new show slots in chronologically!
-    import time
-    time.sleep(2)  # Give Shopify 2 seconds to index the newly created product
-    auto_sort_collection_chronologically(store, headers)
-
-    return created_product
-
-
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
 def main():
-    print("==========================================================")
-    print("  SISYPHUS BREWING • FLEXIBLE SHOPIFY TICKET BUILDER     ")
-    print("==========================================================")
+    if not SHOPIFY_STORE or not SHOPIFY_ACCESS_TOKEN:
+        print("❌ Error: Missing SHOPIFY_STORE or SHOPIFY_ACCESS_TOKEN environment variables.")
+        sys.exit(1)
 
-    # 1. First check if a show was queued from the Web App via Supabase
-    if check_and_process_supabase_queue():
-        return
+    title = SHOW_TITLE or "Stand-Up Comedy Show"
+    raw_showtimes = SHOWTIMES_INPUT or "Oct 24 7pm"
+    price = SHOW_PRICE or "20.00"
+    capacity = int(SHOW_CAPACITY) if SHOW_CAPACITY.isdigit() else 75
+    raw_bio = SHOW_BIO
+    image_url = SHOW_IMAGE_URL
 
-    # 2. Check environment input (GitHub Actions Web Form)
-    title = os.environ.get("SHOW_TITLE", "").strip()
+    variant_names = generate_variants(raw_showtimes)
+    formatted_body = format_bio_html(raw_bio) + STANDARD_POLICY_HTML
 
-    if title:
-        showtimes_raw = os.environ.get("SHOWTIMES_INPUT") or os.environ.get("SHOW_LAYOUT") or "Oct 24 7pm"
-        price = os.environ.get("SHOW_PRICE", DEFAULT_TICKET_PRICE).replace("$", "").strip() or DEFAULT_TICKET_PRICE
-        capacity = int(os.environ.get("SHOW_CAPACITY", DEFAULT_ROOM_CAPACITY) or DEFAULT_ROOM_CAPACITY)
-        bio = os.environ.get("SHOW_BIO", "").strip()
-        image_url = os.environ.get("SHOW_IMAGE_URL", "").strip()
+    variants_payload = []
+    for var_name in variant_names:
+        variants_payload.append({
+            "option1": var_name,
+            "price": price,
+            "sku": f"TIX-{re.sub(r'[^A-Z0-9]', '', title.upper())[:10]}-{re.sub(r'[^A-Z0-9]', '', var_name.upper())[:10]}",
+            "inventory_management": "shopify",
+            "inventory_policy": "deny",
+            "requires_shipping": False,
+            "taxable": True
+        })
 
-        variants = parse_freeform_showtimes(showtimes_raw)
-        if not variants:
-            variants = [{"title": "General Admission", "datetime": datetime.now(CENTRAL_TZ)}]
+    product_data = {
+        "title": title,
+        "body_html": formatted_body,
+        "vendor": VENUE_NAME,
+        "product_type": "Tickets",
+        "tags": f"Comedy, Ticket, Live Event, {title}",
+        "options": [{"name": "Date & Time"}],
+        "variants": variants_payload,
+        "status": "active"
+    }
 
-        print(f"Title: {title}")
-        print(f"Price: ${price} | Capacity per slot: {capacity}")
-        print("Generated Variants:")
-        for v in variants:
-            print(f"  • {v['title']}")
+    if image_url and image_url.startswith("http"):
+        product_data["images"] = [{"src": image_url}]
 
-        payload = build_shopify_product_payload(title, bio, variants, price, capacity, image_url)
-        publish_to_shopify(payload, capacity)
-        return
-
-    # 3. Interactive Terminal fallback
-    comedian = input("\nEvent / Comedian / Show Title: ").strip()
-    if not comedian:
-        print("Title is required.")
-        return
-
-    price = input(f"Ticket Price (USD) [default: ${DEFAULT_TICKET_PRICE}]: ").strip() or DEFAULT_TICKET_PRICE
-    price = price.replace("$", "").strip()
-
-    capacity_in = input(f"Room Capacity / Ticket Limit [default: {DEFAULT_ROOM_CAPACITY}]: ").strip()
-    capacity = int(capacity_in) if capacity_in.isdigit() else DEFAULT_ROOM_CAPACITY
-
-    print("\nEnter showtimes, dates, or pass names (comma-separated):")
-    print("  Examples: 'Oct 11 5pm' OR 'Oct 24 7pm, Oct 24 9pm' OR 'Full 5-Week Pass'")
-    showtimes_in = input("Showtimes: ").strip() or "Oct 24 7pm"
-
-    variants = parse_freeform_showtimes(showtimes_in)
-
-    print("\nEnter bio / event description (Press Enter, then Ctrl+D or Ctrl+Z to finish):")
-    bio_lines = []
-    try:
-        while True:
-            bio_lines.append(input())
-    except EOFError:
-        pass
-    bio = "\n".join(bio_lines).strip()
-
-    image_url = input("\nPromo Image URL (optional, press Enter to skip): ").strip()
-
-    payload = build_shopify_product_payload(comedian, bio, variants, price, capacity, image_url)
+    payload = {"product": product_data}
     publish_to_shopify(payload, capacity)
-
 
 if __name__ == "__main__":
     main()
