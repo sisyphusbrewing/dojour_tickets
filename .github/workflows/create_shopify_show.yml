@@ -4,14 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       comedian_name:
-        description: 'Event / Comedian / Class Title'
+        description: 'Comedian / Show Title'
         required: true
         type: string
       showtimes:
-        description: 'Showtimes / Passes (e.g. "Oct 11 5pm" or "Oct 24 7pm, Oct 24 9pm" or "Full 5-Week Class Pass")'
+        description: 'Showtimes / Passes (e.g. "Oct 11 5pm" or "Oct 24 7pm, Oct 24 9pm")'
         required: true
         type: string
-        default: 'Oct 24 7pm, Oct 24 9pm, Oct 25 7pm, Oct 25 9pm'
       ticket_price:
         description: 'Ticket / Registration Price USD'
         required: true
@@ -27,15 +26,15 @@ on:
         required: false
         type: string
       image_url:
-        description: 'Promo Image / Headshot URL'
+        description: 'Image URL (flyer/promo photo)'
         required: false
         type: string
 
 jobs:
-  create_show:
+  create-show:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -44,20 +43,19 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
       - name: Run Ticket Product Builder
         env:
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
           SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
-          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
           SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           SHOW_TITLE: ${{ inputs.comedian_name }}
-          SHOWTIMES_INPUT: ${{ inputs.showtimes }}
+          SHOW_DATE: ${{ inputs.showtimes }}
           SHOW_PRICE: ${{ inputs.ticket_price }}
           SHOW_CAPACITY: ${{ inputs.room_capacity }}
           SHOW_BIO: ${{ inputs.bio }}
-          SHOW_IMAGE_URL: ${{ inputs.image_url }}      
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SHOW_IMAGE_URL: ${{ inputs.image_url }}
         run: python ticket_product_builder.py
