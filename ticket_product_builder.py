@@ -6,12 +6,21 @@ from datetime import datetime, timedelta
 import requests
 
 # ---------------------------------------------------------------------------
-# CONFIGURATION & ENVIRONMENT
+# CONFIGURATION & ENVIRONMENT (Accepts SHOPIFY_CLIENT_SECRET automatically)
 # ---------------------------------------------------------------------------
-SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE", "").replace("https://", "").replace("/", "").strip()
-SHOPIFY_ACCESS_TOKEN = os.environ.get("SHOPIFY_ACCESS_TOKEN", "").strip()
+raw_store = os.environ.get("SHOPIFY_STORE", "").replace("https://", "").replace("/", "").strip()
+if raw_store and not raw_store.endswith(".myshopify.com"):
+    SHOPIFY_STORE = f"{raw_store}.myshopify.com"
+else:
+    SHOPIFY_STORE = raw_store
 
-# Form inputs passed from GitHub Actions or CLI
+# Use SHOPIFY_ACCESS_TOKEN if present, otherwise fall back to SHOPIFY_CLIENT_SECRET
+SHOPIFY_ACCESS_TOKEN = (
+    os.environ.get("SHOPIFY_ACCESS_TOKEN") or 
+    os.environ.get("SHOPIFY_CLIENT_SECRET") or 
+    ""
+).strip()
+
 SHOW_TITLE = os.environ.get("SHOW_TITLE", "").strip()
 SHOWTIMES_INPUT = os.environ.get("SHOW_DATE", "").strip() or os.environ.get("SHOWTIMES", "").strip()
 SHOW_PRICE = os.environ.get("SHOW_PRICE", "20.00").strip()
@@ -35,7 +44,7 @@ STANDARD_POLICY_HTML = """
 """
 
 # ---------------------------------------------------------------------------
-# TEXT & BIO FORMATTER (Preserves Paragraphs & Bullets without f-string backslashes)
+# TEXT & BIO FORMATTER
 # ---------------------------------------------------------------------------
 def format_bio_html(raw_text):
     if not raw_text or not raw_text.strip():
@@ -73,11 +82,9 @@ def parse_single_showtime(raw_str):
     if not raw_str:
         return None
 
-    # Pass / Class registration
     if any(k in raw_str.lower() for k in ['pass', 'registration', 'general admission', 'class series']):
         return raw_str
 
-    # Already formatted: "Fri, Oct 24 • 7:00 PM"
     if " • " in raw_str and any(ampm in raw_str.upper() for ampm in ["AM", "PM"]):
         return raw_str
 
@@ -114,7 +121,6 @@ def parse_single_showtime(raw_str):
         month_str = month_match.group(1).capitalize()
         day = int(day_match.group(1))
         year = int(year_match.group(1)) if year_match else cur_year
-
         month_num = datetime.strptime(month_str, "%b").month
         try:
             dt = datetime(year, month_num, day)
@@ -201,7 +207,7 @@ def set_variant_inventory(inventory_item_id, location_id, capacity):
             "available": int(capacity)
         })
     except Exception as e:
-        print(f"  ⚠️ Could not set inventory: {e}")
+        print(f"  ⚠️️ Could not set inventory: {e}")
 
 # ---------------------------------------------------------------------------
 # CHRONOLOGICAL COLLECTION REORDERING (GraphQL)
@@ -305,9 +311,19 @@ def publish_to_shopify(payload, capacity):
 # MAIN
 # ---------------------------------------------------------------------------
 def main():
+    print("==========================================================")
+    print("  SISYPHUS BREWING • SHOPIFY TICKET BUILDER               ")
+    print("==========================================================")
+
     if not SHOPIFY_STORE or not SHOPIFY_ACCESS_TOKEN:
-        print("❌ Error: Missing SHOPIFY_STORE or SHOPIFY_ACCESS_TOKEN environment variables.")
+        if not SHOPIFY_STORE:
+            print("❌ Error: SHOPIFY_STORE secret is missing from environment.")
+        if not SHOPIFY_ACCESS_TOKEN:
+            print("❌ Error: SHOPIFY_CLIENT_SECRET or SHOPIFY_ACCESS_TOKEN secret is missing.")
         sys.exit(1)
+
+    print(f"Store target: https://{SHOPIFY_STORE}")
+    print(f"Token present: {'Yes' if SHOPIFY_ACCESS_TOKEN else 'No'}")
 
     title = SHOW_TITLE or "Stand-Up Comedy Show"
     raw_showtimes = SHOWTIMES_INPUT or "Oct 24 7pm"
