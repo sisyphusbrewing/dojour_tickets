@@ -13,25 +13,21 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans pb-10">
 
-  <!-- CONFIGURATION: Paste your Supabase credentials here -->
+  <!-- CONFIGURATION: Supabase Credentials -->
   <script>
-    // Project root URL (stripped of any trailing /rest/v1/)
     const RAW_SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
     const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
     
-    // SHA-256 hash of the door PIN. 
-    // Default PIN: "1234" (hash: 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4)
+    // Default PIN: "1234"
     const DOOR_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 
-    // Suppress sandbox-level WebSocket security warnings in embedded preview iframes
     window.addEventListener('error', (event) => {
       if (event && event.message && event.message.includes('WebSocket')) {
         event.preventDefault();
       }
     });
 
-    // Detect if running in an iframe sandbox where WebSockets are blocked
     function canUseRealtimeWebSocket() {
       try {
         if (typeof WebSocket === 'undefined') return false;
@@ -44,7 +40,6 @@
       }
     }
 
-    // Use supabaseClient to prevent shadowing the CDN's window.supabase library object
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.supabaseClient = supabaseClient;
   </script>
@@ -91,7 +86,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
-          <!-- View Toggle: Door Check-In vs Agent Reports -->
+          <!-- View Toggle: Door Check-In vs Agent Reports vs Create Show -->
           <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs font-bold">
             <button id="tabDoorBtn" onclick="switchTab('door')" class="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 transition-all">
               Door
@@ -121,7 +116,7 @@
         </div>
       </div>
 
-      <!-- Door Controls (Hidden when in Reports View) -->
+      <!-- Door Controls (Hidden when in Reports or Create View) -->
       <div id="doorControls" class="space-y-2">
         <!-- Show Selector -->
         <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
@@ -165,7 +160,6 @@
       </button>
     </div>
 
-    <!-- Container for show summary cards -->
     <div id="reportsList" class="space-y-3">
       <div class="text-center text-slate-500 py-10">Loading upcoming show summaries...</div>
     </div>
@@ -176,7 +170,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
       <div class="border-b border-slate-800 pb-3">
         <h2 class="text-base font-bold text-slate-100">Create Shopify Ticketed Show</h2>
-        <p class="text-xs text-slate-400">Build dates with the visual picker, upload flyers from your desktop, and preserve clean formatting.</p>
+        <p class="text-xs text-slate-400">Build dates with the visual picker, upload flyers from your desktop, and publish directly to Shopify.</p>
       </div>
 
       <!-- 1. Comedian / Show Title -->
@@ -386,7 +380,7 @@
     }
 
     // ==========================================
-    // SHOW CREATOR LOGIC (COMMA FREE VARIANT FORMATTER)
+    // SHOW CREATOR LOGIC (COMMA-FREE VARIANT FORMATTER)
     // ==========================================
     function formatPickerVariant(dateStr, timeStr) {
       if (timeStr === 'pass') {
@@ -562,54 +556,88 @@
       }).join('\n');
     }
 
+    // ==========================================
+    // 1-CLICK SHOPIFY PIPELINE DISPATCH
+    // ==========================================
     async function submitNewShowToPipeline() {
       const title = document.getElementById('newTitle').value.trim();
       const price = document.getElementById('newPrice').value.trim() || '20.00';
       const capacity = parseInt(document.getElementById('newCapacity').value, 10) || 75;
       const imageUrl = document.getElementById('uploadedImageUrl').value.trim();
       const rawBio = document.getElementById('newBio').value.trim();
+      const calDate = document.getElementById('calendarPicker').value;
 
       if (!title) {
         showToast('Please enter an event or comedian title');
         return;
       }
+
+      // Auto-add date if selected in picker but "+ Add Time" wasn't clicked
+      if (configuredShowtimes.length === 0 && calDate) {
+        addSelectedShowtime();
+      }
+
       if (configuredShowtimes.length === 0) {
-        showToast('Please add at least one showtime using the date picker');
+        showToast('Please select a date on the calendar');
         return;
       }
 
-      const formattedHtml = formatDescriptionToHtml(rawBio);
+      // Prompt for GitHub PAT once if not already saved in browser
+      let ghToken = localStorage.getItem('sisyphus_gh_pat');
+      if (!ghToken) {
+        ghToken = prompt("Enter your GitHub Personal Access Token to enable 1-click publishing:");
+        if (!ghToken) {
+          showToast('GitHub token required to publish');
+          return;
+        }
+        localStorage.setItem('sisyphus_gh_pat', ghToken.trim());
+      }
+
       const btn = document.getElementById('publishShowBtn');
       btn.disabled = true;
-      btn.textContent = '⏳ Saving to Show Queue...';
+      btn.textContent = '⏳ Dispatching to Shopify Pipeline...';
 
-      // Join with ' | ' to eliminate comma delimiter collisions
+      // Join multi-day variants with pipe to prevent comma splitting
       const showtimesPayload = configuredShowtimes.join(' | ');
 
       try {
-        const { error } = await supabaseClient
-          .from('show_queue')
-          .insert([{
-            title: title,
-            showtimes: showtimesPayload,
-            price: price,
-            capacity: capacity,
-            bio_html: formattedHtml,
-            image_url: imageUrl,
-            status: 'pending',
-            created_at: new Date().toISOString()
-          }]);
+        const resp = await fetch(
+          'https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/create_shopify_show.yml/dispatches',
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'Authorization': `Bearer ${ghToken.trim()}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ref: 'main',
+              inputs: {
+                comedian_name: title,
+                showtimes: showtimesPayload,
+                ticket_price: price,
+                room_capacity: String(capacity),
+                bio: rawBio,
+                image_url: imageUrl
+              }
+            })
+          }
+        );
 
-        if (error) {
-          console.warn('Queue insert warning:', error);
-          copyActionInputs();
-          showToast('Copied parameters! Run workflow in GitHub Actions');
-        } else {
-          showToast(`✓ "${title}" queued for Shopify!`);
+        if (resp.status === 204) {
+          showToast(`🚀 "${title}" dispatched! Live on Shopify in ~60s.`);
           playChime(true);
+        } else if (resp.status === 401) {
+          localStorage.removeItem('sisyphus_gh_pat');
+          showToast('Invalid GitHub Token. Please try again.');
+        } else {
+          const errText = await resp.text();
+          console.error("GitHub dispatch error:", resp.status, errText);
+          showToast(`Dispatch failed (${resp.status}). Check console.`);
         }
-      } catch (e) {
-        copyActionInputs();
+      } catch (err) {
+        console.error("Network error triggering pipeline:", err);
+        showToast('Network error triggering workflow');
       } finally {
         btn.disabled = false;
         btn.textContent = '🚀 Publish Show to Shopify';
@@ -618,7 +646,6 @@
 
     function copyActionInputs() {
       const title = document.getElementById('newTitle').value.trim() || 'Show Title';
-      // Join with ' | '
       const showtimes = configuredShowtimes.join(' | ') || 'Oct 24 7pm | Oct 24 9pm';
       const price = document.getElementById('newPrice').value.trim() || '20.00';
       const capacity = document.getElementById('newCapacity').value.trim() || '75';
