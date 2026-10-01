@@ -75,7 +75,7 @@
     </div>
   </div>
 
-  <!-- Sticky Top Header -->
+  <!-- Header -->
   <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-md">
     <div class="max-w-2xl mx-auto space-y-2">
       <div class="flex items-center justify-between">
@@ -86,7 +86,6 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
-          <!-- View Toggle: Door Check-In vs Agent Reports vs Create Show -->
           <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs font-bold">
             <button id="tabDoorBtn" onclick="switchTab('door')" class="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 transition-all">
               Door
@@ -102,7 +101,6 @@
           <div id="statsBadge" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300">
             Loading...
           </div>
-          <!-- Manual Refresh Button -->
           <button 
             id="refreshBtn" 
             onclick="manualRefresh()" 
@@ -116,14 +114,11 @@
         </div>
       </div>
 
-      <!-- Door Controls (Hidden when in Reports or Create View) -->
       <div id="doorControls" class="space-y-2">
-        <!-- Show Selector -->
         <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
           <option value="">Loading upcoming shows...</option>
         </select>
 
-        <!-- Instant Search -->
         <div class="relative">
           <input 
             id="searchInput" 
@@ -139,14 +134,14 @@
     </div>
   </header>
 
-  <!-- Main Guest List (Door View) -->
+  <!-- Door View -->
   <main id="doorView" class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
     <div id="guestList" class="space-y-3">
       <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
     </div>
   </main>
 
-  <!-- Agent Reports View -->
+  <!-- Reports View -->
   <main id="reportsView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow">
       <div>
@@ -165,26 +160,26 @@
     </div>
   </main>
 
-  <!-- Create Show View (Visual Date Picker, Rich Description, Desktop Image Upload) -->
+  <!-- Create Show View -->
   <main id="createView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-5">
     <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
       <div class="border-b border-slate-800 pb-3">
         <h2 class="text-base font-bold text-slate-100">Create Shopify Ticketed Show</h2>
-        <p class="text-xs text-slate-400">Build dates with the visual picker, upload flyers from your desktop, and publish directly to Shopify.</p>
+        <p class="text-xs text-slate-400">Supports paid shows, recurring weekly events, and free walk-in/RSVP events without checkout fees.</p>
       </div>
 
-      <!-- 1. Comedian / Show Title -->
+      <!-- 1. Title -->
       <div class="space-y-1.5">
-        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event / Comedian / Class Title *</label>
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event / Comedian / Showcase Title *</label>
         <input 
           id="newTitle" 
           type="text" 
-          placeholder="e.g. Khadijah Cooper - Stand-Up Comedy Class" 
+          placeholder="e.g. Sisyphus Thursday Open Mic" 
           class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-semibold"
         />
       </div>
 
-      <!-- 2. Interactive Date Picker & Showtime Builder -->
+      <!-- 2. Showtime Builder -->
       <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
         <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
           📅 Date Picker & Showtimes
@@ -199,13 +194,12 @@
             />
           </div>
           <div class="sm:col-span-4">
-            <select id="timePicker" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
-              <option value="19:00">7:00 PM</option>
-              <option value="21:00">9:00 PM</option>
-              <option value="17:00">5:00 PM</option>
-              <option value="20:00">8:00 PM</option>
-              <option value="pass">Full Pass / Registration</option>
-            </select>
+            <input 
+              id="timePicker" 
+              type="time" 
+              value="19:00"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+            />
           </div>
           <div class="sm:col-span-3">
             <button 
@@ -217,24 +211,51 @@
           </div>
         </div>
 
-        <!-- Quick Weekend Preset Shortcuts -->
+        <!-- Presets Row with Repeat Weekly Options -->
         <div class="flex flex-wrap gap-1.5 pt-1 text-[11px]">
           <span class="text-slate-500 self-center">Presets:</span>
+          <button type="button" onclick="setTimeVal('19:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">7:00 PM</button>
+          <button type="button" onclick="setTimeVal('19:30')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">7:30 PM</button>
+          <button type="button" onclick="setTimeVal('20:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">8:00 PM</button>
+          <button type="button" onclick="setTimeVal('21:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">9:00 PM</button>
           <button type="button" onclick="applyWeekendPreset('2night_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 & 9 PM</button>
-          <button type="button" onclick="applyWeekendPreset('2night_single')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 PM</button>
-          <button type="button" onclick="applyWeekendPreset('sat_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Sat 7 & 9 PM</button>
+          <button type="button" onclick="applyRepeatWeekly(4)" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700/60 font-bold">🔁 Repeat Weekly (4 wks)</button>
+          <button type="button" onclick="applyRepeatWeekly(8)" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700/60 font-bold">🔁 Repeat Weekly (8 wks)</button>
         </div>
 
-        <!-- Active Showtimes List -->
+        <!-- Custom Variant Row -->
+        <div class="pt-2 flex gap-2">
+          <input 
+            id="customVariantInput" 
+            type="text" 
+            placeholder="Or type custom variant (e.g. VIP Table, Full Weekend Pass, Walk-ins Welcome)..." 
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomVariant();}"
+          />
+          <button 
+            type="button" 
+            onclick="addCustomVariant()" 
+            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-all">
+            + Add Variant
+          </button>
+        </div>
+
         <div id="showtimesTagContainer" class="flex flex-wrap gap-1.5 pt-2">
-          <span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above.</span>
+          <span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above or type a variant.</span>
         </div>
       </div>
 
       <!-- 3. Price & Room Capacity -->
       <div class="grid grid-cols-2 gap-3">
         <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($)</label>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($)</label>
+            <div class="flex gap-1">
+              <button type="button" onclick="setPricePreset('0.00', 'rsvp')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-400 font-bold hover:bg-emerald-900">Free RSVP ($0)</button>
+              <button type="button" onclick="setPricePreset('0.00', 'walkin')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-bold hover:bg-slate-700">Free Walk-In</button>
+              <button type="button" onclick="setPricePreset('20.00')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700">$20</button>
+            </div>
+          </div>
           <input 
             id="newPrice" 
             type="text" 
@@ -255,7 +276,7 @@
         </div>
       </div>
 
-      <!-- 4. Direct Desktop Image Upload to Supabase -->
+      <!-- 4. Direct Desktop Image Upload -->
       <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
         <div class="flex items-center justify-between">
           <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
@@ -271,7 +292,6 @@
             <input id="desktopImageFile" type="file" accept="image/*" class="hidden" onchange="handleDesktopImageSelected(this)" />
           </label>
 
-          <!-- Image Preview Thumbnail -->
           <div id="imagePreviewContainer" class="hidden w-16 h-16 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden relative flex-shrink-0">
             <img id="imagePreviewThumb" src="" alt="Promo preview" class="w-full h-full object-cover" />
           </div>
@@ -285,7 +305,7 @@
         />
       </div>
 
-      <!-- 5. Formatted Bio & Description with Formatting Helper -->
+      <!-- 5. Description -->
       <div class="space-y-1.5">
         <div class="flex items-center justify-between">
           <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event Description / Bio</label>
@@ -303,7 +323,7 @@
         ></textarea>
       </div>
 
-      <!-- Submit & Publish Controls -->
+      <!-- Submit Controls -->
       <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
         <button 
           id="publishShowBtn" 
@@ -321,7 +341,6 @@
     </div>
   </main>
 
-  <!-- Mobile Toast Notification -->
   <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-amber-400 text-slate-950 px-4 py-2 rounded-full font-black text-xs shadow-2xl flex items-center gap-1.5">
     <span id="toastMsg">Sync complete</span>
   </div>
@@ -332,7 +351,7 @@
     let currentTab = 'door';
     let allUpcomingShows = [];
     let showSummaryData = [];
-    let agentDirectory = {}; // { showKey: { name: "", email: "" } }
+    let agentDirectory = {};
     let configuredShowtimes = [];
     let checkedInCollapsed = true;
 
@@ -379,13 +398,46 @@
       }
     }
 
-    // ==========================================
-    // SHOW CREATOR LOGIC (COMMA-FREE VARIANT FORMATTER)
-    // ==========================================
-    function formatPickerVariant(dateStr, timeStr) {
-      if (timeStr === 'pass') {
-        return 'Full Pass / Class Registration';
+    function setTimeVal(val) {
+      document.getElementById('timePicker').value = val;
+    }
+
+    function setPricePreset(amount, mode) {
+      document.getElementById('newPrice').value = amount;
+      if (mode === 'walkin') {
+        const bio = document.getElementById('newBio');
+        const walkinNotice = "FREE EVENT • NO RESERVATION REQUIRED\n\nNo advance tickets needed—just show up, grab a beer, and enjoy the show! Seating is first-come, first-served.\n\n";
+        if (!bio.value.includes('NO RESERVATION REQUIRED')) {
+          bio.value = walkinNotice + bio.value;
+        }
+        if (configuredShowtimes.length === 0) {
+          configuredShowtimes.push("Free Entry • Walk-ins Welcome");
+          renderShowtimeTags();
+        }
+        showToast('Set to Free Walk-In (No tickets needed)');
+      } else if (mode === 'rsvp') {
+        showToast('Set to Free RSVP ($0 Checkout)');
+      } else {
+        showToast(`Price set to $${amount}`);
       }
+    }
+
+    function addCustomVariant() {
+      const input = document.getElementById('customVariantInput');
+      const val = input.value.trim();
+      if (!val) {
+        showToast('Please type a variant name first');
+        return;
+      }
+      if (!configuredShowtimes.includes(val)) {
+        configuredShowtimes.push(val);
+        renderShowtimeTags();
+      }
+      input.value = '';
+    }
+
+    function formatPickerVariant(dateStr, timeStr) {
+      if (!timeStr) timeStr = "19:00";
       const [year, month, day] = dateStr.split('-').map(Number);
       const [hour, minute] = timeStr.split(':').map(Number);
       const dt = new Date(year, month - 1, day, hour, minute);
@@ -396,14 +448,13 @@
       const dispHour = hour % 12 === 0 ? 12 : hour % 12;
       const dispMin = String(minute).padStart(2, '0');
       
-      // Removed comma between weekday and month (e.g. "Fri Jan 29 • 7:00 PM")
       return `${weekdays[dt.getDay()]} ${months[dt.getMonth()]} ${dt.getDate()} • ${dispHour}:${dispMin} ${ampm}`;
     }
 
     function addSelectedShowtime() {
       const dateVal = document.getElementById('calendarPicker').value;
       const timeVal = document.getElementById('timePicker').value;
-      if (!dateVal && timeVal !== 'pass') {
+      if (!dateVal) {
         showToast('Please select a date on the calendar first');
         return;
       }
@@ -422,7 +473,7 @@
     function renderShowtimeTags() {
       const container = document.getElementById('showtimesTagContainer');
       if (configuredShowtimes.length === 0) {
-        container.innerHTML = '<span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above.</span>';
+        container.innerHTML = '<span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above or type a variant.</span>';
         return;
       }
       container.innerHTML = configuredShowtimes.map((item, idx) => `
@@ -458,22 +509,36 @@
           addDateShow(1, '19:00'),
           addDateShow(1, '21:00')
         ];
-      } else if (presetType === '2night_single') {
-        configuredShowtimes = [
-          addDateShow(0, '19:00'),
-          addDateShow(1, '19:00')
-        ];
-      } else if (presetType === 'sat_double') {
-        configuredShowtimes = [
-          addDateShow(0, '19:00'),
-          addDateShow(0, '21:00')
-        ];
       }
       renderShowtimeTags();
       showToast('Showtimes populated!');
     }
 
-    // Direct Desktop Image Upload to Supabase Storage
+    function applyRepeatWeekly(numWeeks) {
+      const dateVal = document.getElementById('calendarPicker').value;
+      const timeVal = document.getElementById('timePicker').value || '19:00';
+      if (!dateVal) {
+        showToast('Select starting date on calendar first');
+        return;
+      }
+      const [year, month, day] = dateVal.split('-').map(Number);
+      const baseDate = new Date(year, month - 1, day);
+
+      for (let i = 0; i < numWeeks; i++) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + (i * 7));
+        const yStr = d.getFullYear();
+        const mStr = String(d.getMonth() + 1).padStart(2, '0');
+        const dStr = String(d.getDate()).padStart(2, '0');
+        const formatted = formatPickerVariant(`${yStr}-${mStr}-${dStr}`, timeVal);
+        if (!configuredShowtimes.includes(formatted)) {
+          configuredShowtimes.push(formatted);
+        }
+      }
+      renderShowtimeTags();
+      showToast(`Added ${numWeeks} weekly recurring dates!`);
+    }
+
     async function handleDesktopImageSelected(inputEl) {
       const file = inputEl.files[0];
       if (!file) return;
@@ -556,9 +621,6 @@
       }).join('\n');
     }
 
-    // ==========================================
-    // 1-CLICK SHOPIFY PIPELINE DISPATCH
-    // ==========================================
     async function submitNewShowToPipeline() {
       const title = document.getElementById('newTitle').value.trim();
       const price = document.getElementById('newPrice').value.trim() || '20.00';
@@ -572,17 +634,15 @@
         return;
       }
 
-      // Auto-add date if selected in picker but "+ Add Time" wasn't clicked
       if (configuredShowtimes.length === 0 && calDate) {
         addSelectedShowtime();
       }
 
       if (configuredShowtimes.length === 0) {
-        showToast('Please select a date on the calendar');
+        showToast('Please select a date on the calendar or add a variant');
         return;
       }
 
-      // Prompt for GitHub PAT once if not already saved in browser
       let ghToken = localStorage.getItem('sisyphus_gh_pat');
       if (!ghToken) {
         ghToken = prompt("Enter your GitHub Personal Access Token to enable 1-click publishing:");
@@ -597,7 +657,6 @@
       btn.disabled = true;
       btn.textContent = '⏳ Dispatching to Shopify Pipeline...';
 
-      // Join multi-day variants with pipe to prevent comma splitting
       const showtimesPayload = configuredShowtimes.join(' | ');
 
       try {
@@ -711,9 +770,6 @@
       playChime(true);
     }
 
-    // ==========================================
-    // CORE DATABASE LOADERS & HELPERS
-    // ==========================================
     function playChime(success = true) {
       if ('vibrate' in navigator) navigator.vibrate(success ? 40 : [30, 50, 30]);
       try {
@@ -1038,7 +1094,6 @@
       playChime(true);
     }
 
-    // Check-in mutations
     async function updateCheckIn(uniqueId, newCount) {
       const record = tickets.find(t => t.unique_id === uniqueId);
       if (!record) return;
