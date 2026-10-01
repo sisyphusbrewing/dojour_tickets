@@ -1,693 +1,393 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sisyphus Brewing • Door Check-In & Ticket Portal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sisyphus Door Check-In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root {
-      --bg: #090d16;
-      --card-bg: #0f172a;
-      --card-border: #1e293b;
-      --accent-blue: #3b82f6;
-      --accent-blue-hover: #2563eb;
-      --accent-amber: #f59e0b;
-      --accent-green: #10b981;
-      --accent-red: #ef4444;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-sub: #64748b;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      background: #0d1322;
-      border-bottom: 1px solid var(--card-border);
-      padding: 1rem 1.5rem;
-      position: sticky;
-      top: 0;
-      z-index: 40;
-    }
-
-    .header-inner {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .brand-title {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .brand-badge {
-      background: #1e293b;
-      color: var(--accent-amber);
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 0.2rem 0.6rem;
-      border-radius: 9999px;
-      border: 1px solid #334155;
-      text-transform: uppercase;
-    }
-
-    .nav-tabs {
-      display: flex;
-      background: #090d16;
-      padding: 0.25rem;
-      border-radius: 0.5rem;
-      border: 1px solid var(--card-border);
-      gap: 0.25rem;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-weight: 600;
-      font-size: 0.875rem;
-      padding: 0.5rem 1rem;
-      border-radius: 0.375rem;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .tab-btn.active {
-      background: var(--card-bg);
-      color: #fff;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    }
-
-    main {
-      max-width: 1100px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-      width: 100%;
-      flex: 1;
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 1rem;
-      padding: 1.75rem;
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-      margin-bottom: 2rem;
-    }
-
-    .card-header {
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .card-subtitle {
-      color: var(--text-muted);
-      font-size: 0.875rem;
-      margin-top: 0.25rem;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .form-group.full-width {
-      grid-column: 1 / -1;
-    }
-
-    label {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    input, select, textarea {
-      background: #090d16;
-      border: 1px solid #1e293b;
-      border-radius: 0.5rem;
-      padding: 0.75rem 1rem;
-      color: #fff;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent-blue);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-    }
-
-    /* Showtime Picker Controls */
-    .showtime-builder-box {
-      background: #090d16;
-      border: 1px solid #1e293b;
-      border-radius: 0.75rem;
-      padding: 1.25rem;
-    }
-
-    .picker-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .preset-btn-group {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-    }
-
-    .preset-btn {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #cbd5e1;
-      font-size: 0.8rem;
-      font-weight: 600;
-      padding: 0.45rem 0.8rem;
-      border-radius: 0.375rem;
-      cursor: pointer;
-    }
-
-    .preset-btn:hover {
-      background: #334155;
-      color: #fff;
-    }
-
-    .btn-add-time {
-      background: #1e293b;
-      color: var(--accent-blue);
-      border: 1px solid var(--accent-blue);
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .btn-add-time:hover {
-      background: var(--accent-blue);
-      color: #fff;
-    }
-
-    .badges-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      min-height: 42px;
-      padding: 0.5rem;
-      background: #0d1322;
-      border-radius: 0.5rem;
-      border: 1px dashed #334155;
-      align-items: center;
-    }
-
-    .showtime-badge {
-      background: #1e293b;
-      border: 1px solid #3b82f6;
-      color: #93c5fd;
-      padding: 0.35rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .showtime-badge button {
-      background: transparent;
-      border: none;
-      color: #94a3b8;
-      cursor: pointer;
-      font-size: 1rem;
-      line-height: 1;
-      padding: 0;
-      display: flex;
-      align-items: center;
-    }
-
-    .showtime-badge button:hover {
-      color: var(--accent-red);
-    }
-
-    /* Flyer Upload Area */
-    .file-upload-box {
-      border: 2px dashed #334155;
-      border-radius: 0.75rem;
-      padding: 1.25rem;
-      text-align: center;
-      background: #090d16;
-      cursor: pointer;
-      position: relative;
-      transition: border-color 0.2s;
-    }
-
-    .file-upload-box:hover {
-      border-color: var(--accent-blue);
-    }
-
-    .upload-status {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-    }
-
-    .upload-status.success {
-      color: var(--accent-green);
-    }
-
-    .upload-status.loading {
-      color: var(--accent-blue);
-    }
-
-    .preview-thumb {
-      max-height: 140px;
-      border-radius: 0.5rem;
-      margin-top: 0.75rem;
-      border: 1px solid #334155;
-      display: none;
-    }
-
-    /* Publish Button */
-    .btn-primary-publish {
-      background: var(--accent-blue);
-      color: #fff;
-      font-size: 1.05rem;
-      font-weight: 800;
-      border: none;
-      border-radius: 0.75rem;
-      padding: 1rem 2rem;
-      width: 100%;
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.75rem;
-      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-      transition: all 0.2s ease;
-    }
-
-    .btn-primary-publish:hover {
-      background: var(--accent-blue-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-primary-publish:disabled {
-      background: #334155;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-      color: #64748b;
-    }
-
-    /* Terminal/Status Box */
-    .terminal-box {
-      margin-top: 1.5rem;
-      background: #050811;
-      border: 1px solid #1e293b;
-      border-radius: 0.5rem;
-      padding: 1rem;
-      font-family: monospace;
-      font-size: 0.85rem;
-      color: #cbd5e1;
-      max-height: 180px;
-      overflow-y: auto;
-      display: none;
-    }
-
-    /* Guest Check-in Table */
-    .search-row {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .guest-table-wrapper {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.9rem;
-    }
-
-    th {
-      background: #090d16;
-      color: var(--text-muted);
-      padding: 0.75rem 1rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    td {
-      padding: 1rem;
-      border-bottom: 1px solid var(--card-border);
-      color: #e2e8f0;
-    }
-
-    tr:hover td {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .btn-checkin {
-      padding: 0.4rem 0.9rem;
-      border-radius: 0.375rem;
-      font-weight: 700;
-      font-size: 0.8rem;
-      cursor: pointer;
-      border: none;
-      transition: all 0.15s;
-    }
-
-    .btn-checkin.checked {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--accent-green);
-      border: 1px solid var(--accent-green);
-    }
-
-    .btn-checkin.unchecked {
-      background: #1e293b;
-      color: #fff;
-    }
-
-    .btn-checkin.unchecked:hover {
-      background: var(--accent-blue);
-    }
-
-    .stats-bar {
-      display: flex;
-      gap: 1.5rem;
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-    }
-
-    .stats-bar strong {
-      color: #fff;
-    }
+    body { -webkit-tap-highlight-color: transparent; }
+    .touch-target { min-height: 48px; }
   </style>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans pb-10">
 
-  <header>
-    <div class="header-inner">
-      <div class="brand-title">
-        <span>SISYPHUS BREWING</span>
-        <span class="brand-badge">Comedy Theater</span>
+  <!-- CONFIGURATION: Paste your Supabase credentials here -->
+  <script>
+    // Project root URL (stripped of any trailing /rest/v1/)
+    const RAW_SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
+    const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
+    
+    // SHA-256 hash of the door PIN. 
+    // Default PIN: "1234" (hash: 03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4)
+    const DOOR_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+
+    // Suppress sandbox-level WebSocket security warnings in embedded preview iframes
+    window.addEventListener('error', (event) => {
+      if (event && event.message && event.message.includes('WebSocket')) {
+        event.preventDefault();
+      }
+    });
+
+    // Detect if running in an iframe sandbox where WebSockets are blocked
+    function canUseRealtimeWebSocket() {
+      try {
+        if (typeof WebSocket === 'undefined') return false;
+        if (window.self !== window.top && window.location.hostname !== 'sisyphusbrewing.github.io') {
+          return false;
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // Use supabaseClient to prevent shadowing the CDN's window.supabase library object
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = supabaseClient;
+  </script>
+
+  <div id="lockModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-xl">
+        🔒
       </div>
-      <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('checkin')">🎟️ Will-Call Check-In</button>
-        <button class="tab-btn" onclick="switchTab('publish')">✨ Publish New Show</button>
-        <button class="tab-btn" onclick="switchTab('settings')">⚙️️ Settings</button>
+      <div>
+        <h2 class="text-base font-bold text-slate-100">Sisyphus Door Access</h2>
+        <p class="text-xs text-slate-400 mt-1">Enter door staff PIN to proceed</p>
+      </div>
+
+      <form id="pinForm" onsubmit="handlePinSubmit(event)" class="space-y-3">
+        <input 
+          id="pinInput"
+          type="password" 
+          inputmode="numeric" 
+          placeholder="Enter PIN"
+          maxlength="16"
+          autocomplete="off"
+          class="w-full text-center tracking-widest text-xl bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+          autofocus
+        />
+        <div id="pinError" class="hidden text-xs font-semibold text-rose-400">Incorrect PIN. Try again.</div>
+        <button 
+          type="submit" 
+          class="touch-target w-full bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-bold rounded-xl text-sm py-3 shadow-lg shadow-amber-500/10">
+          Unlock Door
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sticky Top Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-md">
+    <div class="max-w-2xl mx-auto space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg font-black tracking-wide text-amber-400">SISYPHUS DOOR</h1>
+          <button onclick="lockScreen()" title="Lock Screen" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded border border-slate-700">
+            🔒 Lock
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- View Toggle: Door Check-In vs Agent Reports -->
+          <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs font-bold">
+            <button id="tabDoorBtn" onclick="switchTab('door')" class="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 transition-all">
+              Door
+            </button>
+            <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+              📊 Reports
+            </button>
+            <button id="tabCreateBtn" onclick="switchTab('create')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+              ➕ Create Show
+            </button>
+          </div>
+
+          <div id="statsBadge" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300">
+            Loading...
+          </div>
+          <!-- Manual Refresh Button -->
+          <button 
+            id="refreshBtn" 
+            onclick="manualRefresh()" 
+            title="Refresh guest list for last-minute purchases" 
+            class="touch-target flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-400 hover:text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
+            <svg id="refreshIcon" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span id="refreshLabel">Sync</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Door Controls (Hidden when in Reports View) -->
+      <div id="doorControls" class="space-y-2">
+        <!-- Show Selector -->
+        <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
+          <option value="">Loading upcoming shows...</option>
+        </select>
+
+        <!-- Instant Search -->
+        <div class="relative">
+          <input 
+            id="searchInput" 
+            type="text" 
+            placeholder="Search guest name or email..." 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+            autocomplete="off"
+            autocorrect="off"
+          >
+          <button id="clearSearch" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-sm font-bold">✕</button>
+        </div>
       </div>
     </div>
   </header>
 
-  <main>
-    <!-- TAB 1: WILL CALL CHECK-IN -->
-    <section id="tab-checkin" class="tab-content active">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">Door Will-Call List</h2>
-          <p class="card-subtitle">Search purchaser name to check in ticket holders at the theater door.</p>
-        </div>
-
-        <div class="stats-bar">
-          <div>Total Attendees: <strong id="stat-total">3</strong></div>
-          <div>Checked In: <strong id="stat-checked" style="color: var(--accent-green);">1</strong></div>
-          <div>Remaining: <strong id="stat-remaining" style="color: var(--accent-amber);">2</strong></div>
-        </div>
-
-        <div class="search-row">
-          <input type="text" id="checkin-search" placeholder="🔍 Search purchaser name, order #, or email..." oninput="filterGuestList()">
-        </div>
-
-        <div class="guest-table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Purchaser Name</th>
-                <th>Show / Variant</th>
-                <th>Qty</th>
-                <th>Order #</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="guest-tbody">
-              <!-- Rendered via JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 2: PUBLISH NEW SHOW -->
-    <section id="tab-publish" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">Publish Show to Shopify</h2>
-          <p class="card-subtitle">Creates the active event on sisyphusbrewing.com with tickets and will-call policies.</p>
-        </div>
-
-        <div class="form-grid">
-          <!-- Title -->
-          <div class="form-group full-width">
-            <label for="show-title">Comedian / Show Title *</label>
-            <input type="text" id="show-title" placeholder="e.g. The Dose: A Psychedelic Comedy Show" required>
-          </div>
-
-          <!-- Date & Variant Picker -->
-          <div class="form-group full-width">
-            <label>Showtimes & Passes (Multi-Day Enabled) *</label>
-            <div class="showtime-builder-box">
-              <div class="picker-row">
-                <input type="date" id="picker-date" style="max-width: 170px;">
-                <input type="time" id="picker-time" value="19:00" style="max-width: 140px;">
-                
-                <div class="preset-btn-group">
-                  <button type="button" class="preset-btn" onclick="setTimePreset('19:00')">7:00 PM</button>
-                  <button type="button" class="preset-btn" onclick="setTimePreset('21:00')">9:00 PM</button>
-                  <button type="button" class="preset-btn" onclick="setTimePreset('17:00')">5:00 PM</button>
-                  <button type="button" class="preset-btn" onclick="addPassOption()">+ Class / Weekend Pass</button>
-                </div>
-
-                <button type="button" class="btn-add-time" onclick="addShowtimeFromPicker()">+ Add Showtime</button>
-              </div>
-
-              <!-- Active Badges -->
-              <div id="showtimes-badges-container" class="badges-container">
-                <span style="color: var(--text-sub); font-size: 0.85rem;" id="badges-placeholder">No showtimes selected yet. Pick a date & time above.</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Price & Capacity -->
-          <div class="form-group">
-            <label for="ticket-price">Ticket Price ($ USD) *</label>
-            <input type="number" step="0.50" id="ticket-price" value="20.00">
-          </div>
-
-          <div class="form-group">
-            <label for="room-capacity">Room Capacity (per showtime) *</label>
-            <input type="number" id="room-capacity" value="75">
-          </div>
-
-          <!-- Bio -->
-          <div class="form-group full-width">
-            <label for="show-bio">Event Description / Comedian Bio</label>
-            <textarea id="show-bio" rows="4" placeholder="Brief comedian bio or show highlights..."></textarea>
-          </div>
-
-          <!-- Poster Flyer Upload -->
-          <div class="form-group full-width">
-            <label>Flyer / Promo Poster</label>
-            <div class="file-upload-box" onclick="document.getElementById('flyer-file-input').click()">
-              <input type="file" id="flyer-file-input" accept="image/*" style="display: none;" onchange="handleFlyerUpload(event)">
-              <div id="upload-prompt">
-                <p style="font-size: 1.75rem; margin-bottom: 0.4rem;">🖼️</p>
-                <p style="font-weight: 700; color: #fff;">Click to select show flyer from your device</p>
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Uploads to Supabase Storage</p>
-              </div>
-              <div id="upload-status" class="upload-status"></div>
-              <img id="preview-image" class="preview-thumb" alt="Flyer Preview">
-            </div>
-            <input type="hidden" id="uploaded-image-url">
-          </div>
-        </div>
-
-        <button type="button" id="btn-publish" class="btn-primary-publish" onclick="submitNewShowToPipeline()">
-          <span>🚀 Publish Show to Shopify</span>
-        </button>
-
-        <div id="terminal-log" class="terminal-box"></div>
-      </div>
-    </section>
-
-    <!-- TAB 3: SETTINGS -->
-    <section id="tab-settings" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">Pipeline & API Configuration</h2>
-          <p class="card-subtitle">Stored securely in your local browser storage for GitHub Actions integration.</p>
-        </div>
-
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label for="cfg-token">GitHub Personal Access Token (PAT)</label>
-            <input type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-          </div>
-
-          <div class="form-group">
-            <label for="cfg-owner">GitHub Repo Owner</label>
-            <input type="text" id="cfg-owner" value="sisyphusbrewing">
-          </div>
-
-          <div class="form-group">
-            <label for="cfg-repo">GitHub Repo Name</label>
-            <input type="text" id="cfg-repo" value="dojour_tickets">
-          </div>
-
-          <div class="form-group full-width">
-            <label for="cfg-supabase">Supabase Storage URL</label>
-            <input type="text" id="cfg-supabase" value="https://idsdwkubqnavkazlteis.supabase.co">
-          </div>
-        </div>
-
-        <button type="button" class="preset-btn" style="padding: 0.75rem 1.5rem; background: var(--accent-blue); color: #fff;" onclick="saveSettings()">Save Configuration</button>
-      </div>
-    </section>
+  <!-- Main Guest List (Door View) -->
+  <main id="doorView" class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
+    <div id="guestList" class="space-y-3">
+      <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
+    </div>
   </main>
 
+  <!-- Agent Reports View -->
+  <main id="reportsView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow">
+      <div>
+        <h2 class="text-base font-bold text-slate-100">Agent Ticket Summaries</h2>
+        <p class="text-xs text-slate-400">Copy ticket counts or email updates to agents in one click.</p>
+      </div>
+      <button 
+        onclick="copyAllShowsSummary()" 
+        class="touch-target px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+        📋 Copy All Shows Overview
+      </button>
+    </div>
+
+    <!-- Container for show summary cards -->
+    <div id="reportsList" class="space-y-3">
+      <div class="text-center text-slate-500 py-10">Loading upcoming show summaries...</div>
+    </div>
+  </main>
+
+  <!-- Create Show View (Visual Date Picker, Rich Description, Desktop Image Upload) -->
+  <main id="createView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-5">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
+      <div class="border-b border-slate-800 pb-3">
+        <h2 class="text-base font-bold text-slate-100">Create Shopify Ticketed Show</h2>
+        <p class="text-xs text-slate-400">Build dates with the visual picker, upload flyers from your desktop, and preserve clean formatting.</p>
+      </div>
+
+      <!-- 1. Comedian / Show Title -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event / Comedian / Class Title *</label>
+        <input 
+          id="newTitle" 
+          type="text" 
+          placeholder="e.g. Khadijah Cooper - Stand-Up Comedy Class" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-semibold"
+        />
+      </div>
+
+      <!-- 2. Interactive Date Picker & Showtime Builder -->
+      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+        <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+          📅 Date Picker & Showtimes
+        </label>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <div class="sm:col-span-5">
+            <input 
+              id="calendarPicker" 
+              type="date" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+          <div class="sm:col-span-4">
+            <select id="timePicker" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400">
+              <option value="19:00">7:00 PM</option>
+              <option value="21:00">9:00 PM</option>
+              <option value="17:00">5:00 PM</option>
+              <option value="20:00">8:00 PM</option>
+              <option value="pass">Full Pass / Registration</option>
+            </select>
+          </div>
+          <div class="sm:col-span-3">
+            <button 
+              type="button" 
+              onclick="addSelectedShowtime()" 
+              class="w-full h-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs py-2 transition-all">
+              + Add Time
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Weekend Preset Shortcuts -->
+        <div class="flex flex-wrap gap-1.5 pt-1 text-[11px]">
+          <span class="text-slate-500 self-center">Presets:</span>
+          <button type="button" onclick="applyWeekendPreset('2night_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 & 9 PM</button>
+          <button type="button" onclick="applyWeekendPreset('2night_single')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 PM</button>
+          <button type="button" onclick="applyWeekendPreset('sat_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Sat 7 & 9 PM</button>
+        </div>
+
+        <!-- Active Showtimes List -->
+        <div id="showtimesTagContainer" class="flex flex-wrap gap-1.5 pt-2">
+          <span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above.</span>
+        </div>
+      </div>
+
+      <!-- 3. Price & Room Capacity -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($)</label>
+          <input 
+            id="newPrice" 
+            type="text" 
+            value="20.00" 
+            placeholder="20.00" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Room Limit (Capacity)</label>
+          <input 
+            id="newCapacity" 
+            type="number" 
+            value="75" 
+            placeholder="75" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+      </div>
+
+      <!-- 4. Direct Desktop Image Upload to Supabase -->
+      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+            🖼️ Upload Promo Flyer / Image
+          </label>
+          <span id="uploadStatusText" class="text-[11px] text-slate-400">Direct from desktop to Supabase</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="flex-1 cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-xl p-3 bg-slate-900/60 transition-all text-center">
+            <span class="text-xs font-semibold text-slate-300">Choose Image File from Desktop</span>
+            <span class="text-[10px] text-slate-500 mt-0.5">JPG, PNG, WebP supported</span>
+            <input id="desktopImageFile" type="file" accept="image/*" class="hidden" onchange="handleDesktopImageSelected(this)" />
+          </label>
+
+          <!-- Image Preview Thumbnail -->
+          <div id="imagePreviewContainer" class="hidden w-16 h-16 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden relative flex-shrink-0">
+            <img id="imagePreviewThumb" src="" alt="Promo preview" class="w-full h-full object-cover" />
+          </div>
+        </div>
+
+        <input 
+          id="uploadedImageUrl" 
+          type="url" 
+          placeholder="Or paste an image URL directly..." 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+        />
+      </div>
+
+      <!-- 5. Formatted Bio & Description with Formatting Helper -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event Description / Bio</label>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <button type="button" onclick="insertFormatTag('b')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">B</button>
+            <button type="button" onclick="insertFormatTag('i')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 italic hover:bg-slate-700">I</button>
+            <button type="button" onclick="insertFormatTag('bullet')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">• List</button>
+          </div>
+        </div>
+        <textarea 
+          id="newBio" 
+          rows="6" 
+          placeholder="Paste your comedian bio or class schedule here. Blank lines between paragraphs will be preserved cleanly in Shopify!" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-mono leading-relaxed"
+        ></textarea>
+      </div>
+
+      <!-- Submit & Publish Controls -->
+      <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
+        <button 
+          id="publishShowBtn" 
+          onclick="submitNewShowToPipeline()" 
+          class="touch-target w-full sm:w-auto flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-black rounded-xl text-sm py-3 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+          🚀 Publish Show to Shopify
+        </button>
+        <button 
+          type="button" 
+          onclick="copyActionInputs()" 
+          class="touch-target w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all">
+          📋 Copy Details
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-amber-400 text-slate-950 px-4 py-2 rounded-full font-black text-xs shadow-2xl flex items-center gap-1.5">
+    <span id="toastMsg">Sync complete</span>
+  </div>
+
   <script>
-    // -------------------------------------------------------------------------
-    // STATE & CONFIGURATION
-    // -------------------------------------------------------------------------
+    let tickets = [];
+    let audioCtx = null;
+    let currentTab = 'door';
+    let allUpcomingShows = [];
+    let showSummaryData = [];
+    let agentDirectory = {}; // { showKey: { name: "", email: "" } }
     let configuredShowtimes = [];
-    let sampleGuests = [
-      { id: 1, name: "Marcus Vance", show: "Last Call • Sat Oct 3 • 9:00 PM", qty: 2, order: "#1092", checked: true },
-      { id: 2, name: "Jessica Miller", show: "Last Call • Sat Oct 3 • 9:00 PM", qty: 4, order: "#1093", checked: false },
-      { id: 3, name: "Taylor Hanson", show: "The Dose • Fri Jan 29 • 7:00 PM", qty: 1, order: "#1094", checked: false }
-    ];
+    let checkedInCollapsed = true;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      // Set default date to today
-      const todayStr = new Date().toISOString().split('T')[0];
-      document.getElementById('picker-date').value = todayStr;
+    try {
+      agentDirectory = JSON.parse(localStorage.getItem('sisyphus_agent_directory') || '{}');
+    } catch(e) {}
 
-      // Load saved settings
-      if (localStorage.getItem('GH_PAT')) {
-        document.getElementById('cfg-token').value = localStorage.getItem('GH_PAT');
-      }
-      if (localStorage.getItem('GH_OWNER')) {
-        document.getElementById('cfg-owner').value = localStorage.getItem('GH_OWNER');
-      }
-      if (localStorage.getItem('GH_REPO')) {
-        document.getElementById('cfg-repo').value = localStorage.getItem('GH_REPO');
-      }
-      if (localStorage.getItem('SB_URL')) {
-        document.getElementById('cfg-supabase').value = localStorage.getItem('SB_URL');
-      }
+    function switchTab(tab) {
+      currentTab = tab;
+      const doorView = document.getElementById('doorView');
+      const reportsView = document.getElementById('reportsView');
+      const createView = document.getElementById('createView');
+      const doorControls = document.getElementById('doorControls');
+      const tabDoorBtn = document.getElementById('tabDoorBtn');
+      const tabReportsBtn = document.getElementById('tabReportsBtn');
+      const tabCreateBtn = document.getElementById('tabCreateBtn');
 
-      renderGuestList(sampleGuests);
-    });
+      tabDoorBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+      tabReportsBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+      tabCreateBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
 
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      doorView.classList.add('hidden');
+      reportsView.classList.add('hidden');
+      createView.classList.add('hidden');
+      doorControls.classList.add('hidden');
 
-      if (tabName === 'checkin') {
-        document.querySelector('.nav-tabs button:nth-child(1)').classList.add('active');
-        document.getElementById('tab-checkin').classList.add('active');
-      } else if (tabName === 'publish') {
-        document.querySelector('.nav-tabs button:nth-child(2)').classList.add('active');
-        document.getElementById('tab-publish').classList.add('active');
+      if (tab === 'reports') {
+        reportsView.classList.remove('hidden');
+        tabReportsBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
+        loadAllShowsReport();
+      } else if (tab === 'create') {
+        createView.classList.remove('hidden');
+        tabCreateBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
+        const picker = document.getElementById('calendarPicker');
+        if (!picker.value) {
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          picker.value = d.toISOString().split('T')[0];
+        }
       } else {
-        document.querySelector('.nav-tabs button:nth-child(3)').classList.add('active');
-        document.getElementById('tab-settings').classList.add('active');
+        doorControls.classList.remove('hidden');
+        doorView.classList.remove('hidden');
+        tabDoorBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
       }
     }
 
-    function saveSettings() {
-      localStorage.setItem('GH_PAT', document.getElementById('cfg-token').value.trim());
-      localStorage.setItem('GH_OWNER', document.getElementById('cfg-owner').value.trim());
-      localStorage.setItem('GH_REPO', document.getElementById('cfg-repo').value.trim());
-      localStorage.setItem('SB_URL', document.getElementById('cfg-supabase').value.trim());
-      alert('✓ Settings saved successfully in local storage.');
-    }
-
-    // -------------------------------------------------------------------------
-    // SHOWTIME VARIANT FORMATTER (NO COMMA AFTER WEEKDAY)
-    // -------------------------------------------------------------------------
+    // ==========================================
+    // SHOW CREATOR LOGIC (COMMA FREE VARIANT FORMATTER)
+    // ==========================================
     function formatPickerVariant(dateStr, timeStr) {
       if (timeStr === 'pass') {
         return 'Full Pass / Class Registration';
@@ -706,236 +406,937 @@
       return `${weekdays[dt.getDay()]} ${months[dt.getMonth()]} ${dt.getDate()} • ${dispHour}:${dispMin} ${ampm}`;
     }
 
-    function setTimePreset(timeVal) {
-      document.getElementById('picker-time').value = timeVal;
-    }
-
-    function addPassOption() {
-      const label = "Full Pass / Registration";
-      if (!configuredShowtimes.includes(label)) {
-        configuredShowtimes.push(label);
-        renderShowtimeBadges();
-      }
-    }
-
-    function addShowtimeFromPicker() {
-      const dateVal = document.getElementById('picker-date').value;
-      const timeVal = document.getElementById('picker-time').value;
-
-      if (!dateVal) {
-        alert("Please choose a date from the calendar.");
+    function addSelectedShowtime() {
+      const dateVal = document.getElementById('calendarPicker').value;
+      const timeVal = document.getElementById('timePicker').value;
+      if (!dateVal && timeVal !== 'pass') {
+        showToast('Please select a date on the calendar first');
         return;
       }
-
-      const formatted = formatPickerVariant(dateVal, timeVal);
-      if (!configuredShowtimes.includes(formatted)) {
-        configuredShowtimes.push(formatted);
-        renderShowtimeBadges();
+      const label = formatPickerVariant(dateVal, timeVal);
+      if (!configuredShowtimes.includes(label)) {
+        configuredShowtimes.push(label);
+        renderShowtimeTags();
       }
     }
 
     function removeShowtime(index) {
       configuredShowtimes.splice(index, 1);
-      renderShowtimeBadges();
+      renderShowtimeTags();
     }
 
-    function renderShowtimeBadges() {
-      const container = document.getElementById('showtimes-badges-container');
+    function renderShowtimeTags() {
+      const container = document.getElementById('showtimesTagContainer');
       if (configuredShowtimes.length === 0) {
-        container.innerHTML = '<span style="color: var(--text-sub); font-size: 0.85rem;" id="badges-placeholder">No showtimes selected yet. Pick a date & time above.</span>';
+        container.innerHTML = '<span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above.</span>';
         return;
       }
-
       container.innerHTML = configuredShowtimes.map((item, idx) => `
-        <span class="showtime-badge">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
           ${item}
-          <button type="button" onclick="removeShowtime(${idx})" title="Remove showtime">&times;</button>
+          <button type="button" onclick="removeShowtime(${idx})" class="text-amber-400 hover:text-white font-bold">×</button>
         </span>
       `).join('');
     }
 
-    // -------------------------------------------------------------------------
-    // SUPABASE POSTER IMAGE UPLOAD
-    // -------------------------------------------------------------------------
-    async function handleFlyerUpload(event) {
-      const file = event.target.files[0];
+    function applyWeekendPreset(presetType) {
+      const dateVal = document.getElementById('calendarPicker').value;
+      if (!dateVal) {
+        showToast('Select starting date on calendar first');
+        return;
+      }
+      const [year, month, day] = dateVal.split('-').map(Number);
+      const baseDate = new Date(year, month - 1, day);
+
+      const addDateShow = (offsetDays, timeStr) => {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + offsetDays);
+        const yStr = d.getFullYear();
+        const mStr = String(d.getMonth() + 1).padStart(2, '0');
+        const dStr = String(d.getDate()).padStart(2, '0');
+        return formatPickerVariant(`${yStr}-${mStr}-${dStr}`, timeStr);
+      };
+
+      if (presetType === '2night_double') {
+        configuredShowtimes = [
+          addDateShow(0, '19:00'),
+          addDateShow(0, '21:00'),
+          addDateShow(1, '19:00'),
+          addDateShow(1, '21:00')
+        ];
+      } else if (presetType === '2night_single') {
+        configuredShowtimes = [
+          addDateShow(0, '19:00'),
+          addDateShow(1, '19:00')
+        ];
+      } else if (presetType === 'sat_double') {
+        configuredShowtimes = [
+          addDateShow(0, '19:00'),
+          addDateShow(0, '21:00')
+        ];
+      }
+      renderShowtimeTags();
+      showToast('Showtimes populated!');
+    }
+
+    // Direct Desktop Image Upload to Supabase Storage
+    async function handleDesktopImageSelected(inputEl) {
+      const file = inputEl.files[0];
       if (!file) return;
 
-      const statusBox = document.getElementById('upload-status');
-      const previewImg = document.getElementById('preview-image');
-      const urlInput = document.getElementById('uploaded-image-url');
-      const supabaseBase = document.getElementById('cfg-supabase').value.trim() || 'https://idsdwkubqnavkazlteis.supabase.co';
+      const statusEl = document.getElementById('uploadStatusText');
+      const thumb = document.getElementById('imagePreviewThumb');
+      const thumbContainer = document.getElementById('imagePreviewContainer');
+      const urlInput = document.getElementById('uploadedImageUrl');
 
-      statusBox.className = 'upload-status loading';
-      statusBox.innerHTML = `⏳ Uploading ${file.name} to flyer storage...`;
+      thumb.src = URL.createObjectURL(file);
+      thumbContainer.classList.remove('hidden');
+
+      statusEl.textContent = 'Uploading to Supabase...';
+      statusEl.className = 'text-[11px] text-amber-400 animate-pulse';
 
       try {
         const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const uniqueFileName = `${Date.now()}_${cleanName}`;
-        const uploadEndpoint = `${supabaseBase}/storage/v1/object/show-posters/${uniqueFileName}`;
+        const filePath = `posters/${Date.now()}_${cleanName}`;
 
-        const uploadResp = await fetch(uploadEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': file.type
-          },
-          body: file
-        });
+        const { data, error } = await supabaseClient
+          .storage
+          .from('show-posters')
+          .upload(filePath, file, { upsert: true });
 
-        if (!uploadResp.ok) {
-          throw new Error(`Upload failed (${uploadResp.status}): ${await uploadResp.text()}`);
+        if (error) {
+          console.warn('Supabase storage upload notice:', error);
+          statusEl.textContent = 'Upload failed. Check bucket permissions.';
+          statusEl.className = 'text-[11px] text-rose-400';
+          return;
         }
 
-        const publicUrl = `${supabaseBase}/storage/v1/object/public/show-posters/${uniqueFileName}`;
-        urlInput.value = publicUrl;
+        const { data: pubData } = supabaseClient
+          .storage
+          .from('show-posters')
+          .getPublicUrl(filePath);
 
-        statusBox.className = 'upload-status success';
-        statusBox.innerHTML = `✓ Flyer uploaded successfully!`;
-
-        previewImg.src = publicUrl;
-        previewImg.style.display = 'inline-block';
+        if (pubData && pubData.publicUrl) {
+          urlInput.value = pubData.publicUrl;
+          statusEl.textContent = '✓ Ready on Supabase Storage!';
+          statusEl.className = 'text-[11px] text-emerald-400 font-bold';
+          showToast('Image uploaded to Supabase!');
+          playChime(true);
+        }
       } catch (err) {
-        statusBox.className = 'upload-status';
-        statusBox.style.color = 'var(--accent-red)';
-        statusBox.innerHTML = `⚠️ Upload failed: ${err.message}`;
+        console.error('File upload exception:', err);
+        statusEl.textContent = 'Upload failed.';
+        statusEl.className = 'text-[11px] text-rose-400';
       }
     }
 
-    // -------------------------------------------------------------------------
-    // GITHUB ACTIONS 1-CLICK PIPELINE TRIGGER
-    // -------------------------------------------------------------------------
-    async function submitNewShowToPipeline() {
-      const title = document.getElementById('show-title').value.trim();
-      const price = document.getElementById('ticket-price').value.trim();
-      const capacity = document.getElementById('room-capacity').value.trim();
-      const bio = document.getElementById('show-bio').value.trim();
-      const imageUrl = document.getElementById('uploaded-image-url').value.trim();
+    function insertFormatTag(tag) {
+      const textarea = document.getElementById('newBio');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
 
-      const token = document.getElementById('cfg-token').value.trim();
-      const repoOwner = document.getElementById('cfg-owner').value.trim() || 'sisyphusbrewing';
-      const repoName = document.getElementById('cfg-repo').value.trim() || 'dojour_tickets';
+      let replacement = '';
+      if (tag === 'b') replacement = `<strong>${selected || 'bold text'}</strong>`;
+      if (tag === 'i') replacement = `<em>${selected || 'italic text'}</em>`;
+      if (tag === 'bullet') replacement = `\n• ${selected || 'Key detail or policy'}`;
+
+      textarea.setRangeText(replacement, start, end, 'end');
+      textarea.focus();
+    }
+
+    function formatDescriptionToHtml(rawText) {
+      if (!rawText || !rawText.trim()) return '<p>Live stand-up comedy and events at Sisyphus Brewing.</p>';
+      const clean = rawText.trim();
+      
+      if (clean.includes('<p>') || clean.includes('<br')) return clean;
+
+      const paragraphs = clean.split(/\n\s*\n/);
+      return paragraphs.map(para => {
+        const lines = para.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0 && lines.every(l => l.startsWith('•') || l.startsWith('-') || l.startsWith('*'))) {
+          const listItems = lines.map(l => `<li>${l.replace(/^[-*•]\s*/, '')}</li>`).join('');
+          return `<ul style="margin: 8px 0; padding-left: 20px;">${listItems}</ul>`;
+        }
+        return `<p style="margin-bottom: 12px; line-height: 1.6;">${lines.join('<br/>')}</p>`;
+      }).join('\n');
+    }
+
+    async function submitNewShowToPipeline() {
+      const title = document.getElementById('newTitle').value.trim();
+      const price = document.getElementById('newPrice').value.trim() || '20.00';
+      const capacity = parseInt(document.getElementById('newCapacity').value, 10) || 75;
+      const imageUrl = document.getElementById('uploadedImageUrl').value.trim();
+      const rawBio = document.getElementById('newBio').value.trim();
 
       if (!title) {
-        alert("Please enter a Comedian / Show Title.");
+        showToast('Please enter an event or comedian title');
         return;
       }
-
       if (configuredShowtimes.length === 0) {
-        alert("Please add at least one Showtime variant.");
+        showToast('Please add at least one showtime using the date picker');
         return;
       }
 
-      if (!token) {
-        alert("Missing GitHub Token! Go to the '⚙️ Settings' tab and paste your Personal Access Token.");
-        switchTab('settings');
-        return;
-      }
+      const formattedHtml = formatDescriptionToHtml(rawBio);
+      const btn = document.getElementById('publishShowBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Saving to Show Queue...';
 
-      const publishBtn = document.getElementById('btn-publish');
-      const terminal = document.getElementById('terminal-log');
-
-      publishBtn.disabled = true;
-      publishBtn.innerHTML = `<span>⏳ Triggering GitHub Actions Workflow...</span>`;
-      terminal.style.display = 'block';
-      terminal.innerHTML = `[${new Date().toLocaleTimeString()}] Packing show metadata...\n`;
-      terminal.innerHTML += `[${new Date().toLocaleTimeString()}] Variants: ${configuredShowtimes.length} showtimes\n`;
-
-      // Joined with ' | ' to prevent accidental comma splitting
+      // Join with ' | ' to eliminate comma delimiter collisions
       const showtimesPayload = configuredShowtimes.join(' | ');
 
       try {
-        const response = await fetch(
-          `https://api.github.com/repos/${repoOwner}/${repoName}/actions/workflows/create_shopify_show.yml/dispatches`,
-          {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/vnd.github.v3+json',
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              ref: 'main',
-              inputs: {
-                comedian_name: title,
-                showtimes: showtimesPayload,
-                ticket_price: price,
-                room_capacity: String(capacity),
-                bio: bio,
-                image_url: imageUrl
-              }
-            })
-          }
-        );
+        const { error } = await supabaseClient
+          .from('show_queue')
+          .insert([{
+            title: title,
+            showtimes: showtimesPayload,
+            price: price,
+            capacity: capacity,
+            bio_html: formattedHtml,
+            image_url: imageUrl,
+            status: 'pending',
+            created_at: new Date().toISOString()
+          }]);
 
-        if (response.status === 204) {
-          terminal.innerHTML += `[${new Date().toLocaleTimeString()}] ✓ SUCCESS (204): GitHub Action dispatched successfully!\n`;
-          terminal.innerHTML += `[${new Date().toLocaleTimeString()}] 👉 Shopify is now building the product, variants, flyer, and will-call tags.\n`;
-          alert(`🎉 "${title}" has been sent to the pipeline!\nShopify will have the live show published in under 60 seconds.`);
+        if (error) {
+          console.warn('Queue insert warning:', error);
+          copyActionInputs();
+          showToast('Copied parameters! Run workflow in GitHub Actions');
         } else {
-          const errData = await response.text();
-          terminal.innerHTML += `[${new Date().toLocaleTimeString()}] ❌ Error (${response.status}): ${errData}\n`;
-          alert(`Pipeline dispatch error (${response.status}). Check settings and logs.`);
+          showToast(`✓ "${title}" queued for Shopify!`);
+          playChime(true);
         }
-      } catch (err) {
-        terminal.innerHTML += `[${new Date().toLocaleTimeString()}] ❌ Network error: ${err.message}\n`;
-        alert(`Failed to trigger workflow: ${err.message}`);
+      } catch (e) {
+        copyActionInputs();
       } finally {
-        publishBtn.disabled = false;
-        publishBtn.innerHTML = `<span>🚀 Publish Show to Shopify</span>`;
+        btn.disabled = false;
+        btn.textContent = '🚀 Publish Show to Shopify';
       }
     }
 
-    // -------------------------------------------------------------------------
-    // DOOR CHECK-IN CONTROLLER
-    // -------------------------------------------------------------------------
-    function toggleCheckIn(id) {
-      const guest = sampleGuests.find(g => g.id === id);
-      if (guest) {
-        guest.checked = !guest.checked;
-        renderGuestList(sampleGuests);
-      }
+    function copyActionInputs() {
+      const title = document.getElementById('newTitle').value.trim() || 'Show Title';
+      // Join with ' | '
+      const showtimes = configuredShowtimes.join(' | ') || 'Oct 24 7pm | Oct 24 9pm';
+      const price = document.getElementById('newPrice').value.trim() || '20.00';
+      const capacity = document.getElementById('newCapacity').value.trim() || '75';
+      const imageUrl = document.getElementById('uploadedImageUrl').value.trim();
+      const bio = document.getElementById('newBio').value.trim();
+
+      const blurb = `Show Title: ${title}\n` +
+                    `Showtimes: ${showtimes}\n` +
+                    `Price: ${price}\n` +
+                    `Capacity: ${capacity}\n` +
+                    `Image URL: ${imageUrl}\n\n` +
+                    `Description:\n${bio}`;
+
+      const tempArea = document.createElement("textarea");
+      tempArea.value = blurb;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast('Show details copied to clipboard!');
+      playChime(true);
     }
 
-    function filterGuestList() {
-      const q = document.getElementById('checkin-search').value.toLowerCase().trim();
-      const filtered = sampleGuests.filter(g => 
-        g.name.toLowerCase().includes(q) ||
-        g.order.toLowerCase().includes(q) ||
-        g.show.toLowerCase().includes(q)
+    function emailAgent(safeKey) {
+      const key = decodeURIComponent(safeKey);
+      const s = showSummaryData.find(item => `${item.show_date} • ${item.show_title}` === key);
+      if (!s) return;
+
+      const agent = agentDirectory[key] || { email: "" };
+      const recipient = agent.email || "";
+      const subject = encodeURIComponent(`Ticket Count Update: ${s.show_title} (${s.show_date}) - Sisyphus Brewing`);
+      const body = encodeURIComponent(
+        `Hi,\n\nHere is the current ticket count for ${s.show_title} at Sisyphus Brewing:\n\n` +
+        `• Show: ${s.show_title}\n` +
+        `• Date: ${s.show_date}\n` +
+        `• Total Tickets Sold: ${s.totalTickets}\n` +
+        `  - Website: ${s.websiteTickets}\n` +
+        `  - Dojour: ${s.dojourTickets}\n\n` +
+        `Let us know if you have any questions!\n\nBest,\nSisyphus Brewing`
       );
-      renderGuestList(filtered);
+
+      window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
     }
 
-    function renderGuestList(list) {
-      const tbody = document.getElementById('guest-tbody');
-      
-      const totalChecked = sampleGuests.filter(g => g.checked).length;
-      document.getElementById('stat-total').innerText = sampleGuests.length;
-      document.getElementById('stat-checked').innerText = totalChecked;
-      document.getElementById('stat-remaining').innerText = sampleGuests.length - totalChecked;
+    function copyAllShowsSummary() {
+      if (showSummaryData.length === 0) return;
 
-      if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-sub); padding: 2rem;">No ticket holders found matching your search.</td></tr>`;
+      let report = `SISYPHUS BREWING - UPCOMING COMEDY SHOW COUNTS (${new Date().toLocaleDateString()}):\n\n`;
+      showSummaryData.forEach(s => {
+        report += `• ${s.show_title} (${s.show_date}): ${s.totalTickets} sold (Web: ${s.websiteTickets}, Dojour: ${s.dojourTickets})\n`;
+      });
+
+      const tempArea = document.createElement("textarea");
+      report += `\nGenerated via Sisyphus Door System.`;
+      tempArea.value = report;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast("Copied all shows overview to clipboard!");
+      playChime(true);
+    }
+
+    // ==========================================
+    // CORE DATABASE LOADERS & HELPERS
+    // ==========================================
+    function playChime(success = true) {
+      if ('vibrate' in navigator) navigator.vibrate(success ? 40 : [30, 50, 30]);
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(success ? 880 : 300, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2200);
+    }
+
+    function parseShowDateToMillis(str) {
+      if (!str) return 0;
+      const now = new Date();
+      const currentYear = now.getFullYear();
+
+      const mMatch = str.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b/i);
+      const dMatch = str.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+      const yMatch = str.match(/\b(20\d{2})\b/);
+      const tMatch = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+
+      if (!mMatch || !dMatch) return 0;
+
+      const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+      const month = months[mMatch[1].toLowerCase().slice(0, 3)];
+      const day = parseInt(dMatch[1], 10);
+      let year = yMatch ? parseInt(yMatch[1], 10) : currentYear;
+
+      let hours = 19;
+      let mins = 0;
+      if (tMatch) {
+        hours = parseInt(tMatch[1], 10);
+        mins = tMatch[2] ? parseInt(tMatch[2], 10) : 0;
+        const ampm = tMatch[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+      }
+
+      if (!yMatch && month < now.getMonth() && (now.getMonth() - month) >= 8) {
+        year += 1;
+      }
+
+      return new Date(year, month, day, hours, mins).getTime();
+    }
+
+    async function loadShows() {
+      const select = document.getElementById('showSelector');
+      const previousSelectedValue = select.value;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('tickets')
+          .select('show_date, show_title');
+
+        if (error) {
+          console.error("Supabase loadShows error:", error);
+          document.getElementById('statsBadge').textContent = 'DB Error';
+          select.innerHTML = '<option value="">Database connection error</option>';
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          select.innerHTML = '<option value="">No shows found</option>';
+          document.getElementById('statsBadge').textContent = '0 Shows';
+          return;
+        }
+
+        const uniqueShows = [];
+        const seen = new Set();
+        const now = Date.now();
+        const GRACE_PERIOD_MS = 12 * 60 * 60 * 1000;
+
+        data.forEach(d => {
+          const key = `${d.show_date} • ${d.show_title}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            const timestamp = parseShowDateToMillis(d.show_date);
+            if (timestamp && timestamp < (now - GRACE_PERIOD_MS)) {
+              return;
+            }
+            uniqueShows.push({
+              show_date: d.show_date,
+              show_title: d.show_title,
+              label: key,
+              timestamp: timestamp || Number.MAX_SAFE_INTEGER
+            });
+          }
+        });
+
+        uniqueShows.sort((a, b) => a.timestamp - b.timestamp);
+        allUpcomingShows = uniqueShows;
+
+        if (uniqueShows.length === 0) {
+          select.innerHTML = '<option value="">No upcoming shows found</option>';
+          document.getElementById('statsBadge').textContent = '0 Shows';
+          return;
+        }
+
+        select.innerHTML = uniqueShows.map(s => 
+          `<option value="${encodeURIComponent(JSON.stringify(s))}">${s.label}</option>`
+        ).join('');
+
+        let matchedOption = false;
+        if (previousSelectedValue) {
+          for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === previousSelectedValue) {
+              select.selectedIndex = i;
+              matchedOption = true;
+              break;
+            }
+          }
+        }
+
+        if (!matchedOption) {
+          select.selectedIndex = 0;
+        }
+
+        await loadTicketsForCurrentShow();
+      } catch (err) {
+        console.error("Exception loading shows:", err);
+        document.getElementById('statsBadge').textContent = 'Error';
+      }
+    }
+
+    async function loadTicketsForCurrentShow() {
+      const select = document.getElementById('showSelector');
+      if (!select.value) return;
+
+      try {
+        const show = JSON.parse(decodeURIComponent(select.value));
+
+        const { data, error } = await supabaseClient
+          .from('tickets')
+          .select('*')
+          .eq('show_date', show.show_date)
+          .eq('show_title', show.show_title)
+          .order('guest_name');
+
+        if (error) {
+          console.error("Supabase loadTickets error:", error);
+          return;
+        }
+
+        tickets = data || [];
+        renderList();
+        updateStats();
+      } catch (err) {
+        console.error("Exception in loadTicketsForCurrentShow:", err);
+      }
+    }
+
+    async function manualRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      const label = document.getElementById('refreshLabel');
+      if (icon) icon.classList.add('animate-spin');
+      if (label) label.textContent = 'Syncing...';
+
+      const oldCount = tickets.length;
+      await loadShows();
+
+      if (icon) icon.classList.remove('animate-spin');
+      if (label) label.textContent = 'Sync';
+
+      const diff = tickets.length - oldCount;
+      if (diff > 0) {
+        showToast(`+${diff} new ticket${diff > 1 ? 's' : ''} synced!`);
+        playChime(true);
+      } else {
+        showToast('Guest list is up to date');
+      }
+    }
+
+    async function loadAllShowsReport() {
+      const container = document.getElementById('reportsList');
+      container.innerHTML = '<div class="text-center text-slate-500 py-10">Loading ticket counts...</div>';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('tickets')
+          .select('show_date, show_title, tickets, source');
+
+        if (error || !data) {
+          container.innerHTML = '<div class="text-center text-rose-500 py-10">Failed to load report data from Supabase.</div>';
+          return;
+        }
+
+        const showMap = {};
+        const now = Date.now();
+        const GRACE_PERIOD_MS = 12 * 60 * 60 * 1000;
+
+        data.forEach(t => {
+          const dateStr = t.show_date || '';
+          const titleStr = t.show_title || '';
+          if (!dateStr || !titleStr) return;
+
+          const key = `${dateStr} • ${titleStr}`;
+          const ts = parseShowDateToMillis(dateStr);
+          if (ts && ts < (now - GRACE_PERIOD_MS)) return;
+
+          if (!showMap[key]) {
+            showMap[key] = {
+              show_date: dateStr,
+              show_title: titleStr,
+              timestamp: ts || Number.MAX_SAFE_INTEGER,
+              totalTickets: 0,
+              websiteTickets: 0,
+              dojourTickets: 0
+            };
+          }
+
+          const count = parseInt(t.tickets, 10) || 1;
+          showMap[key].totalTickets += count;
+          if (t.source === 'Website') {
+            showMap[key].websiteTickets += count;
+          } else {
+            showMap[key].dojourTickets += count;
+          }
+        });
+
+        showSummaryData = Object.values(showMap);
+        showSummaryData.sort((a, b) => a.timestamp - b.timestamp);
+
+        if (showSummaryData.length === 0) {
+          container.innerHTML = '<div class="text-center text-slate-500 py-10">No upcoming shows found.</div>';
+          return;
+        }
+
+        container.innerHTML = showSummaryData.map(s => {
+          const safeKey = encodeURIComponent(`${s.show_date} • ${s.show_title}`);
+          const agent = agentDirectory[`${s.show_date} • ${s.show_title}`] || { name: '', email: '' };
+
+          return `
+            <div class="p-4 rounded-xl border bg-slate-900 border-slate-800 space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-base text-slate-100">${s.show_title}</div>
+                  <div class="text-xs text-amber-400 font-semibold">${s.show_date}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-slate-100">${s.totalTickets}</div>
+                  <div class="text-[10px] uppercase font-bold text-slate-400">Total Sold</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                <div>🌐 Web: <span class="font-bold text-indigo-400">${s.websiteTickets}</span></div>
+                <div>🎟 Dojour: <span class="font-bold text-orange-400">${s.dojourTickets}</span></div>
+              </div>
+
+              <div class="pt-1 flex items-center justify-between gap-2">
+                <input 
+                  type="email" 
+                  placeholder="Agent email..." 
+                  value="${agent.email || ''}" 
+                  onchange="saveAgentEmail('${safeKey}', this.value)" 
+                  class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                />
+                <button 
+                  onclick="emailAgent('${safeKey}')" 
+                  class="touch-target px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
+                  ✉️ Email
+                </button>
+                <button 
+                  onclick="copySingleShowSummary('${safeKey}')" 
+                  class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all">
+                  📋 Copy
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("Exception loading reports:", err);
+        container.innerHTML = '<div class="text-center text-rose-500 py-10">Error loading report summary.</div>';
+      }
+    }
+
+    function saveAgentEmail(safeKey, email) {
+      const key = decodeURIComponent(safeKey);
+      if (!agentDirectory[key]) agentDirectory[key] = {};
+      agentDirectory[key].email = email.trim();
+      localStorage.setItem('sisyphus_agent_directory', JSON.stringify(agentDirectory));
+      showToast('Saved agent email');
+    }
+
+    function copySingleShowSummary(safeKey) {
+      const key = decodeURIComponent(safeKey);
+      const s = showSummaryData.find(item => `${item.show_date} • ${item.show_title}` === key);
+      if (!s) return;
+
+      const blurb = `Ticket Count: ${s.show_title} (${s.show_date})\n` +
+                    `• Total Sold: ${s.totalTickets}\n` +
+                    `  - Website: ${s.websiteTickets}\n` +
+                    `  - Dojour: ${s.dojourTickets}`;
+
+      const tempArea = document.createElement("textarea");
+      tempArea.value = blurb;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+
+      showToast('Copied ticket update!');
+      playChime(true);
+    }
+
+    // Check-in mutations
+    async function updateCheckIn(uniqueId, newCount) {
+      const record = tickets.find(t => t.unique_id === uniqueId);
+      if (!record) return;
+
+      const checkedIn = newCount > 0;
+      const checkInTime = checkedIn ? new Date().toISOString() : null;
+
+      record.checked_in_count = newCount;
+      record.checked_in = checkedIn;
+      record.check_in_time = checkInTime;
+      renderList();
+      updateStats();
+      playChime(checkedIn);
+
+      const { error } = await supabaseClient
+        .from('tickets')
+        .update({
+          checked_in_count: newCount,
+          checked_in: checkedIn,
+          check_in_time: checkInTime
+        })
+        .eq('unique_id', uniqueId);
+
+      if (error) {
+        console.error('Failed to update ticket in Supabase:', error);
+      }
+    }
+
+    function toggleCheckedInTray() {
+      checkedInCollapsed = !checkedInCollapsed;
+      renderList();
+    }
+
+    function renderTicketCard(t) {
+      const isComplete = t.checked_in_count >= t.tickets;
+      const isPartial = t.checked_in_count > 0 && !isComplete;
+
+      return `
+        <div class="p-3.5 rounded-xl border transition-all ${
+          isComplete 
+            ? 'bg-emerald-950/20 border-emerald-800/40 opacity-90' 
+            : isPartial 
+            ? 'bg-amber-950/30 border-amber-800/60' 
+            : 'bg-slate-900 border-slate-800 shadow-sm'
+        }">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-bold text-base text-slate-100 flex items-center gap-1.5">
+                ${isComplete ? '<span class="text-emerald-400 text-sm">✓</span>' : ''}
+                ${t.guest_name}
+              </div>
+              <div class="text-xs text-slate-400">${t.email || 'No email provided'}</div>
+              <div class="flex items-center gap-2 mt-1.5">
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                  t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300' : 'bg-orange-900/60 text-orange-300'
+                }">${t.source}</span>
+                <span class="text-xs font-semibold text-slate-300">
+                  ${t.tickets} Ticket${t.tickets > 1 ? 's' : ''}
+                </span>
+                ${isComplete && t.check_in_time ? `
+                  <span class="text-[10px] text-slate-500 font-medium">
+                    In at ${new Date(t.check_in_time).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'})}
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              ${t.tickets === 1 ? `
+                <button 
+                  onclick="updateCheckIn('${t.unique_id}',${t.checked_in ? 0 : 1})" 
+                  class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow ${
+                    t.checked_in 
+                      ? 'bg-emerald-600/90 hover:bg-emerald-500 text-white' 
+                      : 'bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700'
+                  }">
+                  ${t.checked_in ? '✓ In' : 'Check In'}
+                </button>
+              ` : `
+                <div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-1">
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}', Math.max(0,${t.checked_in_count} - 1))" 
+                    title="Remove 1 guest" 
+                    class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center active:scale-95 transition-all">
+                    -
+                  </button>
+                  <span class="w-12 text-center text-xs font-extrabold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}">
+                    ${t.checked_in_count}/${t.tickets}
+                  </span>
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}', Math.min(${t.tickets},${t.checked_in_count} + 1))" 
+                    title="Add 1 guest" 
+                    class="w-8 h-8 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center active:scale-95 transition-all">
+                    +
+                  </button>
+                </div>
+                ${t.checked_in_count < t.tickets ? `
+                  <button 
+                    onclick="updateCheckIn('${t.unique_id}', ${t.tickets})" 
+                    title="Check in entire party" 
+                    class="touch-target px-3 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-black rounded-lg transition-all shadow-sm">
+                    All
+                  </button>
+                ` : ''}
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderList() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const container = document.getElementById('guestList');
+
+      if (!tickets || tickets.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-500 py-10">No guests found for this show.</div>`;
         return;
       }
 
-      tbody.innerHTML = list.map(g => `
-        <tr>
-          <td>
-            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${g.checked ? 'var(--accent-green)' : '#475569'};"></span>
-          </td>
-          <td style="font-weight: 700; color: #fff;">${g.name}</td>
-          <td style="color: var(--text-muted); font-size: 0.85rem;">${g.show}</td>
-          <td style="font-weight: 700;">${g.qty}</td>
-          <td style="color: var(--text-sub); font-family: monospace;">${g.order}</td>
-          <td>
-            <button type="button" class="btn-checkin ${g.checked ? 'checked' : 'unchecked'}" onclick="toggleCheckIn(${g.id})">
-              ${g.checked ? '✓ Checked In' : 'Check In'}
+      const filtered = tickets.filter(t => 
+        t.guest_name.toLowerCase().includes(query) ||
+        (t.email && t.email.toLowerCase().includes(query)) ||
+        t.unique_id.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-500 py-10">No guests match "${query}"</div>`;
+        return;
+      }
+
+      const pendingGuests = filtered.filter(t => t.checked_in_count < t.tickets);
+      const completedGuests = filtered.filter(t => t.checked_in_count >= t.tickets);
+      const totalCompletedTickets = completedGuests.reduce((sum, t) => sum + t.tickets, 0);
+      const isExpanded = query.length > 0 ? true : !checkedInCollapsed;
+
+      let html = '';
+
+      if (pendingGuests.length > 0) {
+        html += `
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Awaiting Arrival (${pendingGuests.length} ${pendingGuests.length === 1 ? 'party' : 'parties'})
+              </span>
+            </div>
+            ${pendingGuests.map(t => renderTicketCard(t)).join('')}
+          </div>
+        `;
+      } else if (!query) {
+        html += `
+          <div class="bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-6 text-center space-y-2">
+            <div class="text-3xl">🎉</div>
+            <div class="font-bold text-emerald-300 text-base">All Guests Checked In!</div>
+            <div class="text-xs text-slate-400">Everyone on the door list has arrived.</div>
+          </div>
+        `;
+      }
+
+      if (completedGuests.length > 0) {
+        html += `
+          <div class="pt-4 border-t border-slate-800/80 space-y-2.5">
+            <button 
+              type="button" 
+              onclick="toggleCheckedInTray()" 
+              class="w-full flex items-center justify-between bg-slate-900/90 hover:bg-slate-900 border border-slate-800 px-3.5 py-2.5 rounded-xl transition-all select-none">
+              <div class="flex items-center gap-2">
+                <span class="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                  ✓
+                </span>
+                <span class="text-xs font-bold text-slate-300">Checked In</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/60">
+                  ${completedGuests.length} ${completedGuests.length === 1 ? 'party' : 'parties'} • ${totalCompletedTickets} ${totalCompletedTickets === 1 ? 'ticket' : 'tickets'}
+                </span>
+              </div>
+              <div class="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+                <span>${isExpanded ? 'Hide' : 'Show'}</span>
+                <span class="transform transition-transform text-[10px] ${isExpanded ? 'rotate-180' : ''}">▼</span>
+              </div>
             </button>
-          </td>
-        </tr>
-      `).join('');
+
+            <div class="${isExpanded ? 'space-y-2.5' : 'hidden'}">
+              ${completedGuests.map(t => renderTicketCard(t)).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
     }
+
+    function updateStats() {
+      const totalSold = tickets.reduce((acc, t) => acc + t.tickets, 0);
+      const totalChecked = tickets.reduce((acc, t) => acc + t.checked_in_count, 0);
+      const pct = totalSold ? Math.round((totalChecked / totalSold) * 100) : 0;
+      document.getElementById('statsBadge').textContent = `${totalChecked} / ${totalSold} In (${pct}%)`;
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearch');
+    searchInput.addEventListener('input', (e) => {
+      clearBtn.classList.toggle('hidden', !e.target.value);
+      renderList();
+    });
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      clearBtn.classList.add('hidden');
+      renderList();
+      searchInput.focus();
+    });
+
+    document.getElementById('showSelector').addEventListener('change', loadTicketsForCurrentShow);
+
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function handlePinSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('pinInput');
+      const errorMsg = document.getElementById('pinError');
+      const hash = await sha256(input.value.trim());
+
+      if (hash === DOOR_PIN_HASH) {
+        sessionStorage.setItem('sisyphus_door_auth', 'true');
+        document.getElementById('lockModal').classList.add('hidden');
+        errorMsg.classList.add('hidden');
+        input.value = '';
+        initApp();
+      } else {
+        errorMsg.classList.remove('hidden');
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function lockScreen() {
+      sessionStorage.removeItem('sisyphus_door_auth');
+      document.getElementById('lockModal').classList.remove('hidden');
+      document.getElementById('pinInput').focus();
+    }
+
+    function checkAuthOnLoad() {
+      if (sessionStorage.getItem('sisyphus_door_auth') === 'true') {
+        document.getElementById('lockModal').classList.add('hidden');
+        initApp();
+      } else {
+        document.getElementById('lockModal').classList.remove('hidden');
+        document.getElementById('pinInput').focus();
+      }
+    }
+
+    let pollTimer = null;
+    function startPollingFallback() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        if (sessionStorage.getItem('sisyphus_door_auth') === 'true' && currentTab === 'door') {
+          await loadTicketsForCurrentShow();
+        }
+      }, 25000);
+    }
+
+    function initRealtime() {
+      if (!canUseRealtimeWebSocket()) {
+        console.log("Sandboxed environment detected: WebSockets disabled, using polling mode.");
+        startPollingFallback();
+        return;
+      }
+
+      if (supabaseClient && typeof supabaseClient.channel === 'function') {
+        try {
+          supabaseClient
+            .channel('schema-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (payload) => {
+              const select = document.getElementById('showSelector');
+              const currentShow = select.value ? JSON.parse(decodeURIComponent(select.value)) : null;
+
+              if (payload.eventType === 'UPDATE') {
+                const idx = tickets.findIndex(t => t.unique_id === payload.new.unique_id);
+                if (idx !== -1) {
+                  tickets[idx].checked_in = payload.new.checked_in;
+                  tickets[idx].checked_in_count = payload.new.checked_in_count;
+                  tickets[idx].check_in_time = payload.new.check_in_time;
+                  renderList();
+                  updateStats();
+                }
+              } else if (payload.eventType === 'INSERT') {
+                if (currentShow && 
+                    payload.new.show_date === currentShow.show_date && 
+                    payload.new.show_title === currentShow.show_title) {
+                  if (!tickets.some(t => t.unique_id === payload.new.unique_id)) {
+                    tickets.push(payload.new);
+                    tickets.sort((a, b) => a.guest_name.localeCompare(b.guest_name));
+                    renderList();
+                    updateStats();
+                    showToast(`+ New ticket: ${payload.new.guest_name}`);
+                    playChime(true);
+                  }
+                }
+              } else if (payload.eventType === 'DELETE') {
+                tickets = tickets.filter(t => t.unique_id !== payload.old.unique_id);
+                renderList();
+                updateStats();
+              }
+            })
+            .subscribe((status, err) => {
+              if (err || status === 'CHANNEL_ERROR') {
+                console.warn('Realtime channel error, falling back to polling:', err);
+                startPollingFallback();
+              }
+            });
+        } catch (err) {
+          console.warn('Realtime subscription could not be established, falling back to polling:', err);
+          startPollingFallback();
+        }
+      }
+    }
+
+    function initApp() {
+      loadShows();
+      initRealtime();
+    }
+
+    checkAuthOnLoad();
   </script>
 </body>
 </html>
