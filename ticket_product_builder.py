@@ -96,10 +96,13 @@ def format_description_html(raw_bio):
         lines = [l.strip() for l in para.split("\n") if l.strip()]
         if not lines:
             continue
-        # Convert bullet points into <ul>
+      # Convert bullet points into <ul>
         if all(l.startswith(("•", "-", "*")) for l in lines):
-            items = "".join([f"<li>{re.sub(r'^[-*•]\s*', '', l)}</li>" for l in lines])
-            html_parts.append(f"<ul style='margin: 8px 0; padding-left: 20px;'>{items}</ul>")
+            bullet_items = []
+            for l in lines:
+                clean_line = re.sub(r'^[-*•]\s*', '', l)
+                bullet_items.append(f"<li>{clean_line}</li>")
+            html_parts.append(f"<ul style='margin: 8px 0; padding-left: 20px;'>{''.join(bullet_items)}</ul>")
         else:
             html_parts.append(f"<p style='margin-bottom: 12px; line-height: 1.6;'>{'<br/>'.join(lines)}</p>")
 
