@@ -31,11 +31,17 @@ def get_shopify_access_token():
         sys.exit(1)
     return resp.json().get('access_token')
 
-def get_headers(token):
-    return {
+def run_graphql(token, query, variables=None):
+    url = f'https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/graphql.json'
+    headers = {
         'X-Shopify-Access-Token': token,
         'Content-Type': 'application/json'
     }
+    resp = requests.post(url, headers=headers, json={'query': query, 'variables': variables or {}})
+    data = resp.json()
+    if 'errors' in data:
+        raise Exception(f'GraphQL error: {data["errors"]}')
+    return data.get('data', {})
 
 def extract_event_date(title, variants, current_date=None):
     if current_date is None:
@@ -48,7 +54,7 @@ def extract_event_date(title, variants, current_date=None):
     if 'every thursday' in t_lower or 'open mic' in t_lower:
         return datetime(current_date.year, current_date.month, current_date.day)
 
-    all_texts = [v.get('title', '') for v in variants] + [title]
+    all_texts = list(variants) + [title]
     month_regex = r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b'
     dates_found = []
 
@@ -80,54 +86,95 @@ def extract_event_date(title, variants, current_date=None):
         return min(dates_found)
     return datetime(9998, 12, 31)
 
-def ensure_manual_sort(token, headers):
-    smart_url = f'https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/smart_collections/{COLLECTION_ID}.json'
-    s_res = requests.get(smart_url, headers=headers)
-    if s_res.status_code == 200:
-        c = s_res.json().get('smart_collection', {})
-        if c.get('sort_order') != 'manual':
-            print('Setting smart collection sort_order to manual...')
-            requests.put(smart_url, headers=headers, json={'smart_collection': {'id': int(COLLECTION_ID), 'sort_order': 'manual'}})
-        return c.get('title', 'Smart Collection')
-
-    custom_url = f'https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections/{COLLECTION_ID}.json'
-    c_res = requests.get(custom_url, headers=headers)
-    if c_res.status_code == 200:
-        c = c_res.json().get('custom_collection', {})
-        if c.get('sort_order') != 'manual':
-            print('Setting custom collection sort_order to manual...')
-            requests.put(custom_url, headers=headers, json={'custom_collection': {'id': int(COLLECTION_ID), 'sort_order': 'manual'}})
-        return c.get('title', 'Custom Collection')
-
-    return 'Collection'
-
 def main():
-    print('============================================================')
-    print('SISYPHUS BREWING • COLLECTION SORTER')
-    print('============================================================')
+    print('=' * 60)
+    print('SISYPHUS BREWING • CHRONOLOGICAL COLLECTION SORTER')
+    print('=' * 60)
     token = get_shopify_access_token()
-    headers = get_headers(token)
+    gid = f'gid://shopify/Collection/{COLLECTION_ID}'
 
-    col_title = ensure_manual_sort(token, headers)
-    print(f'Target Collection: {col_title} (ID: {COLLECTION_ID})')
+    # 1. Fetch collection details and products via GraphQL
+    print(f'Fetching collection {COLLECTION_ID} via GraphQL...')
+    query = '''
+    query getCollection($id: ID!) {
+      collection(id: $id) {
+        id
+        title
+        handle
+        sortOrder
+        products(first: 250) {
+          edges {
+            node {
+              id
+              title
+              handle
+              variants(first: 20) {
+                nodes {
+                  id
+                  title
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    '''
+    data = run_graphql(token, query, {'id': gid})
+    col = data.get('collection')
 
-    prods_url = f'https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/collections/{COLLECTION_ID}/products.json?limit=250'
-    p_resp = requests.get(prods_url, headers=headers)
-    if p_resp.status_code != 200:
-        print(f'Failed to load products: {p_resp.status_code} - {p_resp.text}')
-        sys.exit(1)
+    products = []
+    if col:
+        print(f'✓ Found collection: "{col.get("title")}" (Handle: {col.get("handle")})')
+        edges = col.get('products', {}).get('edges', [])
+        for e in edges:
+            node = e['node']
+            v_titles = [v['title'] for v in node.get('variants', {}).get('nodes', [])]
+            products.append({
+                'id': node['id'],
+                'title': node['title'],
+                'variants': v_titles
+            })
+    else:
+        print('GraphQL collection lookup returned null, falling back to Admin REST query...')
+        rest_url = f'https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/products.json?collection_id={COLLECTION_ID}&limit=250'
+        headers = {'X-Shopify-Access-Token': token, 'Content-Type': 'application/json'}
+        r = requests.get(rest_url, headers=headers)
+        if r.status_code == 200:
+            for p in r.json().get('products', []):
+                v_titles = [v['title'] for v in p.get('variants', [])]
+                products.append({
+                    'id': f'gid://shopify/Product/{p["id"]}',
+                    'title': p['title'],
+                    'variants': v_titles
+                })
+        else:
+            print(f'REST fallback failed ({r.status_code}): {r.text}')
 
-    products = p_resp.json().get('products', [])
     print(f'Loaded {len(products)} products from collection.')
-
     if not products:
-        print('No products found in collection.')
+        print('No products found to sort.')
         return
 
+    # 2. Ensure collection sort order is MANUAL so moves can be applied
+    if col and col.get('sortOrder') != 'MANUAL':
+        print('Setting collection sort order to MANUAL...')
+        update_mut = '''
+        mutation setManual($input: CollectionInput!) {
+          collectionUpdate(input: $input) {
+            collection { id sortOrder }
+            userErrors { field message }
+          }
+        }
+        '''
+        run_graphql(token, update_mut, {'input': {'id': gid, 'sortOrder': 'MANUAL'}})
+        print('Sort order set to MANUAL.')
+
+    # 3. Sort chronologically
     sorted_products = sorted(
         products,
         key=lambda p: (
-            extract_event_date(p['title'], p.get('variants', [])),
+            extract_event_date(p['title'], p['variants']),
             p['title']
         )
     )
@@ -135,13 +182,14 @@ def main():
     current_ids = [p['id'] for p in products]
     target_ids = [p['id'] for p in sorted_products]
 
+    # Calculate minimal moves
     moves = []
     working = list(current_ids)
     for i, target_id in enumerate(target_ids):
         current_idx = working.index(target_id)
         if current_idx != i:
             moves.append({
-                'id': f'gid://shopify/Product/{target_id}',
+                'id': target_id,
                 'newPosition': str(i)
             })
             working.remove(target_id)
@@ -151,8 +199,7 @@ def main():
         print('All events are already in perfect chronological order!')
         return
 
-    print(f'Reordering {len(moves)} event(s) to match calendar dates...')
-    gql_url = f'https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/graphql.json'
+    print(f'Reordering {len(moves)} event(s) to match calendar order...')
     reorder_mutation = '''
     mutation reorder($id: ID!, $moves: [MoveInput!]!) {
       collectionReorderProducts(id: $id, moves: $moves) {
@@ -161,27 +208,21 @@ def main():
       }
     }
     '''
-    g_resp = requests.post(gql_url, headers=headers, json={
-        'query': reorder_mutation,
-        'variables': {
-            'id': f'gid://shopify/Collection/{COLLECTION_ID}',
-            'moves': moves
-        }
-    })
-    errors = g_resp.json().get('data', {}).get('collectionReorderProducts', {}).get('userErrors', [])
+    res = run_graphql(token, reorder_mutation, {'id': gid, 'moves': moves})
+    errors = res.get('collectionReorderProducts', {}).get('userErrors', [])
     if errors:
         print(f'Reorder error: {errors}')
     else:
         print('Order successfully updated on Shopify!')
 
-    print('============================================================')
+    print('=' * 60)
     print('UPCOMING SHOW LINEUP (CHRONOLOGICAL):')
-    print('============================================================')
+    print('=' * 60)
     for idx, p in enumerate(sorted_products, start=1):
-        d = extract_event_date(p['title'], p.get('variants', []))
+        d = extract_event_date(p['title'], p['variants'])
         d_str = d.strftime('%b %d, %Y') if d.year < 9000 else 'Utility'
         print(f'  {idx:2d}. [{d_str}] {p["title"]}')
-    print('============================================================')
+    print('=' * 60)
 
 if __name__ == '__main__':
     main()
