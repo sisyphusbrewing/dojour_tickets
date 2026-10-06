@@ -39,52 +39,50 @@ def get_headers(token):
 
 def find_events_collection(token):
     headers = get_headers(token)
-    all_collections = []
 
-    # 1. Fetch Automated Collections (Smart Collections)
-    smart_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/smart_collections.json"
-    smart_resp = requests.get(smart_url, headers=headers)
-    if smart_resp.status_code == 200:
-        for c in smart_resp.json().get("smart_collections", []):
-            all_collections.append({
-                "id": c["id"],
-                "title": c["title"],
-                "handle": c["handle"],
-                "is_smart": True,
-                "sort_order": c.get("sort_order")
-            })
+    # 1. Direct query by handle on Automated Collections
+    print(f"Looking up '{TARGET_HANDLE}' in Smart Collections...")
+    smart_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/smart_collections.json?handle={TARGET_HANDLE}"
+    s_resp = requests.get(smart_url, headers=headers)
+    if s_resp.status_code == 200:
+        smart_cols = s_resp.json().get("smart_collections", [])
+        if smart_cols:
+            c = smart_cols[0]
+            print(f"✓ Found Automated Collection: \"{c['title']}\" (ID: {c['id']})")
+            return {"id": c["id"], "title": c["title"], "handle": c["handle"], "is_smart": True, "sort_order": c.get("sort_order")}
+    else:
+        print(f"Notice: Smart collections API returned HTTP {s_resp.status_code}")
 
-    # 2. Fetch Manual Collections (Custom Collections)
-    custom_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections.json"
-    custom_resp = requests.get(custom_url, headers=headers)
-    if custom_resp.status_code == 200:
-        for c in custom_resp.json().get("custom_collections", []):
-            all_collections.append({
-                "id": c["id"],
-                "title": c["title"],
-                "handle": c["handle"],
-                "is_smart": False,
-                "sort_order": c.get("sort_order")
-            })
+    # 2. Direct query by handle on Manual Collections
+    print(f"Looking up '{TARGET_HANDLE}' in Custom Collections...")
+    custom_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections.json?handle={TARGET_HANDLE}"
+    c_resp = requests.get(custom_url, headers=headers)
+    if c_resp.status_code == 200:
+        custom_cols = c_resp.json().get("custom_collections", [])
+        if custom_cols:
+            c = custom_cols[0]
+            print(f"✓ Found Manual Collection: \"{c['title']}\" (ID: {c['id']})")
+            return {"id": c["id"], "title": c["title"], "handle": c["handle"], "is_smart": False, "sort_order": c.get("sort_order")}
+    else:
+        print(f"Notice: Custom collections API returned HTTP {c_resp.status_code}")
 
-    print(f"Discovered {len(all_collections)} collection(s) on store:")
-    for c in all_collections:
-        type_str = "Automated" if c["is_smart"] else "Manual"
-        print(f"  • [{type_str}] \"{c['title']}\" (handle: {c['handle']}, ID: {c['id']})")
+    # 3. Discovery Fallback: Fetch all collections from both endpoints
+    print("Direct handle lookup missed. Scanning all store collections...")
+    all_cols = []
+    
+    s_all = requests.get(f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/smart_collections.json", headers=headers)
+    if s_all.status_code == 200:
+        for c in s_all.json().get("smart_collections", []):
+            all_cols.append({"id": c["id"], "title": c["title"], "handle": c["handle"], "is_smart": True, "sort_order": c.get("sort_order")})
 
-    # Match exact handle
-    for c in all_collections:
-        if c["handle"].lower() == TARGET_HANDLE.lower():
-            return c
+    c_all = requests.get(f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections.json", headers=headers)
+    if c_all.status_code == 200:
+        for c in c_all.json().get("custom_collections", []):
+            all_cols.append({"id": c["id"], "title": c["title"], "handle": c["handle"], "is_smart": False, "sort_order": c.get("sort_order")})
 
-    # Match handle or title containing 'comedy' and 'event'
-    for c in all_collections:
-        text = f"{c['title']} {c['handle']}".lower()
-        if "comedy" in text and ("event" in text or "show" in text or "ticket" in text):
-            return c
-
-    # Match any collection containing 'comedy'
-    for c in all_collections:
+    print(f"Found {len(all_cols)} total collection(s):")
+    for c in all_cols:
+        print(f"  • \"{c['title']}\" (handle: {c['handle']})")
         if "comedy" in f"{c['title']} {c['handle']}".lower():
             return c
 
@@ -133,22 +131,103 @@ def extract_event_date(title, variants, current_date=None):
 
 def main():
     print("=" * 60)
-    print("SISYPHUS BREWING • CHRONOLOGICAL COLLECTION SORTER")
+    print("SISYPHUS BREWING • CHRONOLOGICAL COLLECTION SORTER v2")
     print("=" * 60)
     token = get_shopify_access_token()
     headers = get_headers(token)
 
     col = find_events_collection(token)
     if not col:
-        print("❌ Could not match an events collection on this store.")
+        print("❌ Could not locate the events collection.")
         sys.exit(1)
 
     col_id = col["id"]
-    print(f"\n✓ Matched collection: \"{col['title']}\" (ID: {col_id}, Handle: {col['handle']})")
+    print(f"\n✓ Operating on collection: \"{col['title']}\" (ID: {col_id})")
 
-    # 1. Fetch all products in this collection
+    # 1. Fetch products
     prods_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/collections/{col_id}/products.json?limit=250"
     p_resp = requests.get(prods_url, headers=headers)
     if p_resp.status_code != 200:
         print(f"❌ Failed to load products ({p_resp.status_code}): {p_resp.text}")
         sys.exit(1)
+
+    products = p_resp.json().get("products", [])
+    print(f"Loaded {len(products)} products from collection.")
+
+    if not products:
+        print("No products found in collection.")
+        return
+
+    # 2. Ensure collection sort order is manual
+    if col.get("sort_order") != "manual":
+        print("Setting collection sort_order to 'manual'...")
+        endpoint = "smart_collections" if col["is_smart"] else "custom_collections"
+        key = "smart_collection" if col["is_smart"] else "custom_collection"
+        requests.put(
+            f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/{endpoint}/{col_id}.json",
+            headers=headers,
+            json={key: {"id": col_id, "sort_order": "manual"}}
+        )
+
+    # 3. Sort products chronologically
+    sorted_products = sorted(
+        products,
+        key=lambda p: (
+            extract_event_date(p["title"], p.get("variants", [])),
+            p["title"]
+        )
+    )
+
+    current_ids = [p["id"] for p in products]
+    target_ids = [p["id"] for p in sorted_products]
+
+    moves = []
+    working = list(current_ids)
+    for i, target_id in enumerate(target_ids):
+        current_idx = working.index(target_id)
+        if current_idx != i:
+            moves.append({
+                "id": f"gid://shopify/Product/{target_id}",
+                "newPosition": str(i)
+            })
+            working.remove(target_id)
+            working.insert(i, target_id)
+
+    if not moves:
+        print("✓ All events are already in perfect chronological order!")
+        return
+
+    print(f"Reordering {len(moves)} event(s) via GraphQL...")
+    gql_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/graphql.json"
+    reorder_mutation = """
+    mutation reorder($id: ID!, $moves: [MoveInput!]!) {
+      collectionReorderProducts(id: $id, moves: $moves) {
+        job { id }
+        userErrors { field message }
+      }
+    }
+    """
+    g_resp = requests.post(gql_url, headers=headers, json={
+        "query": reorder_mutation,
+        "variables": {
+            "id": f"gid://shopify/Collection/{col_id}",
+            "moves": moves
+        }
+    })
+    errors = g_resp.json().get("data", {}).get("collectionReorderProducts", {}).get("userErrors", [])
+    if errors:
+        print(f"⚠️ Reorder notice: {errors}")
+    else:
+        print("✓ Order updated in Shopify!")
+
+    print("\n" + "=" * 60)
+    print("UPCOMING SHOW LINEUP (CHRONOLOGICAL):")
+    print("=" * 60)
+    for idx, p in enumerate(sorted_products, start=1):
+        d = extract_event_date(p["title"], p.get("variants", []))
+        d_str = d.strftime("%b %d, %Y") if d.year < 9000 else "General"
+        print(f"  {idx:2d}. [{d_str}] {p['title']}")
+    print("=" * 60)
+
+if __name__ == "__main__":
+    main()
