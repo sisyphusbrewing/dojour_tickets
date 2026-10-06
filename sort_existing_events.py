@@ -27,63 +27,70 @@ def get_shopify_access_token():
         "grant_type": "client_credentials"
     })
     if resp.status_code != 200:
-        print(f"❌ Auth failed: {resp.text}")
+        print(f"❌ Auth failed ({resp.status_code}): {resp.text}")
         sys.exit(1)
     return resp.json().get("access_token")
 
-def run_graphql(token, query, variables=None):
-    url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/graphql.json"
-    headers = {
+def get_headers(token):
+    return {
         "X-Shopify-Access-Token": token,
         "Content-Type": "application/json"
     }
-    resp = requests.post(url, headers=headers, json={"query": query, "variables": variables or {}})
-    data = resp.json()
-    if "errors" in data:
-        raise Exception(f"GraphQL error: {data['errors']}")
-    return data.get("data", {})
 
-def find_target_collection(token):
-    """Discovers the events collection dynamically."""
-    query = """
-    query listCollections {
-      collections(first: 50) {
-        nodes {
-          id
-          title
-          handle
-          sortOrder
-        }
-      }
-    }
-    """
-    res = run_graphql(token, query)
-    collections = res.get("collections", {}).get("nodes", [])
+def find_events_collection(token):
+    headers = get_headers(token)
+    all_collections = []
 
-    print("Store collections found:")
-    for c in collections:
-        print(f"  • Title: \"{c['title']}\" | Handle: \"{c['handle']}\"")
+    # 1. Fetch Automated Collections (Smart Collections)
+    smart_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/smart_collections.json"
+    smart_resp = requests.get(smart_url, headers=headers)
+    if smart_resp.status_code == 200:
+        for c in smart_resp.json().get("smart_collections", []):
+            all_collections.append({
+                "id": c["id"],
+                "title": c["title"],
+                "handle": c["handle"],
+                "is_smart": True,
+                "sort_order": c.get("sort_order")
+            })
 
-    # 1. Exact handle match
-    for c in collections:
-        if c.get("handle", "").lower() == TARGET_HANDLE.lower():
+    # 2. Fetch Manual Collections (Custom Collections)
+    custom_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections.json"
+    custom_resp = requests.get(custom_url, headers=headers)
+    if custom_resp.status_code == 200:
+        for c in custom_resp.json().get("custom_collections", []):
+            all_collections.append({
+                "id": c["id"],
+                "title": c["title"],
+                "handle": c["handle"],
+                "is_smart": False,
+                "sort_order": c.get("sort_order")
+            })
+
+    print(f"Discovered {len(all_collections)} collection(s) on store:")
+    for c in all_collections:
+        type_str = "Automated" if c["is_smart"] else "Manual"
+        print(f"  • [{type_str}] \"{c['title']}\" (handle: {c['handle']}, ID: {c['id']})")
+
+    # Match exact handle
+    for c in all_collections:
+        if c["handle"].lower() == TARGET_HANDLE.lower():
             return c
 
-    # 2. Handle or title contains 'comedy' and 'event'
-    for c in collections:
-        combined = f"{c.get('title', '')} {c.get('handle', '')}".lower()
-        if "comedy" in combined and ("event" in combined or "show" in combined or "ticket" in combined):
+    # Match handle or title containing 'comedy' and 'event'
+    for c in all_collections:
+        text = f"{c['title']} {c['handle']}".lower()
+        if "comedy" in text and ("event" in text or "show" in text or "ticket" in text):
             return c
 
-    # 3. Fallback to any collection with 'comedy'
-    for c in collections:
-        combined = f"{c.get('title', '')} {c.get('handle', '')}".lower()
-        if "comedy" in combined:
+    # Match any collection containing 'comedy'
+    for c in all_collections:
+        if "comedy" in f"{c['title']} {c['handle']}".lower():
             return c
 
     return None
 
-def extract_event_date(title, variant_titles, current_date=None):
+def extract_event_date(title, variants, current_date=None):
     if current_date is None:
         current_date = datetime.now()
 
@@ -93,7 +100,7 @@ def extract_event_date(title, variant_titles, current_date=None):
     if "every thursday" in title.lower() or "open mic" in title.lower():
         return datetime(current_date.year, current_date.month, current_date.day)
 
-    all_texts = list(variant_titles) + [title]
+    all_texts = [v.get("title", "") for v in variants] + [title]
     month_regex = r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b'
     dates_found = []
 
@@ -126,102 +133,22 @@ def extract_event_date(title, variant_titles, current_date=None):
 
 def main():
     print("=" * 60)
-    print("SISYPHUS BREWING • COLLECTION SORTER")
+    print("SISYPHUS BREWING • CHRONOLOGICAL COLLECTION SORTER")
     print("=" * 60)
     token = get_shopify_access_token()
+    headers = get_headers(token)
 
-    target_col = find_target_collection(token)
-    if not target_col:
-        print(f"❌ Could not match an events collection on this store.")
+    col = find_events_collection(token)
+    if not col:
+        print("❌ Could not match an events collection on this store.")
         sys.exit(1)
 
-    collection_id = target_col["id"]
-    print(f"\n✓ Matched collection: \"{target_col['title']}\" (Handle: \"{target_col['handle']}\")")
+    col_id = col["id"]
+    print(f"\n✓ Matched collection: \"{col['title']}\" (ID: {col_id}, Handle: {col['handle']})")
 
-    # Fetch products in the collection
-    products_query = """
-    query getProducts($id: ID!) {
-      collection(id: $id) {
-        id
-        title
-        sortOrder
-        products(first: 100) {
-          edges {
-            node {
-              id
-              title
-              handle
-              variants(first: 20) {
-                nodes { id title }
-              }
-            }
-          }
-        }
-      }
-    }
-    """
-    res = run_graphql(token, products_query, {"id": collection_id})
-    col_data = res.get("collection", {})
-    products = [edge["node"] for edge in col_data.get("products", {}).get("edges", [])]
-    print(f"Loaded {len(products)} products from collection.")
-
-    if not products:
-        print("No products found to sort.")
-        return
-
-    # Ensure sort order is MANUAL so moves can be applied
-    if col_data.get("sortOrder") != "MANUAL":
-        print("Setting collection sortOrder to MANUAL...")
-        update_mutation = """
-        mutation setManual($input: CollectionInput!) {
-          collectionUpdate(input: $input) { collection { id sortOrder } }
-        }
-        """
-        run_graphql(token, update_mutation, {"input": {"id": collection_id, "sortOrder": "MANUAL"}})
-
-    # Calculate target chronological order
-    sorted_products = sorted(
-        products,
-        key=lambda p: (
-            extract_event_date(p["title"], [v["title"] for v in p.get("variants", {}).get("nodes", [])]),
-            p["title"]
-        )
-    )
-
-    current_ids = [p["id"] for p in products]
-    target_ids = [p["id"] for p in sorted_products]
-
-    # Compute minimal moves
-    moves = []
-    working = list(current_ids)
-    for i, target_id in enumerate(target_ids):
-        current_idx = working.index(target_id)
-        if current_idx != i:
-            moves.append({"id": target_id, "newPosition": str(i)})
-            working.remove(target_id)
-            working.insert(i, target_id)
-
-    if not moves:
-        print("✓ All events are already in perfect chronological order!")
-        return
-
-    print(f"Applying {len(moves)} reorder adjustments...")
-    reorder_mutation = """
-    mutation reorder($id: ID!, $moves: [MoveInput!]!) {
-      collectionReorderProducts(id: $id, moves: $moves) {
-        job { id }
-        userErrors { field message }
-      }
-    }
-    """
-    run_graphql(token, reorder_mutation, {"id": collection_id, "moves": moves})
-
-    print("\n✓ SUCCESS! Updated Chronological Order:")
-    for idx, p in enumerate(sorted_products, start=1):
-        d = extract_event_date(p["title"], [v["title"] for v in p.get("variants", {}).get("nodes", [])])
-        d_str = d.strftime("%b %d, %Y") if d.year < 9000 else "General"
-        print(f"  {idx:2d}. [{d_str}] {p['title']}")
-    print("=" * 60)
-
-if __name__ == "__main__":
-    main()
+    # 1. Fetch all products in this collection
+    prods_url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/collections/{col_id}/products.json?limit=250"
+    p_resp = requests.get(prods_url, headers=headers)
+    if p_resp.status_code != 200:
+        print(f"❌ Failed to load products ({p_resp.status_code}): {p_resp.text}")
+        sys.exit(1)
