@@ -25,12 +25,18 @@ VENUE_NAME = "Sisyphus Brewing"
 COLLECTION_HANDLE = "comedy-and-events"
 API_VERSION = "2024-01"
 
-# ---------------------------------------------------------------------------
-# SHOWTIME & VARIANT PARSER
-# ---------------------------------------------------------------------------
+MONTH_MAP = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    'march': 3, 'april': 4, 'june': 6, 'july': 7, 'sept': 9
+}
+
 WEEKDAYS = {'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 
             'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
 
+# ---------------------------------------------------------------------------
+# SHOWTIME & VARIANT PARSER
+# ---------------------------------------------------------------------------
 def clean_variant_name(raw_str):
     s = raw_str.strip().strip(",").strip("•").strip("-")
     s = re.sub(r'^(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s*', r'\1 ', s, flags=re.IGNORECASE)
@@ -78,7 +84,7 @@ def generate_variants(showtimes_raw):
     return final_variants if final_variants else ["General Admission"]
 
 # ---------------------------------------------------------------------------
-# HTML DESCRIPTION FORMATTER (PYTHON 3.11+ COMPATIBLE)
+# HTML DESCRIPTION FORMATTER
 # ---------------------------------------------------------------------------
 def format_description_html(raw_bio, is_free):
     if not raw_bio or not raw_bio.strip():
@@ -119,7 +125,7 @@ def format_description_html(raw_bio, is_free):
     return "\n".join(html_parts) + "\n" + policy_footer
 
 # ---------------------------------------------------------------------------
-# SHOPIFY AUTHENTICATION
+# SHOPIFY AUTHENTICATION & API HELPERS
 # ---------------------------------------------------------------------------
 def get_shopify_access_token():
     print(f"Authenticating with Shopify ({SHOPIFY_STORE})...")
@@ -148,6 +154,169 @@ def get_shopify_headers(token):
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
+
+def run_graphql(token, query, variables=None):
+    url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/graphql.json"
+    resp = requests.post(url, headers=get_shopify_headers(token), json={"query": query, "variables": variables or {}})
+    if resp.status_code != 200:
+        raise Exception(f"GraphQL request failed ({resp.status_code}): {resp.text}")
+    data = resp.json()
+    if "errors" in data:
+        raise Exception(f"GraphQL errors: {data['errors']}")
+    return data.get("data", {})
+
+# ---------------------------------------------------------------------------
+# CHRONOLOGICAL DATE EXTRACTION & REORDERING
+# ---------------------------------------------------------------------------
+def extract_event_date(title, variant_titles, current_date=None):
+    if current_date is None:
+        current_date = datetime.now()
+
+    if "ticket fee" in title.lower() or "facility fee" in title.lower():
+        return datetime(9999, 12, 31)
+
+    if "every thursday" in title.lower() or "open mic" in title.lower():
+        return datetime(current_date.year, current_date.month, current_date.day)
+
+    all_texts = list(variant_titles) + [title]
+    month_regex = r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b'
+    dates_found = []
+
+    for text in all_texts:
+        if not text:
+            continue
+        matches = re.finditer(rf'{month_regex}\.?\s*(\d{{1,2}})', text, re.I)
+        for m in matches:
+            m_str = m.group(1).lower()[:3]
+            m_num = MONTH_MAP.get(m_str)
+            d_num = int(m.group(2))
+
+            y_match = re.search(r'\b(202\d)\b', text)
+            if y_match:
+                y_num = int(y_match.group(1))
+            else:
+                if m_num < current_date.month - 2:
+                    y_num = current_date.year + 1
+                else:
+                    y_num = current_date.year
+
+            try:
+                dates_found.append(datetime(y_num, m_num, d_num))
+            except ValueError:
+                pass
+
+    if dates_found:
+        return min(dates_found)
+    return datetime(9998, 12, 31)
+
+def sort_collection_chronologically(token, collection_handle):
+    print("\n" + "=" * 60)
+    print(f"CHRONOLOGICAL EVENT SORTING: '{collection_handle}'")
+    print("=" * 60)
+
+    query = """
+    query getCollection($handle: String!) {
+      collectionByHandle(handle: $handle) {
+        id
+        title
+        sortOrder
+        products(first: 100) {
+          edges {
+            node {
+              id
+              title
+              handle
+              variants(first: 20) {
+                nodes {
+                  id
+                  title
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+    res = run_graphql(token, query, {"handle": collection_handle})
+    col = res.get("collectionByHandle")
+    if not col:
+        print(f"⚠️ Collection '{collection_handle}' not found; skipping sort.")
+        return
+
+    collection_id = col["id"]
+    current_sort = col.get("sortOrder")
+    products = [edge["node"] for edge in col.get("products", {}).get("edges", [])]
+
+    if not products:
+        print("ℹ️ No products in collection to sort.")
+        return
+
+    # Ensure collection sort order is MANUAL so custom moves apply
+    if current_sort != "MANUAL":
+        print(f"Updating collection '{collection_handle}' sortOrder to MANUAL (currently {current_sort})...")
+        update_mutation = """
+        mutation setManualSort($input: CollectionInput!) {
+          collectionUpdate(input: $input) {
+            collection { id sortOrder }
+            userErrors { field message }
+          }
+        }
+        """
+        run_graphql(token, update_mutation, {"input": {"id": collection_id, "sortOrder": "MANUAL"}})
+        print("✓ Collection set to MANUAL sort.")
+
+    # Calculate target chronological order
+    sorted_products = sorted(
+        products,
+        key=lambda p: (
+            extract_event_date(p["title"], [v["title"] for v in p.get("variants", {}).get("nodes", [])]),
+            p["title"]
+        )
+    )
+
+    current_ids = [p["id"] for p in products]
+    target_ids = [p["id"] for p in sorted_products]
+
+    # Compute minimal moves
+    moves = []
+    working = list(current_ids)
+    for i, target_id in enumerate(target_ids):
+        current_idx = working.index(target_id)
+        if current_idx != i:
+            moves.append({"id": target_id, "newPosition": str(i)})
+            working.remove(target_id)
+            working.insert(i, target_id)
+
+    if not moves:
+        print("✓ Collection is already in exact chronological order!")
+        return
+
+    print(f"Reordering {len(moves)} product(s) into chronological sequence...")
+    reorder_mutation = """
+    mutation reorder($id: ID!, $moves: [MoveInput!]!) {
+      collectionReorderProducts(id: $id, moves: $moves) {
+        job { id }
+        userErrors { field message }
+      }
+    }
+    """
+    reorder_res = run_graphql(token, reorder_mutation, {"id": collection_id, "moves": moves})
+    errors = reorder_res.get("collectionReorderProducts", {}).get("userErrors", [])
+    if errors:
+        print(f"⚠️ Reorder user error: {errors}")
+    else:
+        print(f"✓ Reorder dispatched successfully for {len(sorted_products)} products!")
+        print("-" * 60)
+        print("Upcoming Show Lineup:")
+        for idx, p in enumerate(sorted_products[:15], start=1):
+            d = extract_event_date(p["title"], [v["title"] for v in p.get("variants", {}).get("nodes", [])])
+            d_str = d.strftime("%b %d, %Y") if d.year < 9000 else "General"
+            print(f"  {idx:2d}. {d_str} — {p['title']}")
+        if len(sorted_products) > 15:
+            print(f"  ... and {len(sorted_products) - 15} more upcoming events.")
+        print("-" * 60)
 
 # ---------------------------------------------------------------------------
 # MAIN EXECUTION
@@ -183,7 +352,6 @@ def main():
 
     is_free = (price_num == 0.0)
 
-    # Free events do NOT get the 'Ticket' tag or product_type to avoid triggering ticket fee scripts
     if is_free:
         product_type = "Free Event"
         tags = f"Comedy, Free Event, No Fee, RSVP, Live Event, {TITLE}"
@@ -251,23 +419,19 @@ def main():
                     })
             print(f"✓ Capacity set to {capacity_num} per variant at {locations[0].get('name')}.")
 
-    # Add to comedy collection
-    print(f"Adding product to collection '{COLLECTION_HANDLE}'...")
+    # Add to collection if custom collection
+    print(f"Ensuring product belongs to collection '{COLLECTION_HANDLE}'...")
     col_resp = requests.get(f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections.json?handle={COLLECTION_HANDLE}", headers=headers)
-    col_id = None
     if col_resp.status_code == 200 and col_resp.json().get("custom_collections"):
         col_id = col_resp.json()["custom_collections"][0]["id"]
-
-    if col_id:
-        collect_resp = requests.post(
+        requests.post(
             f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/collects.json",
             headers=headers,
             json={"collect": {"collection_id": col_id, "product_id": product_id}}
         )
-        if collect_resp.status_code in (200, 201):
-            print(f"✓ Added to collection '{COLLECTION_HANDLE}'!")
-    else:
-        print(f"ℹ️ Collection '{COLLECTION_HANDLE}' is automated or not found; skipping collect.")
+
+    # Sort entire collection chronologically
+    sort_collection_chronologically(token, COLLECTION_HANDLE)
 
     print("=" * 60)
     print(f"🎉 SUCCESS! Live at: https://{SHOPIFY_STORE}/products/{handle}")
