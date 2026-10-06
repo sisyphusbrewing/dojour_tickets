@@ -10,7 +10,7 @@ if SHOPIFY_STORE and not SHOPIFY_STORE.endswith(".myshopify.com"):
 
 CLIENT_ID = os.environ.get("SHOPIFY_CLIENT_ID", "")
 CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET", "")
-COLLECTION_HANDLE = "comedy-and-events"
+TARGET_HANDLE = "comedy-and-events"
 API_VERSION = "2024-01"
 
 MONTH_MAP = {
@@ -42,6 +42,46 @@ def run_graphql(token, query, variables=None):
     if "errors" in data:
         raise Exception(f"GraphQL error: {data['errors']}")
     return data.get("data", {})
+
+def find_target_collection(token):
+    """Discovers the events collection dynamically."""
+    query = """
+    query listCollections {
+      collections(first: 50) {
+        nodes {
+          id
+          title
+          handle
+          sortOrder
+        }
+      }
+    }
+    """
+    res = run_graphql(token, query)
+    collections = res.get("collections", {}).get("nodes", [])
+
+    print("Store collections found:")
+    for c in collections:
+        print(f"  • Title: \"{c['title']}\" | Handle: \"{c['handle']}\"")
+
+    # 1. Exact handle match
+    for c in collections:
+        if c.get("handle", "").lower() == TARGET_HANDLE.lower():
+            return c
+
+    # 2. Handle or title contains 'comedy' and 'event'
+    for c in collections:
+        combined = f"{c.get('title', '')} {c.get('handle', '')}".lower()
+        if "comedy" in combined and ("event" in combined or "show" in combined or "ticket" in combined):
+            return c
+
+    # 3. Fallback to any collection with 'comedy'
+    for c in collections:
+        combined = f"{c.get('title', '')} {c.get('handle', '')}".lower()
+        if "comedy" in combined:
+            return c
+
+    return None
 
 def extract_event_date(title, variant_titles, current_date=None):
     if current_date is None:
@@ -85,10 +125,23 @@ def extract_event_date(title, variant_titles, current_date=None):
     return datetime(9998, 12, 31)
 
 def main():
+    print("=" * 60)
+    print("SISYPHUS BREWING • COLLECTION SORTER")
+    print("=" * 60)
     token = get_shopify_access_token()
-    query = """
-    query getCollection($handle: String!) {
-      collectionByHandle(handle: $handle) {
+
+    target_col = find_target_collection(token)
+    if not target_col:
+        print(f"❌ Could not match an events collection on this store.")
+        sys.exit(1)
+
+    collection_id = target_col["id"]
+    print(f"\n✓ Matched collection: \"{target_col['title']}\" (Handle: \"{target_col['handle']}\")")
+
+    # Fetch products in the collection
+    products_query = """
+    query getProducts($id: ID!) {
+      collection(id: $id) {
         id
         title
         sortOrder
@@ -107,17 +160,18 @@ def main():
       }
     }
     """
-    res = run_graphql(token, query, {"handle": COLLECTION_HANDLE})
-    col = res.get("collectionByHandle")
-    if not col:
-        print(f"Collection '{COLLECTION_HANDLE}' not found.")
+    res = run_graphql(token, products_query, {"id": collection_id})
+    col_data = res.get("collection", {})
+    products = [edge["node"] for edge in col_data.get("products", {}).get("edges", [])]
+    print(f"Loaded {len(products)} products from collection.")
+
+    if not products:
+        print("No products found to sort.")
         return
 
-    collection_id = col["id"]
-    products = [edge["node"] for edge in col.get("products", {}).get("edges", [])]
-
-    # Ensure MANUAL sort
-    if col.get("sortOrder") != "MANUAL":
+    # Ensure sort order is MANUAL so moves can be applied
+    if col_data.get("sortOrder") != "MANUAL":
+        print("Setting collection sortOrder to MANUAL...")
         update_mutation = """
         mutation setManual($input: CollectionInput!) {
           collectionUpdate(input: $input) { collection { id sortOrder } }
@@ -125,6 +179,7 @@ def main():
         """
         run_graphql(token, update_mutation, {"input": {"id": collection_id, "sortOrder": "MANUAL"}})
 
+    # Calculate target chronological order
     sorted_products = sorted(
         products,
         key=lambda p: (
@@ -136,6 +191,7 @@ def main():
     current_ids = [p["id"] for p in products]
     target_ids = [p["id"] for p in sorted_products]
 
+    # Compute minimal moves
     moves = []
     working = list(current_ids)
     for i, target_id in enumerate(target_ids):
@@ -149,7 +205,7 @@ def main():
         print("✓ All events are already in perfect chronological order!")
         return
 
-    print(f"Reordering {len(moves)} products in '{COLLECTION_HANDLE}'...")
+    print(f"Applying {len(moves)} reorder adjustments...")
     reorder_mutation = """
     mutation reorder($id: ID!, $moves: [MoveInput!]!) {
       collectionReorderProducts(id: $id, moves: $moves) {
@@ -159,7 +215,13 @@ def main():
     }
     """
     run_graphql(token, reorder_mutation, {"id": collection_id, "moves": moves})
-    print("✓ Successfully sorted all events!")
+
+    print("\n✓ SUCCESS! Updated Chronological Order:")
+    for idx, p in enumerate(sorted_products, start=1):
+        d = extract_event_date(p["title"], [v["title"] for v in p.get("variants", {}).get("nodes", [])])
+        d_str = d.strftime("%b %d, %Y") if d.year < 9000 else "General"
+        print(f"  {idx:2d}. [{d_str}] {p['title']}")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()
