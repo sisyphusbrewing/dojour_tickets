@@ -4,18 +4,42 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sisyphus Door Check-In</title>
-  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-  <script src="[https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2](https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2)"></script>
+  
+  <!-- Fallback Native CSS: Ensures tabs and modal hide even if CDN is blocked -->
   <style>
-    body { -webkit-tap-highlight-color: transparent; }
+    body { 
+      -webkit-tap-highlight-color: transparent; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #020617;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
     .touch-target { min-height: 48px; }
+    .hidden { display: none !important; }
+    
+    #lockModal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background-color: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #lockModal.hidden { display: none !important; }
   </style>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans pb-10">
 
   <!-- CONFIGURATION: Supabase Credentials -->
   <script>
-    const RAW_SUPABASE_URL = "[https://idsdwkubqnavkazlteis.supabase.co](https://idsdwkubqnavkazlteis.supabase.co)";
+    const RAW_SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
     const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
 
@@ -42,7 +66,7 @@
   </script>
 
   <!-- Auth Modal: Email & Password -->
-  <div id="lockModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="lockModal">
     <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
       <div class="text-center space-y-1">
         <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-xl mb-2">
@@ -263,7 +287,7 @@
           <div class="flex items-center justify-between">
             <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($)</label>
             <div class="flex gap-1">
-              <button type="button" onclick="setPricePreset('0.00', 'rsvp')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-400 font-bold hover:bg-emerald-900">Free ($0)</button>
+              <button type="button" onclick="setPricePreset('0.00')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-400 font-bold hover:bg-emerald-900">Free ($0)</button>
               <button type="button" onclick="setPricePreset('20.00')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700">$20</button>
             </div>
           </div>
@@ -394,7 +418,7 @@
       document.getElementById('timePicker').value = val;
     }
 
-    function setPricePreset(amount, mode) {
+    function setPricePreset(amount) {
       document.getElementById('newPrice').value = amount;
       showToast('Price set to $' + amount);
     }
@@ -579,7 +603,7 @@
 
       try {
         var resp = await fetch(
-          '[https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/create_shopify_show.yml/dispatches](https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/create_shopify_show.yml/dispatches)',
+          'https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/create_shopify_show.yml/dispatches',
           {
             method: 'POST',
             headers: {
@@ -755,7 +779,7 @@
       if (ghToken) {
         try {
           await fetch(
-            '[https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/daily_sync.yml/dispatches](https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/daily_sync.yml/dispatches)',
+            'https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/daily_sync.yml/dispatches',
             {
               method: 'POST',
               headers: {
@@ -982,7 +1006,7 @@
 
     function updateStats() {
       var totalSold = tickets.reduce(function(acc, t) { return acc + t.tickets; }, 0);
-      var totalChecked = tickets.reduce(function(acc, t) { return acc + t.checked_in_count; }, 0);
+      var totalChecked = tickets.reduce(function(acc, t) { return acc + t.checked_in_count, 0);
       var pct = totalSold ? Math.round((totalChecked / totalSold) * 100) : 0;
       document.getElementById('statsBadge').textContent = totalChecked + ' / ' + totalSold + ' In (' + pct + '%)';
     }
