@@ -63,3 +63,334 @@
             autocomplete="email"
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
           />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+          <input 
+            id="staffPassword"
+            type="password" 
+            placeholder="••••••••••••"
+            required
+            autocomplete="current-password"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+
+        <div id="loginError" class="hidden text-xs font-semibold text-rose-400 text-center py-1"></div>
+
+        <button 
+          id="loginBtn"
+          type="submit" 
+          class="touch-target w-full bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-bold rounded-xl text-sm py-2.5 shadow-lg shadow-amber-500/10">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-md">
+    <div class="max-w-2xl mx-auto space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg font-black tracking-wide text-amber-400">SISYPHUS DOOR</h1>
+          <button onclick="handleStaffSignOut()" title="Sign Out" class="text-xs bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 px-2 py-0.5 rounded border border-slate-700 transition-all">
+            Sign Out
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs font-bold">
+            <button id="tabDoorBtn" onclick="switchTab('door')" class="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 transition-all">
+              Door
+            </button>
+            <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+              📊 Reports
+            </button>
+            <button id="tabCreateBtn" onclick="switchTab('create')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+              ➕ Create Show
+            </button>
+          </div>
+
+          <div id="statsBadge" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300">
+            Loading...
+          </div>
+          <button 
+            id="refreshBtn" 
+            onclick="manualRefresh()" 
+            title="Refresh guest list for last-minute purchases" 
+            class="touch-target flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-400 hover:text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
+            <svg id="refreshIcon" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span id="refreshLabel">Sync</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="doorControls" class="space-y-2">
+        <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
+          <option value="">Loading upcoming shows...</option>
+        </select>
+
+        <div class="relative">
+          <input 
+            id="searchInput" 
+            type="text" 
+            placeholder="Search guest name or email..." 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+            autocomplete="off"
+            autocorrect="off"
+          >
+          <button id="clearSearch" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-sm font-bold">✕</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Door View -->
+  <main id="doorView" class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
+    <div id="guestList" class="space-y-3">
+      <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
+    </div>
+  </main>
+
+  <!-- Reports View -->
+  <main id="reportsView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow">
+      <div>
+        <h2 class="text-base font-bold text-slate-100">Agent Ticket Summaries</h2>
+        <p class="text-xs text-slate-400">Copy ticket counts or email updates to agents in one click.</p>
+      </div>
+      <button 
+        onclick="copyAllShowsSummary()" 
+        class="touch-target px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+        📋 Copy All Shows Overview
+      </button>
+    </div>
+
+    <div id="reportsList" class="space-y-3">
+      <div class="text-center text-slate-500 py-10">Loading upcoming show summaries...</div>
+    </div>
+  </main>
+
+  <!-- Create Show View -->
+  <main id="createView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-5">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
+      <div class="border-b border-slate-800 pb-3">
+        <h2 class="text-base font-bold text-slate-100">Create Shopify Ticketed Show</h2>
+        <p class="text-xs text-slate-400">Supports paid shows, recurring weekly events, and free walk-in/RSVP events without checkout fees.</p>
+      </div>
+
+      <!-- 1. Title -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event / Comedian / Showcase Title *</label>
+        <input 
+          id="newTitle" 
+          type="text" 
+          placeholder="e.g. Sisyphus Thursday Open Mic" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-semibold"
+        />
+      </div>
+
+      <!-- 2. Showtime Builder -->
+      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+        <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+          📅 Date Picker & Showtimes
+        </label>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <div class="sm:col-span-5">
+            <input 
+              id="calendarPicker" 
+              type="date" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+          <div class="sm:col-span-4">
+            <input 
+              id="timePicker" 
+              type="time" 
+              value="19:00"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
+            />
+          </div>
+          <div class="sm:col-span-3">
+            <button 
+              type="button" 
+              onclick="addSelectedShowtime()" 
+              class="w-full h-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs py-2 transition-all">
+              + Add Time
+            </button>
+          </div>
+        </div>
+
+        <!-- Presets Row with Repeat Weekly Options -->
+        <div class="flex flex-wrap gap-1.5 pt-1 text-[11px]">
+          <span class="text-slate-500 self-center">Presets:</span>
+          <button type="button" onclick="setTimeVal('19:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">7:00 PM</button>
+          <button type="button" onclick="setTimeVal('19:30')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">7:30 PM</button>
+          <button type="button" onclick="setTimeVal('20:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">8:00 PM</button>
+          <button type="button" onclick="setTimeVal('21:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">9:00 PM</button>
+          <button type="button" onclick="applyWeekendPreset('2night_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 & 9 PM</button>
+          <button type="button" onclick="applyRepeatWeekly(4)" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700/60 font-bold">🔁 Repeat Weekly (4 wks)</button>
+          <button type="button" onclick="applyRepeatWeekly(8)" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700/60 font-bold">🔁 Repeat Weekly (8 wks)</button>
+        </div>
+
+        <!-- Custom Variant Row -->
+        <div class="pt-2 flex gap-2">
+          <input 
+            id="customVariantInput" 
+            type="text" 
+            placeholder="Or type custom variant (e.g. VIP Table, Full Weekend Pass, Walk-ins Welcome)..." 
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomVariant();}"
+          />
+          <button 
+            type="button" 
+            onclick="addCustomVariant()" 
+            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-all">
+            + Add Variant
+          </button>
+        </div>
+
+        <div id="showtimesTagContainer" class="flex flex-wrap gap-1.5 pt-2">
+          <span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above or type a variant.</span>
+        </div>
+      </div>
+
+      <!-- 3. Price & Room Capacity -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($)</label>
+            <div class="flex gap-1">
+              <button type="button" onclick="setPricePreset('0.00', 'rsvp')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-400 font-bold hover:bg-emerald-900">Free RSVP ($0)</button>
+              <button type="button" onclick="setPricePreset('0.00', 'walkin')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-bold hover:bg-slate-700">Free Walk-In</button>
+              <button type="button" onclick="setPricePreset('20.00')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700">$20</button>
+            </div>
+          </div>
+          <input 
+            id="newPrice" 
+            type="text" 
+            value="20.00" 
+            placeholder="20.00" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Room Limit (Capacity)</label>
+          <input 
+            id="newCapacity" 
+            type="number" 
+            value="75" 
+            placeholder="75" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+      </div>
+
+      <!-- 4. Direct Desktop Image Upload -->
+      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+            🖼️ Upload Promo Flyer / Image
+          </label>
+          <span id="uploadStatusText" class="text-[11px] text-slate-400">Direct from desktop to Supabase</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="flex-1 cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-xl p-3 bg-slate-900/60 transition-all text-center">
+            <span class="text-xs font-semibold text-slate-300">Choose Image File from Desktop</span>
+            <span class="text-[10px] text-slate-500 mt-0.5">JPG, PNG, WebP supported</span>
+            <input id="desktopImageFile" type="file" accept="image/*" class="hidden" onchange="handleDesktopImageSelected(this)" />
+          </label>
+
+          <div id="imagePreviewContainer" class="hidden w-16 h-16 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden relative flex-shrink-0">
+            <img id="imagePreviewThumb" src="" alt="Promo preview" class="w-full h-full object-cover" />
+          </div>
+        </div>
+
+        <input 
+          id="uploadedImageUrl" 
+          type="url" 
+          placeholder="Or paste an image URL directly..." 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-400"
+        />
+      </div>
+
+      <!-- 5. Description -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event Description / Bio</label>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <button type="button" onclick="insertFormatTag('b')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">B</button>
+            <button type="button" onclick="insertFormatTag('i')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 italic hover:bg-slate-700">I</button>
+            <button type="button" onclick="insertFormatTag('bullet')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">• List</button>
+          </div>
+        </div>
+        <textarea 
+          id="newBio" 
+          rows="6" 
+          placeholder="Paste your comedian bio or class schedule here. Blank lines between paragraphs will be preserved cleanly in Shopify!" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-mono leading-relaxed"
+        ></textarea>
+      </div>
+
+      <!-- Submit Controls -->
+      <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
+        <button 
+          id="publishShowBtn" 
+          onclick="submitNewShowToPipeline()" 
+          class="touch-target w-full sm:w-auto flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-black rounded-xl text-sm py-3 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+          🚀 Publish Show to Shopify
+        </button>
+        <button 
+          type="button" 
+          onclick="copyActionInputs()" 
+          class="touch-target w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all">
+          📋 Copy Details
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-amber-400 text-slate-950 px-4 py-2 rounded-full font-black text-xs shadow-2xl flex items-center gap-1.5">
+    <span id="toastMsg">Sync complete</span>
+  </div>
+
+  <script>
+    let tickets = [];
+    let audioCtx = null;
+    let currentTab = 'door';
+    let allUpcomingShows = [];
+    let showSummaryData = [];
+    let agentDirectory = {};
+    let configuredShowtimes = [];
+    let checkedInCollapsed = true;
+    let isAuthenticated = false;
+
+    try {
+      agentDirectory = JSON.parse(localStorage.getItem('sisyphus_agent_directory') || '{}');
+    } catch(e) {}
+
+    function switchTab(tab) {
+      currentTab = tab;
+      const doorView = document.getElementById('doorView');
+      const reportsView = document.getElementById('reportsView');
+      const createView = document.getElementById('createView');
+      const doorControls = document.getElementById('doorControls');
+      const tabDoorBtn = document.getElementById('tabDoorBtn');
+      const tabReportsBtn = document.getElementById('tabReportsBtn');
+      const tabCreateBtn = document.getElementById('tabCreateBtn');
+
+      tabDoorBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+      tabReportsBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+      tabCreateBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
+
+      doorView.classList.add('hidden');
+      reportsView.classList.add('hidden');
+      createView.classList.add('hidden');
+      doorControls.classList.add('hidden');
+
+      if (tab
