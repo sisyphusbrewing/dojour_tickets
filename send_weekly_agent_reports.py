@@ -154,10 +154,11 @@ def send_email(to_email, subject, html_content):
     msg["To"] = to_email
     msg.attach(MIMEText(html_content, "html"))
 
-    print(f"Connecting to {SMTP_HOST}:465 via direct SSL...")
+print(f"Connecting to {SMTP_HOST}:465 via direct SSL...")
     try:
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=30) as server:
+            server.set_debuglevel(1)  # <--- Prints raw SMTP handshake to console
             server.login(SMTP_USER, SMTP_PASS)
             server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
         print(f"✓ Sent consolidated report to {to_email}")
