@@ -1,6 +1,7 @@
 import os
 import smtplib
-from datetime import datetime, timezone
+import re
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from collections import defaultdict
@@ -9,15 +10,15 @@ import requests
 # ---------------------------------------------------------------------------
 # CONFIGURATION
 # ---------------------------------------------------------------------------
-RAW_SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://idsdwkubqnavkazlteis.supabase.co")
+RAW_SUPABASE_URL = os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co"
 SUPABASE_URL = RAW_SUPABASE_URL.replace("/rest/v1", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
 
-SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASS = os.environ.get("SMTP_PASS", "")
-FROM_EMAIL = os.environ.get("FROM_EMAIL", SMTP_USER)
+SMTP_HOST = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
+SMTP_PORT = int(os.environ.get("SMTP_PORT") or 465)
+SMTP_USER = os.environ.get("SMTP_USER", "").strip()
+SMTP_PASS = os.environ.get("SMTP_PASS", "").replace(" ", "").strip()
+FROM_EMAIL = os.environ.get("FROM_EMAIL") or SMTP_USER
 FROM_NAME = "Sisyphus Brewing Box Office"
 
 MONTH_MAP = {
@@ -29,7 +30,6 @@ def parse_date_to_timestamp(date_str):
     if not date_str:
         return 0
     now = datetime.now()
-    import re
     m_match = re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b', date_str, re.I)
     d_match = re.search(r'\b(\d{1,2})\b', date_str)
     y_match = re.search(r'\b(202\d)\b', date_str)
@@ -129,7 +129,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold):
           </table>
 
           <div class="total-box">
-            <span style="font-size: 12px; text-transform: uppercase; font-weight: 700; color: #92400e;">Total Weekend Tickets Sold</span>
+            <span style="font-size: 12px; text-transform: uppercase; font-weight: 700; color: #92400e;">Total Tickets Sold</span>
             <div style="font-size: 26px; font-weight: 900; color: #78350f; margin-top: 2px;">{total_sold}</div>
           </div>
         </div>
@@ -144,21 +144,37 @@ def build_email_html(agent_email, comedian_name, shows, total_sold):
 
 def send_email(to_email, subject, html_content):
     if not SMTP_USER or not SMTP_PASS:
-        print(f"⚠️ SMTP credentials missing. Dry-run mode for {to_email}:\nSubject: {subject}")
+        print(f"⚠️ SMTP credentials missing. Dry-run mode for {to_email}")
         return
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
     msg["To"] = to_email
-
     msg.attach(MIMEText(html_content, "html"))
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASS)
-        server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
-    print(f"✓ Sent consolidated report to {to_email}")
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+
+        print(f"✓ Sent consolidated report to {to_email}")
+    except smtplib.SMTPServerDisconnected as e:
+        print(f"❌ Connection closed by server: {e}")
+        print("👉 Reminder: Ensure you are using a 16-character Google App Password (not your normal Gmail password).")
+        raise e
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"❌ Authentication failed: {e}")
+        print("👉 Reminder: Check SMTP_USER and SMTP_PASS. An App Password is required when 2-Step Verification is active.")
+        raise e
 
 def main():
     print("=" * 60)
@@ -177,9 +193,8 @@ def main():
         return
 
     now_ts = datetime.now().timestamp()
-    GRACE_PERIOD = 12 * 60 * 60  # Don't report on shows finished >12 hours ago
+    GRACE_PERIOD = 12 * 60 * 60
 
-    # Group tickets by show_title + show_date
     shows_map = {}
     for t in tickets:
         date_str = (t.get("show_date") or "").strip()
@@ -209,8 +224,7 @@ def main():
         else:
             shows_map[key]["dojour_tickets"] += count
 
-    # 3. Consolidate by Comedian / Agent
-    # Structure: agent_email -> comedian_title -> list of shows
+    # 3. Consolidate by Agent -> Comedian -> Shows
     consolidated = defaultdict(lambda: defaultdict(list))
 
     for (title_str, date_str), sdata in shows_map.items():
