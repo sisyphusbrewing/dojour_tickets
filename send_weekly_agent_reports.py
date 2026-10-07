@@ -1,5 +1,6 @@
 import os
 import smtplib
+import ssl
 import re
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
@@ -14,11 +15,11 @@ RAW_SUPABASE_URL = os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlte
 SUPABASE_URL = RAW_SUPABASE_URL.replace("/rest/v1", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
 
+# Force Gmail Port 465 direct SSL to avoid cloud runner disconnects
 SMTP_HOST = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
-SMTP_PORT = int(os.environ.get("SMTP_PORT") or 465)
-SMTP_USER = os.environ.get("SMTP_USER", "").strip()
-SMTP_PASS = os.environ.get("SMTP_PASS", "").replace(" ", "").strip()
-FROM_EMAIL = os.environ.get("FROM_EMAIL") or SMTP_USER
+SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
+SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
+FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
 FROM_NAME = "Sisyphus Brewing Box Office"
 
 MONTH_MAP = {
@@ -144,7 +145,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold):
 
 def send_email(to_email, subject, html_content):
     if not SMTP_USER or not SMTP_PASS:
-        print(f"⚠️ SMTP credentials missing. Dry-run mode for {to_email}")
+        print(f"⚠️ SMTP credentials missing. User: '{SMTP_USER}', Pass present: {bool(SMTP_PASS)}")
         return
 
     msg = MIMEMultipart("alternative")
@@ -153,27 +154,22 @@ def send_email(to_email, subject, html_content):
     msg["To"] = to_email
     msg.attach(MIMEText(html_content, "html"))
 
+    print(f"Connecting to {SMTP_HOST}:465 via direct SSL...")
     try:
-        if SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
-        else:
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
-
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=30) as server:
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
         print(f"✓ Sent consolidated report to {to_email}")
-    except smtplib.SMTPServerDisconnected as e:
-        print(f"❌ Connection closed by server: {e}")
-        print("👉 Reminder: Ensure you are using a 16-character Google App Password (not your normal Gmail password).")
-        raise e
     except smtplib.SMTPAuthenticationError as e:
         print(f"❌ Authentication failed: {e}")
-        print("👉 Reminder: Check SMTP_USER and SMTP_PASS. An App Password is required when 2-Step Verification is active.")
+        print("👉 Verification needed: Ensure SMTP_PASS is a 16-character Google App Password (not your primary Gmail password).")
+        raise e
+    except smtplib.SMTPServerDisconnected as e:
+        print(f"❌ Connection disconnected: {e}")
+        raise e
+    except Exception as e:
+        print(f"❌ Unexpected SMTP Error on Port 465: {e}")
         raise e
 
 def main():
