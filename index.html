@@ -118,7 +118,7 @@
           <button 
             id="refreshBtn" 
             onclick="manualRefresh()" 
-            title="Refresh guest list for last-minute purchases" 
+            title="Trigger GitHub Action Sync & reload guest list" 
             class="touch-target flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-400 hover:text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
             <svg id="refreshIcon" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -958,21 +958,71 @@
       const icon = document.getElementById('refreshIcon');
       const label = document.getElementById('refreshLabel');
       if (icon) icon.classList.add('animate-spin');
-      if (label) label.textContent = 'Syncing...';
+      if (label) label.textContent = 'Triggering...';
 
-      const oldCount = tickets.length;
+      let ghToken = localStorage.getItem('sisyphus_gh_pat');
+      if (!ghToken) {
+        ghToken = prompt("Enter your GitHub Personal Access Token to trigger the sync workflow:");
+        if (!ghToken) {
+          showToast('GitHub token required to run sync');
+          if (icon) icon.classList.remove('animate-spin');
+          if (label) label.textContent = 'Sync';
+          await loadShows();
+          return;
+        }
+        localStorage.setItem('sisyphus_gh_pat', ghToken.trim());
+      }
+
+      try {
+        const resp = await fetch(
+          'https://api.github.com/repos/sisyphusbrewing/dojour_tickets/actions/workflows/daily_sync.yml/dispatches',
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'Authorization': `Bearer ${ghToken.trim()}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ref: 'main' })
+          }
+        );
+
+        if (resp.status === 204) {
+          if (label) label.textContent = 'Syncing...';
+          showToast('🚀 Ticket Sync workflow dispatched in GitHub!');
+          playChime(true);
+
+          setTimeout(async () => {
+            const oldCount = tickets.length;
+            await loadShows();
+            if (icon) icon.classList.remove('animate-spin');
+            if (label) label.textContent = 'Sync';
+
+            const diff = tickets.length - oldCount;
+            if (diff > 0) {
+              showToast(`+${diff} new ticket${diff > 1 ? 's' : ''} synced!`);
+              playChime(true);
+            } else {
+              showToast('Sync complete: door list up to date');
+            }
+          }, 8000);
+          return;
+        } else if (resp.status === 401) {
+          localStorage.removeItem('sisyphus_gh_pat');
+          showToast('Invalid GitHub Token. Please try again.');
+        } else {
+          const errText = await resp.text();
+          console.error("Workflow dispatch error:", resp.status, errText);
+          showToast(`Dispatch failed (${resp.status}). Check console.`);
+        }
+      } catch (err) {
+        console.error("Error triggering sync workflow:", err);
+        showToast('Network error triggering sync');
+      }
+
       await loadShows();
-
       if (icon) icon.classList.remove('animate-spin');
       if (label) label.textContent = 'Sync';
-
-      const diff = tickets.length - oldCount;
-      if (diff > 0) {
-        showToast(`+${diff} new ticket${diff > 1 ? 's' : ''} synced!`);
-        playChime(true);
-      } else {
-        showToast('Guest list is up to date');
-      }
     }
 
     async function loadAllShowsReport() {
