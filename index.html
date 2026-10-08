@@ -174,6 +174,29 @@
 
   <!-- Door View -->
   <main id="doorView" class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
+    <div id="compPanel" class="mb-3">
+      <button id="addCompToggle" type="button" onclick="toggleCompForm()" class="touch-target w-full flex items-center justify-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-sm font-bold transition-all">
+        🎁 Add Comp to This Show
+      </button>
+      <form id="compForm" class="hidden bg-slate-900 border border-emerald-800/50 rounded-xl p-4 space-y-3">
+        <div class="text-sm font-bold text-emerald-300">Add a comp for <span id="compShowLabel" class="text-slate-100"></span></div>
+        <div class="grid grid-cols-12 gap-2">
+          <input id="compName" type="text" required maxlength="80" placeholder="Guest name" autocomplete="off"
+            class="col-span-8 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400" />
+          <select id="compCount" class="col-span-4 bg-slate-950 border border-slate-700 rounded-lg px-2 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-400">
+            <option value="1">1 ticket</option><option value="2" selected>2 tickets</option><option value="3">3 tickets</option>
+            <option value="4">4 tickets</option><option value="5">5 tickets</option><option value="6">6 tickets</option>
+          </select>
+        </div>
+        <input id="compNote" type="text" maxlength="80" placeholder="Note (optional) e.g. Comic's +1, comped by Steve" autocomplete="off"
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400" />
+        <div class="flex gap-2">
+          <button id="compSaveBtn" type="submit" class="touch-target flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-sm">Add Comp</button>
+          <button type="button" onclick="toggleCompForm(false)" class="touch-target px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-sm font-bold">Cancel</button>
+        </div>
+      </form>
+    </div>
+
     <div id="guestList" class="space-y-3">
       <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
     </div>
@@ -380,6 +403,32 @@
     var configuredShowtimes = [];
     var checkedInCollapsed = true;
     var isAuthenticated = false;
+
+    // Escape text before putting it into HTML. Guest names and emails come from
+    // public checkout forms, so they must never be inserted as raw HTML.
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    // Safely embed a value as a JS string argument inside an onclick="..." attribute.
+    function jsArg(value) {
+      return escapeHtml(JSON.stringify(String(value == null ? '' : value)));
+    }
+
+    // Supabase returns at most 1000 rows per request; page through everything.
+    async function fetchAllTicketRows(columns) {
+      var all = [];
+      var pageSize = 1000;
+      for (var from = 0; ; from += pageSize) {
+        var res = await supabaseClient.from('tickets').select(columns).range(from, from + pageSize - 1);
+        if (res.error) return { data: null, error: res.error };
+        var rows = res.data || [];
+        all = all.concat(rows);
+        if (rows.length < pageSize) break;
+      }
+      return { data: all, error: null };
+    }
 
     function switchTab(tab) {
       currentTab = tab;
@@ -663,6 +712,10 @@
       fallbackCopyText(blurb, "Show details copied to clipboard!");
     }
 
+    function compText(n) {
+      return n ? ', ' + n + ' comp' + (n > 1 ? 's' : '') : '';
+    }
+
     function copyAllShowsSummary() {
       if (!showSummaryData || showSummaryData.length === 0) {
         showToast("No show data available to copy");
@@ -671,25 +724,33 @@
 
       var report = 'SISYPHUS BREWING - UPCOMING COMEDY SHOW COUNTS (' + new Date().toLocaleDateString() + '):\n\n';
       showSummaryData.forEach(function(s) {
-        report += '• ' + s.show_title + ' (' + s.show_date + '): ' + s.totalTickets + ' sold (Web: ' + s.websiteTickets + ', Dojour: ' + s.dojourTickets + ')\n';
+        report += '• ' + s.show_title + ' (' + s.show_date + '): ' + s.totalTickets + ' sold (Web: ' + s.websiteTickets + ', Dojour: ' + s.dojourTickets + ')' + compText(s.compTickets) + '\n';
       });
 
       report += '\nGenerated via Sisyphus Door System.';
       fallbackCopyText(report, "Copied all shows overview to clipboard!");
     }
 
-    function copySingleShowSummary(safeTitle) {
-      var comedianTitle = decodeURIComponent(safeTitle);
-      var s = showSummaryData.find(function(item) {
-        return item.show_title === comedianTitle;
+    // Every upcoming showtime for one comedian/title, soonest first.
+    function getRunForTitle(title) {
+      return showSummaryData.filter(function(s) { return s.show_title === title; });
+    }
+
+    function buildRunSummary(title) {
+      var run = getRunForTitle(title);
+      var lines = run.map(function(s) {
+        return '• ' + s.show_date + ': ' + s.totalTickets + ' sold (Web ' + s.websiteTickets + ', Dojour ' + s.dojourTickets + ')' + compText(s.compTickets);
       });
-      if (!s) return;
+      var total = run.reduce(function(a, s) { return a + s.totalTickets; }, 0);
+      var comps = run.reduce(function(a, s) { return a + s.compTickets; }, 0);
+      return { run: run, lines: lines, total: total, comps: comps };
+    }
 
-      var blurb = 'Ticket Count: ' + s.show_title + ' (' + s.show_date + ')\n' +
-                  '• Total Sold: ' + s.totalTickets + '\n' +
-                  '  - Website: ' + s.websiteTickets + '\n' +
-                  '  - Dojour: ' + s.dojourTickets;
-
+    function copySingleShowSummary(title) {
+      var r = buildRunSummary(title);
+      if (!r.run.length) return;
+      var blurb = 'Ticket Count: ' + title + '\n' + r.lines.join('\n') +
+        (r.run.length > 1 ? '\nTotal across ' + r.run.length + ' shows: ' + r.total + ' sold' + compText(r.comps) : '');
       fallbackCopyText(blurb, "Copied ticket update!");
     }
 
@@ -723,26 +784,26 @@
       document.body.removeChild(tempArea);
     }
 
-    function emailAgent(safeTitle) {
-      var comedianTitle = decodeURIComponent(safeTitle);
-      var s = showSummaryData.find(function(item) {
-        return item.show_title === comedianTitle;
-      });
-      if (!s) return;
+    function emailAgent(title) {
+      var r = buildRunSummary(title);
+      if (!r.run.length) return;
 
-      var recipient = agentDirectory[comedianTitle] || '';
-      var subject = encodeURIComponent('Ticket Count Update: ' + s.show_title + ' (' + s.show_date + ') - Sisyphus Brewing');
-      var body = encodeURIComponent(
-        'Hi,\n\nHere is the current ticket count for ' + s.show_title + ' at Sisyphus Brewing:\n\n' +
-        '• Show: ' + s.show_title + '\n' +
-        '• Date: ' + s.show_date + '\n' +
-        '• Total Tickets Sold: ' + s.totalTickets + '\n' +
-        '  - Website: ' + s.websiteTickets + '\n' +
-        '  - Dojour: ' + s.dojourTickets + '\n\n' +
-        'Let us know if you have any questions!\n\nBest,\nSisyphus Brewing'
-      );
+      var recipient = agentDirectory[title] || '';
+      if (!recipient) {
+        showToast('Add the agent\'s email first');
+        return;
+      }
+      var multi = r.run.length > 1;
+      var subject = 'Ticket Count Update: ' + title + (multi ? '' : ' (' + r.run[0].show_date + ')') + ' - Sisyphus Brewing';
+      var body =
+        'Hi,\n\nHere are the current ticket counts for ' + title + ' at Sisyphus Brewing:\n\n' +
+        r.lines.join('\n') + '\n' +
+        (multi ? '\nTotal across ' + r.run.length + ' shows: ' + r.total + ' sold' + compText(r.comps) + '\n' : '') +
+        (r.comps ? '\n(Comps are not included in the sold counts.)\n' : '') +
+        '\nLet us know if you have any questions!\n\nBest,\nSisyphus Brewing';
 
-      window.location.href = 'mailto:' + recipient + '?subject=' + subject + '&body=' + body;
+      window.location.href = 'mailto:' + encodeURIComponent(recipient).replace(/%40/g, '@') +
+        '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
     }
 
     function playChime(success) {
@@ -773,23 +834,46 @@
       }, 2200);
     }
 
+    // Turns "Sat, Apr 3 • 7:00 PM" into a timestamp. When no year is written,
+    // the weekday decides it: Apr 3 is a Saturday in 2027, not 2026.
     function parseShowDateToMillis(str) {
       if (!str) return 0;
-      var now = new Date();
-      var mMatch = str.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b/i);
-      var dMatch = str.match(/\b(\d{1,2})\b/);
-      var yMatch = str.match(/\b(202\d)\b/);
-      if (!mMatch || !dMatch) return 0;
-
       var months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
-      var month = months[mMatch[1].toLowerCase().slice(0, 3)];
-      var day = parseInt(dMatch[1], 10);
-      var year = yMatch ? parseInt(yMatch[1], 10) : now.getFullYear();
+      var weekdays = { sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6 };
 
-      if (!yMatch && month < now.getMonth() && (now.getMonth() - month) >= 8) {
-        year += 1;
+      var md = str.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b/i);
+      if (!md) return 0;
+      var month = months[md[1].toLowerCase().slice(0, 3)];
+      var day = parseInt(md[2], 10);
+
+      var hour = 19, minute = 0;
+      var tm = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+      if (tm) {
+        hour = parseInt(tm[1], 10) % 12;
+        minute = tm[2] ? parseInt(tm[2], 10) : 0;
+        if (tm[3].toLowerCase() === 'pm') hour += 12;
       }
-      return new Date(year, month, day, 19, 0).getTime();
+
+      var ym = str.match(/\b(20\d{2})\b/);
+      if (ym) return new Date(parseInt(ym[1], 10), month, day, hour, minute).getTime();
+
+      var now = new Date();
+      var candidates = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(function(y) {
+        return new Date(y, month, day, hour, minute);
+      }).filter(function(d) { return d.getMonth() === month; });   // drops Feb 29 in non-leap years
+
+      var wd = str.match(/^\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)/i);
+      if (wd) {
+        var target = weekdays[wd[1].toLowerCase()];
+        var matching = candidates.filter(function(d) { return d.getDay() === target; });
+        if (matching.length) candidates = matching;
+      }
+      if (!candidates.length) return 0;
+
+      var floor = now.getTime() - 60 * 24 * 60 * 60 * 1000;
+      var upcoming = candidates.filter(function(d) { return d.getTime() >= floor; });
+      var pick = upcoming.length ? upcoming[0] : candidates[candidates.length - 1];
+      return pick.getTime();
     }
 
     async function loadShows() {
@@ -797,7 +881,7 @@
       var prev = select.value;
 
       try {
-        var res = await supabaseClient.from('tickets').select('show_date, show_title');
+        var res = await fetchAllTicketRows('show_date, show_title');
         if (res.error || !res.data) {
           select.innerHTML = '<option value="">No shows loaded</option>';
           return;
@@ -832,7 +916,7 @@
         }
 
         select.innerHTML = uniqueShows.map(function(s) {
-          return '<option value="' + encodeURIComponent(JSON.stringify(s)) + '">' + s.label + '</option>';
+          return '<option value="' + encodeURIComponent(JSON.stringify(s)) + '">' + escapeHtml(s.label) + '</option>';
         }).join('');
 
         if (prev) {
@@ -863,6 +947,7 @@
           .order('guest_name');
 
         tickets = res.data || [];
+        document.getElementById('compShowLabel').textContent = show.label || (show.show_date + ' • ' + show.show_title);
         renderList();
         updateStats();
       } catch (err) {
@@ -912,10 +997,11 @@
       container.innerHTML = '<div class="text-center text-slate-500 py-10">Loading ticket counts...</div>';
 
       try {
-        var [tRes, aRes] = await Promise.all([
-          supabaseClient.from('tickets').select('show_date, show_title, tickets, source'),
+        var results = await Promise.all([
+          fetchAllTicketRows('show_date, show_title, tickets, source'),
           supabaseClient.from('show_agents').select('show_title, agent_email')
         ]);
+        var tRes = results[0], aRes = results[1];
 
         var data = tRes.data || [];
         var agentRecords = aRes.data || [];
@@ -941,14 +1027,19 @@
               timestamp: ts || Number.MAX_SAFE_INTEGER,
               totalTickets: 0,
               websiteTickets: 0,
-              dojourTickets: 0
+              dojourTickets: 0,
+              compTickets: 0
             };
           }
 
           var count = parseInt(t.tickets, 10) || 1;
-          showMap[key].totalTickets += count;
-          if (t.source === 'Website') showMap[key].websiteTickets += count;
-          else showMap[key].dojourTickets += count;
+          if (t.source === 'Comp') {
+            showMap[key].compTickets += count;          // comps are not "sold"
+          } else {
+            showMap[key].totalTickets += count;
+            if (t.source === 'Website') showMap[key].websiteTickets += count;
+            else showMap[key].dojourTickets += count;
+          }
         });
 
         showSummaryData = Object.values(showMap);
@@ -960,28 +1051,31 @@
         }
 
         container.innerHTML = showSummaryData.map(function(s) {
-          var safeTitle = encodeURIComponent(s.show_title);
+          var titleArg = jsArg(s.show_title);
           var agentEmail = agentDirectory[s.show_title] || '';
+          var runCount = getRunForTitle(s.show_title).length;
+          var emailLabel = runCount > 1 ? '✉️ Email (all ' + runCount + ')' : '✉️ Email';
 
           return '<div class="p-4 rounded-xl border bg-slate-900 border-slate-800 space-y-3">' +
             '<div class="flex items-start justify-between gap-2">' +
-              '<div>' +
-                '<div class="font-bold text-base text-slate-100">' + s.show_title + '</div>' +
-                '<div class="text-xs text-amber-400 font-semibold">' + s.show_date + '</div>' +
+              '<div class="min-w-0">' +
+                '<div class="font-bold text-base text-slate-100 break-words">' + escapeHtml(s.show_title) + '</div>' +
+                '<div class="text-xs text-amber-400 font-semibold">' + escapeHtml(s.show_date) + '</div>' +
               '</div>' +
               '<div class="text-right">' +
                 '<div class="text-xl font-black text-slate-100">' + s.totalTickets + '</div>' +
                 '<div class="text-[10px] uppercase font-bold text-slate-400">Total Sold</div>' +
               '</div>' +
             '</div>' +
-            '<div class="flex items-center gap-3 text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">' +
+            '<div class="flex flex-wrap items-center gap-3 text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">' +
               '<div>🌐 Web: <span class="font-bold text-indigo-400">' + s.websiteTickets + '</span></div>' +
               '<div>🎟 Dojour: <span class="font-bold text-orange-400">' + s.dojourTickets + '</span></div>' +
+              (s.compTickets ? '<div>🎁 Comps: <span class="font-bold text-emerald-400">' + s.compTickets + '</span></div>' : '') +
             '</div>' +
             '<div class="pt-1 flex items-center justify-between gap-2">' +
-              '<input type="email" placeholder="Agent email..." value="' + agentEmail + '" onchange="saveAgentEmail(\'' + safeTitle + '\', this.value)" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-400" />' +
-              '<button onclick="emailAgent(\'' + safeTitle + '\')" class="touch-target px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">✉️ Email</button>' +
-              '<button onclick="copySingleShowSummary(\'' + safeTitle + '\')" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all">📋 Copy</button>' +
+              '<input type="email" placeholder="Agent email..." value="' + escapeHtml(agentEmail) + '" onchange="saveAgentEmail(' + titleArg + ', this.value)" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-400" />' +
+              '<button onclick="emailAgent(' + titleArg + ')" class="touch-target px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold transition-all whitespace-nowrap">' + emailLabel + '</button>' +
+              '<button onclick="copySingleShowSummary(' + titleArg + ')" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all">📋 Copy</button>' +
             '</div>' +
           '</div>';
         }).join('');
@@ -990,10 +1084,14 @@
       }
     }
 
-    async function saveAgentEmail(safeTitle, email) {
-      var showTitle = decodeURIComponent(safeTitle).trim();
+    async function saveAgentEmail(title, email) {
+      var showTitle = String(title).trim();
       var cleanEmail = email.trim();
       if (!cleanEmail) return;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        showToast('That doesn\'t look like an email address');
+        return;
+      }
 
       var res = await supabaseClient.from('show_agents').upsert({
         show_title: showTitle,
@@ -1004,8 +1102,10 @@
       if (res.error) {
         showToast('Failed to save to Supabase');
       } else {
+        agentDirectory[showTitle] = cleanEmail;
         showToast('Saved agent for "' + showTitle + '"!');
         playChime(true);
+        loadAllShowsReport();   // fill the same email into this comedian's other showtimes
       }
     }
 
@@ -1013,6 +1113,11 @@
       var record = tickets.find(function(t) { return t.unique_id === uniqueId; });
       if (!record) return;
 
+      var previous = {
+        checked_in_count: record.checked_in_count,
+        checked_in: record.checked_in,
+        check_in_time: record.check_in_time
+      };
       var checkedIn = newCount > 0;
       var checkInTime = checkedIn ? new Date().toISOString() : null;
 
@@ -1023,10 +1128,99 @@
       updateStats();
       playChime(checkedIn);
 
-      await supabaseClient
+      // .select() makes Supabase return the saved row, so we can tell if the
+      // save was silently blocked (e.g. expired login) instead of assuming it worked.
+      var res = await supabaseClient
         .from('tickets')
         .update({ checked_in_count: newCount, checked_in: checkedIn, check_in_time: checkInTime })
-        .eq('unique_id', uniqueId);
+        .eq('unique_id', uniqueId)
+        .select('unique_id');
+
+      if (res.error || !res.data || res.data.length === 0) {
+        record.checked_in_count = previous.checked_in_count;
+        record.checked_in = previous.checked_in;
+        record.check_in_time = previous.check_in_time;
+        renderList();
+        updateStats();
+        playChime(false);
+        showToast('⚠️ Check-in NOT saved — check connection and tap again');
+      }
+    }
+
+    function toggleCompForm(forceOpen) {
+      var form = document.getElementById('compForm');
+      var btn = document.getElementById('addCompToggle');
+      var open = typeof forceOpen === 'boolean' ? forceOpen : form.classList.contains('hidden');
+      if (open && !document.getElementById('showSelector').value) {
+        showToast('Pick a show first');
+        return;
+      }
+      form.classList.toggle('hidden', !open);
+      btn.classList.toggle('hidden', open);
+      if (open) document.getElementById('compName').focus();
+      else form.reset();
+    }
+
+    async function submitComp(e) {
+      e.preventDefault();
+      var select = document.getElementById('showSelector');
+      if (!select.value) { showToast('Pick a show first'); return; }
+      var show = JSON.parse(decodeURIComponent(select.value));
+
+      var name = document.getElementById('compName').value.trim();
+      var count = parseInt(document.getElementById('compCount').value, 10) || 1;
+      var note = document.getElementById('compNote').value.trim();
+      if (!name) { showToast('Enter the guest name'); return; }
+
+      var btn = document.getElementById('compSaveBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      var id = 'comp_' + (window.crypto && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Date.now() + '_' + Math.random().toString(36).slice(2));
+
+      try {
+        var res = await supabaseClient.from('tickets').insert({
+          unique_id: id,
+          show_date: show.show_date,
+          show_title: show.show_title,
+          guest_name: name,
+          email: note ? 'Comp: ' + note : 'Comp',
+          tickets: count,
+          source: 'Comp',
+          checked_in: false,
+          checked_in_count: 0,
+          check_in_time: null
+        });
+        if (res.error) {
+          showToast('Could not add comp: ' + res.error.message);
+          playChime(false);
+          return;
+        }
+        toggleCompForm(false);
+        showToast('🎁 Comp added for ' + name);
+        playChime(true);
+        await loadTicketsForCurrentShow();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add Comp';
+      }
+    }
+
+    async function removeComp(uniqueId) {
+      var record = tickets.find(function(t) { return t.unique_id === uniqueId; });
+      if (!record || record.source !== 'Comp') return;
+      if (!confirm('Remove comp for ' + record.guest_name + '?')) return;
+
+      var res = await supabaseClient.from('tickets').delete()
+        .eq('unique_id', uniqueId).eq('source', 'Comp').select('unique_id');
+      if (res.error || !res.data || res.data.length === 0) {
+        showToast('Could not remove comp' + (res.error ? ': ' + res.error.message : ''));
+        return;
+      }
+      showToast('Comp removed');
+      await loadTicketsForCurrentShow();
     }
 
     function toggleCheckedInTray() {
@@ -1037,34 +1231,42 @@
     function renderTicketCard(t) {
       var isComplete = t.checked_in_count >= t.tickets;
       var isPartial = t.checked_in_count > 0 && !isComplete;
+      var isComp = t.source === 'Comp';
+      var id = jsArg(t.unique_id);
 
       var bgClass = isComplete ? 'bg-emerald-950/20 border-emerald-800/40 opacity-90' : (isPartial ? 'bg-amber-950/30 border-amber-800/60' : 'bg-slate-900 border-slate-800 shadow-sm');
-      var sourceClass = t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300' : 'bg-orange-900/60 text-orange-300';
+      var sourceClass = t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300'
+        : (isComp ? 'bg-emerald-900/60 text-emerald-300' : 'bg-orange-900/60 text-orange-300');
 
       var btnHtml = '';
       if (t.tickets === 1) {
         var actionText = t.checked_in ? '✓ In' : 'Check In';
         var actionBg = t.checked_in ? 'bg-emerald-600/90 text-white' : 'bg-slate-800 text-slate-200 border border-slate-700';
-        btnHtml = '<button onclick="updateCheckIn(\'' + t.unique_id + '\',' + (t.checked_in ? 0 : 1) + ')" class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold ' + actionBg + '">' + actionText + '</button>';
+        btnHtml = '<button onclick="updateCheckIn(' + id + ',' + (t.checked_in ? 0 : 1) + ')" class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold ' + actionBg + '">' + actionText + '</button>';
       } else {
         btnHtml = '<div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-1">' +
-          '<button onclick="updateCheckIn(\'' + t.unique_id + '\', Math.max(0,' + (t.checked_in_count - 1) + '))" class="w-8 h-8 rounded bg-slate-800 text-slate-200 font-bold">-</button>' +
+          '<button onclick="updateCheckIn(' + id + ', ' + Math.max(0, t.checked_in_count - 1) + ')" class="w-10 h-10 rounded bg-slate-800 text-slate-200 font-bold">-</button>' +
           '<span class="w-12 text-center text-xs font-extrabold ' + (isComplete ? 'text-emerald-400' : 'text-amber-400') + '">' + t.checked_in_count + '/' + t.tickets + '</span>' +
-          '<button onclick="updateCheckIn(\'' + t.unique_id + '\', Math.min(' + t.tickets + ',' + (t.checked_in_count + 1) + '))" class="w-8 h-8 rounded bg-slate-800 text-slate-200 font-bold">+</button>' +
+          '<button onclick="updateCheckIn(' + id + ', ' + Math.min(t.tickets, t.checked_in_count + 1) + ')" class="w-10 h-10 rounded bg-slate-800 text-slate-200 font-bold">+</button>' +
         '</div>';
       }
 
+      var removeHtml = isComp
+        ? '<button onclick="removeComp(' + id + ')" title="Remove comp" class="ml-2 text-[11px] text-slate-500 hover:text-rose-400 underline">remove</button>'
+        : '';
+
       return '<div class="p-3.5 rounded-xl border ' + bgClass + '">' +
         '<div class="flex items-start justify-between gap-2">' +
-          '<div>' +
-            '<div class="font-bold text-base text-slate-100">' + (isComplete ? '<span class="text-emerald-400 mr-1">✓</span>' : '') + t.guest_name + '</div>' +
-            '<div class="text-xs text-slate-400">' + (t.email || 'No email provided') + '</div>' +
+          '<div class="min-w-0">' +
+            '<div class="font-bold text-base text-slate-100 break-words">' + (isComplete ? '<span class="text-emerald-400 mr-1">✓</span>' : '') + escapeHtml(t.guest_name) + '</div>' +
+            '<div class="text-xs text-slate-400 break-all">' + escapeHtml(t.email || 'No email provided') + '</div>' +
             '<div class="flex items-center gap-2 mt-1.5">' +
-              '<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ' + sourceClass + '">' + t.source + '</span>' +
+              '<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ' + sourceClass + '">' + escapeHtml(t.source) + '</span>' +
               '<span class="text-xs font-semibold text-slate-300">' + t.tickets + ' Ticket' + (t.tickets > 1 ? 's' : '') + '</span>' +
+              removeHtml +
             '</div>' +
           '</div>' +
-          '<div class="flex items-center gap-1.5">' + btnHtml + '</div>' +
+          '<div class="flex items-center gap-1.5 flex-shrink-0">' + btnHtml + '</div>' +
         '</div>' +
       '</div>';
     }
@@ -1079,11 +1281,11 @@
       }
 
       var filtered = tickets.filter(function(t) {
-        return t.guest_name.toLowerCase().includes(query) || (t.email && t.email.toLowerCase().includes(query));
+        return (t.guest_name || '').toLowerCase().includes(query) || (t.email && t.email.toLowerCase().includes(query));
       });
 
       if (filtered.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-500 py-10">No guests match "' + query + '"</div>';
+        container.innerHTML = '<div class="text-center text-slate-500 py-10">No guests match "' + escapeHtml(query) + '"</div>';
         return;
       }
 
@@ -1128,7 +1330,18 @@
       this.classList.add('hidden');
       renderList();
     });
-    document.getElementById('showSelector').addEventListener('change', loadTicketsForCurrentShow);
+    document.getElementById('showSelector').addEventListener('change', function() {
+      toggleCompForm(false);
+      loadTicketsForCurrentShow();
+    });
+    document.getElementById('compForm').addEventListener('submit', submitComp);
+
+    // Keep multiple door devices in step: refresh the open show every 30 seconds.
+    setInterval(function() {
+      if (isAuthenticated && currentTab === 'door' && !document.hidden) {
+        loadTicketsForCurrentShow();
+      }
+    }, 30000);
 
     // Form Submit Event Listener
     document.getElementById('loginForm').addEventListener('submit', async function(e) {
