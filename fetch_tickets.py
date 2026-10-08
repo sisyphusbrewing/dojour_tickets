@@ -696,14 +696,29 @@ def cleanup_past_shows_from_supabase(active_upcoming_tickets: list, sources_ok: 
     }
 
     try:
-        # Fetch all distinct show titles & dates currently recorded in Supabase
-        endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?select=show_date,show_title"
-        resp = requests.get(endpoint, headers=headers, timeout=20)
-        if resp.status_code != 200:
-            return
+        # Fetch every row (Supabase caps each request at 1000 rows, so page through)
+        existing_rows = []
+        page_size = 1000
+        offset = 0
+        while True:
+            endpoint = (f"{supabase_url.rstrip('/')}/rest/v1/tickets"
+                        f"?select=unique_id,show_date,show_title&limit={page_size}&offset={offset}")
+            resp = requests.get(endpoint, headers=headers, timeout=20)
+            if resp.status_code != 200:
+                print(f"Notice: could not read Supabase for cleanup ({resp.status_code}); skipping purge.")
+                return
+            page = resp.json() or []
+            existing_rows.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
 
         active_show_keys = set(f"{t['show_date']} • {t['show_title']}" for t in active_upcoming_tickets)
-        existing_rows = resp.json() or []
+        # Comps are added from the door app, not Shopify/Dojour. A show that only has
+        # comps so far must not be treated as stale. (Past comps still get purged by date.)
+        for r in existing_rows:
+            if str(r.get("unique_id") or "").startswith("comp_"):
+                active_show_keys.add(f"{r.get('show_date') or ''} • {r.get('show_title') or ''}")
         shows_to_remove = set()
 
         for r in existing_rows:
