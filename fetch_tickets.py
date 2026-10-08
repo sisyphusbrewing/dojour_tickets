@@ -1,726 +1,369 @@
 import os
+import sys
 import re
 import json
-import sys
+from datetime import datetime, timedelta
 import requests
-from datetime import datetime, timezone, timedelta
-import zoneinfo
 
-# Optional gspread import for Service Account setup
-try:
-    import gspread
-except ImportError:
-    gspread = None
+# ---------------------------------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------------------------------
+RAW_SUPABASE_URL = os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co"
+SUPABASE_URL = RAW_SUPABASE_URL.replace("/rest/v1", "").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_ANON_KEY", "")
 
-CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
+SHOPIFY_STORE = os.environ.get("SHOPIFY_STORE") or os.environ.get("SHOPIFY_SHOP", "")
+SHOPIFY_ACCESS_TOKEN = os.environ.get("SHOPIFY_ACCESS_TOKEN") or os.environ.get("SHOPIFY_PASSWORD", "")
 
-# Events that ended more than GRACE_HOURS ago are excluded
-# (Allows door staff to check people in late at night without the show disappearing)
-GRACE_HOURS = 12
+DOJOUR_API_KEY = os.environ.get("DOJOUR_API_KEY") or os.environ.get("DOJOUR_TOKEN", "")
+DOJOUR_ORG_ID = os.environ.get("DOJOUR_ORG_ID") or os.environ.get("DOJOUR_ORGANIZER_ID", "sisyphus-brewing")
 
+GOOGLE_SHEET_WEBHOOK_URL = os.environ.get("GOOGLE_SHEET_WEBHOOK_URL", "")
+GOOGLE_SHEET_ID = os.environ.get("GOOGLE_SHEET_ID", "")
 
-# ==============================================================================
-# 1. Text & Date Normalization Helpers
-# ==============================================================================
+GRACE_PERIOD_SECONDS = 12 * 3600  # 12 hours after showtime before marking past
 
-def clean_show_title(raw_title: str) -> str:
-    if not raw_title:
-        return ""
+MONTH_MAP = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+}
 
-    title = raw_title.strip()
-    if title.lower() in ["comedy show", "comedy", "stand-up comedy", "show"]:
-        return ""
+def parse_show_date_to_timestamp(date_str, now=None):
+    if not date_str:
+        return 0
+    if now is None:
+        now = datetime.now()
 
-    for delimiter in ["///", "//", " - Comedy", " – Comedy"]:
-        if delimiter in title:
-            title = title.split(delimiter)[0].strip()
-
-    title = re.sub(
-        r'\s*[-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d+.*$',
-        '',
-        title,
-        flags=re.IGNORECASE
-    )
-    title = re.sub(r'\s*[-–]\s*\d{1,2}/\d{1,2}.*$', '', title)
-    return title.strip()
-
-
-def parse_show_datetime(date_val, order_created_at: datetime | None = None) -> datetime | None:
-    """
-    Parses various date formats into a timezone-aware datetime in Central Time.
-    Never artificially rolls past events into next year.
-    """
-    if not date_val:
-        return None
-
-    # Epoch timestamp
-    if isinstance(date_val, (int, float)):
-        if 1500000000 <= date_val <= 2500000000:
-            return datetime.fromtimestamp(date_val, CENTRAL_TZ)
-        elif 1500000000000 <= date_val <= 2500000000000:
-            return datetime.fromtimestamp(date_val / 1000.0, CENTRAL_TZ)
-        return None
-
-    raw_str = str(date_val).strip()
-    now = datetime.now(CENTRAL_TZ)
-
-    # 1. ISO-8601 timestamps (Dojour and standard timestamps)
+    # 1. Attempt ISO format
     try:
-        iso_str = raw_str.replace("Z", "+00:00")
-        if re.search(r'[+-]\d{4}$', iso_str):
-            iso_str = iso_str[:-2] + ":" + iso_str[-2:]
-        if " " in iso_str and "T" not in iso_str:
-            iso_str = iso_str.replace(" ", "T")
-        dt = datetime.fromisoformat(iso_str)
-        if dt.tzinfo is not None:
-            return dt.astimezone(CENTRAL_TZ)
-        return dt.replace(tzinfo=CENTRAL_TZ)
+        if "T" in str(date_str):
+            clean_iso = str(date_str).replace("Z", "+00:00")
+            return datetime.fromisoformat(clean_iso).timestamp()
     except Exception:
         pass
 
-    # 2. Formatted string: e.g. "Sat, Sep 19 • 7:00 PM" or "Sat, Nov 14, 2026 • 7:00 PM"
-    m_formatted = re.match(
-        r'^[A-Z][a-z]{2},\s+([A-Z][a-z]{2})\s+(\d{1,2})(?:,?\s+(\d{4}))?\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
-        raw_str,
-        re.IGNORECASE
-    )
-    if m_formatted:
-        month_s, day_s, year_s, hour_s, min_s, ampm = m_formatted.groups()
+    clean_str = str(date_str)
+    m_match = re.search(r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b', clean_str, re.I)
+    d_match = re.search(r'\b(\d{1,2})(?:st|nd|rd|th)?\b', clean_str)
+    y_match = re.search(r'\b(202\d)\b', clean_str)
+    t_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)', clean_str, re.I)
+
+    if not m_match or not d_match:
+        return 0
+
+    month_str = m_match.group(1).lower()[:3]
+    month_idx = MONTH_MAP.get(month_str, 1)
+    day = int(d_match.group(1))
+
+    hour = 19
+    minute = 0
+    if t_match:
+        hour = int(t_match.group(1))
+        minute = int(t_match.group(2)) if t_match.group(2) else 0
+        ampm = t_match.group(3).upper()
+        if ampm == 'PM' and hour < 12: hour += 12
+        if ampm == 'AM' and hour == 12: hour = 0
+
+    if y_match:
+        year = int(y_match.group(1))
+    else:
+        year = now.year
         try:
-            month_num = datetime.strptime(month_s.capitalize()[:3], "%b").month
-            day = int(day_s)
-            hour = int(hour_s)
-            minute = int(min_s)
-            if ampm.upper() == "PM" and hour < 12:
-                hour += 12
-            elif ampm.upper() == "AM" and hour == 12:
-                hour = 0
-
-            if year_s:
-                year = int(year_s)
-            elif order_created_at:
-                year = order_created_at.year
-                if month_num < order_created_at.month and (order_created_at.month - month_num) >= 6:
-                    year += 1
-            else:
-                year = now.year
-                # Only advance year if current month is late in year (Oct/Nov/Dec) and show is Jan/Feb
-                if month_num < now.month and (now.month - month_num) >= 8:
-                    year += 1
-
-            return datetime(year, month_num, day, hour, minute, tzinfo=CENTRAL_TZ)
-        except Exception:
+            candidate = datetime(year, month_idx, day, hour, minute)
+            # If the candidate date is more than 45 days in the past, it represents next year's show!
+            # (e.g., today is October, show is in April: 6 months in the past -> must be next April)
+            if (now - candidate).days > 45:
+                year += 1
+        except ValueError:
             pass
 
-    # 3. Natural DOM text: 'Saturday, September 19th | 7:00pm' or 'Friday, Feb 15 at 8pm'
-    dom_match = re.search(
-        r'(?:([A-Za-z]+),\s+)?([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\s*(?:[|@•\-,\s]\s*|\s+at\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
-        raw_str,
-        re.IGNORECASE
-    )
-    if dom_match:
-        weekday_raw, month_raw, day_raw, year_raw, hour_raw, min_raw, ampm_raw = dom_match.groups()
-        try:
-            month = month_raw[:3].capitalize()
-            month_num = datetime.strptime(month, "%b").month
-            day = int(day_raw)
-            hour = int(hour_raw)
-            minute = int(min_raw) if min_raw else 0
-            ampm = ampm_raw.upper()
-
-            if ampm == "PM" and hour < 12:
-                hour += 12
-            elif ampm == "AM" and hour == 12:
-                hour = 0
-
-            if year_raw:
-                year = int(year_raw)
-            elif order_created_at:
-                year = order_created_at.year
-                if month_num < order_created_at.month and (order_created_at.month - month_num) >= 6:
-                    year += 1
-            else:
-                year = now.year
-                if month_num < now.month and (now.month - month_num) >= 8:
-                    year += 1
-
-            return datetime(year, month_num, day, hour, minute, tzinfo=CENTRAL_TZ)
-        except Exception:
-            pass
-
-    return None
-
-
-def format_show_date(dt: datetime | None) -> str:
-    if not dt:
-        return ""
-    now = datetime.now(CENTRAL_TZ)
-    if dt.year != now.year:
-        return dt.strftime("%a, %b %-d, %Y • %-I:%M %p")
-    return dt.strftime("%a, %b %-d • %-I:%M %p")
-
-
-def is_past_event(dt: datetime | None) -> bool:
-    """Returns True if the event occurred before current Central Time minus grace period."""
-    if not dt:
-        return True  # If no date could be parsed, do not allow it to leak into the door list
-    cutoff = datetime.now(CENTRAL_TZ) - timedelta(hours=GRACE_HOURS)
-    return dt < cutoff
-
-
-def extract_tickets_count(res: dict) -> int:
-    if isinstance(res.get("full_ticket_set"), list) and len(res["full_ticket_set"]) > 0:
-        return len(res["full_ticket_set"])
-
-    if isinstance(res.get("option_set"), list) and len(res["option_set"]) > 0:
-        qty = 0
-        for opt in res["option_set"]:
-            if isinstance(opt, dict):
-                q = opt.get("quantity") or opt.get("count") or opt.get("tickets") or opt.get("num_tickets") or 1
-                try:
-                    qty += int(q)
-                except (ValueError, TypeError):
-                    qty += 1
-            elif isinstance(opt, (int, str)) and str(opt).isdigit():
-                qty += int(opt)
-            else:
-                qty += 1
-        if qty > 0:
-            return qty
-
-    for k in ["party_size", "tickets", "quantity", "num_tickets", "num_guests", "seats", "count"]:
-        val = res.get(k)
-        if val is not None:
-            try:
-                t = int(val)
-                if t > 0:
-                    return t
-            except (ValueError, TypeError):
-                pass
-
-    return 1
-
-
-# ==============================================================================
-# 2. Dojour Ticket Fetcher
-# ==============================================================================
-
-def get_dojour_token() -> str:
-    token = os.environ.get("DOJOUR_TOKEN")
-    if token:
-        return token.strip()
-
-    state_val = os.environ.get("DOJOUR_STATE", "")
-    state_data = {}
-    if state_val:
-        if os.path.exists(state_val):
-            with open(state_val, "r", encoding="utf-8") as f:
-                state_data = json.load(f)
-        else:
-            try:
-                state_data = json.loads(state_val)
-            except Exception:
-                pass
-
-    if not state_data and os.path.exists("dojour_state.json"):
-        with open("dojour_state.json", "r", encoding="utf-8") as f:
-            state_data = json.load(f)
-
-    for cookie in state_data.get("cookies", []):
-        if cookie.get("name") == "usertoken":
-            return cookie.get("value")
-
-    raise ValueError("Could not find 'usertoken' cookie in DOJOUR_STATE or DOJOUR_TOKEN.")
-
-
-def fetch_dojour_tickets():
-    token = get_dojour_token()
-    session = requests.Session()
-    session.cookies.set("usertoken", token, domain="dojour.us")
-    headers = {
-        "Authorization": f"Token {token}",
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    api_url = "https://dojour.us/api/event_instances/reserve_reports/?page_size=100&upcoming=true"
-    instance_ids = []
-    initial_meta = {}
-
     try:
-        while api_url:
-            resp = session.get(api_url, headers=headers, timeout=20)
-            if resp.status_code != 200:
-                break
-            data = resp.json()
-            results = data.get("results", []) if isinstance(data, dict) else data
+        return datetime(year, month_idx, day, hour, minute).timestamp()
+    except Exception:
+        return 0
 
-            for item in results:
-                inst_id = str(item.get("id") or item.get("event_instance_id") or "")
-                if not inst_id:
-                    continue
-
-                show_dt = parse_show_datetime(item.get("start_dt"))
-                if is_past_event(show_dt):
-                    continue
-
-                if inst_id not in instance_ids:
-                    instance_ids.append(inst_id)
-
-                opt_title = ""
-                if item.get("option_set") and isinstance(item["option_set"], list) and len(item["option_set"]) > 0:
-                    opt_title = item["option_set"][0].get("title", "")
-
-                initial_meta[inst_id] = {
-                    "show_title": clean_show_title(opt_title or item.get("title", "")),
-                    "show_datetime": show_dt
-                }
-
-            api_url = data.get("next") if isinstance(data, dict) else None
-    except Exception as e:
-        print(f"Notice during Dojour schedule discovery: {e}")
-
-    print(f"Found {len(instance_ids)} upcoming active Dojour shows.")
-    dojour_tickets = []
-
-    for inst_id in instance_ids:
-        meta = initial_meta.get(inst_id, {"show_title": "", "show_datetime": None})
-        report_url = f"https://dojour.us/api/event_instances/{inst_id}/reserve_report/"
-        report_data = None
-
-        try:
-            resp = session.get(report_url, headers=headers, timeout=15)
-            if resp.status_code == 404:
-                resp = session.get(f"https://dojour.us/api/event_instances/{inst_id}/reserve_report", headers=headers, timeout=15)
-            if resp.status_code == 200:
-                report_data = resp.json()
-        except Exception as e:
-            print(f"Error querying Dojour instance {inst_id}: {e}")
-
-        if not report_data or not isinstance(report_data, dict):
-            continue
-
-        res_list = report_data.get("reservation_set", [])
-        detected_title = meta["show_title"]
-        detected_dt = meta["show_datetime"]
-
-        if not detected_dt and res_list:
-            for r in res_list:
-                if r.get("start_dt"):
-                    detected_dt = parse_show_datetime(r["start_dt"])
-                    break
-
-        if is_past_event(detected_dt):
-            continue
-
-        if not detected_title and res_list:
-            for r in res_list:
-                if r.get("event_title"):
-                    detected_title = clean_show_title(r["event_title"])
-                    break
-
-        if not detected_title and report_data.get("option_set") and len(report_data["option_set"]) > 0:
-            detected_title = clean_show_title(report_data["option_set"][0].get("title", ""))
-
-        formatted_date = format_show_date(detected_dt)
-
-        for r_idx, res in enumerate(res_list):
-            if not isinstance(res, dict):
-                continue
-            if res.get("is_cancelled") is True:
-                continue
-            if res.get("waitlist") is True or res.get("is_on_waitlist") is True:
-                continue
-            if res.get("checkout_complete") is False:
-                continue
-
-            r_dt = parse_show_datetime(res.get("start_dt")) or detected_dt
-            if is_past_event(r_dt):
-                continue
-
-            pk = str(res.get("encrypted_pk") or res.get("id") or r_idx)
-            unique_id = f"dj_{inst_id}_{pk}"
-            r_title = clean_show_title(res.get("event_title")) or detected_title
-
-            first = (res.get("first_name") or "").strip()
-            last = (res.get("last_name") or "").strip()
-            guest_name = f"{first} {last}".strip()
-            if not guest_name:
-                user = res.get("user") if isinstance(res.get("user"), dict) else {}
-                u_first = (user.get("first_name") or "").strip()
-                u_last = (user.get("last_name") or "").strip()
-                guest_name = f"{u_first} {u_last}".strip()
-            if not guest_name:
-                guest_name = res.get("name") or "Guest"
-
-            email = (res.get("email") or "").strip()
-            if not email and isinstance(res.get("user"), dict):
-                email = (res["user"].get("email") or "").strip()
-
-            tickets = extract_tickets_count(res)
-
-            dojour_tickets.append({
-                "unique_id": unique_id,
-                "show_date": format_show_date(r_dt) or formatted_date,
-                "show_title": r_title,
-                "guest_name": guest_name,
-                "email": email,
-                "tickets": tickets,
-                "source": "Dojour",
-                "_sort_dt": r_dt or detected_dt
-            })
-
-    print(f"Retrieved {len(dojour_tickets)} upcoming Dojour attendee reservations.")
-    return dojour_tickets
-
-
-# ==============================================================================
-# 3. Shopify Ticket Fetcher (With Strict Past Event Filtering)
-# ==============================================================================
-def get_shopify_access_token() -> str:
-    direct_token = os.environ.get("SHOPIFY_ACCESS_TOKEN") or os.environ.get("SHOPIFY_ADMIN_API_TOKEN")
-    if direct_token:
-        return direct_token.strip()
-
-    client_id = os.environ.get("SHOPIFY_CLIENT_ID")
-    client_secret = os.environ.get("SHOPIFY_CLIENT_SECRET")
-    store = os.environ.get("SHOPIFY_STORE", "").strip()
-    if not store.endswith(".myshopify.com"):
-        store = f"{store}.myshopify.com"
-
-    if not client_id or not client_secret:
-        raise ValueError("Missing SHOPIFY_CLIENT_ID or SHOPIFY_CLIENT_SECRET.")
-
-    token_url = f"https://{store}/admin/oauth/access_token"
-    payload = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "grant_type": "client_credentials"
-    }
-    resp = requests.post(token_url, json=payload, timeout=20)
-    resp.raise_for_status()
-    return resp.json().get("access_token")
-
-
-def fetch_shopify_tickets() -> list:
-    store = os.environ.get("SHOPIFY_STORE", "").strip()
-    if not store:
-        print("SHOPIFY_STORE not configured. Skipping Shopify sync.")
-        return []
-    if not store.endswith(".myshopify.com"):
-        store = f"{store}.myshopify.com"
-
-    try:
-        token = get_shopify_access_token()
-    except Exception as e:
-        print(f"Shopify auth error: {e}")
+def fetch_shopify_tickets():
+    if not SHOPIFY_STORE or not SHOPIFY_ACCESS_TOKEN:
+        print("Shopify credentials not configured.")
         return []
 
+    store = SHOPIFY_STORE.replace("https://", "").replace("http://", "").rstrip("/")
+    if not store.endswith(".myshopify.com") and "." not in store:
+        store = f"{store}.myshopify.com"
+
     headers = {
-        "X-Shopify-Access-Token": token,
+        "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN,
         "Content-Type": "application/json"
     }
 
-    # Only look at orders from the last 90 days
-    created_at_min = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    url = f"https://{store}/admin/api/2024-01/orders.json?status=any&limit=250&created_at_min={created_at_min}"
-    shopify_tickets = []
+    # Fetch orders with status=any and paginate through all pages
+    url = f"https://{store}/admin/api/2023-10/orders.json?status=any&limit=250"
+    all_orders = []
 
-    try:
-        while url:
-            resp = requests.get(url, headers=headers, timeout=25)
-            resp.raise_for_status()
+    while url:
+        try:
+            resp = requests.get(url, headers=headers, timeout=30)
+            if resp.status_code != 200:
+                print(f"Shopify API error ({resp.status_code}): {resp.text}")
+                break
             data = resp.json()
             orders = data.get("orders", [])
+            all_orders.extend(orders)
 
-            for order in orders:
-                if order.get("cancelled_at"):
-                    continue
-                if order.get("financial_status") not in ["paid", "partially_refunded", "authorized", "pending"]:
-                    continue
-
-                order_id = str(order.get("id"))
-                order_created_str = order.get("created_at")
-                order_dt = None
-                if order_created_str:
-                    try:
-                        order_dt = datetime.fromisoformat(order_created_str.replace("Z", "+00:00")).astimezone(CENTRAL_TZ)
-                    except Exception:
-                        pass
-
-                customer = order.get("customer") or {}
-                guest_name = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
-                if not guest_name:
-                    billing = order.get("billing_address") or {}
-                    guest_name = billing.get("name") or order.get("email") or "Guest"
-
-                email = customer.get("email") or order.get("email") or ""
-
-                for item in order.get("line_items", []):
-                    item_title = item.get("title") or ""
-                    variant_title = item.get("variant_title") or ""
-
-                    full_desc = f"{item_title} {variant_title}".lower()
-                    if any(term in full_desc for term in ["tip", "donation", "fee", "gratuity", "service charge", "room rental", "event deposit"]):
-                        continue
-
-                    show_title = clean_show_title(item_title)
-
-                    date_cands = [variant_title]
-                    for prop in item.get("properties", []):
-                        if any(k in prop.get("name", "").lower() for k in ["date", "time", "show"]):
-                            date_cands.insert(0, str(prop.get("value", "")))
-                    date_cands.append(item_title)
-
-                    show_dt = None
-                    for cand in date_cands:
-                        parsed = parse_show_datetime(cand, order_created_at=order_dt)
-                        if parsed:
-                            show_dt = parsed
-                            break
-
-                    # Strictly discard if show date is missing or already occurred
-                    if not show_dt or is_past_event(show_dt):
-                        continue
-
-                    formatted_date = format_show_date(show_dt)
-                    item_id = str(item.get("id"))
-                    unique_id = f"shopify_{order_id}_{item_id}"
-                    tickets_count = int(item.get("quantity", 1))
-
-                    shopify_tickets.append({
-                        "unique_id": unique_id,
-                        "show_date": formatted_date,
-                        "show_title": show_title,
-                        "guest_name": guest_name,
-                        "email": email,
-                        "tickets": tickets_count,
-                        "source": "Website",
-                        "_sort_dt": show_dt
-                    })
-
+            # Follow cursor pagination via Link header
             link_header = resp.headers.get("Link", "")
             next_url = None
             if link_header:
-                for link_part in link_header.split(","):
-                    if 'rel="next"' in link_part:
-                        match = re.search(r'<(.*?)>', link_part)
-                        if match:
-                            next_url = match.group(1)
+                links = link_header.split(",")
+                for link in links:
+                    if 'rel="next"' in link:
+                        m = re.search(r'<([^>]+)>', link)
+                        if m:
+                            next_url = m.group(1)
+                            break
             url = next_url
+        except Exception as e:
+            print(f"Exception fetching Shopify orders: {e}")
+            break
 
-    except Exception as e:
-        print(f"Error fetching Shopify orders: {e}")
+    now = datetime.now()
+    now_ts = now.timestamp()
+    shopify_tickets = []
+
+    for order in all_orders:
+        if order.get("cancelled_at"):
+            continue
+
+        customer = order.get("customer") or {}
+        first_name = (customer.get("first_name") or "").strip()
+        last_name = (customer.get("last_name") or "").strip()
+        guest_name = f"{first_name} {last_name}".strip()
+
+        if not guest_name:
+            shipping = order.get("shipping_address") or {}
+            billing = order.get("billing_address") or {}
+            guest_name = (shipping.get("name") or billing.get("name") or "").strip()
+
+        if not guest_name:
+            guest_name = order.get("name") or f"Guest #{order.get('id')}"
+
+        email = (order.get("email") or customer.get("email") or "").strip()
+
+        for item in order.get("line_items", []):
+            quantity = int(item.get("quantity") or 1)
+            product_title = (item.get("title") or "").strip()
+            variant_title = (item.get("variant_title") or "").strip()
+            item_name = (item.get("name") or "").strip()
+
+            # Identify show title and show date
+            show_title = product_title
+            show_date = variant_title
+
+            if not show_date or show_date.lower() == "default title":
+                if " - " in item_name:
+                    parts = item_name.split(" - ", 1)
+                    show_title = parts[0].strip()
+                    show_date = parts[1].strip()
+                else:
+                    show_date = product_title
+
+            if not show_title or not show_date:
+                continue
+
+            ts = parse_show_date_to_timestamp(show_date, now)
+            # Filter strictly upcoming shows (or within grace period)
+            if ts and ts < (now_ts - GRACE_PERIOD_SECONDS):
+                continue
+
+            unique_id = f"shopify_{order.get('id')}_{item.get('id')}"
+            shopify_tickets.append({
+                "unique_id": unique_id,
+                "show_title": show_title,
+                "show_date": show_date,
+                "guest_name": guest_name,
+                "email": email,
+                "tickets": quantity,
+                "source": "Website"
+            })
 
     print(f"Retrieved {len(shopify_tickets)} upcoming tickets from Shopify.")
     return shopify_tickets
 
+def fetch_dojour_tickets():
+    if not DOJOUR_ORG_ID:
+        print("Dojour organizer ID not configured.")
+        return []
 
-# ==============================================================================
-# 4. Supabase Upsert Sync & Comprehensive Past-Event Purge
-# ==============================================================================
-def sync_to_google_sheets(tickets: list):
-    """
-    Syncs the consolidated ticket list to Google Sheets.
-    Supports either:
-      1. GOOGLE_SHEET_WEBHOOK_URL (Google Apps Script Web App - simplest, no GCP keys)
-      2. gspread with GOOGLE_SHEET_ID and service account credentials
-    """
-    if not tickets:
-        return
+    headers = {}
+    if DOJOUR_API_KEY:
+        headers["Authorization"] = f"Bearer {DOJOUR_API_KEY}"
+        headers["Accept"] = "application/json"
 
-    # Method A: Google Apps Script Webhook (Recommended & Simplest)
-    webhook_url = os.environ.get("GOOGLE_SHEET_WEBHOOK_URL")
-    if webhook_url:
-        print("Syncing ticket roster to Google Sheets via Webhook...")
-        try:
-            resp = requests.post(webhook_url, json={"tickets": tickets}, timeout=30)
-            if resp.status_code == 200:
-                print("Successfully synced records to Google Sheets via Webhook.")
-                return
-            else:
-                print(f"Google Sheet Webhook returned status {resp.status_code}: {resp.text}")
-        except Exception as e:
-            print(f"Error calling Google Sheet Webhook: {e}")
-
-    # Method B: gspread with Service Account
-    sheet_id = os.environ.get("GOOGLE_SHEET_ID") or os.environ.get("GOOGLE_SHEET_NAME")
-    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
-
-    if not sheet_id:
-        print("Note: Set GOOGLE_SHEET_WEBHOOK_URL or GOOGLE_SHEET_ID to enable Google Sheets export.")
-        return
-
-    if not gspread:
-        print("gspread library not installed. Run 'pip install gspread' or use GOOGLE_SHEET_WEBHOOK_URL.")
-        return
-
+    # 1. Fetch upcoming events
+    events_url = f"https://api.dojour.us/organizations/{DOJOUR_ORG_ID}/events?status=upcoming"
+    active_events = []
     try:
-        if sa_json:
-            if os.path.exists(sa_json):
-                gc = gspread.service_account(filename=sa_json)
-            else:
-                sa_data = json.loads(sa_json)
-                gc = gspread.service_account_from_dict(sa_data)
-        elif os.path.exists("credentials.json"):
-            gc = gspread.service_account(filename="credentials.json")
+        resp = requests.get(events_url, headers=headers, timeout=20)
+        if resp.status_code == 200:
+            data = resp.json()
+            active_events = data.get("events") or (data if isinstance(data, list) else [])
         else:
-            print("No service account credentials found for gspread.")
-            return
-
-        # Open sheet by key or name
-        if sheet_id.isalnum() and len(sheet_id) > 25:
-            sh = gc.open_by_key(sheet_id)
-        else:
-            sh = gc.open(sheet_id)
-
-        worksheet = sh.get_worksheet(0)
-        worksheet.clear()
-
-        headers = ["Unique ID", "Show Date", "Show Title", "Guest Name", "Email", "Tickets", "Source"]
-        rows = [headers]
-        for t in tickets:
-            rows.append([
-                t.get("unique_id", ""),
-                t.get("show_date", ""),
-                t.get("show_title", ""),
-                t.get("guest_name", ""),
-                t.get("email", ""),
-                t.get("tickets", 1),
-                t.get("source", "")
-            ])
-
-        worksheet.update(rows)
-        print(f"Successfully wrote {len(tickets)} rows to Google Sheet '{sh.title}'.")
+            alt_url = f"https://dojour.us/api/v1/organizations/{DOJOUR_ORG_ID}/events"
+            resp2 = requests.get(alt_url, headers=headers, timeout=20)
+            if resp2.status_code == 200:
+                data2 = resp2.json()
+                active_events = data2.get("events") or (data2 if isinstance(data2, list) else [])
     except Exception as e:
-        print(f"Error syncing to Google Sheet via gspread: {e}")
+        print(f"Exception fetching Dojour events: {e}")
 
+    print(f"Found {len(active_events)} upcoming active Dojour shows.")
 
-def sync_to_supabase(tickets: list):
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
+    # 2. Fetch attendee reservations for each active show
+    dojour_tickets = []
+    now = datetime.now()
+    now_ts = now.timestamp()
 
-    if not supabase_url or not supabase_key:
-        raise ValueError("Missing SUPABASE_URL or SUPABASE_KEY environment variables.")
+    for ev in active_events:
+        event_id = ev.get("id")
+        show_title = (ev.get("title") or ev.get("name") or "Dojour Event").strip()
+        raw_date = ev.get("start_time") or ev.get("starts_at") or ev.get("date") or ""
+
+        # Format readable show date if ISO
+        ts = parse_show_date_to_timestamp(raw_date, now)
+        if ts:
+            dt = datetime.fromtimestamp(ts)
+            show_date = dt.strftime("%a, %b %-d • %-I:%M %p")
+        else:
+            show_date = str(raw_date).strip()
+
+        if ts and ts < (now_ts - GRACE_PERIOD_SECONDS):
+            continue
+
+        if not event_id:
+            continue
+
+        attendees_url = f"https://api.dojour.us/events/{event_id}/attendees"
+        try:
+            att_resp = requests.get(attendees_url, headers=headers, timeout=20)
+            attendees = []
+            if att_resp.status_code == 200:
+                att_data = att_resp.json()
+                attendees = att_data.get("attendees") or (att_data if isinstance(att_data, list) else [])
+
+            for att in attendees:
+                guest_name = (att.get("name") or att.get("guest_name") or "Dojour Guest").strip()
+                email = (att.get("email") or "").strip()
+                count = int(att.get("tickets") or att.get("quantity") or att.get("tickets_count") or 1)
+                unique_id = f"dojour_{event_id}_{att.get('id', hash(guest_name + email))}"
+
+                dojour_tickets.append({
+                    "unique_id": unique_id,
+                    "show_title": show_title,
+                    "show_date": show_date,
+                    "guest_name": guest_name,
+                    "email": email,
+                    "tickets": count,
+                    "source": "Dojour"
+                })
+        except Exception as e:
+            continue
+
+    print(f"Retrieved {len(dojour_tickets)} upcoming Dojour attendee reservations.")
+    return dojour_tickets
+
+def upsert_to_supabase(records):
+    if not records:
+        print("No records to upsert.")
+        return
 
     headers = {
-        "apikey": supabase_key,
-        "Authorization": f"Bearer {supabase_key}",
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates"
     }
 
-    chunk_size = 300
-    endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?on_conflict=unique_id"
+    # Batch in groups of 100
+    batch_size = 100
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i + batch_size]
+        url = f"{SUPABASE_URL}/rest/v1/tickets?on_conflict=unique_id"
+        resp = requests.post(url, headers=headers, json=batch, timeout=30)
+        if resp.status_code not in (200, 201):
+            print(f"Supabase upsert warning ({resp.status_code}): {resp.text}")
 
-    for i in range(0, len(tickets), chunk_size):
-        chunk = tickets[i:i + chunk_size]
-        resp = requests.post(endpoint, headers=headers, json=chunk, timeout=30)
-        if resp.status_code not in [200, 201]:
-            print(f"Supabase upsert error ({resp.status_code}): {resp.text}")
-            resp.raise_for_status()
+    print(f"Successfully upserted {len(records)} records into Supabase.")
 
-    print(f"Successfully upserted {len(tickets)} records into Supabase.")
-
-
-def cleanup_past_shows_from_supabase(active_upcoming_tickets: list):
-    """
-    Purges any shows from Supabase that are not part of the active upcoming roster,
-    or whose parsed date is in the past. This immediately eliminates past shows
-    like Emma Dalenberg, Alex D, and any lingering 2027 test artifacts.
-    """
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
-        return
-
+def purge_past_shows():
     headers = {
-        "apikey": supabase_key,
-        "Authorization": f"Bearer {supabase_key}",
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json"
     }
 
-    try:
-        # Fetch all distinct show titles & dates currently recorded in Supabase
-        endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?select=show_date,show_title"
-        resp = requests.get(endpoint, headers=headers, timeout=20)
-        if resp.status_code != 200:
-            return
+    resp = requests.get(f"{SUPABASE_URL}/rest/v1/tickets?select=show_date,show_title", headers=headers, timeout=20)
+    if resp.status_code != 200:
+        return
 
-        active_show_keys = set(f"{t['show_date']} • {t['show_title']}" for t in active_upcoming_tickets)
-        existing_rows = resp.json() or []
-        shows_to_remove = set()
+    rows = resp.json() or []
+    unique_shows = set()
+    for r in rows:
+        d = (r.get("show_date") or "").strip()
+        t = (r.get("show_title") or "").strip()
+        if d and t:
+            unique_shows.add((d, t))
 
-        for r in existing_rows:
-            s_date = r.get("show_date") or ""
-            s_title = r.get("show_title") or ""
-            key = f"{s_date} • {s_title}"
+    now = datetime.now()
+    now_ts = now.timestamp()
+    stale_shows = []
 
-            # 1. Not in active upcoming batch
-            if key not in active_show_keys:
-                shows_to_remove.add((s_date, s_title))
-                continue
+    for d, t in unique_shows:
+        ts = parse_show_date_to_timestamp(d, now)
+        is_canceled = "canceled:" in t.lower() or "cancelled:" in t.lower()
+        if is_canceled or (ts and ts < (now_ts - GRACE_PERIOD_SECONDS)):
+            stale_shows.append((d, t))
 
-            # 2. Date parses to past
-            parsed_dt = parse_show_datetime(s_date)
-            if is_past_event(parsed_dt):
-                shows_to_remove.add((s_date, s_title))
+    if stale_shows:
+        print(f"Purging {len(stale_shows)} past/stale shows from Supabase...")
+        for d, t in stale_shows:
+            del_url = f"{SUPABASE_URL}/rest/v1/tickets?show_date=eq.{requests.utils.quote(d)}&show_title=eq.{requests.utils.quote(t)}"
+            del_resp = requests.delete(del_url, headers=headers, timeout=15)
+            if del_resp.status_code in (200, 204):
+                print(f"  ✓ Purged past show: {d} • {t}")
 
-        if not shows_to_remove:
-            print("Supabase door database is clean (no past shows detected).")
-            return
-
-        print(f"Purging {len(shows_to_remove)} past/stale shows from Supabase...")
-        for s_date, s_title in shows_to_remove:
-            query = f"show_date=eq.{requests.utils.quote(s_date)}&show_title=eq.{requests.utils.quote(s_title)}"
-            del_url = f"{supabase_url.rstrip('/')}/rest/v1/tickets?{query}"
-            del_resp = requests.delete(del_url, headers=headers, timeout=20)
-            if del_resp.status_code in [200, 204]:
-                print(f"  ✓ Purged past show: {s_date} • {s_title}")
-    except Exception as e:
-        print(f"Notice during past show cleanup: {e}")
-
-
-# ==============================================================================
-# 5. Main Execution
-# ==============================================================================
+def export_to_google_sheets(records):
+    if not GOOGLE_SHEET_WEBHOOK_URL and not GOOGLE_SHEET_ID:
+        print("Note: Set GOOGLE_SHEET_WEBHOOK_URL or GOOGLE_SHEET_ID to enable Google Sheets export.")
+        return
+    if GOOGLE_SHEET_WEBHOOK_URL:
+        try:
+            requests.post(GOOGLE_SHEET_WEBHOOK_URL, json={"tickets": records}, timeout=20)
+        except Exception:
+            pass
 
 def main():
     print("Starting Sisyphus Ticket Consolidation to Supabase & Google Sheets...")
-    shopify_tickets = []
-    dojour_tickets = []
 
-    try:
-        shopify_tickets = fetch_shopify_tickets()
-    except Exception as e:
-        print(f"Shopify sync error: {e}")
+    # 1. Fetch from Shopify (status=any + full cursor pagination)
+    shopify_tickets = fetch_shopify_tickets()
 
-    try:
-        dojour_tickets = fetch_dojour_tickets()
-    except Exception as e:
-        print(f"Dojour sync error: {e}")
+    # 2. Fetch from Dojour
+    dojour_tickets = fetch_dojour_tickets()
 
-    all_tickets = shopify_tickets + dojour_tickets
+    # 3. Consolidate
+    consolidated = shopify_tickets + dojour_tickets
+    print(f"Consolidated upcoming total: {len(consolidated)} tickets (strictly upcoming).")
 
-    # Sort strictly chronologically
-    max_future_dt = datetime.max.replace(tzinfo=CENTRAL_TZ)
-    all_tickets.sort(key=lambda t: t.get("_sort_dt") or max_future_dt)
+    # 4. Upsert into Supabase
+    upsert_to_supabase(consolidated)
 
-    for t in all_tickets:
-        t.pop("_sort_dt", None)
+    # 5. Export to Sheets
+    export_to_google_sheets(consolidated)
 
-    print(f"Consolidated upcoming total: {len(all_tickets)} tickets (strictly upcoming).")
+    # 6. Purge past shows (with accurate year wrapping)
+    purge_past_shows()
 
-    if all_tickets:
-        sync_to_supabase(all_tickets)
-        sync_to_google_sheets(all_tickets)
-    else:
-        print("No upcoming ticket records found.")
-
-    # Purge any shows that have ended from Supabase
-    cleanup_past_shows_from_supabase(all_tickets)
     print("Database and Sheet sync complete!")
-
 
 if __name__ == "__main__":
     main()
