@@ -116,7 +116,7 @@ def parse_show_datetime(date_val, order_created_at: datetime | None = None) -> d
 
     # 2. Formatted string: e.g. "Sat, Sep 19 • 7:00 PM" or "Sat, Nov 14, 2026 • 7:00 PM"
     m_formatted = re.match(
-        r'^([A-Z][a-z]{2}),\s+([A-Z][a-z]{2})\s+(\d{1,2})(?:,?\s+(\d{4}))?\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
+        r'^([A-Z][a-z]{2}),?\s+([A-Z][a-z]{2})\s+(\d{1,2})(?:,?\s+(\d{4}))?\s+•\s+(\d{1,2}):(\d{2})\s+(AM|PM)$',
         raw_str,
         re.IGNORECASE
     )
@@ -140,7 +140,7 @@ def parse_show_datetime(date_val, order_created_at: datetime | None = None) -> d
 
     # 3. Natural DOM text: 'Saturday, September 19th | 7:00pm' or 'Friday, Feb 15 at 8pm'
     dom_match = re.search(
-        r'(?:([A-Za-z]+),\s+)?([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\s*(?:[|@•\-,\s]\s*|\s+at\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
+        r'(?:([A-Za-z]+),?\s+)?([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\s*(?:[|@•\-,\s]\s*|\s+at\s+)(\d{1,2})(?::(\d{2}))?\s*(am|pm)',
         raw_str,
         re.IGNORECASE
     )

@@ -4,6 +4,8 @@ import sys
 import requests
 from datetime import datetime
 
+from show_dates import parse_show_datetime, CENTRAL_TZ
+
 # ---------------------------------------------------------------------------
 # CONFIGURATION & ENVIRONMENT VARIABLES
 # ---------------------------------------------------------------------------
@@ -22,6 +24,11 @@ BIO_RAW = os.environ.get("SHOW_BIO") or os.environ.get("BIO") or ""
 IMAGE_URL = os.environ.get("SHOW_IMAGE_URL") or os.environ.get("IMAGE_URL") or ""
 
 VENUE_NAME = "Sisyphus Brewing"
+
+# Ticketing fee built into every paid show's price (not classes or free events).
+# The theme shows it as "$25 ticket + $3 fee" using the custom.ticket_fee field.
+TICKET_FEE = float(os.environ.get("TICKET_FEE") or "3.00")
+CLASS_PATTERN = re.compile(r"\b(class|classes|workshop|course)\b", re.IGNORECASE)
 COLLECTION_HANDLE = "comedy-and-events"
 API_VERSION = "2024-01"
 
@@ -86,11 +93,15 @@ def generate_variants(showtimes_raw):
 # ---------------------------------------------------------------------------
 # HTML DESCRIPTION FORMATTER
 # ---------------------------------------------------------------------------
-def format_description_html(raw_bio, is_free):
+def format_description_html(raw_bio, is_free, fee_included=0):
     if not raw_bio or not raw_bio.strip():
         if is_free:
             return f"<p>Free live event at {VENUE_NAME}. Walk-ins welcome!</p>"
-        return f"<p>Live comedy at {VENUE_NAME}. 100% Will-Call: check in under your name at the door.</p>"
+        default = f"<p>Live comedy at {VENUE_NAME}. 100% Will-Call: check in under your name at the door.</p>"
+        if fee_included:
+            default += (f"<p><strong>💵 Price includes a ${fee_included:.0f} ticketing fee</strong> "
+                        "— 100% of the fee goes to performers.</p>")
+        return default
 
     if "<p>" in raw_bio or "<br" in raw_bio:
         return raw_bio
@@ -122,6 +133,11 @@ def format_description_html(raw_bio, is_free):
             "<p><strong>🎟️ 100% Will-Call:</strong> No paper tickets needed. Check in under your name at the door.</p>"
             "<p><strong>📍 Venue:</strong> Sisyphus Brewing • 712 Ontario Ave W, Minneapolis, MN</p>"
         )
+        if fee_included:
+            policy_footer += (
+                f"<p><strong>💵 Price includes a ${fee_included:.0f} ticketing fee</strong> "
+                "— 100% of the fee goes to performers.</p>"
+            )
     return "\n".join(html_parts) + "\n" + policy_footer
 
 # ---------------------------------------------------------------------------
@@ -169,45 +185,21 @@ def run_graphql(token, query, variables=None):
 # CHRONOLOGICAL DATE EXTRACTION & REORDERING
 # ---------------------------------------------------------------------------
 def extract_event_date(title, variant_titles, current_date=None):
-    if current_date is None:
-        current_date = datetime.now()
-
+    """Earliest upcoming show date for sorting (classes/unknowns sort last)."""
     if "ticket fee" in title.lower() or "facility fee" in title.lower():
-        return datetime(9999, 12, 31)
+        return datetime(9999, 12, 31, tzinfo=CENTRAL_TZ)
 
-    if "every thursday" in title.lower() or "open mic" in title.lower():
-        return datetime(current_date.year, current_date.month, current_date.day)
+    now = current_date or datetime.now(CENTRAL_TZ)
+    dates = [d for d in (parse_show_datetime(v, now=now) for v in variant_titles) if d]
+    if not dates:
+        d = parse_show_datetime(title, now=now)
+        dates = [d] if d else []
+    if not dates:
+        return datetime(9998, 12, 31, tzinfo=CENTRAL_TZ)
 
-    all_texts = list(variant_titles) + [title]
-    month_regex = r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b'
-    dates_found = []
+    upcoming = [d for d in dates if d >= now]
+    return min(upcoming) if upcoming else max(dates)
 
-    for text in all_texts:
-        if not text:
-            continue
-        matches = re.finditer(rf'{month_regex}\.?\s*(\d{{1,2}})', text, re.I)
-        for m in matches:
-            m_str = m.group(1).lower()[:3]
-            m_num = MONTH_MAP.get(m_str)
-            d_num = int(m.group(2))
-
-            y_match = re.search(r'\b(202\d)\b', text)
-            if y_match:
-                y_num = int(y_match.group(1))
-            else:
-                if m_num < current_date.month - 2:
-                    y_num = current_date.year + 1
-                else:
-                    y_num = current_date.year
-
-            try:
-                dates_found.append(datetime(y_num, m_num, d_num))
-            except ValueError:
-                pass
-
-    if dates_found:
-        return min(dates_found)
-    return datetime(9998, 12, 31)
 
 def sort_collection_chronologically(token, collection_handle):
     print("\n" + "=" * 60)
@@ -351,14 +343,23 @@ def main():
         price_clean = "20.00"
 
     is_free = (price_num == 0.0)
+    is_class = bool(CLASS_PATTERN.search(TITLE))
+    fee = 0.0
 
     if is_free:
         product_type = "Free Event"
         tags = f"Comedy, Free Event, No Fee, RSVP, Live Event, {TITLE}"
-        print("ℹ️ Free Event detected ($0.00): Exempting from ticket fee tags.")
+        print("ℹ️ Free Event detected ($0.00): no ticketing fee.")
+    elif is_class:
+        product_type = "Class"
+        tags = f"Comedy, Class, No Fee, no-auto-archive, {TITLE}"
+        print("ℹ️ Class detected: no ticketing fee, and it won't be auto-archived.")
     else:
         product_type = "Tickets"
-        tags = f"Comedy, Ticket, Live Event, {TITLE}"
+        tags = f"Comedy, Ticket, Live Event, fee-included, {TITLE}"
+        fee = TICKET_FEE
+        price_clean = f"{price_num + fee:.2f}"
+        print(f"ℹ️ Ticket price ${price_num:.2f} + ${fee:.2f} fee = ${price_clean} per ticket.")
 
     variants_payload = []
     for vt in variant_titles:
@@ -370,7 +371,7 @@ def main():
             "requires_shipping": False
         })
 
-    body_html = format_description_html(BIO_RAW, is_free)
+    body_html = format_description_html(BIO_RAW, is_free, fee_included=fee)
 
     product_payload = {
         "product": {
@@ -384,6 +385,13 @@ def main():
             "status": "active"
         }
     }
+    if fee:
+        product_payload["product"]["metafields"] = [{
+            "namespace": "custom",
+            "key": "ticket_fee",
+            "type": "number_decimal",
+            "value": f"{fee:.2f}"
+        }]
 
     if IMAGE_URL and IMAGE_URL.startswith("http"):
         product_payload["product"]["images"] = [{"src": IMAGE_URL}]
