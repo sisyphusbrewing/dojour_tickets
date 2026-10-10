@@ -5,7 +5,9 @@ Runs after the ticket sync. For every ACTIVE show in Shopify:
   * every showtime is over        -> the product is archived
   * some showtimes are over       -> just those dates are removed
                                      (past orders are not affected)
-Then re-sorts the Comedy Tickets & Events collection by next show date.
+Then re-sorts the Comedy Tickets & Events collection by next show date, and
+saves each showtime's exact start (custom.show_start, e.g.
+"2026-11-20T20:00:00-06:00") so the theme can publish Google event listings.
 
 Left alone on purpose:
   * the Ticket Fee and Private Event Deposit products
@@ -88,7 +90,12 @@ query ActiveShows($cursor: String) {
   products(first: 50, after: $cursor, query: "status:active") {
     nodes {
       id title handle productType tags isGiftCard
-      variants(first: 100) { nodes { id title selectedOptions { name value } } }
+      variants(first: 100) {
+        nodes {
+          id title selectedOptions { name value }
+          metafield(namespace: "custom", key: "show_start") { value }
+        }
+      }
     }
     pageInfo { hasNextPage endCursor }
   }
@@ -176,6 +183,34 @@ def remove_variants(shop, product, variant_ids):
       }""", {"productId": product["id"], "variantsIds": variant_ids})["productVariantsBulkDelete"]
     if res["userErrors"]:
         raise RuntimeError(res["userErrors"])
+
+
+def start_time_updates(products, now):
+    """Showtimes whose saved start time is missing or out of date. Pure - easy to test."""
+    updates = []
+    for p in products:
+        if skip_reason(p):
+            continue
+        for v in p["variants"]["nodes"]:
+            start = parse_show_datetime(date_text(v), now=now, require_time=True)
+            if not start:
+                continue
+            value = start.isoformat()            # e.g. 2026-11-20T20:00:00-06:00
+            current = (v.get("metafield") or {}).get("value")
+            if current != value:
+                updates.append({"ownerId": v["id"], "namespace": "custom", "key": "show_start",
+                                "type": "single_line_text_field", "value": value})
+    return updates
+
+
+def save_start_times(shop, updates):
+    for i in range(0, len(updates), 25):
+        res = shop.gql("""
+          mutation SetStarts($metafields: [MetafieldsSetInput!]!) {
+            metafieldsSet(metafields: $metafields) { metafields { id } userErrors { field message } }
+          }""", {"metafields": updates[i:i + 25]})["metafieldsSet"]
+        if res["userErrors"]:
+            raise RuntimeError(res["userErrors"])
 
 
 COLLECTION_QUERY = """
@@ -276,6 +311,12 @@ def main():
 
     if not actions["archive"] and not actions["remove_dates"]:
         print("No past shows to clean up.")
+
+    updates = start_time_updates(fetch_active_products(shop) if not DRY_RUN else products, now)
+    if updates:
+        print(f"Saving exact start times for {len(updates)} showtime(s) (used for Google event listings).")
+        if not DRY_RUN:
+            save_start_times(shop, updates)
 
     sort_collection(shop, now)
     print("Done.")
