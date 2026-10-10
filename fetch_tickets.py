@@ -527,6 +527,10 @@ def fetch_shopify_tickets() -> list:
                     unique_id = f"shopify_{order_id}_{item_id}"
                     tickets_count = int(item.get("quantity", 1))
 
+                    # Ticket type is the part of the variant after the showtime:
+                    # "Thu, Oct 15 • 8:00 PM / VIP / Reserved Seating" -> "VIP / Reserved Seating"
+                    ticket_type = variant_title.split(" / ", 1)[1].strip() if " / " in variant_title else ""
+
                     shopify_tickets.append({
                         "unique_id": unique_id,
                         "show_date": formatted_date,
@@ -534,6 +538,7 @@ def fetch_shopify_tickets() -> list:
                         "guest_name": guest_name,
                         "email": email,
                         "tickets": tickets_count,
+                        "ticket_type": ticket_type or None,
                         "source": "Website",
                         "_sort_dt": show_dt
                     })
@@ -668,9 +673,23 @@ def sync_to_supabase(tickets: list):
     chunk_size = 300
     endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?on_conflict=unique_id"
 
+    # Supabase needs every row in a batch to have the same fields.
+    # Dojour rows have no ticket type, so give them an empty one.
+    for t in tickets:
+        t.setdefault("ticket_type", None)
+    include_ticket_type = True
+
     for i in range(0, len(tickets), chunk_size):
         chunk = tickets[i:i + chunk_size]
+        if not include_ticket_type:
+            chunk = [{k: v for k, v in t.items() if k != "ticket_type"} for t in chunk]
         resp = requests.post(endpoint, headers=headers, json=chunk, timeout=30)
+        if resp.status_code not in [200, 201] and include_ticket_type and "ticket_type" in resp.text:
+            # The ticket_type column hasn't been added in Supabase yet - sync without it.
+            print("Note: Supabase has no ticket_type column yet; syncing without ticket types (no VIP badges).")
+            include_ticket_type = False
+            chunk = [{k: v for k, v in t.items() if k != "ticket_type"} for t in chunk]
+            resp = requests.post(endpoint, headers=headers, json=chunk, timeout=30)
         if resp.status_code not in [200, 201]:
             print(f"Supabase upsert error ({resp.status_code}): {resp.text}")
             resp.raise_for_status()
