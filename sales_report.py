@@ -77,9 +77,10 @@ def dojour_sales():
             data = r.json()
             for item in (data.get("results", []) if isinstance(data, dict) else data):
                 opt = (item.get("option_set") or [{}])[0].get("title") or ""
-                title = opt or item.get("title") or ""
+                ev = item.get("event") if isinstance(item.get("event"), dict) else {}
+                title = ev.get("title") or item.get("event_title") or item.get("title") or opt or "?"
                 haystack = " ".join(str(x) for x in (opt, item.get("title"), item.get("event_title"),
-                                                      (item.get("event") or {}).get("title") if isinstance(item.get("event"), dict) else "")).lower()
+                                                      ev.get("title"))).lower()
                 iid = str(item.get("id") or item.get("event_instance_id") or "")
                 if iid:
                     seen[iid] = (str(item.get("start_dt") or ""), f"{item.get('title')} / {opt}")
@@ -87,11 +88,7 @@ def dojour_sales():
                     instances[iid] = (title, item.get("start_dt"))
             url = data.get("next") if isinstance(data, dict) else None
 
-    dates = sorted(d for d, _ in seen.values() if d)
-    annotate(f"Dojour: scanned {len(seen)} shows ({dates[0][:10] if dates else '?'} to {dates[-1][:10] if dates else '?'}), "
-             f"{len(instances)} match '{QUERY}'. Kahl-like titles: "
-             + "; ".join(sorted({t for _, t in seen.values() if Q.split()[-1] in t.lower()}))[:300]
-             + " | Oct 8-11 2026 shows: " + "; ".join(sorted(f"{d[:16]} {t}" for d, t in seen.values() if d[:10] in ("2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11")))[:600])
+    annotate(f"Dojour: searched {len(seen)} shows, {len(instances)} matched '{QUERY}'.")
     rows = {}
     for iid, (title, start) in instances.items():
         r = s.get(f"https://dojour.us/api/event_instances/{iid}/reserve_report/", timeout=30)
