@@ -67,7 +67,7 @@ def dojour_sales():
     s.cookies.set("usertoken", token, domain="dojour.us")
     s.headers.update({"Authorization": f"Token {token}", "Accept": "application/json", "User-Agent": "Mozilla/5.0"})
 
-    instances = {}
+    instances, seen = {}, {}
     for extra in ("", "&upcoming=false", "&past=true"):
         url = f"https://dojour.us/api/event_instances/reserve_reports/?page_size=100{extra}"
         while url:
@@ -80,10 +80,16 @@ def dojour_sales():
                 if item.get("option_set"):
                     title = item["option_set"][0].get("title") or title
                 iid = str(item.get("id") or item.get("event_instance_id") or "")
+                if iid:
+                    seen[iid] = (str(item.get("start_dt") or ""), title)
                 if iid and Q in title.lower():
                     instances[iid] = (title, item.get("start_dt"))
             url = data.get("next") if isinstance(data, dict) else None
 
+    dates = sorted(d for d, _ in seen.values() if d)
+    annotate(f"Dojour: scanned {len(seen)} shows ({dates[0][:10] if dates else '?'} to {dates[-1][:10] if dates else '?'}), "
+             f"{len(instances)} match '{QUERY}'. Kahl-like titles: "
+             + "; ".join(sorted({t for _, t in seen.values() if Q.split()[-1] in t.lower()}))[:300])
     rows = {}
     for iid, (title, start) in instances.items():
         r = s.get(f"https://dojour.us/api/event_instances/{iid}/reserve_report/", timeout=30)
