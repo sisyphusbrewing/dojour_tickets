@@ -1,0 +1,160 @@
+<!-- SISYPHUS BREWING CUSTOM FOOTER -->
+<footer class="sb-footer">
+  <div class="sb-footer-container">
+    <div class="sb-footer-grid">
+      
+      <!-- Column 1: Location & Social -->
+      <div class="sb-footer-col">
+        <h4 class="sb-footer-title">Location</h4>
+        <p class="sb-footer-text">
+          <strong>Sisyphus Brewing</strong><br>
+          712 Ontario Ave W<br>
+          Minneapolis, MN 55403
+        </p>
+        <div class="sb-social-links">
+          <a href="https://instagram.com/sisyphusbrewing" target="_blank" rel="noopener">Instagram</a>
+          <a href="https://facebook.com/sisyphusbrewing" target="_blank" rel="noopener">Facebook</a>
+        </div>
+      </div>
+
+      <!-- Column 2: Updated Hours -->
+      <div class="sb-footer-col">
+        <h4 class="sb-footer-title">Taproom Hours</h4>
+        <ul class="sb-footer-list">
+          <li><strong>Mon:</strong> Closed <em>(Available for Private Events)</em></li>
+          <li><strong>Tue - Wed:</strong> 4pm - 9pm</li>
+          <li><strong>Thu:</strong> 4pm - 11pm</li>
+          <li><strong>Fri - Sat:</strong> 1pm - 11pm</li>
+          <li><strong>Sun:</strong> 1pm - 6pm</li>
+        </ul>
+      </div>
+
+      <!-- Column 3: Updated Parking -->
+      <div class="sb-footer-col">
+        <h4 class="sb-footer-title">Parking</h4>
+        <ul class="sb-footer-list">
+          <li>Free street parking on Ontario &amp; Aldrich</li>
+          <li>Our back customer parking lot</li>
+          <li>Dunwoody Parking Lot on Aldrich</li>
+        </ul>
+      </div>
+
+      <!-- Column 4: Quick Links -->
+      <div class="sb-footer-col">
+        <h4 class="sb-footer-title">Quick Links</h4>
+        <ul class="sb-footer-list">
+          <li><a href="/collections/comedy-and-events">Comedy Tickets &amp; Events</a></li>
+          <li><a href="/pages/beer">Drink Menu</a></li>
+          <li><a href="/pages/taproom">Taproom FAQ</a></li>
+          <li><a href="/pages/rental">Private Rentals</a></li>
+          <li><a href="/pages/about-sisyphus-brewing">Our Story</a></li>
+          <li><a href="/pages/accessibility">Accessibility</a></li>
+        </ul>
+      </div>
+
+    </div>
+    
+    <div class="sb-footer-bottom">
+      <p>&copy; {{ 'now' | date: "%Y" }} Sisyphus Brewing. All Rights Reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .sb-footer {
+    background-color: #0b101b;
+    color: #94a3b8;
+    padding: 5rem 1.5rem 2rem 1.5rem;
+    border-top: 1px solid rgba(37, 99, 235, 0.2);
+    font-family: inherit;
+    line-height: 1.6;
+  }
+  .sb-footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .sb-footer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 3rem;
+    margin-bottom: 4rem;
+  }
+  .sb-footer-title {
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 1.25rem 0;
+  }
+  .sb-footer-text, .sb-footer-list {
+    margin: 0;
+    padding: 0;
+    font-size: 1.5rem;
+    list-style: none;
+  }
+  .sb-footer-list li {
+    margin-bottom: 0.75rem;
+  }
+  .sb-footer-list strong {
+    color: #cbd5e1;
+  }
+  .sb-footer-list em {
+    color: #60a5fa;
+    font-style: normal;
+    font-size: 1.35rem;
+    display: block;
+    margin-top: 0.15rem;
+  }
+  .sb-footer-list a {
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .sb-footer-list a:hover {
+    color: #60a5fa;
+  }
+  .sb-social-links {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+  .sb-social-links a {
+    color: #93c5fd;
+    font-size: 1.3rem;
+    font-weight: 800;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(37, 99, 235, 0.1);
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    transition: all 0.2s ease;
+  }
+  .sb-social-links a:hover {
+    background: #2563eb;
+    color: #ffffff;
+  }
+  .sb-footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 2rem;
+    text-align: center;
+    font-size: 1.3rem;
+    color: #94a3b8;
+  }
+  .sb-footer .sb-footer-bottom p {
+    color: #94a3b8 !important;
+    font-size: 1.3rem !important;
+  }
+  .sb-footer .sb-footer-title {
+    font-size: 1.5rem !important;
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Custom Footer",
+  "settings": []
+}
+{% endschema %}

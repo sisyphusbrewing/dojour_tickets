@@ -1,0 +1,56 @@
+{% comment %}
+  Ticket fees are now built into each ticket's price (see the custom.ticket_fee
+  product field and snippets/price.liquid). The old script that added a separate
+  "Ticket Fee" item to the cart was retired Oct 9, 2026; the previous version is
+  in the backup theme "Dawn".
+
+  This small script only removes a leftover "Ticket Fee" item from carts that
+  were started before the switch, so nobody is charged the fee twice.
+{% endcomment %}
+<script>
+  (function () {
+    var FEE_VARIANT_ID = 43940901224483;
+    fetch('/cart.js')
+      .then(function (r) { return r.json(); })
+      .then(function (cart) {
+        var hasFee = cart.items.some(function (i) { return Number(i.variant_id) === FEE_VARIANT_ID; });
+        if (!hasFee) return;
+        return fetch('/cart/change.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: String(FEE_VARIANT_ID), quantity: 0 })
+        }).then(function () {
+          if (window.location.pathname.indexOf('/cart') === 0) window.location.reload();
+        });
+      })
+      .catch(function () {});
+  })();
+</script>
+
+{%- comment -%}
+  Sisyphus accessibility fixes (Oct 10, 2026):
+  1. Visible keyboard focus. The theme's default focus ring is dark gray, which
+     is invisible on our near-black background (WCAG 2.4.7).
+  2. Names the quantity box for screen readers. Dawn hides the visible
+     "Quantity" text from them and points at a label that doesn't exist.
+{%- endcomment -%}
+<style>
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+  textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible,
+  .focus-inset:focus-visible, .field__input:focus-visible {
+    outline: 3px solid #38bdf8 !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
+</style>
+<script>
+  (function () {
+    function nameQuantityBoxes() {
+      document.querySelectorAll('input.quantity__input:not([aria-label])').forEach(function (input) {
+        input.setAttribute('aria-label', 'Quantity');
+      });
+    }
+    nameQuantityBoxes();
+    new MutationObserver(nameQuantityBoxes).observe(document.body, { childList: true, subtree: true });
+  })();
+</script>
