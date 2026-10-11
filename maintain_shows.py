@@ -285,7 +285,7 @@ def load_collection(shop):
             notes.append("scopes: " + ",".join(s["handle"] for s in r.json().get("access_scopes", [])))
     except Exception:
         pass
-    annotate("warning", f"Show listing NOT sorted - collection '{COLLECTION_HANDLE}' not found. " + "; ".join(notes))
+    annotate("notice", f"Collection order not changed (the website theme sorts shows by date itself) - collection '{COLLECTION_HANDLE}' not found. " + "; ".join(notes))
     return None, []
 
 
