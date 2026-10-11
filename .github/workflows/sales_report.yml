@@ -1,0 +1,26 @@
+name: Show sales report
+
+on:
+  workflow_dispatch:
+    inputs:
+      show:
+        description: "Performer or show name (e.g. Ryan Kahl)"
+        required: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Count tickets
+        env:
+          SHOW_QUERY: ${{ inputs.show }}
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+        run: python sales_report.py
