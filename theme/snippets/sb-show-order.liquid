@@ -1,0 +1,35 @@
+{%- comment -%}
+  Sisyphus: prints the handles of `products`, comma-separated, ordered by each
+  show's next upcoming date (read from the variant names, e.g. "Tue Oct 13 • 7:00 PM").
+  Shows with no upcoming date (classes already started, merch) go last.
+  Used so new shows land in the right spot without anyone re-sorting the collection.
+{%- endcomment -%}
+{%- liquid
+  assign sb_now = 'now' | date: '%s' | plus: 0
+  assign sb_grace = sb_now | minus: 43200
+  assign sb_floor = sb_now | minus: 5184000
+  assign sb_keys = ''
+  for sb_p in products
+    assign sb_best = 9999999999
+    for sb_v in sb_p.variants
+      assign sb_text = sb_v.title | split: ' / ' | first | replace: '•', ' ' | remove: ','
+      assign sb_ts = sb_text | date: '%s' | plus: 0
+      if sb_ts > 0
+        if sb_ts < sb_floor
+          assign sb_ts = sb_ts | plus: 31536000
+        endif
+        if sb_ts >= sb_grace and sb_ts < sb_best
+          assign sb_best = sb_ts
+        endif
+      endif
+    endfor
+    assign sb_keys = sb_keys | append: sb_best | append: '|' | append: sb_p.handle | append: ','
+  endfor
+  assign sb_sorted = sb_keys | split: ',' | sort
+  for sb_k in sb_sorted
+    echo sb_k | split: '|' | last
+    unless forloop.last
+      echo ','
+    endunless
+  endfor
+-%}
