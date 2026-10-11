@@ -213,16 +213,21 @@ def save_start_times(shop, updates):
             raise RuntimeError(res["userErrors"])
 
 
-COLLECTION_QUERY = """
-query Coll($handle: String!, $cursor: String) {
-  collectionByIdentifier(identifier: { handle: $handle }) {
+COLLECTION_ID = os.environ.get("SHOPIFY_COLLECTION_ID", "472787812387").strip()
+_COLL_FIELDS = """
     id sortOrder
     products(first: 250, after: $cursor) {
       nodes { id title variants(first: 100) { nodes { title } } }
       pageInfo { hasNextPage endCursor }
-    }
-  }
-}"""
+    }"""
+COLLECTION_BY_HANDLE = """
+query Coll($handle: String!, $cursor: String) {
+  collection: collectionByIdentifier(identifier: { handle: $handle }) {%s}
+}""" % _COLL_FIELDS
+COLLECTION_BY_ID = """
+query CollById($id: ID!, $cursor: String) {
+  collection(id: $id) {%s}
+}""" % _COLL_FIELDS
 
 
 def sort_key(product, now):
@@ -234,22 +239,65 @@ def sort_key(product, now):
     return (1, datetime.max.replace(tzinfo=CENTRAL_TZ), product["title"])
 
 
+def annotate(level, msg):
+    """Print a GitHub Actions annotation (shows on the run summary page)."""
+    print(f"::{level}::{msg}" if os.environ.get("GITHUB_ACTIONS") else f"[{level}] {msg}")
+
+
+def load_collection(shop):
+    """Find the show collection by handle, then by id. Returns (collection, products)."""
+    lookups = [("handle", COLLECTION_BY_HANDLE, {"handle": COLLECTION_HANDLE})]
+    if COLLECTION_ID:
+        lookups.append(("id", COLLECTION_BY_ID, {"id": f"gid://shopify/Collection/{COLLECTION_ID}"}))
+    notes = []
+    for how, query, base_vars in lookups:
+        products, cursor, coll = [], None, None
+        try:
+            while True:
+                coll = shop.gql(query, {**base_vars, "cursor": cursor})["collection"]
+                if not coll:
+                    break
+                products.extend(coll["products"]["nodes"])
+                if not coll["products"]["pageInfo"]["hasNextPage"]:
+                    break
+                cursor = coll["products"]["pageInfo"]["endCursor"]
+        except Exception as e:
+            notes.append(f"by {how}: error {str(e)[:200]}")
+            continue
+        if coll:
+            return coll, products
+        notes.append(f"by {how}: not visible")
+    # Extra clues for why the app can't see it.
+    try:
+        count = shop.gql("{ collectionsCount { count } }")["collectionsCount"]["count"]
+        notes.append(f"app sees {count} collection(s)")
+    except Exception as e:
+        notes.append(f"collectionsCount error {str(e)[:150]}")
+    try:
+        r = requests.get(f"https://{shop.store}/admin/api/{API_VERSION}/collections/{COLLECTION_ID}.json",
+                         headers=shop.headers, timeout=20)
+        notes.append(f"REST collection lookup HTTP {r.status_code}")
+    except Exception as e:
+        notes.append(f"REST error {e}")
+    try:
+        r = requests.get(f"https://{shop.store}/admin/oauth/access_scopes.json", headers=shop.headers, timeout=20)
+        if r.ok:
+            notes.append("scopes: " + ",".join(s["handle"] for s in r.json().get("access_scopes", [])))
+    except Exception:
+        pass
+    annotate("warning", f"Show listing NOT sorted - collection '{COLLECTION_HANDLE}' not found. " + "; ".join(notes))
+    return None, []
+
+
 def sort_collection(shop, now):
-    coll, products, cursor = None, [], None
-    while True:
-        coll = shop.gql(COLLECTION_QUERY, {"handle": COLLECTION_HANDLE, "cursor": cursor})["collectionByIdentifier"]
-        if not coll:
-            print(f"Collection '{COLLECTION_HANDLE}' not found - skipping sort.")
-            return
-        products.extend(coll["products"]["nodes"])
-        if not coll["products"]["pageInfo"]["hasNextPage"]:
-            break
-        cursor = coll["products"]["pageInfo"]["endCursor"]
+    coll, products = load_collection(shop)
+    if not coll:
+        return
 
     current = [p["id"] for p in products]
     target = [p["id"] for p in sorted(products, key=lambda p: sort_key(p, now))]
-    if current == target:
-        print("Show listing is already in date order.")
+    if current == target and coll["sortOrder"] == "MANUAL":
+        annotate("notice", f"Show listing already in date order ({len(products)} products).")
         return
 
     moves, working = [], list(current)
@@ -263,15 +311,21 @@ def sort_collection(shop, now):
     if DRY_RUN:
         return
     if coll["sortOrder"] != "MANUAL":
-        shop.gql("""mutation SetManual($input: CollectionInput!) {
+        res = shop.gql("""mutation SetManual($input: CollectionInput!) {
                       collectionUpdate(input: $input) { collection { id } userErrors { field message } } }""",
-                 {"input": {"id": coll["id"], "sortOrder": "MANUAL"}})
+                       {"input": {"id": coll["id"], "sortOrder": "MANUAL"}})["collectionUpdate"]
+        if res["userErrors"]:
+            annotate("warning", f"Couldn't switch collection to manual sort: {res['userErrors']}")
+    errors = []
     for i in range(0, len(moves), 250):
         res = shop.gql("""mutation Reorder($id: ID!, $moves: [MoveInput!]!) {
                             collectionReorderProducts(id: $id, moves: $moves) { job { id } userErrors { field message } } }""",
                        {"id": coll["id"], "moves": moves[i:i + 250]})["collectionReorderProducts"]
-        if res["userErrors"]:
-            print(f"Sort warning: {res['userErrors']}")
+        errors += res["userErrors"]
+    if errors:
+        annotate("warning", f"Sort errors: {errors}")
+    else:
+        annotate("notice", f"Show listing re-sorted by date ({len(moves)} move(s), {len(products)} products).")
 
 
 # ---------------------------------------------------------------------------
