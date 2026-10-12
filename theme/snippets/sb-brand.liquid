@@ -67,13 +67,14 @@
 
   /* Hero: Michael Che on stage. The full stage scene shows (no zoom); the tint is
      clear over the top of the photo where his face is and only darkens behind the
-     text at the bottom. On phones the crop is pulled to his side of the room. */
+     text at the bottom. On phones the crop is pulled to his side of the room. The wall paint in
+     assets/sb-hero-che.jpg is smoothed; the people and stage are untouched. */
   html body .sb-hero {
     min-height: 78vh !important;
     align-items: flex-end !important;
     padding: 6rem 1.5rem 4.5rem !important;
     background: linear-gradient(180deg, rgba(31, 29, 29, 0) 0%, rgba(31, 29, 29, 0.08) 45%, rgba(31, 29, 29, 0.9) 100%),
-      url('/cdn/shop/files/PXL_20260708_022746590.jpg?v=1789428949') 22% 30% / cover no-repeat !important;
+      url('{{ 'sb-hero-che.jpg' | asset_url }}') 22% 30% / cover no-repeat !important;
   }
   html body .sb-hero-overlay { background: none !important; }
   html body .sb-hero-inner { padding-top: 14rem; }
