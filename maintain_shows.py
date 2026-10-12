@@ -5,6 +5,8 @@ Runs after the ticket sync. For every ACTIVE show in Shopify:
   * every showtime is over        -> the product is archived
   * some showtimes are over       -> just those dates are removed
                                      (past orders are not affected)
+Recurring shows (tagged e.g. "recurring: 1st Wed 7:00 PM", see
+recurring_events.py) get their next dates added first, so they never run out.
 Then re-sorts the Comedy Tickets & Events collection by next show date, and
 saves each showtime's exact start (custom.show_start, e.g.
 "2026-11-20T20:00:00-06:00") so the theme can publish Google event listings.
@@ -26,6 +28,7 @@ from datetime import datetime, timedelta
 import requests
 
 from show_dates import parse_show_datetime, CENTRAL_TZ
+import recurring_events
 
 API_VERSION = "2025-07"
 COLLECTION_HANDLE = "comedy-and-events"
@@ -90,9 +93,10 @@ query ActiveShows($cursor: String) {
   products(first: 50, after: $cursor, query: "status:active") {
     nodes {
       id title handle productType tags isGiftCard
+      options { name }
       variants(first: 100) {
         nodes {
-          id title selectedOptions { name value }
+          id title price inventoryQuantity selectedOptions { name value }
           metafield(namespace: "custom", key: "show_start") { value }
         }
       }
@@ -155,7 +159,10 @@ def plan(products, now):
         past = [(v, d) for v, d in dated if d < cutoff]
         if not past:
             continue
-        if len(past) == len(variants):
+        if len(past) == len(variants) and recurring_events.has_recurring_tag(p.get("tags")):
+            # New dates couldn't be added (warned above); never archive a recurring show.
+            actions["unreadable"].append((p, ["no upcoming dates"]))
+        elif len(past) == len(variants):
             actions["archive"].append((p, max(d for _, d in dated)))
         else:
             actions["remove_dates"].append((p, past))
@@ -337,6 +344,20 @@ def main():
 
     shop = Shopify()
     products = fetch_active_products(shop)
+
+    additions, problems = recurring_events.plan_additions(products, now)
+    for p, reason in problems:
+        annotate("warning", f"Recurring show {p['title']}: {reason} - left alone")
+    if additions:
+        location_id = None if DRY_RUN else recurring_events.first_location_id(shop)
+        for p, option, price, capacity, dates in additions:
+            names = ", ".join(recurring_events.variant_name(d) for d in dates)
+            print(f"  + add date(s) to {p['title']}: {names}")
+            if not DRY_RUN:
+                recurring_events.add_dates(shop, location_id, p, option, price, capacity, dates)
+        if not DRY_RUN:
+            products = fetch_active_products(shop)
+
     actions = plan(products, now)
     print(f"Checked {len(products)} active products.")
 
