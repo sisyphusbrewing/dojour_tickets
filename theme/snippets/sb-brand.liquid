@@ -1,0 +1,400 @@
+{%- comment -%}
+  Sisyphus brand layer (Oct 12, 2026)
+  Brings the look of the Drink Menu page to the whole site:
+  - Colors from the official logo files: slate blue #4a6c86, charcoal #393636,
+    gray #918f90 and white, replacing the earlier navy and bright blue.
+  - Josefin Sans for headings, like the logo lettering.
+  - Section headings set as tilted slate-blue bands with thin white rules
+    above and below, echoing the band across the logo.
+  Rendered last in layout/theme.liquid so it wins over base.css, the inline
+  styles in the homepage and content pages, and the theme's custom CSS.
+  Font sizes from the Oct 12 readable-text fix (facility-fee.liquid) are kept.
+{%- endcomment -%}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&display=swap">
+<style>
+  :root {
+    --sb-bg: #262424;
+    --sb-deep: #1f1d1d;
+    --sb-panel: #312e2e;
+    --sb-panel-2: #393636;
+    --sb-line: #4a4646;
+    --sb-gray: #918f90;
+    --sb-slate: #4a6c86;
+    --sb-slate-hover: #567b97;
+    --sb-slate-edge: #6d8ea8;
+    --sb-slate-light: #a9c3d8;
+    --sb-slate-pale: #e4edf4;
+    --sb-text: #ffffff;
+    --sb-muted: #d9d6d6;
+    --sb-dim: #b5b1b1;
+    --sb-display: 'Josefin Sans', 'Century Gothic', 'Futura', sans-serif;
+    --sb-ring: var(--sb-bg);
+  }
+
+  /* ---------- Page surfaces ---------- */
+  html body,
+  html body .color-scheme-1,
+  html body .color-scheme-2,
+  html body .gradient,
+  html body header,
+  html body .header-wrapper,
+  html body .sb-wrap,
+  html body .sb-comedy,
+  html body .sb-cta-banner,
+  html body .sb-faq-wrap,
+  html body .sb-rental-wrap,
+  html body .sb-story-wrap,
+  html body .collection-hero,
+  html body .menu-drawer,
+  html body .menu-drawer__inner-container,
+  html body .menu-drawer__submenu {
+    background: var(--sb-bg) !important;
+  }
+  html body .sb-taproom { background: var(--sb-deep) !important; border-top-color: var(--sb-line) !important; }
+  html body .sb-comedy,
+  html body .sb-cta-banner { border-top: 1px solid var(--sb-line) !important; }
+  html body .header-wrapper { border-bottom: 3px solid var(--sb-slate) !important; }
+  html body .header-wrapper--border-bottom { border-bottom: 3px solid var(--sb-slate) !important; }
+  html body .footer,
+  html body .sb-footer { background: var(--sb-deep) !important; border-top: 3px solid var(--sb-slate) !important; }
+
+  /* Hero: warm the overlay from navy to charcoal */
+  html body .sb-hero {
+    background: linear-gradient(rgba(31, 29, 29, 0.72), rgba(31, 29, 29, 0.9)),
+      url('/cdn/shop/files/PXL_20260708_022746590.jpg?v=1789428949') center center / cover no-repeat !important;
+  }
+  html body .sb-hero-overlay { background: radial-gradient(circle at center, rgba(74, 108, 134, 0.22) 0%, transparent 70%) !important; }
+
+  /* ---------- Type ---------- */
+  html body h1, html body h2, html body h3, html body h4,
+  html body .h0, html body .h1, html body .h2, html body .h3,
+  html body .sb-tag, html body .sb-btn, html body .button,
+  html body .sb-artist-badge, html body .sb-event-badge,
+  html body .sb-date-overlay__text, html body .sb-footer-title,
+  html body a.sb-ticket-btn, html body .sb-mobile-cta-btn,
+  html body .header__menu-item, html body .menu-drawer__menu-item,
+  html body .card__heading, html body .product-form__submit {
+    font-family: var(--sb-display) !important;
+  }
+  html body .header__menu-item,
+  html body .menu-drawer__menu-item { text-transform: uppercase; letter-spacing: .08em !important; }
+  html body .card__heading { letter-spacing: .04em !important; text-transform: uppercase; line-height: 1.25 !important; }
+
+  html body .sb-hero-title,
+  html body .sb-faq-title,
+  html body .sb-rental-title,
+  html body .sb-story-title {
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+    line-height: 1.05 !important;
+    color: var(--sb-text) !important;
+  }
+  html body .sb-faq-title::after,
+  html body .sb-rental-title::after,
+  html body .sb-story-title::after {
+    content: ""; display: block; width: 96px; height: 4px; background: var(--sb-slate); margin: 1.6rem auto 0;
+  }
+  html body .sb-story-title::after { margin-left: 0; }
+  html body .sb-tag,
+  html body .sb-story-byline {
+    color: var(--sb-slate-light) !important;
+    letter-spacing: .22em !important;
+    font-weight: 700 !important;
+  }
+  html body .sb-story-byline { font-family: var(--sb-display) !important; }
+
+  /* Body copy colors (were cool blue-grays) */
+  html body p, html body li { color: var(--sb-muted); }
+  html body .sb-hero-desc { color: #f2f0f0 !important; }
+  html body .sb-section-head p,
+  html body .sb-split-content p,
+  html body .sb-cta-inner p,
+  html body .sb-faq-desc,
+  html body .sb-rental-desc,
+  html body .sb-faq-item p,
+  html body .sb-highlight-card p,
+  html body .sb-check-list li,
+  html body .sb-logistics-box p,
+  html body .sb-story-content p { color: var(--sb-muted) !important; }
+  html body .sb-feature-box p,
+  html body .sb-faq-footer-cta p,
+  html body .sb-rental-footer-cta p { color: var(--sb-dim) !important; }
+  html body .sb-story-content p.sb-lead,
+  html body .sb-story-content p.sb-closing { color: var(--sb-text) !important; }
+
+  /* ---------- The slanted band ---------- */
+  html body .sb-hero-subtitle,
+  html body .sb-section-head h2,
+  html body .sb-split-content h2,
+  html body .sb-cta-inner h2,
+  html body .featured-collection .title-wrapper-with-link .title,
+  html body .collection__title .title,
+  html body .collection-hero__title,
+  html body .main-page-title,
+  html body .page-width--narrow .rte h2,
+  html body .sb-faq-category h2,
+  html body .sb-detail-panel h2,
+  html body .sb-footer-title,
+  html body .sb-footer-col h4 {
+    display: inline-block;
+    background: var(--sb-slate) !important;
+    color: #ffffff !important;
+    font-family: var(--sb-display) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: .12em !important;
+    line-height: 1.15 !important;
+    padding: .55em .9em .38em !important;
+    border: 0 !important;
+    transform: rotate(-1.5deg);
+    box-shadow: 0 -4px 0 -1px var(--sb-ring), 0 -6px 0 -1px #fff, 0 4px 0 -1px var(--sb-ring), 0 6px 0 -1px #fff;
+    text-shadow: none !important;
+  }
+  /* Panels and the footer sit on a different gray, so the gap between band and rule matches it */
+  html body .sb-faq-category, html body .sb-detail-panel { --sb-ring: var(--sb-panel); }
+  html body .sb-taproom, html body .footer, html body .sb-footer { --sb-ring: var(--sb-deep); }
+  html body .sb-hero { --sb-ring: transparent; }
+
+  html body .sb-hero-subtitle { margin: .4rem 0 2.4rem !important; }
+  html body .sb-section-head h2,
+  html body .sb-split-content h2,
+  html body .sb-cta-inner h2 { margin-bottom: 2.4rem !important; }
+  html body .sb-split-content h2 { transform: rotate(-1.5deg); }
+  html body .featured-collection .title-wrapper-with-link { align-items: center; margin-bottom: 3.2rem; }
+  html body .featured-collection .title-wrapper-with-link .title { font-size: clamp(2.6rem, 3.6vw, 3.4rem) !important; margin: 0 !important; }
+  html body .collection-hero__title { font-size: clamp(3rem, 4.5vw, 4.4rem) !important; margin: 1rem 0 2rem !important; }
+  html body .collection-hero__description p { color: var(--sb-muted) !important; }
+  html body .main-page-title { font-size: clamp(3rem, 4.5vw, 4.2rem) !important; margin: 1.2rem 0 3.6rem !important; }
+  html body .page-width--narrow .rte h2 { font-size: 2.2rem !important; margin: 3.2rem 0 1.6rem !important; }
+  html body .page-width--narrow .rte h3 { font-family: var(--sb-display) !important; color: var(--sb-slate-light) !important; letter-spacing: .06em; text-transform: uppercase; font-size: 1.9rem; margin-top: 2.8rem; }
+  html body .sb-faq-category h2,
+  html body .sb-detail-panel h2 { display: block; font-size: clamp(2rem, 2.4vw, 2.4rem) !important; margin: 0 0 2.4rem !important; }
+  html body .sb-footer-title,
+  html body .sb-footer-col h4 { font-size: 1.4rem !important; letter-spacing: .14em !important; margin: 0 0 1.8rem !important; padding: .5em .8em .34em !important; }
+  @media screen and (max-width: 749px) {
+    html body .sb-section-head h2,
+    html body .sb-split-content h2,
+    html body .sb-cta-inner h2 { font-size: clamp(2.2rem, 6.4vw, 2.8rem) !important; letter-spacing: .08em !important; }
+    html body .collection-hero__title,
+    html body .main-page-title { font-size: clamp(2.4rem, 7vw, 3rem) !important; }
+  }
+
+  /* ---------- Buttons ---------- */
+  html body .sb-btn-blue,
+  html body .sb-btn-dark,
+  html body .sb-center-btn .sb-btn-dark,
+  html body .sb-taproom-btns .sb-btn-dark,
+  html body .button:not(.button--secondary):not(.button--tertiary):not(.link),
+  html body .product-form__submit,
+  html body button[name="add"],
+  html body .sb-footer-cta-link,
+  html body .sb-park .sb-btn:not(.sb-ghost) {
+    background: var(--sb-slate) !important;
+    border: 2px solid var(--sb-slate-edge) !important;
+    color: #fff !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    letter-spacing: .12em !important;
+  }
+  html body .sb-btn-blue:hover,
+  html body .sb-btn-dark:hover,
+  html body .button:not(.button--secondary):not(.button--tertiary):not(.link):hover,
+  html body .product-form__submit:hover,
+  html body button[name="add"]:hover,
+  html body .sb-footer-cta-link:hover,
+  html body .sb-park .sb-btn:not(.sb-ghost):hover { background: var(--sb-slate-hover) !important; border-color: var(--sb-slate-edge) !important; }
+  html body .sb-btn-outline,
+  html body .sb-btn-outline-dark,
+  html body .featured-collection .button,
+  html body .sb-park .sb-btn.sb-ghost {
+    background: transparent !important;
+    border: 2px solid #fff !important;
+    color: #fff !important;
+    border-radius: 2px !important;
+  }
+  html body .sb-btn-outline:hover,
+  html body .sb-btn-outline-dark:hover,
+  html body .featured-collection .button:hover,
+  html body .sb-park .sb-btn.sb-ghost:hover { background: rgba(255, 255, 255, .12) !important; color: #fff !important; }
+  html body .sb-btn { border-radius: 2px !important; }
+
+  /* Header ticket button and mobile menu button */
+  html body .header__inline-menu li:last-child .header__menu-item,
+  html body .header__menu-item[href*="buy-tickets"],
+  html body .header__menu-item.sb-ticket-btn,
+  html body a.sb-ticket-btn,
+  html body .menu-drawer__menu-item.sb-drawer-btn,
+  html body .sb-mobile-cta-btn {
+    background: var(--sb-slate) !important;
+    border: 2px solid var(--sb-slate-edge) !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    color: #fff !important;
+  }
+  html body .header__inline-menu li:last-child .header__menu-item:hover,
+  html body a.sb-ticket-btn:hover { background: var(--sb-slate-hover) !important; }
+
+  /* Links */
+  html body .sb-text-link,
+  html body .sb-feature-box .sb-text-link,
+  html body .sb-faq-item a,
+  html body .rte a,
+  html body .sb-footer-list a:hover,
+  html body .sb-footer-links a:hover { color: var(--sb-slate-light) !important; }
+  html body .sb-text-link:hover,
+  html body .sb-faq-item a:hover { color: #fff !important; }
+  html body .sb-footer-list a,
+  html body .sb-footer-links a,
+  html body .sb-footer-col p,
+  html body .sb-footer-text { color: var(--sb-dim) !important; }
+  html body .sb-footer-list em { color: var(--sb-slate-light) !important; }
+
+  /* ---------- Homepage blocks ---------- */
+  html body .sb-artist-banner {
+    background: var(--sb-panel) !important;
+    border: 3px solid var(--sb-gray) !important;
+    border-radius: 6px !important;
+    box-shadow: inset 0 0 0 5px var(--sb-panel), inset 0 0 0 6px rgba(145, 143, 144, .5) !important;
+  }
+  html body .sb-artist-badge { background: var(--sb-slate) !important; color: #fff !important; border-radius: 2px !important; letter-spacing: .16em !important; }
+  html body .sb-artist-banner-text { font-family: var(--sb-display) !important; letter-spacing: .06em !important; text-transform: uppercase; }
+  html body .sb-artist-banner-sub { color: var(--sb-slate-pale) !important; }
+  html body .sb-feature-box {
+    background: var(--sb-panel) !important;
+    border: 1px solid var(--sb-line) !important;
+    border-top: 4px solid var(--sb-slate) !important;
+    border-radius: 4px !important;
+  }
+  html body .sb-feature-box:hover { border-color: var(--sb-gray) !important; border-top-color: var(--sb-slate-hover) !important; }
+  html body .sb-feature-box h3 { color: #fff !important; text-transform: uppercase; letter-spacing: .06em; }
+  html body .sb-split-image img { border: 3px solid var(--sb-gray) !important; border-radius: 4px !important; }
+
+  /* ---------- Event cards and show pages ---------- */
+  html body .card-wrapper .card__inner { background-color: var(--sb-panel) !important; }
+  html body .sb-date-overlay {
+    background: rgba(31, 29, 29, 0.94) !important;
+    border: 2px solid var(--sb-slate) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .7) !important;
+    border-radius: 3px !important;
+  }
+  html body .sb-date-overlay__multi-badge { color: var(--sb-slate-light) !important; }
+  html body .sb-badge-overlay .sb-event-badge,
+  html body .sb-event-badge { background: var(--sb-slate) !important; color: #fff !important; border-radius: 2px !important; }
+  html body .sb-event-date { color: var(--sb-slate-light) !important; }
+  html body .card-information .price,
+  html body .card-information .price-item { color: var(--sb-muted) !important; }
+
+  html body .product__title h1,
+  html body .product__title .h1 { font-family: var(--sb-display) !important; font-weight: 700 !important; letter-spacing: .05em !important; text-transform: uppercase; line-height: 1.2 !important; }
+  html body .product__title { border-left: 6px solid var(--sb-slate); padding-left: 1.4rem !important; }
+  html body .product__text.subtitle,
+  html body .product__text { color: var(--sb-slate-light) !important; }
+  html body .product-form__input input[type='radio'] + label {
+    background: var(--sb-panel) !important;
+    border: 1px solid var(--sb-line) !important;
+    border-radius: 2px !important;
+    color: #fff !important;
+  }
+  html body .product-form__input input[type='radio']:checked + label {
+    background: var(--sb-slate) !important;
+    border-color: var(--sb-slate-light) !important;
+    color: #fff !important;
+  }
+  html body .quantity,
+  html body .field__input,
+  html body .select__select { background: var(--sb-panel) !important; border: 1px solid var(--sb-line) !important; border-radius: 2px !important; color: #fff !important; }
+  html body.sb-weekly-open-mic product-info .product__title::after {
+    background: var(--sb-panel) !important;
+    border: 2px solid var(--sb-slate) !important;
+    border-radius: 3px !important;
+    color: var(--sb-slate-pale) !important;
+  }
+
+  /* Event filters */
+  html body .facets__display,
+  html body .facets__header,
+  html body .mobile-facets__inner,
+  html body .mobile-facets__footer,
+  html body .mobile-facets__submenu { background: var(--sb-panel) !important; border-color: var(--sb-line) !important; }
+  html body .facets__display .field__input,
+  html body .mobile-facets__inner .field__input { background: var(--sb-bg) !important; }
+  html body .facet-checkbox > svg,
+  html body .facet-checkbox > .svg-wrapper,
+  html body .mobile-facets__label > svg { background-color: var(--sb-panel) !important; }
+
+  /* ---------- Content pages (Taproom FAQ, Private Rentals, Our Story) ---------- */
+  html body .sb-faq-category,
+  html body .sb-detail-panel,
+  html body .sb-highlight-card,
+  html body .sb-logistics-box,
+  html body .sb-faq-footer-cta,
+  html body .sb-rental-footer-cta {
+    background: var(--sb-panel) !important;
+    border: 1px solid var(--sb-line) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+  }
+  html body .sb-highlight-card { border-top: 4px solid var(--sb-slate) !important; }
+  html body .sb-faq-footer-cta,
+  html body .sb-rental-footer-cta { border: 3px solid var(--sb-gray) !important; }
+  html body .sb-faq-item h3 { color: var(--sb-slate-light) !important; font-family: var(--sb-display) !important; letter-spacing: .03em; }
+  html body .sb-highlight-card h3,
+  html body .sb-logistics-box h3,
+  html body .sb-faq-footer-cta h3,
+  html body .sb-rental-footer-cta h3 { color: #fff !important; text-transform: uppercase; letter-spacing: .05em; }
+  html body .sb-highlight-card strong,
+  html body .sb-alert-box strong { color: var(--sb-slate-light) !important; }
+  html body .sb-check-list li::before { color: var(--sb-slate-light) !important; }
+  html body .sb-check-list strong { color: #fff !important; }
+  html body .sb-alert-box {
+    background: var(--sb-panel) !important;
+    border: 2px solid var(--sb-slate) !important;
+    border-left-width: 8px !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    color: var(--sb-muted) !important;
+  }
+  html body .sb-story-content blockquote {
+    border-left: 4px solid var(--sb-slate) !important;
+    background: var(--sb-panel) !important;
+    border-radius: 0 4px 4px 0 !important;
+  }
+  html body .sb-story-content blockquote cite { color: var(--sb-slate-light) !important; font-family: var(--sb-display) !important; }
+  html body .sb-help-line { background: var(--sb-panel) !important; border-left: 4px solid var(--sb-slate-light) !important; }
+  html body .sb-help-line em { color: var(--sb-muted) !important; }
+  html body .sb-help-line strong { color: #fff !important; }
+  html body .sb-story-image img { border: 3px solid var(--sb-gray) !important; border-radius: 4px !important; }
+
+  /* Parking & Entrance: page colors to brand, map keeps its color key */
+  html body .sb-park {
+    --sb-bg: #262424; --sb-panel: #312e2e; --sb-line: #4a4646;
+    --sb-text: #ffffff; --sb-muted: #d9d6d6; --sb-accent: #4a6c86;
+  }
+  html body .sb-park .sb-btn.sb-ghost { color: #fff !important; }
+  html body .sb-park svg rect[fill="#0b1220"] { fill: #1f1d1d; }
+  html body .sb-park svg [fill="#141d2c"] { fill: #2c2a2a; stroke: #3d3a3a; }
+  html body .sb-park svg [fill="#1b2638"] { fill: #343131; stroke: #4a4646; }
+  html body .sb-park svg path[stroke="#1e293b"] { stroke: #403c3c; }
+  html body .sb-park svg path[stroke="#18202e"] { stroke: #383535; }
+  html body .sb-park svg [fill="#1e3a5f"] { fill: #4a6c86; stroke: #ffffff; }
+  html body .sb-park svg text[fill="#93c5fd"] { fill: #e4edf4; }
+
+  /* Focus ring: light slate reads clearly on charcoal */
+  html body a:focus-visible, html body button:focus-visible, html body input:focus-visible,
+  html body select:focus-visible, html body textarea:focus-visible, html body summary:focus-visible,
+  html body [tabindex]:focus-visible, html body .field__input:focus-visible {
+    outline: 3px solid var(--sb-slate-light) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Cart notification and drawers */
+  html body .cart-notification,
+  html body .menu-drawer { border-color: var(--sb-line) !important; }
+  html body .menu-drawer__menu-item { border-bottom-color: var(--sb-line) !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html body .sb-feature-box:hover { transform: none !important; }
+  }
+</style>

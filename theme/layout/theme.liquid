@@ -15,15 +15,22 @@
       <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
     {%- endunless -%}
 
+    {%- comment -%}
+      Sisyphus rebrand (Oct 12, 2026): the venue now goes by just "Sisyphus".
+      The Shopify store name is still "Sisyphus Brewing", so the theme swaps
+      the name in titles and descriptions instead of using shop.name.
+    {%- endcomment -%}
+    {%- assign sb_name = 'Sisyphus' -%}
+    {%- assign sb_page_title = page_title | replace: 'Sisyphus Brewing', sb_name -%}
     <title>
-      {{ page_title }}
+      {{ sb_page_title }}
       {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
       {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
-      {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+      {%- unless sb_page_title contains sb_name %} &ndash; {{ sb_name }}{% endunless -%}
     </title>
 
     {% if page_description %}
-      <meta name="description" content="{{ page_description | escape }}">
+      <meta name="description" content="{{ page_description | replace: 'Sisyphus Brewing', sb_name | escape }}">
     {% endif %}
 
     {% render 'meta-tags' %}
@@ -420,5 +427,6 @@
       <script src="{{ 'cart-drawer.js' | asset_url }}" defer="defer"></script>
     {%- endif -%}
     {% render 'facility-fee' %}
+    {% render 'sb-brand' %}
   </body>
 </html>
