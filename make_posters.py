@@ -162,6 +162,7 @@ def build_show(product, now):
         "recurring": recurring_label(product.get("tags")),
         "photo_mode": photo_mode,
         "handle": product["handle"],
+        "created_at": product.get("created_at"),
         "title": product["title"].strip(),
         "url": f"{SITE}/products/{product['handle']}",
         "first_show": min(times),
@@ -691,6 +692,7 @@ def main():
         for w in warnings:
             print(f"    warning: {w}")
         manifest.append({"handle": show["handle"], "title": show["title"], "url": show["url"],
+                         "created_at": show.get("created_at"),
                          "first_show": show["first_show"].isoformat(), "dates": show["dates"],
                          "prices": show["prices"], "image_url": show["image_url"],
                          "image_dpi": show.get("image_dpi"), "photo_mode": show["photo_mode"],

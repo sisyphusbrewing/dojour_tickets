@@ -16,6 +16,10 @@ on:
         description: 'Skip shows before this one (product handle); affects print-order.pdf too.'
         required: false
         type: string
+      email:
+        description: 'Email these posters (product handles, space-separated) to POSTER_EMAIL_TO.'
+        required: false
+        type: string
   workflow_run:
     workflows: ["Sync Ticket Sales", "Create Shopify Show Tickets"]
     types: [completed]
@@ -72,3 +76,16 @@ jobs:
             done
           fi
           gh release edit posters --notes-file posters/out/RELEASE_NOTES.md
+
+      # A show made with the Create Show button gets its poster emailed as soon as it exists.
+      - name: Email the new show's poster
+        if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.name == 'Create Shopify Show Tickets') || inputs.email != '' }}
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          POSTER_EMAIL_TO: ${{ vars.POSTER_EMAIL_TO }}
+          EMAIL: ${{ inputs.email }}
+        run: |
+          if [ -n "$EMAIL" ]; then python email_posters.py $EMAIL; else python email_posters.py --new; fi
