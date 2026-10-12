@@ -158,6 +158,7 @@ def build_show(product, now):
 
     image = (product.get("images") or [{}])[0]
     return {
+        "party": party_layout(product["title"], tags),
         "recurring": recurring_label(product.get("tags")),
         "photo_mode": photo_mode,
         "handle": product["handle"],
@@ -169,6 +170,22 @@ def build_show(product, now):
         "image_url": image.get("src"),
         "image_size": (image.get("width"), image.get("height")),
     }
+
+
+_PARTY = re.compile(r"^\s*((?:release|watch|viewing|listening|premiere)\s+party)\s*[:\-–—]\s*(.+)$",
+                    re.IGNORECASE)
+
+
+def party_layout(title, tags):
+    """For a watch party (tagged "Watch Party", or titled "Release Party: ..."): the event kind for
+    the band and the special's title for the headline, so the poster never reads as a live show."""
+    m = _PARTY.match(title)
+    if not m and "watch party" not in tags:
+        return None
+    kind = m.group(1).upper() if m else "WATCH PARTY"
+    rest = m.group(2) if m else title
+    parts = [p.strip() for p in re.split(r"\s*[:–—]\s*|\s+-\s+", rest, maxsplit=1) if p.strip()]
+    return {"kind": kind, "headline": [p.upper() for p in parts]}
 
 
 WEEKDAY_NAMES = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
@@ -378,6 +395,59 @@ def draw_band(c, bottom_y, lines, size, band_h, font="JosefinSans-Bold", angle=-
     c.restoreState()
 
 
+def texture_panel(url, width_pt, height_pt):
+    """The listing image blurred beyond recognition and sunk into the charcoal: a backdrop for a
+    typographic poster (watch parties), faded at the foot like the headshot panel."""
+    src = fetch_image(url)
+    w = int(round(width_pt / inch * DPI))
+    h = int(round(height_pt / inch * DPI))
+    img = cover(src, w, h, focus_y=0.5).filter(ImageFilter.GaussianBlur(w / 12))
+    img = Image.blend(Image.new("RGB", (w, h), CHARCOAL_RGB), img, 0.28)
+    img = fade_bottom(img, int(round(1.5 * inch / inch * DPI)))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=85, optimize=True)
+    buf.seek(0)
+    return ImageReader(buf)
+
+
+def draw_party_hero(c, bottom_y, party):
+    """Big type where the headshot would be: the special's title, framed as a screening."""
+    top = PAGE_H
+    label = "FREE WATCH PARTY  ·  TAPROOM BIG SCREEN"
+    lsize = fit_size(label, "JosefinSans-SemiBold", PAGE_W - 2 * MARGIN, 21, 14, 0.18)
+    draw_text(c, PAGE_W / 2, top - 1.15 * inch, label, "JosefinSans-SemiBold", lsize, LIGHT_SLATE,
+              lsize * 0.18, align="center")
+    lines = party["headline"]
+    max_w = PAGE_W - 2 * MARGIN
+    sizes = [fit_size(lines[0], "JosefinSans-Bold", max_w, 150, 60, 0.04)]
+    for line in lines[1:]:
+        sizes.append(fit_size(line, "JosefinSans-Bold", max_w, 104, 48, 0.04))
+    sub = "THE NEW SPECIAL, ON RELEASE NIGHT, WITH BEER BREWED RIGHT HERE"
+    ssize = fit_size(sub, "JosefinSans-SemiBold", PAGE_W - 2 * MARGIN, 20, 13, 0.14)
+    gap = 0.3 * inch
+    block = sum(s * CAP for s in sizes) + gap * len(sizes) + ssize * CAP
+    y = (top - 1.5 * inch + bottom_y + 0.3 * inch) / 2 + block / 2
+    for line, size in zip(lines, sizes):
+        y -= size * CAP
+        draw_text(c, PAGE_W / 2, y, line, "JosefinSans-Bold", size, WHITE, size * 0.04, align="center")
+        y -= gap
+    y -= ssize * CAP
+    draw_text(c, PAGE_W / 2, y, sub, "JosefinSans-SemiBold", ssize, GRAY, ssize * 0.14, align="center")
+
+
+def note_block(note, inner):
+    """A one-line note in gray above another block. Returns (height, draw)."""
+    inner_h, draw_inner = inner
+    note_h, gap = 18 * CAP, 0.42 * inch
+
+    def draw(c, top_y):
+        draw_text(c, PAGE_W / 2, top_y - note_h, note, "JosefinSans-SemiBold", 18, LIGHT_SLATE, 2.5,
+                  align="center")
+        draw_inner(c, top_y - note_h - gap)
+
+    return note_h + gap + inner_h, draw
+
+
 # --- the dates block: measured first, then drawn at a given top ---------------
 def _date_table(rows, size):
     """Column widths for an aligned day | · | time table at a font size."""
@@ -482,7 +552,8 @@ def draw_prices(c, cx, cy, prices):
     gap = 0.14 * inch
     total = label * CAP + gap + big * CAP + sum(gap + small * CAP for _ in others)
     y = cy + total / 2 - label * CAP
-    draw_text(c, cx, y, "TICKETS" if len(prices) == 1 else main_kind, "JosefinSans-SemiBold", label,
+    top_label = main_kind if len(prices) > 1 else ("ADMISSION" if main_text == "FREE" else "TICKETS")
+    draw_text(c, cx, y, top_label, "JosefinSans-SemiBold", label,
               GRAY, 2.5, align="center")
     y -= gap + big * CAP
     draw_text(c, cx, y, main_text, "JosefinSans-Bold", big, WHITE, 0, align="center")
@@ -504,8 +575,9 @@ def draw_footer(c, bottom_y, url, prices):
     c.drawImage(BADGE, badge_x, tile_y, badge_w, tile, mask="auto")
 
     line1, line2 = bottom_y + 0.24 * inch, bottom_y
-    draw_text(c, qr_x + tile / 2, line1, "SCAN FOR TICKETS", "JosefinSans-SemiBold", 14, WHITE, 2.5,
-              align="center")
+    free = len(prices) == 1 and prices[0][1] == "FREE"
+    draw_text(c, qr_x + tile / 2, line1, "SCAN TO RSVP" if free else "SCAN FOR TICKETS",
+              "JosefinSans-SemiBold", 14, WHITE, 2.5, align="center")
     draw_text(c, qr_x + tile / 2, line2, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY, 0.5,
               align="center")
     draw_text(c, badge_x + badge_w / 2, line1, TAGLINE, "JosefinSans-SemiBold", 14, WHITE, 2.5,
@@ -527,13 +599,17 @@ def render_poster(show, path):
     gap_footer = 0.55 * inch                     # footer -> dates
     gap_band = 0.58 * inch                       # dates -> band (the tilt adds up to 0.15 in at the edges)
 
+    party = show.get("party")
     if show["recurring"]:
         block_h, draw_block = recurring_block(show["recurring"], show["dates"])
     else:
         block_h, draw_block = dates_block(show["dates"])
+    if party:
+        block_h, draw_block = note_block("A SCREENING OF THE SPECIAL  ·  NOT A LIVE PERFORMANCE",
+                                         (block_h, draw_block))
     block_top = footer_top + gap_footer + block_h
     band_bottom = block_top + gap_band
-    band_lines, band_size, band_h = band_layout(show["title"])
+    band_lines, band_size, band_h = band_layout(party["kind"] if party else show["title"])
     photo_bottom = band_bottom + band_h - 0.55 * inch   # the band overlaps the faded photo foot
 
     c = canvas.Canvas(path, pagesize=(PAGE_W + 2 * BLEED, PAGE_H + 2 * BLEED))
@@ -553,7 +629,13 @@ def render_poster(show, path):
     warnings = []
     photo_w = PAGE_W + 2 * BLEED
     photo_h = PAGE_H + BLEED - photo_bottom
-    if show["image_url"]:
+    if party:
+        if show["image_url"]:
+            c.drawImage(texture_panel(show["image_url"], photo_w, photo_h), -BLEED, photo_bottom,
+                        photo_w, photo_h)
+        draw_party_hero(c, photo_bottom, party)
+        show["photo_mode"] = "texture"
+    elif show["image_url"]:
         img, src_size, eff_dpi, mode = headshot_panel(show["image_url"], photo_w, photo_h, show["photo_mode"])
         c.drawImage(img, -BLEED, photo_bottom, photo_w, photo_h)
         show["image_dpi"] = round(eff_dpi)
