@@ -39,6 +39,11 @@
     assign money_price = 'products.product.price.from_price_html' | t: price: money_price
   endif
 
+  # Sisyphus: the store's money format puts a space after the $ ("$ 26.00"); drop it here.
+  assign money_price = money_price | replace: '$ ', '$'
+  assign money_price_min = money_price_min | replace: '$ ', '$'
+  assign money_price_max = money_price_max | replace: '$ ', '$'
+
   # Sisyphus: ticket + fee breakdown for shows whose price includes the fee.
   # Product pages (price--large) show it on its own line under the price;
   # everywhere else it sits on the same line, e.g. "$26.00 USD ($23 ticket + $3 fee)".
@@ -102,7 +107,7 @@
           <span class="visually-hidden visually-hidden--inline">{{ 'products.product.price.regular_price' | t }}</span>
           <span class="price-item price-item--regular">
             {{ money_price }}
-            {%- if sb_fee_inline %} <span class="sb-fee-inline" style="white-space: nowrap; opacity: 0.75; font-weight: 400;">({{ sb_base_cents | money_without_trailing_zeros }} ticket + {{ sb_fee_cents | money_without_trailing_zeros }} fee)</span>{% endif -%}
+            {%- if sb_fee_inline %} <span class="sb-fee-inline" style="white-space: nowrap; opacity: 0.75; font-weight: 400;">({{ sb_base_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticket + {{ sb_fee_cents | money_without_trailing_zeros | replace: '$ ', '$' }} fee)</span>{% endif -%}
           </span>
         {%- endif -%}
       </div>
@@ -122,7 +127,7 @@
         <span class="visually-hidden visually-hidden--inline">{{ 'products.product.price.sale_price' | t }}</span>
         <span class="price-item price-item--sale price-item--last">
           {{ money_price }}
-          {%- if sb_fee_inline %} <span class="sb-fee-inline" style="white-space: nowrap; opacity: 0.75; font-weight: 400;">({{ sb_base_cents | money_without_trailing_zeros }} ticket + {{ sb_fee_cents | money_without_trailing_zeros }} fee)</span>{% endif -%}
+          {%- if sb_fee_inline %} <span class="sb-fee-inline" style="white-space: nowrap; opacity: 0.75; font-weight: 400;">({{ sb_base_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticket + {{ sb_fee_cents | money_without_trailing_zeros | replace: '$ ', '$' }} fee)</span>{% endif -%}
         </span>
       </div>
       {%- if product.selected_or_first_available_variant.unit_price_measurement -%}
@@ -131,7 +136,7 @@
     </div>
     {%- if sb_fee_cents and sb_base_cents > 0 and price_class contains 'price--large' -%}
       <p class="sb-fee-note" style="display: block; flex-basis: 100%; width: 100%; margin: 0.2rem 0 0; font-size: 0.8em; line-height: 1.35; opacity: 0.8; letter-spacing: 0;">
-        Includes {{ sb_base_cents | money_without_trailing_zeros }} ticket + {{ sb_fee_cents | money_without_trailing_zeros }} ticketing fee &middot; 100% of the fee goes to performers
+        Includes {{ sb_base_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticket + {{ sb_fee_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticketing fee &middot; 100% of the fee goes to performers
       </p>
     {%- endif -%}
     {%- comment -%} Sisyphus: low-ticket notice for the selected showtime (cards show theirs in the date box) {%- endcomment -%}
