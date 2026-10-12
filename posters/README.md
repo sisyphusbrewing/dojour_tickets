@@ -33,6 +33,16 @@ Each file has a stable link, e.g. `.../releases/download/posters/sam-jay.pdf`.
 Run the action by hand (Actions > Show posters > Run workflow) to regenerate
 now, optionally for just a few product handles.
 
+## Email
+
+When a show is created with the Create Show button, its poster is emailed
+(PDF attached) to the addresses in the repo variable `POSTER_EMAIL_TO`
+(comma-separated; Settings > Secrets and variables > Actions > Variables).
+With no variable set it goes to the sending mailbox (`FROM_EMAIL`). To email
+any poster by hand, run the Show posters action with handles in the "email"
+box. The mail goes out through the same Gmail SMTP secrets as the weekly
+agent reports (`email_posters.py`).
+
 ## Running it locally
 
     pip install requests pillow reportlab pypdf
