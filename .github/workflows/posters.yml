@@ -23,6 +23,8 @@ on:
   workflow_run:
     workflows: ["Sync Ticket Sales", "Create Shopify Show Tickets"]
     types: [completed]
+  schedule:
+    - cron: '0 14 * * 1'          # Mondays 9 AM Central: the weekly poster email
 
 permissions:
   contents: write
@@ -77,15 +79,15 @@ jobs:
           fi
           gh release edit posters --notes-file posters/out/RELEASE_NOTES.md
 
-      # A show made with the Create Show button gets its poster emailed as soon as it exists.
-      - name: Email the new show's poster
-        if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.name == 'Create Shopify Show Tickets') || inputs.email != '' }}
+      # Mondays: the week's new posters go to POSTER_EMAIL_TO (booking). The "email" box sends any poster by hand.
+      - name: Email posters
+        if: ${{ github.event_name == 'schedule' || inputs.email != '' }}
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-          POSTER_EMAIL_TO: ${{ vars.POSTER_EMAIL_TO }}
+          POSTER_EMAIL_TO: ${{ vars.POSTER_EMAIL_TO || 'booking@sisyphusbrewing.com' }}
           EMAIL: ${{ inputs.email }}
         run: |
-          if [ -n "$EMAIL" ]; then python email_posters.py $EMAIL; else python email_posters.py --new; fi
+          if [ -n "$EMAIL" ]; then python email_posters.py $EMAIL; else python email_posters.py --weekly; fi
