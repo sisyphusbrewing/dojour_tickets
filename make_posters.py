@@ -18,6 +18,10 @@ It reads the public collection feed, so it needs no Shopify credentials:
     python make_posters.py sam-jay ali-sultan  # only these product handles
     POSTER_BLEED=0 python make_posters.py      # plain 11 x 17, no bleed
     POSTER_OUT=/some/dir python make_posters.py
+    POSTER_FROM=sam-jay python make_posters.py  # skip shows before this one (date order)
+
+Every run also writes print-order.pdf: all the posters it made, in date order,
+in one file for a single upload to a print shop.
 
 Skipped on purpose: classes/workshops, and anything whose dates can't be
 read (same rules as maintain_shows.py).
@@ -578,6 +582,12 @@ def main():
     products = fetch_collection_products()
     shows = [s for s in (build_show(p, now) for p in products) if s]
     shows.sort(key=lambda s: s["first_show"])
+    start = os.environ.get("POSTER_FROM", "").strip().lower()
+    if start:
+        handles = [s["handle"] for s in shows]
+        if start not in handles:
+            sys.exit(f"POSTER_FROM={start!r} is not an upcoming show. Upcoming: {', '.join(handles)}")
+        shows = shows[handles.index(start):]
     if wanted:
         missing = wanted - {s["handle"] for s in shows}
         if missing:
@@ -605,12 +615,25 @@ def main():
                          "warnings": warnings,
                          "file": os.path.basename(path)})
 
+    if manifest:
+        from pypdf import PdfWriter
+        writer = PdfWriter()
+        for m in manifest:
+            writer.append(os.path.join(OUT_DIR, m["file"]))
+        writer.add_metadata({"/Title": "Sisyphus show posters - print order"})
+        with open(os.path.join(OUT_DIR, "print-order.pdf"), "wb") as f:
+            writer.write(f)
+        print(f"  print-order.pdf  {len(manifest)} posters in date order")
+
     with open(os.path.join(OUT_DIR, "manifest.json"), "w") as f:
         json.dump({"generated_at": now.isoformat(), "posters": manifest}, f, indent=2)
     with open(os.path.join(OUT_DIR, "RELEASE_NOTES.md"), "w") as f:
         f.write(f"Print-ready 11 x 17 in posters (1/8 in bleed) for every upcoming show, "
                 f"regenerated {now.strftime('%b %-d, %Y %-I:%M %p')} Central from sisyphusbrewing.com.\n\n")
         repo = os.environ.get("GITHUB_REPOSITORY")
+        if repo:
+            f.write(f"**[print-order.pdf](https://github.com/{repo}/releases/download/posters/print-order.pdf)** "
+                    f"has all {len(manifest)} posters in one file, in date order, for a single print upload.\n\n")
         for m in manifest:
             flag = "  ⚠️ low-res headshot" if m["warnings"] else ""
             name = f"[{m['title']}](https://github.com/{repo}/releases/download/posters/{m['file']})" \
