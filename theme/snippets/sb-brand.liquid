@@ -434,4 +434,38 @@
   @media (prefers-reduced-motion: reduce) {
     html body .sb-feature-box:hover { transform: none !important; }
   }
+
+  /* ---------- One size scale for page titles and subheads ---------- */
+  html body .collection-hero__title,
+  html body .main-page-title,
+  html body .sb-faq-title,
+  html body .sb-rental-title,
+  html body .sb-story-title { font-size: 4.4rem !important; line-height: 1.1 !important; }
+  html body .product__title h1,
+  html body .product__title .h1 { font-size: 3.4rem !important; }
+  html body .sb-faq-category h2,
+  html body .sb-detail-panel h2,
+  html body .page-width--narrow .rte h2 { font-size: 2.4rem !important; }
+  @media screen and (max-width: 749px) {
+    html body .collection-hero__title,
+    html body .main-page-title,
+    html body .sb-faq-title,
+    html body .sb-rental-title,
+    html body .sb-story-title { font-size: 3rem !important; }
+    html body .product__title h1,
+    html body .product__title .h1 { font-size: 2.4rem !important; }
+    html body .sb-faq-category h2,
+    html body .sb-detail-panel h2,
+    html body .page-width--narrow .rte h2 { font-size: 2rem !important; }
+  }
+
+  /* Show descriptions pasted from documents carry inline black text; use the page color */
+  html body .product__description [style*="color"],
+  html body .rte [style*="color"] { color: inherit !important; }
+
+  /* Phone header: on every page but the homepage an empty search slot sits in the
+     logo's row and pushed the logo right; it has no button on phones, so drop it */
+  @media screen and (max-width: 989px) {
+    html body .header > .header__search { display: none !important; }
+  }
 </style>
