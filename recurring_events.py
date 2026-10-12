@@ -9,6 +9,9 @@ the next dates for it, so it never runs out and is never archived:
     recurring: last Fri 8:00 PM     (last Friday)
     recurring: every Thu 8:00 PM    (weekly)
 
+To skip one date (a holiday, or another show in the room), also tag it
+"skip: Oct 22"; that date is never added.
+
 Monthly events keep the next MONTHLY_AHEAD dates listed, weekly events the
 next WEEKLY_AHEAD. New dates copy the price of the show's existing dates and
 the largest capacity among them (default 100). Only shows with a single
@@ -45,6 +48,17 @@ def parse_rule(tags):
             return (ORDINALS[m.group(1).lower()], WEEKDAYS[m.group(2).lower()[:3]],
                     hour, int(m.group(4) or 0))
     return None
+
+
+def skip_days(tags, now):
+    """Dates from "skip: Oct 22" tags."""
+    days = set()
+    for tag in tags or []:
+        if tag.strip().lower().startswith("skip:"):
+            d = parse_show_datetime(tag.split(":", 1)[1], now=now)
+            if d:
+                days.add(d.date())
+    return days
 
 
 def has_recurring_tag(tags):
@@ -111,7 +125,8 @@ def plan_additions(products, now):
 
         variants = p["variants"]["nodes"]
         have = {parse_show_datetime(v["title"], now=now, require_time=True) for v in variants}
-        missing = [d for d in upcoming_dates(rule, now) if d not in have]
+        skipped = skip_days(tags, now)
+        missing = [d for d in upcoming_dates(rule, now) if d not in have and d.date() not in skipped]
         if not missing:
             continue
         prices = [v.get("price") for v in variants if v.get("price") is not None]
