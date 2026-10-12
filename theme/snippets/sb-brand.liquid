@@ -65,39 +65,28 @@
   html body .footer,
   html body .sb-footer { background: var(--sb-deep) !important; border-top: 3px solid var(--sb-slate) !important; }
 
-  /* Hero: Michael Che on stage. The photo stays visible: a light tint on top,
-     dark only behind the text at the bottom, and the picture framed so he is in
-     view on desktop (upper left) and on phones (the crop is pulled to his side). */
+  /* Hero: Michael Che on stage. The photo is zoomed in on him (upper left of the
+     original) so his face reads at desktop and phone widths; the tint stays light
+     at the top and only darkens behind the text at the bottom. */
   html body .sb-hero {
     min-height: 78vh !important;
     align-items: flex-end !important;
     padding: 6rem 1.5rem 4.5rem !important;
-    background: linear-gradient(180deg, rgba(31, 29, 29, 0.18) 0%, rgba(31, 29, 29, 0.35) 40%, rgba(31, 29, 29, 0.92) 100%),
-      url('/cdn/shop/files/PXL_20260708_022746590.jpg?v=1789428949') 30% 20% / cover no-repeat !important;
+    background: linear-gradient(180deg, rgba(31, 29, 29, 0.12) 0%, rgba(31, 29, 29, 0.2) 45%, rgba(31, 29, 29, 0.92) 100%),
+      url('/cdn/shop/files/PXL_20260708_022746590.jpg?v=1789428949') 23.5% 47% / auto 160% no-repeat !important;
   }
   html body .sb-hero-overlay { background: none !important; }
-  html body .sb-hero-inner { padding-top: 10rem; }
+  html body .sb-hero-inner { padding-top: 12rem; }
   html body .sb-hero-title { text-shadow: 0 3px 16px rgba(0, 0, 0, .95), 0 0 40px rgba(0, 0, 0, .7) !important; }
   html body .sb-hero-desc { text-shadow: 0 2px 10px rgba(0, 0, 0, .95) !important; }
-  html body .sb-hero-inner::after {
-    content: "Michael Che on stage at Sisyphus";
-    display: block;
-    margin-top: 2.4rem;
-    font-family: var(--sb-display);
-    font-size: 1.2rem;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: var(--sb-slate-light);
-    text-shadow: 0 2px 8px rgba(0, 0, 0, .9);
-  }
   @media screen and (max-width: 749px) {
     html body .sb-hero {
       min-height: 92vh !important;
-      background-position: 26% 18% !important;
-      background-size: auto 100% !important;
+      background-position: 31% 40% !important;
+      background-size: auto 190% !important;
       padding: 4rem 1.25rem 3.5rem !important;
     }
-    html body .sb-hero-inner { padding-top: 24rem; }
+    html body .sb-hero-inner { padding-top: 32rem; }
   }
 
   /* ---------- Type ---------- */
