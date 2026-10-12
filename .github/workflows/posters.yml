@@ -1,0 +1,69 @@
+name: Show posters
+
+# Makes a print-ready 11 x 17 in poster for every upcoming show (make_posters.py)
+# and keeps them on the repo's "posters" release, so each show has a stable link:
+#   https://github.com/<owner>/<repo>/releases/tag/posters
+# Runs after the daily sync and after a show is created, or on demand.
+
+on:
+  workflow_dispatch:
+    inputs:
+      handles:
+        description: 'Only these shows (product handles, space-separated). Blank = every upcoming show.'
+        required: false
+        type: string
+  workflow_run:
+    workflows: ["Sync Ticket Sales", "Create Shopify Show Tickets"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: show-posters
+  cancel-in-progress: false
+
+jobs:
+  posters:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pillow reportlab
+
+      - name: Make posters
+        env:
+          HANDLES: ${{ inputs.handles }}
+        run: python make_posters.py $HANDLES
+
+      - name: Attach posters to this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: show-posters
+          path: posters/out/*.pdf
+          retention-days: 30
+
+      - name: Publish to the "posters" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ONLY: ${{ inputs.handles }}
+        run: |
+          if ! gh release view posters >/dev/null 2>&1; then
+            gh release create posters --title "Show posters" --notes "Print-ready 11 x 17 in show posters." --latest=false
+          fi
+          gh release upload posters posters/out/*.pdf --clobber
+          if [ -z "$ONLY" ]; then
+            # A full run replaces the whole set: drop posters for shows that are no longer listed.
+            for asset in $(gh release view posters --json assets -q '.assets[].name'); do
+              [ -f "posters/out/$asset" ] || gh release delete-asset posters "$asset" -y
+            done
+          fi
+          gh release edit posters --notes-file posters/out/RELEASE_NOTES.md
