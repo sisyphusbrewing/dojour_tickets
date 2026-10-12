@@ -328,17 +328,23 @@ def split_title(title):
     return [" ".join(words[:mid]), " ".join(words[mid:])]
 
 
+CAP = 0.702                                   # Josefin Sans cap height (share of the font size)
+MARGIN = 0.75 * inch
+DATE_FONT = "JosefinSans-SemiBold"
+DATE_SPACING = 0.04                           # letter spacing, share of the font size
+
+
 def band_layout(title, font="JosefinSans-Bold"):
     """(lines, font size, band height) for a show name: one big line, or two when it is long."""
-    max_w = PAGE_W - 1.3 * inch
+    max_w = PAGE_W - 2 * MARGIN
     lines = [title.upper()]
     size = fit_size(lines[0], font, max_w, 120, 60, 0.06)
     if text_width(lines[0], font, size, size * 0.06) > max_w:
         lines = [l.upper() for l in split_title(title)]
         size = min(fit_size(line, font, max_w, 84, 28, 0.06) for line in lines)
-    line_h = size * 1.08
-    pad = size * 0.42
-    band_h = pad * 2 + line_h * len(lines) - size * 0.18
+    line_gap = size * 0.32                     # space between the two lines' caps
+    pad = size * 0.38                          # band padding above and below the caps
+    band_h = 2 * pad + size * CAP * len(lines) + line_gap * (len(lines) - 1)
     return lines, size, band_h
 
 
@@ -346,8 +352,8 @@ def draw_band(c, bottom_y, lines, size, band_h, font="JosefinSans-Bold", angle=-
     """The tilted slate band from the logo, with the show name in it. Its bottom edge sits at
     bottom_y (at the page centre); a long name wraps to two lines and the band grows upward."""
     spacing = size * 0.06
-    line_h = size * 1.08
-    pad = size * 0.42
+    line_gap = size * 0.32
+    pad = size * 0.38
     half = PAGE_W / 2 + 1.6 * inch               # long enough to cover the page when tilted
 
     c.saveState()
@@ -361,75 +367,95 @@ def draw_band(c, bottom_y, lines, size, band_h, font="JosefinSans-Bold", angle=-
     for sign in (1, -1):
         y = sign * (band_h / 2 + gap)
         c.line(-half, y, half, y)
-    # Josefin Sans caps sit high: nudge so the caps are centred in the band.
-    cap = size * 0.70
-    y = band_h / 2 - pad - cap
+    y = band_h / 2 - pad - size * CAP            # baseline of the first line: caps centred exactly
     for line in lines:
         draw_text(c, 0, y, line, font, size, WHITE, spacing, align="center")
-        y -= line_h
+        y -= size * CAP + line_gap
     c.restoreState()
 
 
-def draw_recurring(c, top_y, bottom_y, label, dates):
-    """"EVERY THURSDAY · 8:00 PM" with the next few dates under it, centred in the block."""
-    headline, when = label
-    size = fit_size(headline, "JosefinSans-Bold", PAGE_W - 1.5 * inch, 54, 30, 0.08)
-    block_h = size * 0.7 + size * 1.25 + size * 1.15 + 17
-    y = (top_y + bottom_y) / 2 + block_h / 2 - size * 0.7
-    draw_text(c, PAGE_W / 2, y, headline, "JosefinSans-Bold", size, WHITE, size * 0.08, align="center")
-    y -= size * 1.25
-    draw_text(c, PAGE_W / 2, y, when, "JosefinSans-SemiBold", size * 0.8, LIGHT_SLATE, size * 0.08,
-              align="center")
-    y -= size * 1.15
-    nxt = "  ·  ".join(d.split(" ", 1)[1] for d, _ in dates[:5])
-    draw_text(c, PAGE_W / 2, y, f"NEXT UP:  {nxt}", "JosefinSans-SemiBold", 17, GRAY, 2, align="center")
+# --- the dates block: measured first, then drawn at a given top ---------------
+def _date_table(rows, size):
+    """Column widths for an aligned day | · | time table at a font size."""
+    sp = size * DATE_SPACING
+    day_w = max(text_width(d, DATE_FONT, size, sp) for d, _ in rows)
+    time_w = max(text_width(t, DATE_FONT, size, sp) for _, t in rows)
+    dot_w = size * 0.9
+    return day_w, dot_w, time_w, day_w + dot_w + time_w
 
 
-def dates_layout(shown, avail):
-    """(columns, rows, font size): one or two columns, whichever lets the dates print biggest."""
-    best = None
-    for cols in (1, 2):
-        rows = -(-len(shown) // cols)
-        col_w = (PAGE_W - 1.5 * inch) / cols - 0.3 * inch
-        size = 48
-        while size > 16:
-            widest = max(text_width(f"{d}  ·  {t}", "JosefinSans-SemiBold", size, size * 0.08)
-                         for d, t in shown)
-            if widest <= col_w and rows * size * 1.45 <= avail:
-                break
-            size -= 1
-        if best is None or size > best[2]:
-            best = (cols, rows, size)
-    return best
+def dates_block(dates):
+    """Returns (height, draw(c, top_y)) for the list of (day, times) lines.
 
-
-def draw_dates(c, top_y, bottom_y, dates):
-    """Date lines, biggest size that fits, in one or two columns."""
+    One aligned column, or two side by side when that lets the dates print bigger.
+    More than six dates: the first six and a "+ N more dates" line. Days are white,
+    times light slate, and the day and time columns line up so the eye runs straight down.
+    """
     shown = dates[:MAX_DATES]
     extra = len(dates) - len(shown)
-    avail = top_y - bottom_y - (0.5 * inch if extra else 0)
-    cols, rows, size = dates_layout(shown, avail)
-    col_w = (PAGE_W - 1.5 * inch) / cols
-    row_h = size * 1.45
-    block_h = rows * row_h
-    y = top_y - (avail - block_h) / 2 - size * 0.72
-    for i, (day, times) in enumerate(shown):
-        col, row = divmod(i, rows) if cols == 2 else (0, i)
-        cx = 0.75 * inch + col_w * (col + 0.5)
-        yy = y - row * row_h
-        day_w = text_width(day, "JosefinSans-SemiBold", size, size * 0.08)
-        dot_w = text_width("  ·  ", "JosefinSans-SemiBold", size, size * 0.08)
-        time_w = text_width(times, "JosefinSans-SemiBold", size, size * 0.08)
-        x = cx - (day_w + dot_w + time_w) / 2
-        draw_text(c, x, yy, day, "JosefinSans-SemiBold", size, WHITE, size * 0.08)
-        draw_text(c, x + day_w, yy, "  ·  ", "JosefinSans-SemiBold", size, GRAY, size * 0.08)
-        draw_text(c, x + day_w + dot_w, yy, times, "JosefinSans-SemiBold", size, LIGHT_SLATE, size * 0.08)
-    if extra:
-        draw_text(c, PAGE_W / 2, y - rows * row_h + size * 0.2,
-                  f"+ {extra} MORE DATES AT SISYPHUSBREWING.COM", "JosefinSans-SemiBold", 18, GRAY, 2,
+    col_gap = 0.6 * inch
+    best = None
+    for cols in (1, 2):
+        if cols == 2 and len(shown) < 4:
+            continue
+        rows = -(-len(shown) // cols)
+        columns = [shown[i * rows:(i + 1) * rows] for i in range(cols)]
+        size = {1: 46, 2: 42, 3: 42, 4: 40}.get(rows, 34)
+        while size > 18:
+            total = sum(_date_table(col, size)[3] for col in columns) + col_gap * (cols - 1)
+            if total <= PAGE_W - 2 * MARGIN:
+                break
+            size -= 1
+        if best is None or size > best[0] + 2:
+            best = (size, cols, rows, columns)
+    size, cols, rows, columns = best
+    row_h = size * 1.42
+    extra_h = 0.42 * inch if extra else 0
+    height = size * CAP + row_h * (rows - 1) + extra_h
+
+    def draw(c, top_y):
+        sp = size * DATE_SPACING
+        widths = [_date_table(col, size) for col in columns]
+        total = sum(w[3] for w in widths) + col_gap * (cols - 1)
+        x = (PAGE_W - total) / 2
+        for col, (day_w, dot_w, time_w, _) in zip(columns, widths):
+            y = top_y - size * CAP
+            for day, times in col:
+                draw_text(c, x + day_w, y, day, DATE_FONT, size, WHITE, sp, align="right")
+                draw_text(c, x + day_w + dot_w / 2, y, "·", DATE_FONT, size, GRAY, 0, align="center")
+                draw_text(c, x + day_w + dot_w, y, times, DATE_FONT, size, LIGHT_SLATE, sp)
+                y -= row_h
+            x += day_w + dot_w + time_w + col_gap
+        if extra:
+            y = top_y - height + 0.02 * inch
+            draw_text(c, PAGE_W / 2, y, f"+ {extra} MORE DATES AT SISYPHUSBREWING.COM",
+                      "JosefinSans-SemiBold", 17, GRAY, 2, align="center")
+
+    return height, draw
+
+
+def recurring_block(label, dates):
+    """Returns (height, draw) for "EVERY THURSDAY / 8:00 PM / next up: ..."."""
+    headline, when = label
+    size = fit_size(headline, "JosefinSans-Bold", PAGE_W - 2 * MARGIN, 52, 30, 0.08)
+    when_size = size * 0.78
+    gap1, gap2 = size * 0.42, size * 0.62
+    height = size * CAP + gap1 + when_size * CAP + gap2 + 17 * CAP
+
+    def draw(c, top_y):
+        y = top_y - size * CAP
+        draw_text(c, PAGE_W / 2, y, headline, "JosefinSans-Bold", size, WHITE, size * 0.08, align="center")
+        y -= gap1 + when_size * CAP
+        draw_text(c, PAGE_W / 2, y, when, "JosefinSans-SemiBold", when_size, LIGHT_SLATE, size * 0.08,
                   align="center")
+        y -= gap2 + 17 * CAP
+        nxt = "  ·  ".join(d.split(" ", 1)[1] for d, _ in dates[:5])
+        draw_text(c, PAGE_W / 2, y, f"NEXT UP:  {nxt}", "JosefinSans-SemiBold", 17, GRAY, 2, align="center")
+
+    return height, draw
 
 
+# --- the footer ----------------------------------------------------------------
 def draw_qr(c, x, y, size, url):
     """White tile with the QR code (dark modules so phones read it off the charcoal)."""
     pad = size * 0.08
@@ -443,33 +469,68 @@ def draw_qr(c, x, y, size, url):
     renderPDF.draw(d, c, x + pad, y + pad)
 
 
-def draw_prices(c, cx, top_y, bottom_y, prices):
-    """Price block centred between the QR code and the badge."""
-    gap = 0.12 * inch
+def draw_prices(c, cx, cy, prices):
+    """Price block, centred on cy (the middle of the QR tile)."""
     main_kind, main_text = prices[0]
     others = prices[1:]
-    big = 78 if len(main_text) <= 4 else 60
-    label_h, big_h, other_h = 16, big * 0.72, 17
-    total = label_h + gap + big_h + sum(other_h + gap for _ in others)
-    y = (top_y + bottom_y) / 2 + total / 2
-    draw_text(c, cx, y - label_h, "TICKETS" if len(prices) == 1 else main_kind, "JosefinSans-SemiBold", 16,
+    big = 80 if len(main_text) <= 4 else 62
+    label, small = 15, 16
+    gap = 0.14 * inch
+    total = label * CAP + gap + big * CAP + sum(gap + small * CAP for _ in others)
+    y = cy + total / 2 - label * CAP
+    draw_text(c, cx, y, "TICKETS" if len(prices) == 1 else main_kind, "JosefinSans-SemiBold", label,
               GRAY, 2.5, align="center")
-    y -= label_h + gap + big_h
+    y -= gap + big * CAP
     draw_text(c, cx, y, main_text, "JosefinSans-Bold", big, WHITE, 0, align="center")
     for kind, text in others:
-        y -= other_h + gap
-        draw_text(c, cx, y, f"{kind}  {text}", "JosefinSans-SemiBold", 17, LIGHT_SLATE, 1.5, align="center")
+        y -= gap + small * CAP
+        draw_text(c, cx, y, f"{kind}  {text}", "JosefinSans-SemiBold", small, LIGHT_SLATE, 1.5,
+                  align="center")
+
+
+def draw_footer(c, bottom_y, url, prices):
+    """QR tile (left), price (middle), badge (right), captions on shared baselines. Returns its top."""
+    tile = 2.0 * inch
+    caption_h = 0.5 * inch
+    tile_y = bottom_y + caption_h
+    qr_x = MARGIN
+    draw_qr(c, qr_x, tile_y, tile, url)
+    badge_w = tile * (920 / 875)
+    badge_x = PAGE_W - MARGIN - badge_w
+    c.drawImage(BADGE, badge_x, tile_y, badge_w, tile, mask="auto")
+
+    line1, line2 = bottom_y + 0.24 * inch, bottom_y
+    draw_text(c, qr_x + tile / 2, line1, "SCAN FOR TICKETS", "JosefinSans-SemiBold", 14, WHITE, 2.5,
+              align="center")
+    draw_text(c, qr_x + tile / 2, line2, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY, 0.5,
+              align="center")
+    draw_text(c, badge_x + badge_w / 2, line1, TAGLINE, "JosefinSans-SemiBold", 14, WHITE, 2.5,
+              align="center")
+    draw_text(c, badge_x + badge_w / 2, line2, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1,
+              align="center")
+
+    draw_prices(c, (qr_x + tile + badge_x) / 2, tile_y + tile / 2, prices)
+    return tile_y + tile
 
 
 # ---------------------------------------------------------------------------
 # The poster
 # ---------------------------------------------------------------------------
 def render_poster(show, path):
-    band_bottom = 6.1 * inch                     # the tilt swings ±0.15 in at the page edges
+    """Layout runs from the bottom up: footer, dates, name band, and the photo fills the rest."""
+    footer_bottom = 0.6 * inch
+    footer_top = footer_bottom + 0.5 * inch + 2.0 * inch
+    gap_footer = 0.55 * inch                     # footer -> dates
+    gap_band = 0.58 * inch                       # dates -> band (the tilt adds up to 0.15 in at the edges)
+
+    if show["recurring"]:
+        block_h, draw_block = recurring_block(show["recurring"], show["dates"])
+    else:
+        block_h, draw_block = dates_block(show["dates"])
+    block_top = footer_top + gap_footer + block_h
+    band_bottom = block_top + gap_band
     band_lines, band_size, band_h = band_layout(show["title"])
     photo_bottom = band_bottom + band_h - 0.55 * inch   # the band overlaps the faded photo foot
-    dates_top, dates_bottom = 5.75 * inch, 3.25 * inch
-    footer_top, footer_bottom = 2.95 * inch, 0.6 * inch
 
     c = canvas.Canvas(path, pagesize=(PAGE_W + 2 * BLEED, PAGE_H + 2 * BLEED))
     c.setTitle(f"{show['title']} at Sisyphus")
@@ -484,7 +545,7 @@ def render_poster(show, path):
     c.setFillColor(CHARCOAL)
     c.rect(-BLEED, -BLEED, PAGE_W + 2 * BLEED, PAGE_H + 2 * BLEED, stroke=0, fill=1)
 
-    # Headshot: full width, from the top edge (plus bleed) down to the band
+    # Headshot: full width, from the top edge (plus bleed) down into the band
     warnings = []
     photo_w = PAGE_W + 2 * BLEED
     photo_h = PAGE_H + BLEED - photo_bottom
@@ -499,35 +560,9 @@ def render_poster(show, path):
     else:
         warnings.append("no image on the product")
 
-    # Name band
     draw_band(c, band_bottom, band_lines, band_size, band_h)
-
-    # Dates
-    if show["recurring"]:
-        draw_recurring(c, dates_top, dates_bottom, show["recurring"], show["dates"])
-    else:
-        draw_dates(c, dates_top, dates_bottom, show["dates"])
-
-    # Footer: QR (left), price (middle), badge + address (right)
-    qr_size = footer_top - footer_bottom - 0.45 * inch
-    qr_x = 0.75 * inch
-    draw_qr(c, qr_x, footer_bottom + 0.45 * inch, qr_size, show["url"])
-    draw_text(c, qr_x + qr_size / 2, footer_bottom + 0.2 * inch, "SCAN FOR TICKETS", "JosefinSans-SemiBold", 14,
-              WHITE, 2.5, align="center")
-    draw_text(c, qr_x + qr_size / 2, footer_bottom, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY,
-              0.5, align="center")
-
-    badge_w = 2.3 * inch
-    badge_h = badge_w * (875 / 920)
-    badge_x = PAGE_W - 0.75 * inch - badge_w
-    c.drawImage(BADGE, badge_x, footer_bottom + 0.45 * inch + (qr_size - badge_h) / 2, badge_w, badge_h,
-                mask="auto")
-    draw_text(c, badge_x + badge_w / 2, footer_bottom + 0.2 * inch, TAGLINE, "JosefinSans-SemiBold", 13,
-              WHITE, 2.5, align="center")
-    draw_text(c, badge_x + badge_w / 2, footer_bottom, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1,
-              align="center")
-
-    draw_prices(c, (qr_x + qr_size + badge_x) / 2, footer_top, footer_bottom, show["prices"])
+    draw_block(c, block_top)
+    draw_footer(c, footer_bottom, show["url"], show["prices"])
 
     c.showPage()
     c.save()
