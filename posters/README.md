@@ -17,6 +17,9 @@ times, price, and a QR code to the ticket page.
 * Recurring shows (tagged `recurring: ...`, see `recurring_events.py`) say
   "EVERY THURSDAY · 8:00 PM" with the next dates under it.
 * Classes and workshops are skipped.
+* `print-order.pdf` on the release has every poster in one file, in date
+  order, for a single upload to a print shop. `POSTER_FROM=<handle>` (or the
+  action's "from" box) starts the set at that show.
 
 ## Where the posters are
 
@@ -32,7 +35,7 @@ now, optionally for just a few product handles.
 
 ## Running it locally
 
-    pip install requests pillow reportlab
+    pip install requests pillow reportlab pypdf
     python make_posters.py                      # all upcoming shows -> posters/out/
     python make_posters.py sam-jay ali-sultan   # only these handles
     POSTER_BLEED=0 python make_posters.py       # no bleed
