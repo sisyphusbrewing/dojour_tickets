@@ -55,6 +55,9 @@
     </div>
     
     <div class="sb-footer-bottom">
+      <a href="/" class="sb-footer-logo" aria-label="Sisyphus Brewing home">
+        <img src="{{ 'sisyphus-logo-badge-light-v2.png' | file_url }}" alt="Sisyphus Brewing" width="120" height="120" loading="lazy">
+      </a>
       <p>&copy; {{ 'now' | date: "%Y" }} Sisyphus Brewing. All Rights Reserved.</p>
     </div>
   </div>
@@ -136,12 +139,27 @@
     background: #2563eb;
     color: #ffffff;
   }
+  .sb-footer-logo {
+    display: inline-block;
+    margin-bottom: 1.5rem;
+  }
+  .sb-footer-logo img {
+    display: block;
+    width: 120px;
+    height: auto;
+    opacity: 0.9;
+  }
   .sb-footer-bottom {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding-top: 2rem;
     text-align: center;
     font-size: 1.3rem;
     color: #94a3b8;
+  }
+  .sb-footer .sb-footer-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .sb-footer .sb-footer-bottom p {
     color: #94a3b8 !important;
