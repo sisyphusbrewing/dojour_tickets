@@ -463,17 +463,9 @@
   html body .product__description [style*="color"],
   html body .rte [style*="color"] { color: inherit !important; }
 
-  /* Phone header: the logo is an h1 on the homepage and a link elsewhere, which
-     landed in different grid columns; pin menu, logo and cart to a 3-column row */
+  /* Phone header: on every page but the homepage an empty search slot sits in the
+     logo's row and pushed the logo right; it has no button on phones, so drop it */
   @media screen and (max-width: 989px) {
-    html body .header.header--mobile-center {
-      grid-template-columns: 1fr auto 1fr !important;
-      grid-template-areas: 'left-icons heading icons' !important;
-    }
-    html body .header.header--mobile-center > header-drawer { grid-area: left-icons !important; justify-self: start; }
-    html body .header.header--mobile-center > .header__search { grid-area: left-icons !important; }
-    html body .header.header--mobile-center > .header__heading,
-    html body .header.header--mobile-center > .header__heading-link { grid-area: heading !important; justify-self: center !important; }
-    html body .header.header--mobile-center > .header__icons { grid-area: icons !important; justify-self: end !important; }
+    html body .header > .header__search { display: none !important; }
   }
 </style>
