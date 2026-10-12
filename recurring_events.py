@@ -165,3 +165,47 @@ def first_location_id(shop):
         return shop.gql("{ locations(first: 1) { nodes { id } } }")["locations"]["nodes"][0]["id"]
     except Exception:
         return FALLBACK_LOCATION_ID
+
+
+# ---------------------------------------------------------------------------
+# Card label: the site's show cards would list every date ("★ 6 SHOW DATES,
+# Nov 4 - April 7"). For recurring shows we keep a "date:Wed Nov 4 • 7:00 PM"
+# tag up to date instead, so the card's date box shows just the next date.
+# (Shopify tags can't contain commas, so the date has none.)
+# ---------------------------------------------------------------------------
+def label_tags(product, now):
+    """The date: tag a recurring show should carry, as a set, or None."""
+    rule = parse_rule(product.get("tags"))
+    if not rule:
+        return None
+    dates = sorted(d for d in (parse_show_datetime(v["title"], now=now, require_time=True)
+                               for v in product["variants"]["nodes"]) if d and d >= now)
+    if not dates:
+        return None
+    return {"date:" + variant_name(dates[0])}
+
+
+def plan_label_updates(products, now):
+    """[(product, tags_to_add, tags_to_remove)] for recurring shows. Pure - easy to test."""
+    updates = []
+    for p in products:
+        want = label_tags(p, now)
+        if want is None:
+            continue
+        have = {t for t in p.get("tags") or [] if t.startswith("date:")}
+        add, remove = sorted(want - have), sorted(have - want)
+        if add or remove:
+            updates.append((p, add, remove))
+    return updates
+
+
+def apply_label_update(shop, product, add, remove):
+    for mutation, tags in (("tagsRemove", remove), ("tagsAdd", add)):
+        if not tags:
+            continue
+        res = shop.gql("""
+          mutation Tags($id: ID!, $tags: [String!]!) {
+            %s(id: $id, tags: $tags) { userErrors { field message } }
+          }""" % mutation, {"id": product["id"], "tags": tags})[mutation]
+        if res["userErrors"]:
+            raise RuntimeError(res["userErrors"])
