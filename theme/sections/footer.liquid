@@ -1,10 +1,10 @@
 <!-- SISYPHUS BREWING CUSTOM FOOTER -->
 <footer class="sb-footer">
   <div class="sb-footer-container">
-    {%- assign sb_footer_logo = images['sisyphus-banner-blue.png'] | default: settings.logo -%}
+    {%- assign sb_footer_logo = images['sisyphus-badge-mic.png'] | default: settings.logo -%}
     {%- if sb_footer_logo != blank -%}
       <a href="{{ routes.root_url }}" class="sb-footer-logo">
-        {{ sb_footer_logo | image_url: width: 440 | image_tag: width: 220, alt: shop.name, loading: 'lazy' }}
+        {{ sb_footer_logo | image_url: width: 320 | image_tag: width: 160, alt: 'Sisyphus', loading: 'lazy' }}
       </a>
     {%- endif -%}
     <div class="sb-footer-grid">
@@ -83,7 +83,7 @@
   }
   .sb-footer-logo {
     display: block;
-    width: 220px;
+    width: 160px;
     max-width: 70%;
     margin: 0 auto 4rem auto;
   }
