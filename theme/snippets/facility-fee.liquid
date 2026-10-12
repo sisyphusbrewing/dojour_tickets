@@ -54,3 +54,82 @@
     new MutationObserver(nameQuantityBoxes).observe(document.body, { childList: true, subtree: true });
   })();
 </script>
+
+{%- comment -%}
+  Cookie banner contrast fix (Oct 11, 2026):
+  The theme's custom CSS forces headings, paragraphs, links and spans to
+  near-white so the site stays dark. Shopify's cookie banner and its
+  preferences dialog have a white background, so their text became
+  white-on-white. This puts dark text back inside those two elements only.
+{%- endcomment -%}
+<style>
+  [id^="shopify-pc__"],
+  [id^="shopify-pc__"] h1, [id^="shopify-pc__"] h2, [id^="shopify-pc__"] h3,
+  [id^="shopify-pc__"] h4, [id^="shopify-pc__"] p, [id^="shopify-pc__"] a,
+  [id^="shopify-pc__"] span, [id^="shopify-pc__"] label,
+  [id^="shopify-pc__"] summary, [id^="shopify-pc__"] div,
+  [id^="shopify-pc__"] li {
+    color: #121212 !important;
+  }
+  [id^="shopify-pc__"] a:focus-visible,
+  [id^="shopify-pc__"] button:focus-visible,
+  [id^="shopify-pc__"] input:focus-visible {
+    outline-color: #2563eb !important;
+  }
+</style>
+
+{%- comment -%}
+  Readable text sizes (Oct 12, 2026):
+  The custom Sisyphus CSS (base.css and the homepage's Custom Liquid section)
+  was written as if 1rem = 16px, but Dawn sets 1rem = 10px, so that text
+  rendered at about 60% of its intended size (9-12px). These rules bring
+  body text to 16px+ and small labels to 12px+. Dawn's own text is untouched.
+{%- endcomment -%}
+<style>
+  /* Header and mobile menu */
+  html body .header__menu-item { font-size: 1.5rem !important; }
+  html body a.sb-ticket-btn { font-size: 1.4rem !important; }
+  html body .sb-mobile-cta-btn { font-size: 1.4rem !important; }
+  html body .menu-drawer__menu-item { font-size: 1.8rem !important; }
+  html body .menu-drawer__menu-item.sb-drawer-btn { font-size: 1.5rem !important; }
+
+  /* Homepage sections */
+  html body .sb-tag { font-size: 1.3rem; }
+  html body .sb-hero-subtitle { font-size: clamp(2rem, 3.5vw, 2.8rem); }
+  html body .sb-hero-desc { font-size: clamp(1.6rem, 1.6vw, 1.9rem); }
+  html body .sb-btn { font-size: 1.4rem; }
+  html body .sb-section-head h2,
+  html body .sb-split-content h2,
+  html body .sb-cta-inner h2 { font-size: clamp(2.8rem, 4vw, 3.8rem); }
+  html body .sb-section-head p,
+  html body .sb-split-content p,
+  html body .sb-cta-inner p { font-size: 1.7rem; }
+  html body .sb-artist-badge { font-size: 1.2rem; }
+  html body .sb-artist-banner-text { font-size: clamp(1.8rem, 2.8vw, 2.4rem); }
+  html body .sb-artist-banner-sub { font-size: 1.5rem; }
+  html body .sb-feature-box h3 { font-size: 2rem; }
+  html body .sb-feature-box p { font-size: 1.6rem; }
+  html body .sb-text-link { font-size: 1.5rem; }
+
+  /* Event cards */
+  html body .sb-date-overlay__text { font-size: 1.6rem !important; }
+  html body .sb-date-overlay__multi-badge { font-size: 1.15rem !important; }
+  html body .sb-date-overlay__status { font-size: 1.2rem !important; }
+  html body .sb-event-badge { font-size: 1.15rem !important; }
+  html body .sb-event-date { font-size: 1.5rem !important; }
+  html body .card-information .price-item { font-size: 1.5rem !important; }
+  html body .sb-fee-note { font-size: 1.3rem !important; }
+  @media screen and (max-width: 749px) {
+    html body .sb-date-overlay__text { font-size: 1.4rem !important; }
+  }
+
+  /* Product page */
+  html body button[name="add"] { font-size: 1.5rem !important; }
+
+  /* Footer */
+  html body .sb-footer-col p { font-size: 1.5rem !important; }
+  html body .sb-footer-links a { font-size: 1.5rem !important; }
+  html body .sb-footer-cta-link { font-size: 1.4rem !important; }
+  html body .sb-footer-socials a { font-size: 1.4rem !important; }
+  html body .sb-footer-bottom p { font-size: 1.3rem !important; }
+</style>
