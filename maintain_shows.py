@@ -393,6 +393,12 @@ def main():
         if not DRY_RUN:
             save_start_times(shop, updates)
 
+    current = fetch_active_products(shop) if not DRY_RUN else products
+    for p, add, remove in recurring_events.plan_label_updates(current, now):
+        print(f"  ~ card date for {p['title']}: {', '.join(add)}")
+        if not DRY_RUN:
+            recurring_events.apply_label_update(shop, p, add, remove)
+
     sort_collection(shop, now)
     print("Done.")
 
