@@ -167,6 +167,25 @@
     .modal h3 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 15px; margin: 0 0 14px; }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
     main { padding: 0 16px 48px; }
+
+    /* ---------- recipe card (reads like the e-mailed recipes) ---------- */
+    .rcard { background: #fff; color: #222; border: 0; border-radius: 6px; padding: 22px 22px 18px; margin-top: 16px;
+             font-family: var(--body); font-size: 17px; line-height: 1.35; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+    .rcard h2 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 22px; margin: 0; color: #222; }
+    .rcard .rc-sub { color: #4a6c86; font-size: 14px; font-weight: 600; margin: 3px 0 0; }
+    .rcard .rc-block { margin-top: 14px; }
+    .rcard .rc-block div { padding: 1px 0; }
+    .rcard .rc-label { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: #918f90; margin-bottom: 2px; }
+    .rcard .rc-notes { white-space: pre-wrap; font-size: 15px; color: #393636; }
+    .rcard .rc-src { margin-top: 16px; font-size: 12px; color: #918f90; }
+    .rcard .rc-empty { color: #918f90; font-style: italic; }
+    .rcard-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    @media print {
+      body { background: #fff !important; }
+      header, #lock, .btn-link, .detail-head, .rcard-actions, #rEdit, .saved, .modal, #viewList, #viewDetail, #viewRecipes { display: none !important; }
+      main { padding: 0; max-width: none; }
+      .rcard { box-shadow: none; padding: 0; font-size: 14pt; }
+    }
   </style>
 </head>
 <body>
@@ -334,6 +353,13 @@
         <button class="btn btn-primary btn-sm" id="brewBtn" type="button">Brew this</button>
       </div>
 
+      <div class="rcard" id="rCard"></div>
+      <div class="rcard-actions">
+        <button class="btn btn-sm" id="printBtn" type="button">Print</button>
+        <button class="btn btn-sm" id="editRecipeBtn" type="button">Edit recipe</button>
+      </div>
+
+      <div id="rEdit" class="hidden">
       <div class="band-wrap"><span class="band">Recipe</span></div>
       <form id="recipeForm" class="card" autocomplete="off">
         <div class="grid grid-3">
@@ -352,6 +378,9 @@
           <div class="field"><label>Mash temp °F</label><input class="input" type="number" step="0.1" inputmode="decimal" name="mash_temp" placeholder="152"></div>
           <div class="field"><label>Mash minutes</label><input class="input" type="number" step="1" min="0" inputmode="numeric" name="mash_minutes" placeholder="60"></div>
           <div class="field"><label>Boil minutes</label><input class="input" type="number" step="1" min="0" inputmode="numeric" name="boil_minutes" placeholder="60"></div>
+          <div class="field"><label>Mash water gal</label><input class="input" type="number" step="0.1" min="0" inputmode="decimal" name="mash_water_gal" placeholder="127.2"></div>
+          <div class="field"><label>Sparge water gal</label><input class="input" type="number" step="0.1" min="0" inputmode="decimal" name="sparge_water_gal" placeholder="106.7"></div>
+          <div class="field"><label>Also called</label><input class="input" name="aka" placeholder="Fool's Gold"></div>
           <div class="field span2"><label>Yeast</label><input class="input" name="yeast" placeholder="WLP001 California Ale"></div>
           <div class="field"><label>Source</label><input class="input" name="source" placeholder="Binder p. 12"></div>
           <div class="field full"><label>Notes / process</label><textarea class="input" name="notes" placeholder="Water adjustments, mash steps, hop schedule notes, fermentation plan."></textarea></div>
@@ -382,6 +411,7 @@
 
       <div class="danger-zone">
         <button class="btn btn-danger" id="delRecipeBtn" type="button">Delete recipe</button>
+      </div>
       </div>
     </section>
 
@@ -693,6 +723,7 @@
       var items = [], parentId = null;
       var listEl = $(opts.list), formEl = $(opts.form), statEl = $(opts.stat);
       function render() {
+        if (opts.onRender) opts.onRender(parentId, items);
         if (!items.length) { listEl.innerHTML = '<div class="stat" style="padding:4px 0 2px">No ingredients yet. Add the grain bill, hops and yeast below.</div>'; statEl.textContent = ''; return; }
         statEl.textContent = items.length + ' item' + (items.length === 1 ? '' : 's');
         listEl.innerHTML = CATS.map(function (c) {
@@ -740,7 +771,8 @@
     }
     var batchIngredients = ingredientEditor({ list: 'ingList', form: 'ingForm', stat: 'ingStat', table: 'batch_ingredients', key: 'batch_id' });
     var recipeIngredients = ingredientEditor({ list: 'rIngList', form: 'rIngForm', stat: 'rIngStat', table: 'recipe_ingredients', key: 'recipe_id',
-      onChange: function (id, n) { recipeCounts[id] = n; } });
+      onChange: function (id, n) { recipeCounts[id] = n; },
+      onRender: function (id, items) { if (currentRecipe && currentRecipe.id === id) renderCard(currentRecipe, items); } });
 
     /* ---------------- batch detail ---------------- */
     async function openBatch(id) {
@@ -953,7 +985,7 @@
     });
 
     /* ---------------- recipe detail ---------------- */
-    var RFIELDS = ['name', 'style', 'batch_size', 'batch_size_unit', 'target_og', 'target_fg', 'ibu', 'srm', 'mash_temp', 'mash_minutes', 'boil_minutes', 'yeast', 'source', 'notes'];
+    var RFIELDS = ['name', 'style', 'batch_size', 'batch_size_unit', 'target_og', 'target_fg', 'ibu', 'srm', 'mash_temp', 'mash_minutes', 'boil_minutes', 'mash_water_gal', 'sparge_water_gal', 'aka', 'yeast', 'source', 'notes'];
     async function openRecipe(id) {
       var r = byId(recipes, id);
       if (!r) {
@@ -963,6 +995,7 @@
       }
       currentRecipe = r; current = null;
       show('viewRecipe', 'recipes');
+      $('rEdit').classList.add('hidden'); $('editRecipeBtn').textContent = 'Edit recipe';
       fillRecipeForm(r);
       recipeIngredients.load(id);
     }
@@ -995,9 +1028,80 @@
       var res = await sb.from('recipes').update(patch).eq('id', r.id).select().single();
       if (res.error) { fail(res); fillRecipeForm(r); return; }
       Object.assign(r, res.data);
-      if (currentRecipe === r) paintRecipeHead(r);
+      if (currentRecipe === r) { paintRecipeHead(r); renderCard(r, recipeIngredients.items()); }
       toast('Saved');
     }
+    // The recipe card reads like the e-mailed recipes: grains, then hops and kettle additions,
+    // yeast, mash and sparge water, salts by where they go, then targets and notes.
+    function plural(n, unit) {
+      if (!unit) return '';
+      if (n === 1 || n == null) return unit;
+      if (unit === 'bag') return 'bags';
+      if (unit === 'lb') return 'lbs';
+      if (unit === 'pkg') return 'pkgs';
+      return unit;
+    }
+    function qty(i) { return i.amount == null ? '' : fmtNum(i.amount) + ' ' + plural(Number(i.amount), i.unit) + ' '; }
+    function when(i) {
+      var t = i.timing ? String(i.timing).replace(/\s*min(ute)?s?$/i, '') : '';
+      var st = (i.stage || '').toLowerCase();
+      if (st === 'dry hop') return ' · dry hop' + (t ? ' ' + t : '');
+      if (st === 'fermenter' || st === 'keg' || st === 'brite') return ' · ' + (i.stage || '') + (t ? ' ' + t : '');
+      if (t) return ' @ ' + t;
+      if (st === 'whirlpool') return ' @ Whirlpool';
+      return '';
+    }
+    function lineHtml(i) {
+      return '<div>' + esc(qty(i) + i.name + when(i)) + (i.notes ? ' <span style="color:#918f90">(' + esc(i.notes) + ')</span>' : '') + '</div>';
+    }
+    function renderCard(r, items) {
+      items = (items || []).slice().sort(function (a, b) { return a.sort_order - b.sort_order; });
+      var isMash = function (i) { return (i.stage || '').toLowerCase() === 'mash'; };
+      var grains = items.filter(function (i) { return i.category === 'grain' || (i.category === 'adjunct' && isMash(i)); });
+      var kettle = items.filter(function (i) { return i.category === 'hops' || i.category === 'other' || (i.category === 'adjunct' && !isMash(i)); });
+      var yeasts = items.filter(function (i) { return i.category === 'yeast'; });
+      var salts = items.filter(function (i) { return i.category === 'water'; });
+      var html = '<h2>' + esc(r.name) + '</h2>';
+      var sub = [r.aka ? 'aka ' + r.aka : null, r.style, r.batch_size != null ? fmtNum(r.batch_size) + ' ' + r.batch_size_unit : null].filter(Boolean).join(' · ');
+      if (sub) html += '<div class="rc-sub">' + esc(sub) + '</div>';
+      if (!items.length && r.mash_water_gal == null && !r.notes) html += '<div class="rc-block rc-empty">No ingredients yet. Tap Edit recipe to add them.</div>';
+      if (grains.length) html += '<div class="rc-block">' + grains.map(lineHtml).join('') + '</div>';
+      if (kettle.length) html += '<div class="rc-block">' + kettle.map(lineHtml).join('') + '</div>';
+      if (yeasts.length || r.yeast) html += '<div class="rc-block">' + yeasts.map(lineHtml).join('') +
+        (r.yeast && !yeasts.length ? '<div>Yeast: ' + esc(r.yeast) + '</div>' : '') + '</div>';
+      if (r.mash_water_gal != null || r.sparge_water_gal != null) html += '<div class="rc-block">' +
+        (r.mash_water_gal != null ? '<div>Mash ' + fmtNum(r.mash_water_gal) + ' Gallons</div>' : '') +
+        (r.sparge_water_gal != null ? '<div>Sparge ' + fmtNum(r.sparge_water_gal) + ' Gallons</div>' : '') + '</div>';
+      if (salts.length) {
+        var stages = [];
+        salts.forEach(function (i) { var k = i.stage || 'Water'; if (stages.indexOf(k) < 0) stages.push(k); });
+        html += '<div class="rc-block">' + stages.map(function (k) {
+          var these = salts.filter(function (i) { return (i.stage || 'Water') === k; });
+          return '<div>' + esc(these.map(function (i) { return qty(i) + i.name; }).join(' / ')) + (k === 'Water' ? '' : ' to ' + esc(k)) + '</div>';
+        }).join('') + '</div>';
+      }
+      var t = [];
+      if (r.target_og != null) t.push('Target Gravity: ' + fmtNum(r.target_og));
+      if (r.target_fg != null) t.push('FG ' + fmtNum(r.target_fg));
+      if (r.target_abv != null) t.push(fmtNum(r.target_abv) + '% ABV');
+      if (r.ibu != null) t.push(fmtNum(r.ibu) + ' IBU');
+      if (r.srm != null) t.push(fmtNum(r.srm) + ' SRM');
+      var proc = [];
+      if (r.mash_temp != null) proc.push('Mash at ' + fmtNum(r.mash_temp) + '°F' + (r.mash_minutes != null ? ' for ' + r.mash_minutes + ' min' : ''));
+      else if (r.mash_minutes != null) proc.push('Mash ' + r.mash_minutes + ' min');
+      if (r.boil_minutes != null) proc.push('Boil ' + r.boil_minutes + ' min');
+      if (t.length || proc.length) html += '<div class="rc-block">' + (t.length ? '<div>' + esc(t.join(' · ')) + '</div>' : '') + (proc.length ? '<div>' + esc(proc.join(' · ')) + '</div>' : '') + '</div>';
+      if (r.notes) html += '<div class="rc-block"><div class="rc-label">Notes</div><div class="rc-notes">' + esc(r.notes) + '</div></div>';
+      if (r.source) html += '<div class="rc-src">From ' + esc(r.source) + '</div>';
+      $('rCard').innerHTML = html;
+    }
+    $('editRecipeBtn').addEventListener('click', function () {
+      var ed = $('rEdit'), open = ed.classList.toggle('hidden') === false;
+      this.textContent = open ? 'Done editing' : 'Edit recipe';
+      if (open) ed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    $('printBtn').addEventListener('click', function () { window.print(); });
+
     $('rBackBtn').addEventListener('click', function () { location.hash = '#/recipes'; });
     $('brewBtn').addEventListener('click', function () { if (currentRecipe) openNewBatch(currentRecipe.id); });
     $('delRecipeBtn').addEventListener('click', async function () {
