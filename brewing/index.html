@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Sisyphus Batch Log</title>
-  <meta name="description" content="Brew log for Sisyphus: batches, ingredients, brew and keg dates.">
+  <meta name="description" content="Brew log for Sisyphus: batches, recipes, tanks, brew and keg dates.">
   <meta name="theme-color" content="#2b2929">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -40,13 +40,17 @@
 
     /* ---------- header ---------- */
     header { position: sticky; top: 0; z-index: 20; background: rgba(43,41,41,.96); backdrop-filter: blur(8px);
-             border-bottom: 1px solid var(--line); padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+             border-bottom: 1px solid var(--line); padding: 10px 16px 0; padding-top: calc(10px + env(safe-area-inset-top)); }
     .wrap { max-width: 680px; margin: 0 auto; }
     .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .hdr-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .hdr-brand img { height: 40px; width: auto; display: block; }
     .hdr-title { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 15px; line-height: 1; padding-top: 3px; }
     .hdr-title small { display: block; font-family: var(--body); font-weight: 600; text-transform: none; letter-spacing: .02em; color: var(--slate-light); font-size: 12px; margin-top: 4px; }
+    .tabs { display: flex; gap: 4px; margin-top: 10px; }
+    .tab { flex: 1; min-height: 40px; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--gray); cursor: pointer;
+           font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 13px; padding-top: 4px; }
+    .tab.on { color: var(--white); border-bottom-color: var(--slate); }
 
     /* ---------- buttons ---------- */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 16px;
@@ -59,7 +63,6 @@
     .btn-ghost { background: transparent; }
     .btn-danger { color: #f0b7ac; border-color: #6b4a44; background: transparent; }
     .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 14px; border-radius: 8px; }
-    .btn-icon { min-width: 44px; padding: 8px; }
     .btn-link { background: none; border: 0; padding: 8px 0; color: var(--slate-light); font-weight: 600; cursor: pointer; min-height: 44px; }
 
     /* ---------- slanted logo band heading ---------- */
@@ -82,9 +85,11 @@
     input[type=date].input, input[type=datetime-local].input { color-scheme: dark; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .grid .span2 { grid-column: 1 / -1; }
+    .grid .full { grid-column: 1 / -1; }
     @media (min-width: 560px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .grid-3 .span2 { grid-column: span 2; } }
     .row { display: flex; gap: 8px; align-items: center; }
     .inline-unit { display: grid; grid-template-columns: 1fr 88px; gap: 8px; }
+    .readonly { display: flex; align-items: center; color: var(--slate-light); }
 
     /* ---------- cards ---------- */
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
@@ -101,6 +106,16 @@
     .pill.kegged { background: #fff; color: var(--card); border-color: #fff; }
     .pill.on_tap { background: var(--ok); color: #1d2a20; border-color: var(--ok); }
     .pill.finished, .pill.dumped { color: var(--gray); }
+
+    /* ---------- tanks strip ---------- */
+    .tanks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0 6px; }
+    @media (min-width: 560px) { .tanks { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    .tank { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-height: 58px; text-align: left; background: transparent; color: inherit; cursor: default; }
+    .tank.full { background: var(--card); border-color: var(--slate); cursor: pointer; }
+    .tank .tn { font-family: var(--head); font-weight: 700; letter-spacing: .08em; font-size: 12px; color: var(--slate-light); text-transform: uppercase; }
+    .tank .tb { font-weight: 600; font-size: 13px; line-height: 1.2; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tank .td { font-size: 12px; color: var(--gray); }
+    .tank.empty .tb { color: var(--gray); font-weight: 400; }
 
     /* ---------- toolbar ---------- */
     .toolbar { display: flex; gap: 8px; align-items: center; margin: 16px 0 12px; }
@@ -134,6 +149,7 @@
     .saved.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .saved.err { background: var(--danger); }
     .danger-zone { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin: 24px 0 40px; }
+    .from-recipe { font-size: 14px; color: var(--slate-light); margin-top: 6px; }
 
     /* ---------- sign-in ---------- */
     #lock { position: fixed; inset: 0; z-index: 100; background: rgba(43,41,41,.97); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -173,20 +189,25 @@
   </div>
 
   <header>
-    <div class="wrap hdr">
-      <a class="hdr-brand" href="#/" style="text-decoration:none;color:inherit">
-        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
-        <div class="hdr-title">Batch Log<small id="hdrSub">Sisyphus brewhouse</small></div>
-      </a>
-      <div class="row">
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="#/" style="text-decoration:none;color:inherit">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Batch Log<small id="hdrSub">Sisyphus brewhouse</small></div>
+        </a>
         <button class="btn btn-sm btn-ghost" id="signOut" type="button">Sign out</button>
       </div>
+      <nav class="tabs">
+        <button class="tab on" data-tab="batches" type="button">Batches</button>
+        <button class="tab" data-tab="recipes" type="button">Recipes</button>
+      </nav>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- ===== list view ===== -->
+    <!-- ===== batches list ===== -->
     <section id="viewList">
+      <div class="tanks" id="tanks"></div>
       <div class="toolbar">
         <input class="input" id="search" type="search" placeholder="Search beer, style, batch #" autocomplete="off">
         <button class="btn btn-primary" id="newBatchBtn" type="button">+ New batch</button>
@@ -200,13 +221,14 @@
       <div id="batchList"></div>
     </section>
 
-    <!-- ===== detail view ===== -->
+    <!-- ===== batch detail ===== -->
     <section id="viewDetail" class="hidden">
       <button class="btn-link" id="backBtn" type="button">‹ All batches</button>
       <div class="detail-head">
         <div>
           <div class="detail-title" id="dTitle"></div>
           <div class="batch-sub" id="dSub"></div>
+          <div class="from-recipe hidden" id="dRecipe"></div>
         </div>
         <span class="pill" id="dPill"></span>
       </div>
@@ -223,7 +245,7 @@
           <div class="field span2"><label>Beer name</label><input class="input" name="beer_name" required></div>
           <div class="field"><label>Batch #</label><input class="input" name="batch_number" placeholder="26-041"></div>
           <div class="field"><label>Style</label><input class="input" name="style" placeholder="West Coast IPA"></div>
-          <div class="field"><label>Fermenter</label><input class="input" name="fermenter" placeholder="FV2"></div>
+          <div class="field"><label>Tank</label><select class="input" name="fermenter"></select></div>
           <div class="field"><label>Status</label>
             <select class="input" name="status">
               <option value="planned">Planned</option>
@@ -244,10 +266,9 @@
             </div></div>
           <div class="field"><label>OG</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="og" placeholder="1.062"></div>
           <div class="field"><label>FG</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="fg" placeholder="1.012"></div>
-          <div class="field"><label>ABV</label><div class="input" id="dAbv" style="display:flex;align-items:center;color:var(--slate-light)">—</div></div>
+          <div class="field"><label>ABV</label><div class="input readonly" id="dAbv">—</div></div>
           <div class="field"><label>Kegs filled</label><input class="input" type="number" step="1" min="0" inputmode="numeric" name="keg_count"></div>
-          <div class="field span2"></div>
-          <div class="field span2" style="grid-column:1/-1"><label>Notes</label><textarea class="input" name="notes" placeholder="Mash temp, boil length, yeast pitch, anything worth remembering next time."></textarea></div>
+          <div class="field full"><label>Notes</label><textarea class="input" name="notes" placeholder="Mash temp, boil length, yeast pitch, anything worth remembering next time."></textarea></div>
         </div>
       </form>
 
@@ -268,11 +289,9 @@
             </div></div>
           <div class="field"><label>Stage</label><input class="input" name="stage" list="stages" placeholder="Mash"></div>
           <div class="field"><label>Timing</label><input class="input" name="timing" placeholder="60 min / day 4"></div>
-          <div class="span2" style="grid-column:1/-1;display:flex;justify-content:flex-end">
+          <div class="full" style="display:flex;justify-content:flex-end">
             <button class="btn btn-sm btn-primary" type="submit">Add ingredient</button></div>
         </form>
-        <datalist id="units"><option>lb</option><option>oz</option><option>kg</option><option>g</option><option>pkg</option><option>L</option><option>mL</option><option>gal</option><option>bbl</option></datalist>
-        <datalist id="stages"><option>Mash</option><option>Boil</option><option>Whirlpool</option><option>Dry hop</option><option>Fermenter</option><option>Brite</option><option>Keg</option></datalist>
       </div>
 
       <div class="band-wrap band-row"><span class="band">Log</span><span class="stat" id="logStat"></span></div>
@@ -281,18 +300,93 @@
           <div class="field"><label>When</label><input class="input" type="datetime-local" name="logged_at" required></div>
           <div class="field"><label>Gravity</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="gravity" placeholder="1.020"></div>
           <div class="field"><label>Temp °F</label><input class="input" type="number" step="0.1" inputmode="decimal" name="temperature" placeholder="66"></div>
-          <div class="field span2" style="grid-column:1/-1"><label>Note</label><input class="input" name="note" placeholder="Dry hopped, crashed to 34°F, tasted great…"></div>
-          <div style="grid-column:1/-1;display:flex;justify-content:flex-end">
+          <div class="field full"><label>Note</label><input class="input" name="note" placeholder="Dry hopped, crashed to 34°F, tasted great…"></div>
+          <div class="full" style="display:flex;justify-content:flex-end">
             <button class="btn btn-sm btn-primary" type="submit">Add entry</button></div>
         </form>
         <div id="logList"></div>
       </div>
 
       <div class="danger-zone">
-        <button class="btn" id="dupBtn" type="button">Duplicate recipe</button>
+        <button class="btn" id="saveRecipeBtn" type="button">Save as recipe</button>
+        <button class="btn" id="dupBtn" type="button">Duplicate batch</button>
         <button class="btn btn-danger" id="delBtn" type="button">Delete batch</button>
       </div>
     </section>
+
+    <!-- ===== recipes list ===== -->
+    <section id="viewRecipes" class="hidden">
+      <div class="toolbar">
+        <input class="input" id="rSearch" type="search" placeholder="Search recipes" autocomplete="off">
+        <button class="btn btn-primary" id="newRecipeBtn" type="button">+ New recipe</button>
+      </div>
+      <div id="recipeList"></div>
+    </section>
+
+    <!-- ===== recipe detail ===== -->
+    <section id="viewRecipe" class="hidden">
+      <button class="btn-link" id="rBackBtn" type="button">‹ All recipes</button>
+      <div class="detail-head">
+        <div>
+          <div class="detail-title" id="rTitle"></div>
+          <div class="batch-sub" id="rSub"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="brewBtn" type="button">Brew this</button>
+      </div>
+
+      <div class="band-wrap"><span class="band">Recipe</span></div>
+      <form id="recipeForm" class="card" autocomplete="off">
+        <div class="grid grid-3">
+          <div class="field span2"><label>Name</label><input class="input" name="name" required></div>
+          <div class="field"><label>Style</label><input class="input" name="style" placeholder="Pale Ale"></div>
+          <div class="field"><label>Batch size</label>
+            <div class="inline-unit">
+              <input class="input" type="number" step="0.01" min="0" inputmode="decimal" name="batch_size" placeholder="7">
+              <select class="input" name="batch_size_unit"><option>bbl</option><option>gal</option><option>L</option><option>hL</option></select>
+            </div></div>
+          <div class="field"><label>Target OG</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="target_og" placeholder="1.052"></div>
+          <div class="field"><label>Target FG</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="target_fg" placeholder="1.010"></div>
+          <div class="field"><label>Target ABV</label><div class="input readonly" id="rAbv">—</div></div>
+          <div class="field"><label>IBU</label><input class="input" type="number" step="0.1" min="0" inputmode="decimal" name="ibu"></div>
+          <div class="field"><label>SRM</label><input class="input" type="number" step="0.1" min="0" inputmode="decimal" name="srm"></div>
+          <div class="field"><label>Mash temp °F</label><input class="input" type="number" step="0.1" inputmode="decimal" name="mash_temp" placeholder="152"></div>
+          <div class="field"><label>Mash minutes</label><input class="input" type="number" step="1" min="0" inputmode="numeric" name="mash_minutes" placeholder="60"></div>
+          <div class="field"><label>Boil minutes</label><input class="input" type="number" step="1" min="0" inputmode="numeric" name="boil_minutes" placeholder="60"></div>
+          <div class="field span2"><label>Yeast</label><input class="input" name="yeast" placeholder="WLP001 California Ale"></div>
+          <div class="field"><label>Source</label><input class="input" name="source" placeholder="Binder p. 12"></div>
+          <div class="field full"><label>Notes / process</label><textarea class="input" name="notes" placeholder="Water adjustments, mash steps, hop schedule notes, fermentation plan."></textarea></div>
+        </div>
+      </form>
+
+      <div class="band-wrap band-row"><span class="band">Ingredients</span><span class="stat" id="rIngStat"></span></div>
+      <div class="card">
+        <div id="rIngList"></div>
+        <form id="rIngForm" class="add-form grid grid-3" autocomplete="off">
+          <div class="field"><label>Type</label>
+            <select class="input" name="category">
+              <option value="grain">Grain</option><option value="hops">Hops</option><option value="yeast">Yeast</option>
+              <option value="adjunct">Adjunct</option><option value="water">Water</option><option value="other">Other</option>
+            </select></div>
+          <div class="field span2"><label>Ingredient</label><input class="input" name="name" required placeholder="Rahr 2-Row"></div>
+          <div class="field"><label>Amount</label>
+            <div class="inline-unit">
+              <input class="input" type="number" step="any" min="0" inputmode="decimal" name="amount" placeholder="250">
+              <input class="input" name="unit" list="units" placeholder="lb">
+            </div></div>
+          <div class="field"><label>Stage</label><input class="input" name="stage" list="stages" placeholder="Mash"></div>
+          <div class="field"><label>Timing</label><input class="input" name="timing" placeholder="60 min / day 4"></div>
+          <div class="full" style="display:flex;justify-content:flex-end">
+            <button class="btn btn-sm btn-primary" type="submit">Add ingredient</button></div>
+        </form>
+      </div>
+
+      <div class="danger-zone">
+        <button class="btn btn-danger" id="delRecipeBtn" type="button">Delete recipe</button>
+      </div>
+    </section>
+
+    <datalist id="units"><option>lb</option><option>oz</option><option>kg</option><option>g</option><option>pkg</option><option>L</option><option>mL</option><option>gal</option><option>bbl</option></datalist>
+    <datalist id="stages"><option>Mash</option><option>Boil</option><option>Whirlpool</option><option>Dry hop</option><option>Fermenter</option><option>Brite</option><option>Keg</option></datalist>
   </main>
 
   <!-- new batch modal -->
@@ -300,15 +394,32 @@
     <form class="card" id="newForm" autocomplete="off">
       <h3>New batch</h3>
       <div class="grid">
+        <div class="field span2"><label>From recipe</label><select class="input" name="recipe_id"><option value="">Start blank</option></select></div>
         <div class="field span2"><label>Beer name</label><input class="input" name="beer_name" required placeholder="Boulder Pusher Pale Ale"></div>
         <div class="field"><label>Style</label><input class="input" name="style" placeholder="Pale Ale"></div>
         <div class="field"><label>Batch #</label><input class="input" name="batch_number" placeholder="26-041"></div>
         <div class="field"><label>Date brewed</label><input class="input" type="date" name="brew_date"></div>
-        <div class="field"><label>Fermenter</label><input class="input" name="fermenter" placeholder="FV2"></div>
+        <div class="field"><label>Tank</label><select class="input" name="fermenter"></select></div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" id="newCancel">Cancel</button>
         <button class="btn btn-primary" type="submit" id="newSubmit">Create batch</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- new recipe modal -->
+  <div class="modal hidden" id="newRecipeModal">
+    <form class="card" id="newRecipeForm" autocomplete="off">
+      <h3>New recipe</h3>
+      <div class="grid">
+        <div class="field span2"><label>Name</label><input class="input" name="name" required placeholder="Boulder Pusher"></div>
+        <div class="field"><label>Style</label><input class="input" name="style" placeholder="Pale Ale"></div>
+        <div class="field"><label>Batch size (bbl)</label><input class="input" type="number" step="0.01" min="0" inputmode="decimal" name="batch_size" placeholder="7"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="newRecipeCancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="newRecipeSubmit">Create recipe</button>
       </div>
     </form>
   </div>
@@ -327,27 +438,28 @@
     var STATUS = { planned: 'Planned', brewing: 'Brew day', fermenting: 'Fermenting', conditioning: 'Conditioning',
                    kegged: 'Kegged', on_tap: 'On tap', finished: 'Finished', dumped: 'Dumped' };
     var ACTIVE = ['brewing', 'fermenting', 'conditioning', 'kegged'];
+    var IN_TANK = ['brewing', 'fermenting', 'conditioning'];
     var CATS = ['grain', 'hops', 'yeast', 'adjunct', 'water', 'other'];
     var CAT_LABEL = { grain: 'Grain', hops: 'Hops', yeast: 'Yeast', adjunct: 'Adjuncts', water: 'Water', other: 'Other' };
 
-    var batches = [];
+    var batches = [], recipes = [], tanks = [], recipeCounts = {};
     var current = null;          // batch being viewed
-    var ingredients = [];
+    var currentRecipe = null;    // recipe being viewed
     var logs = [];
-    var filter = 'active';
-    var search = '';
+    var filter = 'active', search = '', rSearch = '';
 
     var $ = function (id) { return document.getElementById(id); };
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-    function todayISO() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
     function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function todayISO() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
     function parseDate(s) { if (!s) return null; var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
     function fmtDate(s) { var d = parseDate(s); if (!d) return ''; return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); }
     function daysBetween(a, b) { var da = parseDate(a), db = b ? parseDate(b) : new Date(); if (!da) return null; db.setHours(0,0,0,0); da.setHours(0,0,0,0); return Math.round((db - da) / 86400000); }
     function fmtNum(n) { if (n == null || n === '') return ''; var x = Number(n); return Number.isInteger(x) ? String(x) : String(x).replace(/\.?0+$/, ''); }
     function localDT(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
     function abvOf(og, fg) { if (og == null || fg == null || og === '' || fg === '') return null; return Math.round((og - fg) * 131.25 * 100) / 100; }
+    function byId(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
 
     var toastTimer;
     function toast(msg, isErr) {
@@ -369,7 +481,7 @@
       } catch (err) { $('loginError').textContent = 'Could not reach the server. Check your connection.'; }
       finally { btn.disabled = false; btn.textContent = 'Sign in'; }
     });
-    $('signOut').addEventListener('click', async function () { await sb.auth.signOut(); batches = []; showLock(true); });
+    $('signOut').addEventListener('click', async function () { await sb.auth.signOut(); batches = []; recipes = []; showLock(true); });
 
     async function boot() {
       var res = await sb.auth.getSession();
@@ -379,22 +491,72 @@
 
     /* ---------------- routing ---------------- */
     var started = false;
-    function start() { if (started) { route(); return; } started = true; loadBatches().then(route); }
+    function start() { if (started) { route(); return; } started = true; loadAll().then(route); }
     window.addEventListener('hashchange', route);
+    var VIEWS = ['viewList', 'viewDetail', 'viewRecipes', 'viewRecipe'];
+    function show(view, tab) {
+      VIEWS.forEach(function (v) { $(v).classList.toggle('hidden', v !== view); });
+      Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) { t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
+      window.scrollTo(0, 0);
+    }
     function route() {
       var h = location.hash || '#/';
-      var m = h.match(/^#\/b\/([0-9a-f-]{36})$/);
-      if (m) { openBatch(m[1]); }
-      else { current = null; $('viewDetail').classList.add('hidden'); $('viewList').classList.remove('hidden'); renderList(); window.scrollTo(0, 0); }
+      var m;
+      if ((m = h.match(/^#\/b\/([0-9a-f-]{36})$/))) { openBatch(m[1]); return; }
+      if ((m = h.match(/^#\/r\/([0-9a-f-]{36})$/))) { openRecipe(m[1]); return; }
+      if (h === '#/recipes') { current = null; currentRecipe = null; show('viewRecipes', 'recipes'); renderRecipes(); return; }
+      current = null; currentRecipe = null; show('viewList', 'batches'); renderList();
+    }
+    document.querySelector('.tabs').addEventListener('click', function (e) {
+      var t = e.target.closest('.tab'); if (!t) return;
+      location.hash = t.getAttribute('data-tab') === 'recipes' ? '#/recipes' : '#/';
+    });
+
+    async function loadAll() {
+      var r = await Promise.all([
+        sb.from('batches').select('*').order('brew_date', { ascending: false, nullsFirst: true }).order('created_at', { ascending: false }),
+        sb.from('recipes').select('*').order('name'),
+        sb.from('tanks').select('*').eq('active', true).order('sort_order'),
+        sb.from('recipe_ingredients').select('recipe_id')
+      ]);
+      if (r[0].error) fail(r[0], 'Load'); else batches = r[0].data || [];
+      if (r[1].error) fail(r[1], 'Load'); else recipes = r[1].data || [];
+      if (r[2].error) fail(r[2], 'Load'); else tanks = r[2].data || [];
+      recipeCounts = {};
+      if (!r[3].error) (r[3].data || []).forEach(function (x) { recipeCounts[x.recipe_id] = (recipeCounts[x.recipe_id] || 0) + 1; });
+      fillTankSelects();
     }
 
-    /* ---------------- list ---------------- */
-    async function loadBatches() {
-      var res = await sb.from('batches').select('*').order('brew_date', { ascending: false, nullsFirst: true }).order('created_at', { ascending: false });
-      if (res.error) { fail(res, 'Load'); return; }
-      batches = res.data || [];
+    /* ---------------- tanks ---------------- */
+    function tankOptions(currentValue) {
+      var names = tanks.map(function (t) { return t.name; });
+      if (currentValue && names.indexOf(currentValue) < 0) names.push(currentValue);
+      return '<option value="">— none —</option>' + names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
     }
+    function fillTankSelects() {
+      $('newForm').fermenter.innerHTML = tankOptions();
+      $('batchForm').fermenter.innerHTML = tankOptions();
+    }
+    function occupant(tankName) {
+      return batches.filter(function (b) { return b.fermenter === tankName && IN_TANK.indexOf(b.status) >= 0; })
+        .sort(function (a, b) { return (b.brew_date || '') < (a.brew_date || '') ? -1 : 1; })[0];
+    }
+    function renderTanks() {
+      var el = $('tanks');
+      if (!tanks.length) { el.innerHTML = ''; return; }
+      el.innerHTML = tanks.map(function (t) {
+        var b = occupant(t.name);
+        if (!b) return '<div class="tank empty"><div class="tn">' + esc(t.name) + '</div><div class="tb">empty</div></div>';
+        var d = b.brew_date ? daysBetween(b.brew_date, null) + 1 : null;
+        return '<button class="tank full" type="button" data-id="' + b.id + '"><div class="tn">' + esc(t.name) + '</div>' +
+          '<div class="tb">' + esc(b.beer_name) + '</div><div class="td">' + esc(STATUS[b.status]) + (d != null ? ' · day ' + d : '') + '</div></button>';
+      }).join('');
+    }
+    $('tanks').addEventListener('click', function (e) {
+      var t = e.target.closest('.tank.full'); if (t) location.hash = '#/b/' + t.getAttribute('data-id');
+    });
 
+    /* ---------------- batch list ---------------- */
     function matches(b) {
       if (filter === 'active' && ACTIVE.indexOf(b.status) < 0) return false;
       if (filter === 'on_tap' && b.status !== 'on_tap') return false;
@@ -413,13 +575,15 @@
         if (b.kegged_date) {
           var d = daysBetween(b.brew_date, b.kegged_date);
           s += ' → Kegged <b>' + esc(fmtDate(b.kegged_date)) + '</b>' + (d != null ? ' (' + d + ' days)' : '');
-        } else if (ACTIVE.indexOf(b.status) >= 0 || b.status === 'brewing') {
+        } else if (IN_TANK.indexOf(b.status) >= 0) {
           var n = daysBetween(b.brew_date, null);
           s += ' · <b>day ' + (n + 1) + '</b>' + (b.fermenter ? ' in ' + esc(b.fermenter) : '');
         }
         parts.push('<span>' + s + '</span>');
       } else if (b.kegged_date) {
         parts.push('<span>Kegged <b>' + esc(fmtDate(b.kegged_date)) + '</b></span>');
+      } else if (b.fermenter && IN_TANK.indexOf(b.status) >= 0) {
+        parts.push('<span>In <b>' + esc(b.fermenter) + '</b></span>');
       }
       return parts;
     }
@@ -436,8 +600,10 @@
     function renderList() {
       var el = $('batchList');
       sortBatches();
+      renderTanks();
       var rows = batches.filter(matches);
-      $('hdrSub').textContent = batches.length ? batches.length + (batches.length === 1 ? ' batch' : ' batches') + ' · ' + batches.filter(function (b) { return ACTIVE.indexOf(b.status) >= 0; }).length + ' in the brewhouse' : 'Sisyphus brewhouse';
+      var inTank = batches.filter(function (b) { return IN_TANK.indexOf(b.status) >= 0; }).length;
+      $('hdrSub').textContent = batches.length ? batches.length + (batches.length === 1 ? ' batch' : ' batches') + ' · ' + inTank + ' in tanks' : 'Sisyphus brewhouse';
       if (!rows.length) {
         el.innerHTML = '<div class="empty"><b>' + (batches.length ? 'Nothing here' : 'No batches yet') + '</b>' +
           (batches.length ? 'Try another filter or clear the search.' : 'Tap <em>New batch</em> to log your first brew.') + '</div>';
@@ -472,54 +638,134 @@
     });
 
     /* ---------------- new batch ---------------- */
-    $('newBatchBtn').addEventListener('click', function () {
+    function openNewBatch(recipeId) {
       var f = $('newForm'); f.reset(); f.brew_date.value = '';
-      $('newModal').classList.remove('hidden'); setTimeout(function () { f.beer_name.focus(); }, 50);
-    });
+      f.recipe_id.innerHTML = '<option value="">Start blank</option>' + recipes.map(function (r) {
+        return '<option value="' + r.id + '">' + esc(r.name) + (r.style ? ' · ' + esc(r.style) : '') + '</option>'; }).join('');
+      f.recipe_id.value = recipeId || '';
+      if (recipeId) applyRecipeToNew();
+      $('newModal').classList.remove('hidden');
+      setTimeout(function () { (recipeId ? f.batch_number : f.beer_name).focus(); }, 50);
+    }
+    function applyRecipeToNew() {
+      var f = $('newForm'), r = byId(recipes, f.recipe_id.value);
+      if (!r) return;
+      f.beer_name.value = r.name; f.style.value = r.style || '';
+    }
+    $('newBatchBtn').addEventListener('click', function () { openNewBatch(''); });
+    $('newForm').recipe_id.addEventListener('change', applyRecipeToNew);
     $('newCancel').addEventListener('click', function () { $('newModal').classList.add('hidden'); });
     $('newModal').addEventListener('click', function (e) { if (e.target === this) this.classList.add('hidden'); });
     $('newForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var f = this, btn = $('newSubmit'); btn.disabled = true;
+      var r = byId(recipes, f.recipe_id.value);
       var row = {
         beer_name: f.beer_name.value.trim(), style: f.style.value.trim() || null, batch_number: f.batch_number.value.trim() || null,
-        brew_date: f.brew_date.value || null, fermenter: f.fermenter.value.trim() || null,
-        status: f.brew_date.value && f.brew_date.value <= todayISO() ? 'fermenting' : 'planned'
+        brew_date: f.brew_date.value || null, fermenter: f.fermenter.value || null,
+        status: f.brew_date.value && f.brew_date.value <= todayISO() ? 'fermenting' : 'planned',
+        recipe_id: r ? r.id : null,
+        volume: r ? r.batch_size : null, volume_unit: r ? r.batch_size_unit : 'bbl', og: r ? r.target_og : null
       };
       var res = await sb.from('batches').insert(row).select().single();
+      if (res.error) { btn.disabled = false; fail(res, 'Create'); return; }
+      if (r) await copyIngredients('recipe_ingredients', 'recipe_id', r.id, 'batch_ingredients', 'batch_id', res.data.id);
       btn.disabled = false;
-      if (res.error) { fail(res, 'Create'); return; }
       $('newModal').classList.add('hidden');
       batches.unshift(res.data);
       location.hash = '#/b/' + res.data.id;
     });
 
-    /* ---------------- detail ---------------- */
+    async function copyIngredients(fromTable, fromKey, fromId, toTable, toKey, toId) {
+      var src = await sb.from(fromTable).select('*').eq(fromKey, fromId).order('sort_order').order('created_at');
+      if (src.error) { fail(src, 'Copy ingredients'); return; }
+      if (!src.data.length) return;
+      var copies = src.data.map(function (i) {
+        var c = { category: i.category, name: i.name, amount: i.amount, unit: i.unit, stage: i.stage, timing: i.timing, notes: i.notes, sort_order: i.sort_order };
+        c[toKey] = toId; return c;
+      });
+      var res = await sb.from(toTable).insert(copies);
+      if (res.error) fail(res, 'Copy ingredients');
+    }
+
+    /* ---------------- generic ingredient editor ---------------- */
+    function ingredientEditor(opts) {
+      var items = [], parentId = null;
+      var listEl = $(opts.list), formEl = $(opts.form), statEl = $(opts.stat);
+      function render() {
+        if (!items.length) { listEl.innerHTML = '<div class="stat" style="padding:4px 0 2px">No ingredients yet. Add the grain bill, hops and yeast below.</div>'; statEl.textContent = ''; return; }
+        statEl.textContent = items.length + ' item' + (items.length === 1 ? '' : 's');
+        listEl.innerHTML = CATS.map(function (c) {
+          var rows = items.filter(function (i) { return i.category === c; });
+          if (!rows.length) return '';
+          return '<div class="cat">' + CAT_LABEL[c] + '</div>' + rows.map(function (i) {
+            var sub = [i.stage, i.timing, i.notes].filter(Boolean).map(esc).join(' · ');
+            return '<div class="list-row"><div><div class="main">' + esc(i.name) + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>' +
+              '<div class="row"><span class="amt">' + (i.amount != null ? fmtNum(i.amount) + ' ' + esc(i.unit || '') : '') + '</span>' +
+              '<button class="x" type="button" data-del="' + i.id + '" aria-label="Remove">×</button></div></div>';
+          }).join('');
+        }).join('');
+      }
+      async function load(id) {
+        parentId = id; items = []; render();
+        var res = await sb.from(opts.table).select('*').eq(opts.key, id).order('sort_order').order('created_at');
+        if (parentId !== id) return;
+        if (res.error) { fail(res, 'Load'); return; }
+        items = res.data || []; render();
+      }
+      formEl.addEventListener('submit', async function (e) {
+        e.preventDefault(); if (!parentId) return;
+        var f = formEl;
+        var row = { category: f.category.value, name: f.name.value.trim(),
+          amount: f.amount.value === '' ? null : Number(f.amount.value), unit: f.unit.value.trim() || null,
+          stage: f.stage.value.trim() || null, timing: f.timing.value.trim() || null, sort_order: items.length };
+        row[opts.key] = parentId;
+        var res = await sb.from(opts.table).insert(row).select().single();
+        if (res.error) { fail(res, 'Add'); return; }
+        items.push(res.data); render();
+        if (opts.onChange) opts.onChange(parentId, items.length);
+        var keepCat = f.category.value, keepUnit = f.unit.value, keepStage = f.stage.value;
+        f.reset(); f.category.value = keepCat; f.unit.value = keepUnit; f.stage.value = keepStage; f.name.focus();
+        toast('Added');
+      });
+      listEl.addEventListener('click', async function (e) {
+        var x = e.target.closest('[data-del]'); if (!x) return;
+        var id = x.getAttribute('data-del');
+        var res = await sb.from(opts.table).delete().eq('id', id);
+        if (res.error) { fail(res, 'Remove'); return; }
+        items = items.filter(function (i) { return i.id !== id; }); render();
+        if (opts.onChange) opts.onChange(parentId, items.length);
+      });
+      return { load: load, items: function () { return items; } };
+    }
+    var batchIngredients = ingredientEditor({ list: 'ingList', form: 'ingForm', stat: 'ingStat', table: 'batch_ingredients', key: 'batch_id' });
+    var recipeIngredients = ingredientEditor({ list: 'rIngList', form: 'rIngForm', stat: 'rIngStat', table: 'recipe_ingredients', key: 'recipe_id',
+      onChange: function (id, n) { recipeCounts[id] = n; } });
+
+    /* ---------------- batch detail ---------------- */
     async function openBatch(id) {
-      var b = batches.filter(function (x) { return x.id === id; })[0];
+      var b = byId(batches, id);
       if (!b) {
         var res = await sb.from('batches').select('*').eq('id', id).maybeSingle();
         if (res.error || !res.data) { toast('That batch is gone.', true); location.hash = '#/'; return; }
         b = res.data; batches.push(b);
       }
-      current = b;
-      $('viewList').classList.add('hidden'); $('viewDetail').classList.remove('hidden'); window.scrollTo(0, 0);
+      current = b; currentRecipe = null;
+      show('viewDetail', 'batches');
       fillForm(b);
-      ingredients = []; logs = []; renderIngredients(); renderLogs();
-      var r = await Promise.all([
-        sb.from('batch_ingredients').select('*').eq('batch_id', id).order('sort_order').order('created_at'),
-        sb.from('batch_log').select('*').eq('batch_id', id).order('logged_at', { ascending: false })
-      ]);
+      logs = []; renderLogs();
+      batchIngredients.load(id);
+      var r = await sb.from('batch_log').select('*').eq('batch_id', id).order('logged_at', { ascending: false });
       if (current !== b) return;
-      if (r[0].error) fail(r[0], 'Load'); else ingredients = r[0].data || [];
-      if (r[1].error) fail(r[1], 'Load'); else logs = r[1].data || [];
-      renderIngredients(); renderLogs();
+      if (r.error) fail(r, 'Load'); else logs = r.data || [];
+      renderLogs();
       $('logForm').logged_at.value = localDT(new Date());
     }
 
     var FIELDS = ['beer_name', 'batch_number', 'style', 'fermenter', 'status', 'brew_date', 'kegged_date', 'volume', 'volume_unit', 'og', 'fg', 'keg_count', 'notes'];
     function fillForm(b) {
       var f = $('batchForm');
+      f.fermenter.innerHTML = tankOptions(b.fermenter);
       FIELDS.forEach(function (k) { f[k].value = b[k] == null ? '' : b[k]; });
       f.volume_unit.value = b.volume_unit || 'bbl';
       paintHead(b);
@@ -531,6 +777,10 @@
       var abv = abvOf(b.og, b.fg);
       $('dAbv').textContent = abv == null ? '—' : fmtNum(abv) + '%';
       $('dAbv').style.color = abv == null ? 'var(--slate-light)' : 'var(--white)';
+      var r = b.recipe_id ? byId(recipes, b.recipe_id) : null;
+      $('dRecipe').classList.toggle('hidden', !r);
+      if (r) $('dRecipe').innerHTML = 'Recipe: <a href="#/r/' + r.id + '">' + esc(r.name) + '</a>';
+      $('saveRecipeBtn').classList.toggle('hidden', !!r);
     }
 
     // Autosave: any field change is written straight away.
@@ -566,43 +816,6 @@
     });
 
     $('backBtn').addEventListener('click', function () { location.hash = '#/'; });
-
-    /* ---------------- ingredients ---------------- */
-    function renderIngredients() {
-      var el = $('ingList');
-      if (!ingredients.length) { el.innerHTML = '<div class="stat" style="padding:4px 0 2px">No ingredients yet. Add the grain bill, hops and yeast below.</div>'; $('ingStat').textContent = ''; return; }
-      $('ingStat').textContent = ingredients.length + ' item' + (ingredients.length === 1 ? '' : 's');
-      el.innerHTML = CATS.map(function (c) {
-        var rows = ingredients.filter(function (i) { return i.category === c; });
-        if (!rows.length) return '';
-        return '<div class="cat">' + CAT_LABEL[c] + '</div>' + rows.map(function (i) {
-          var sub = [i.stage, i.timing, i.notes].filter(Boolean).map(esc).join(' · ');
-          return '<div class="list-row"><div><div class="main">' + esc(i.name) + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>' +
-            '<div class="row"><span class="amt">' + (i.amount != null ? fmtNum(i.amount) + ' ' + esc(i.unit || '') : '') + '</span>' +
-            '<button class="x" type="button" data-del-ing="' + i.id + '" aria-label="Remove">×</button></div></div>';
-        }).join('');
-      }).join('');
-    }
-    $('ingForm').addEventListener('submit', async function (e) {
-      e.preventDefault(); if (!current) return;
-      var f = this;
-      var row = { batch_id: current.id, category: f.category.value, name: f.name.value.trim(),
-        amount: f.amount.value === '' ? null : Number(f.amount.value), unit: f.unit.value.trim() || null,
-        stage: f.stage.value.trim() || null, timing: f.timing.value.trim() || null, sort_order: ingredients.length };
-      var res = await sb.from('batch_ingredients').insert(row).select().single();
-      if (res.error) { fail(res, 'Add'); return; }
-      ingredients.push(res.data); renderIngredients();
-      var keepCat = f.category.value, keepUnit = f.unit.value, keepStage = f.stage.value;
-      f.reset(); f.category.value = keepCat; f.unit.value = keepUnit; f.stage.value = keepStage; f.name.focus();
-      toast('Added');
-    });
-    $('ingList').addEventListener('click', async function (e) {
-      var x = e.target.closest('[data-del-ing]'); if (!x) return;
-      var id = x.getAttribute('data-del-ing');
-      var res = await sb.from('batch_ingredients').delete().eq('id', id);
-      if (res.error) { fail(res, 'Remove'); return; }
-      ingredients = ingredients.filter(function (i) { return i.id !== id; }); renderIngredients();
-    });
 
     /* ---------------- log ---------------- */
     function renderLogs() {
@@ -648,22 +861,32 @@
       logs = logs.filter(function (l) { return l.id !== id; }); renderLogs();
     });
 
-    /* ---------------- duplicate / delete ---------------- */
+    /* ---------------- batch: save as recipe / duplicate / delete ---------------- */
+    $('saveRecipeBtn').addEventListener('click', async function () {
+      if (!current) return;
+      var b = current;
+      var row = { name: b.beer_name, style: b.style, batch_size: b.volume, batch_size_unit: b.volume_unit || 'bbl',
+                  target_og: b.og, target_fg: b.fg, notes: b.notes, source: 'Batch ' + (b.batch_number || fmtDate(b.brew_date) || '') };
+      var res = await sb.from('recipes').insert(row).select().single();
+      if (res.error) { fail(res, 'Save recipe'); return; }
+      var r = res.data; recipes.push(r); recipes.sort(function (a, c) { return a.name.localeCompare(c.name); });
+      await copyIngredients('batch_ingredients', 'batch_id', b.id, 'recipe_ingredients', 'recipe_id', r.id);
+      recipeCounts[r.id] = batchIngredients.items().length;
+      await saveBatch({ recipe_id: r.id });
+      toast('Saved to recipes');
+      location.hash = '#/r/' + r.id;
+    });
     $('dupBtn').addEventListener('click', async function () {
       if (!current) return;
       var src = current;
       var row = { beer_name: src.beer_name, style: src.style, fermenter: src.fermenter, volume: src.volume, volume_unit: src.volume_unit,
-                  og: src.og, notes: src.notes, status: 'planned' };
+                  og: src.og, notes: src.notes, status: 'planned', recipe_id: src.recipe_id };
       var res = await sb.from('batches').insert(row).select().single();
       if (res.error) { fail(res, 'Duplicate'); return; }
       var nb = res.data;
-      if (ingredients.length) {
-        var copies = ingredients.map(function (i) { return { batch_id: nb.id, category: i.category, name: i.name, amount: i.amount, unit: i.unit, stage: i.stage, timing: i.timing, notes: i.notes, sort_order: i.sort_order }; });
-        var r2 = await sb.from('batch_ingredients').insert(copies);
-        if (r2.error) fail(r2, 'Copy ingredients');
-      }
+      await copyIngredients('batch_ingredients', 'batch_id', src.id, 'batch_ingredients', 'batch_id', nb.id);
       batches.unshift(nb);
-      toast('New planned batch from this recipe');
+      toast('New planned batch');
       location.hash = '#/b/' + nb.id;
     });
     $('delBtn').addEventListener('click', async function () {
@@ -675,6 +898,118 @@
       batches = batches.filter(function (b) { return b.id !== id; });
       toast('Batch deleted');
       location.hash = '#/';
+    });
+
+    /* ---------------- recipes list ---------------- */
+    function renderRecipes() {
+      var el = $('recipeList');
+      var rows = recipes.filter(function (r) {
+        if (!rSearch) return true;
+        return [r.name, r.style, r.yeast, r.source].join(' ').toLowerCase().indexOf(rSearch) >= 0;
+      });
+      $('hdrSub').textContent = recipes.length ? recipes.length + (recipes.length === 1 ? ' recipe' : ' recipes') : 'Recipe library';
+      if (!rows.length) {
+        el.innerHTML = '<div class="empty"><b>' + (recipes.length ? 'Nothing here' : 'No recipes yet') + '</b>' +
+          (recipes.length ? 'Try clearing the search.' : 'Tap <em>New recipe</em>, or open a batch and use <em>Save as recipe</em>.') + '</div>';
+        return;
+      }
+      el.innerHTML = rows.map(function (r) {
+        var bits = [];
+        if (r.target_abv != null) bits.push('<span><b>' + fmtNum(r.target_abv) + '%</b> ABV</span>');
+        else if (r.target_og != null) bits.push('<span>OG <b>' + fmtNum(r.target_og) + '</b></span>');
+        if (r.ibu != null) bits.push('<span><b>' + fmtNum(r.ibu) + '</b> IBU</span>');
+        if (r.batch_size != null) bits.push('<span><b>' + fmtNum(r.batch_size) + '</b> ' + esc(r.batch_size_unit) + '</span>');
+        var n = recipeCounts[r.id] || 0;
+        bits.push('<span>' + (n ? '<b>' + n + '</b> ingredient' + (n === 1 ? '' : 's') : 'no ingredients yet') + '</span>');
+        var brews = batches.filter(function (b) { return b.recipe_id === r.id; }).length;
+        if (brews) bits.push('<span>brewed <b>' + brews + '</b>×</span>');
+        return '<button class="card batch" type="button" data-id="' + r.id + '">' +
+          '<div class="batch-top"><div><div class="batch-name">' + esc(r.name) + '</div>' +
+          (r.style ? '<div class="batch-sub">' + esc(r.style) + '</div>' : '') + '</div></div>' +
+          '<div class="batch-meta">' + bits.join('') + '</div></button>';
+      }).join('');
+    }
+    $('recipeList').addEventListener('click', function (e) {
+      var card = e.target.closest('.batch'); if (card) location.hash = '#/r/' + card.getAttribute('data-id');
+    });
+    $('rSearch').addEventListener('input', function () { rSearch = this.value.trim().toLowerCase(); renderRecipes(); });
+
+    $('newRecipeBtn').addEventListener('click', function () {
+      var f = $('newRecipeForm'); f.reset();
+      $('newRecipeModal').classList.remove('hidden'); setTimeout(function () { f.name.focus(); }, 50);
+    });
+    $('newRecipeCancel').addEventListener('click', function () { $('newRecipeModal').classList.add('hidden'); });
+    $('newRecipeModal').addEventListener('click', function (e) { if (e.target === this) this.classList.add('hidden'); });
+    $('newRecipeForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var f = this, btn = $('newRecipeSubmit'); btn.disabled = true;
+      var row = { name: f.name.value.trim(), style: f.style.value.trim() || null, batch_size: f.batch_size.value === '' ? null : Number(f.batch_size.value) };
+      var res = await sb.from('recipes').insert(row).select().single();
+      btn.disabled = false;
+      if (res.error) { fail(res, 'Create'); return; }
+      $('newRecipeModal').classList.add('hidden');
+      recipes.push(res.data); recipes.sort(function (a, c) { return a.name.localeCompare(c.name); });
+      location.hash = '#/r/' + res.data.id;
+    });
+
+    /* ---------------- recipe detail ---------------- */
+    var RFIELDS = ['name', 'style', 'batch_size', 'batch_size_unit', 'target_og', 'target_fg', 'ibu', 'srm', 'mash_temp', 'mash_minutes', 'boil_minutes', 'yeast', 'source', 'notes'];
+    async function openRecipe(id) {
+      var r = byId(recipes, id);
+      if (!r) {
+        var res = await sb.from('recipes').select('*').eq('id', id).maybeSingle();
+        if (res.error || !res.data) { toast('That recipe is gone.', true); location.hash = '#/recipes'; return; }
+        r = res.data; recipes.push(r);
+      }
+      currentRecipe = r; current = null;
+      show('viewRecipe', 'recipes');
+      fillRecipeForm(r);
+      recipeIngredients.load(id);
+    }
+    function fillRecipeForm(r) {
+      var f = $('recipeForm');
+      RFIELDS.forEach(function (k) { f[k].value = r[k] == null ? '' : r[k]; });
+      f.batch_size_unit.value = r.batch_size_unit || 'bbl';
+      paintRecipeHead(r);
+    }
+    function paintRecipeHead(r) {
+      $('rTitle').textContent = r.name || 'Untitled recipe';
+      var brews = batches.filter(function (b) { return b.recipe_id === r.id; }).length;
+      $('rSub').textContent = [r.style, r.batch_size != null ? fmtNum(r.batch_size) + ' ' + r.batch_size_unit : null, brews ? 'brewed ' + brews + '×' : null].filter(Boolean).join(' · ');
+      var abv = abvOf(r.target_og, r.target_fg);
+      $('rAbv').textContent = abv == null ? '—' : fmtNum(abv) + '%';
+      $('rAbv').style.color = abv == null ? 'var(--slate-light)' : 'var(--white)';
+    }
+    $('recipeForm').addEventListener('change', function (e) {
+      var k = e.target.name; if (!k || !currentRecipe) return;
+      var v = e.target.value;
+      if (e.target.type === 'number') v = v === '' ? null : Number(v);
+      else { v = v.trim(); if (v === '' && k !== 'name') v = null; }
+      if (k === 'name' && !v) { e.target.value = currentRecipe.name; return; }
+      var patch = {}; patch[k] = v;
+      saveRecipe(patch);
+    });
+    $('recipeForm').addEventListener('submit', function (e) { e.preventDefault(); });
+    async function saveRecipe(patch) {
+      var r = currentRecipe;
+      var res = await sb.from('recipes').update(patch).eq('id', r.id).select().single();
+      if (res.error) { fail(res); fillRecipeForm(r); return; }
+      Object.assign(r, res.data);
+      if (currentRecipe === r) paintRecipeHead(r);
+      toast('Saved');
+    }
+    $('rBackBtn').addEventListener('click', function () { location.hash = '#/recipes'; });
+    $('brewBtn').addEventListener('click', function () { if (currentRecipe) openNewBatch(currentRecipe.id); });
+    $('delRecipeBtn').addEventListener('click', async function () {
+      if (!currentRecipe) return;
+      if (!confirm('Delete recipe "' + currentRecipe.name + '"? Batches brewed from it are kept.')) return;
+      var id = currentRecipe.id;
+      var res = await sb.from('recipes').delete().eq('id', id);
+      if (res.error) { fail(res, 'Delete'); return; }
+      recipes = recipes.filter(function (r) { return r.id !== id; });
+      batches.forEach(function (b) { if (b.recipe_id === id) b.recipe_id = null; });
+      toast('Recipe deleted');
+      location.hash = '#/recipes';
     });
 
     boot();
