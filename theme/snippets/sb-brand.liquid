@@ -67,11 +67,8 @@
 
   /* Hero: Michael Che on stage. The full stage scene shows (no zoom); the tint is
      clear over the top of the photo where his face is and only darkens behind the
-     text at the bottom. On phones the crop is pulled to his side of the room. The wall paint in
-     assets/sb-hero-che.jpg is smoothed; the people and stage are untouched. Phones use
-     the uncropped original (sb-hero-che-tall.jpg), which is taller, so it is
-     stretched less; it fills the top of the block (he sits above the headline) and
-     fades into the page color behind the text. */
+     text at the bottom. The wall paint in assets/sb-hero-che.jpg is smoothed; the
+     people and stage are untouched. Phones get their own crop, below. */
   html body .sb-hero {
     min-height: 78vh !important;
     align-items: flex-end !important;
@@ -83,16 +80,22 @@
   html body .sb-hero-inner { padding-top: 14rem; }
   html body .sb-hero-title { text-shadow: 0 3px 16px rgba(0, 0, 0, .95), 0 0 40px rgba(0, 0, 0, .7) !important; }
   html body .sb-hero-desc { text-shadow: 0 2px 10px rgba(0, 0, 0, .95) !important; }
+  /* Phones: the photo sits at the top at full width, uncut and unstretched
+     (assets/sb-hero-phone-b.jpg, a close crop of the stage and the front tables), and the
+     headline and text sit below it on the page color. --sb-hero-ratio is the
+     photo's height / width. */
   @media screen and (max-width: 749px) {
+    html body div:has(> .sb-wrap > .sb-hero) { padding-top: 0 !important; }
     html body .sb-hero {
-      min-height: 92vh !important;
+      --sb-hero-ratio: 0.9231;
+      min-height: 0 !important;
       background:
-        linear-gradient(180deg, rgba(38, 36, 36, 0) 55%, #262424 100%) 0 0 / 100% 760px no-repeat,
-        url('{{ 'sb-hero-che-tall.jpg' | asset_url }}') 35% 0 / auto 760px no-repeat,
+        linear-gradient(180deg, rgba(38, 36, 36, 0) 55%, #262424 100%) 0 0 / 100% calc(100vw * var(--sb-hero-ratio)) no-repeat,
+        url('{{ 'sb-hero-phone-b.jpg' | asset_url }}') 0 0 / 100% auto no-repeat,
         #262424 !important;
-      padding: 4rem 1.25rem 3.5rem !important;
+      padding: calc(100vw * var(--sb-hero-ratio) - 2rem) 1.25rem 3.5rem !important;
     }
-    html body .sb-hero-inner { padding-top: 40rem; }
+    html body .sb-hero-inner { padding-top: 0; }
   }
 
   /* ---------- Type ---------- */
