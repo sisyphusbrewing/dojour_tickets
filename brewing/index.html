@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Batch Log</title>
+  <meta name="description" content="Brew log for Sisyphus: batches, ingredients, brew and keg dates.">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Batches">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #2b2929;        /* charcoal board background */
+      --card: #393636;      /* logo charcoal */
+      --line: #4a4646;
+      --slate: #4a6c86;     /* logo slate blue */
+      --slate-dark: #3b586e;
+      --slate-light: #a9c3d8;
+      --gray: #918f90;
+      --white: #ffffff;
+      --danger: #c96a5a;
+      --ok: #7fb58a;
+      --head: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+      --body: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--white); }
+    body { font-family: var(--body); font-size: 16px; line-height: 1.4; -webkit-tap-highlight-color: transparent;
+           padding-bottom: env(safe-area-inset-bottom); }
+    a { color: var(--slate-light); }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    .hidden { display: none !important; }
+
+    /* ---------- header ---------- */
+    header { position: sticky; top: 0; z-index: 20; background: rgba(43,41,41,.96); backdrop-filter: blur(8px);
+             border-bottom: 1px solid var(--line); padding: 10px 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+    .wrap { max-width: 680px; margin: 0 auto; }
+    .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .hdr-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .hdr-brand img { height: 40px; width: auto; display: block; }
+    .hdr-title { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 15px; line-height: 1; padding-top: 3px; }
+    .hdr-title small { display: block; font-family: var(--body); font-weight: 600; text-transform: none; letter-spacing: .02em; color: var(--slate-light); font-size: 12px; margin-top: 4px; }
+
+    /* ---------- buttons ---------- */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 16px;
+           border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--white); cursor: pointer;
+           font-weight: 600; white-space: nowrap; transition: transform .08s, background .12s; }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { background: var(--slate); border-color: var(--slate); }
+    .btn-primary:hover { background: var(--slate-dark); }
+    .btn-ghost { background: transparent; }
+    .btn-danger { color: #f0b7ac; border-color: #6b4a44; background: transparent; }
+    .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 14px; border-radius: 8px; }
+    .btn-icon { min-width: 44px; padding: 8px; }
+    .btn-link { background: none; border: 0; padding: 8px 0; color: var(--slate-light); font-weight: 600; cursor: pointer; min-height: 44px; }
+
+    /* ---------- slanted logo band heading ---------- */
+    .band-wrap { margin: 28px 0 14px; padding: 8px 0; overflow: visible; }
+    .band { display: inline-block; background: var(--slate); color: #fff; padding: 8px 16px 5px;
+            font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .14em; font-size: 14px;
+            transform: rotate(-1.5deg);
+            box-shadow: 0 -4px 0 -1px var(--bg), 0 -6px 0 -1px #fff, 0 4px 0 -1px var(--bg), 0 6px 0 -1px #fff; }
+    .band-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+    /* ---------- forms ---------- */
+    .field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-light); margin-bottom: 4px; }
+    .input, select.input, textarea.input { width: 100%; min-height: 44px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line);
+             background: var(--bg); color: var(--white); outline: none; -webkit-appearance: none; appearance: none; }
+    .input:focus { border-color: var(--slate-light); }
+    .input::placeholder { color: #7a7677; }
+    select.input { background-image: linear-gradient(45deg, transparent 50%, var(--gray) 50%), linear-gradient(135deg, var(--gray) 50%, transparent 50%);
+                   background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+    textarea.input { min-height: 88px; resize: vertical; }
+    input[type=date].input, input[type=datetime-local].input { color-scheme: dark; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .grid .span2 { grid-column: 1 / -1; }
+    @media (min-width: 560px) { .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .grid-3 .span2 { grid-column: span 2; } }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .inline-unit { display: grid; grid-template-columns: 1fr 88px; gap: 8px; }
+
+    /* ---------- cards ---------- */
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+    .batch { display: block; width: 100%; text-align: left; cursor: pointer; margin-bottom: 10px; color: inherit; }
+    .batch:hover { border-color: var(--gray); }
+    .batch-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .batch-name { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 17px; line-height: 1.15; padding-top: 2px; }
+    .batch-sub { color: var(--slate-light); font-size: 14px; margin-top: 3px; }
+    .batch-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 14px; color: #d9d6d6; }
+    .batch-meta b { color: var(--white); font-weight: 600; }
+    .pill { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 5px 9px 4px;
+            border-radius: 999px; border: 1px solid var(--line); color: var(--slate-light); white-space: nowrap; font-family: var(--head); }
+    .pill.fermenting, .pill.brewing, .pill.conditioning { background: var(--slate); border-color: var(--slate); color: #fff; }
+    .pill.kegged { background: #fff; color: var(--card); border-color: #fff; }
+    .pill.on_tap { background: var(--ok); color: #1d2a20; border-color: var(--ok); }
+    .pill.finished, .pill.dumped { color: var(--gray); }
+
+    /* ---------- toolbar ---------- */
+    .toolbar { display: flex; gap: 8px; align-items: center; margin: 16px 0 12px; }
+    .toolbar .input { flex: 1; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: #d9d6d6; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+    .chip.on { background: var(--slate); border-color: var(--slate); color: #fff; }
+    .empty { text-align: center; color: var(--gray); padding: 40px 16px; }
+    .empty b { display: block; color: var(--white); font-family: var(--head); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+
+    /* ---------- detail ---------- */
+    .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .detail-title { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 24px; line-height: 1.1; }
+    .quick { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
+    .list-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .list-row:last-child { border-bottom: 0; }
+    .list-row .main { font-weight: 600; }
+    .list-row .sub { color: var(--slate-light); font-size: 13px; }
+    .list-row .amt { font-weight: 700; font-family: var(--head); white-space: nowrap; }
+    .cat { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: var(--gray); margin: 14px 0 2px; }
+    .cat:first-child { margin-top: 0; }
+    .x { background: none; border: 0; color: var(--gray); min-width: 36px; min-height: 36px; cursor: pointer; font-size: 18px; border-radius: 8px; }
+    .x:hover { color: #f0b7ac; background: rgba(255,255,255,.04); }
+    .add-form { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+    .stat { color: var(--slate-light); font-size: 13px; }
+    .stat b { color: var(--white); font-size: 15px; }
+    .saved { position: fixed; bottom: calc(18px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0;
+             background: var(--slate); color: #fff; padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; pointer-events: none;
+             transition: opacity .2s, transform .2s; z-index: 50; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+    .saved.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .saved.err { background: var(--danger); }
+    .danger-zone { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin: 24px 0 40px; }
+
+    /* ---------- sign-in ---------- */
+    #lock { position: fixed; inset: 0; z-index: 100; background: rgba(43,41,41,.97); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    #lock .card { width: 100%; max-width: 380px; }
+    #lock img { height: 120px; display: block; margin: 4px auto 8px; }
+    #lock h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .12em; font-size: 15px; text-align: center; margin: 0 0 4px; }
+    #lock p { color: var(--slate-light); font-size: 13px; text-align: center; margin: 0 0 16px; }
+    #lock .field { margin-bottom: 12px; }
+    #loginError { color: #f0b7ac; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 8px; }
+
+    /* ---------- modal ---------- */
+    .modal { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; padding: 12px; }
+    @media (min-width: 560px) { .modal { align-items: center; } }
+    .modal .card { width: 100%; max-width: 480px; padding: 18px; }
+    .modal h3 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 15px; margin: 0 0 14px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    main { padding: 0 16px 48px; }
+  </style>
+</head>
+<body>
+
+  <!-- Sign in: the same staff account as the door check-in app -->
+  <div id="lock">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h2>Batch Log</h2>
+      <p>Sign in with your staff account.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="field"><label for="email">Email</label>
+          <input class="input" id="email" type="email" required autocomplete="email" placeholder="you@sisyphusbrewing.com"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password" placeholder="••••••••••"></div>
+        <div id="loginError"></div>
+        <button class="btn btn-primary" id="loginBtn" type="submit" style="width:100%">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="#/" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Batch Log<small id="hdrSub">Sisyphus brewhouse</small></div>
+      </a>
+      <div class="row">
+        <button class="btn btn-sm btn-ghost" id="signOut" type="button">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ===== list view ===== -->
+    <section id="viewList">
+      <div class="toolbar">
+        <input class="input" id="search" type="search" placeholder="Search beer, style, batch #" autocomplete="off">
+        <button class="btn btn-primary" id="newBatchBtn" type="button">+ New batch</button>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip on" data-filter="active" type="button">In the brewhouse</button>
+        <button class="chip" data-filter="on_tap" type="button">On tap</button>
+        <button class="chip" data-filter="planned" type="button">Planned</button>
+        <button class="chip" data-filter="all" type="button">All batches</button>
+      </div>
+      <div id="batchList"></div>
+    </section>
+
+    <!-- ===== detail view ===== -->
+    <section id="viewDetail" class="hidden">
+      <button class="btn-link" id="backBtn" type="button">‹ All batches</button>
+      <div class="detail-head">
+        <div>
+          <div class="detail-title" id="dTitle"></div>
+          <div class="batch-sub" id="dSub"></div>
+        </div>
+        <span class="pill" id="dPill"></span>
+      </div>
+      <div class="quick" id="quick">
+        <button class="btn btn-sm" data-quick="brewed" type="button">Brewed today</button>
+        <button class="btn btn-sm" data-quick="kegged" type="button">Kegged off today</button>
+        <button class="btn btn-sm" data-quick="on_tap" type="button">On tap</button>
+        <button class="btn btn-sm" data-quick="finished" type="button">Finished</button>
+      </div>
+
+      <div class="band-wrap"><span class="band">Batch</span></div>
+      <form id="batchForm" class="card" autocomplete="off">
+        <div class="grid grid-3">
+          <div class="field span2"><label>Beer name</label><input class="input" name="beer_name" required></div>
+          <div class="field"><label>Batch #</label><input class="input" name="batch_number" placeholder="26-041"></div>
+          <div class="field"><label>Style</label><input class="input" name="style" placeholder="West Coast IPA"></div>
+          <div class="field"><label>Fermenter</label><input class="input" name="fermenter" placeholder="FV2"></div>
+          <div class="field"><label>Status</label>
+            <select class="input" name="status">
+              <option value="planned">Planned</option>
+              <option value="brewing">Brew day</option>
+              <option value="fermenting">Fermenting</option>
+              <option value="conditioning">Conditioning</option>
+              <option value="kegged">Kegged</option>
+              <option value="on_tap">On tap</option>
+              <option value="finished">Finished</option>
+              <option value="dumped">Dumped</option>
+            </select></div>
+          <div class="field"><label>Date brewed</label><input class="input" type="date" name="brew_date"></div>
+          <div class="field"><label>Date kegged off</label><input class="input" type="date" name="kegged_date"></div>
+          <div class="field"><label>Volume</label>
+            <div class="inline-unit">
+              <input class="input" type="number" step="0.01" min="0" inputmode="decimal" name="volume" placeholder="7">
+              <select class="input" name="volume_unit"><option>bbl</option><option>gal</option><option>L</option><option>hL</option></select>
+            </div></div>
+          <div class="field"><label>OG</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="og" placeholder="1.062"></div>
+          <div class="field"><label>FG</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="fg" placeholder="1.012"></div>
+          <div class="field"><label>ABV</label><div class="input" id="dAbv" style="display:flex;align-items:center;color:var(--slate-light)">—</div></div>
+          <div class="field"><label>Kegs filled</label><input class="input" type="number" step="1" min="0" inputmode="numeric" name="keg_count"></div>
+          <div class="field span2"></div>
+          <div class="field span2" style="grid-column:1/-1"><label>Notes</label><textarea class="input" name="notes" placeholder="Mash temp, boil length, yeast pitch, anything worth remembering next time."></textarea></div>
+        </div>
+      </form>
+
+      <div class="band-wrap band-row"><span class="band">Ingredients</span><span class="stat" id="ingStat"></span></div>
+      <div class="card">
+        <div id="ingList"></div>
+        <form id="ingForm" class="add-form grid grid-3" autocomplete="off">
+          <div class="field"><label>Type</label>
+            <select class="input" name="category">
+              <option value="grain">Grain</option><option value="hops">Hops</option><option value="yeast">Yeast</option>
+              <option value="adjunct">Adjunct</option><option value="water">Water</option><option value="other">Other</option>
+            </select></div>
+          <div class="field span2"><label>Ingredient</label><input class="input" name="name" required placeholder="Rahr 2-Row"></div>
+          <div class="field"><label>Amount</label>
+            <div class="inline-unit">
+              <input class="input" type="number" step="any" min="0" inputmode="decimal" name="amount" placeholder="250">
+              <input class="input" name="unit" list="units" placeholder="lb">
+            </div></div>
+          <div class="field"><label>Stage</label><input class="input" name="stage" list="stages" placeholder="Mash"></div>
+          <div class="field"><label>Timing</label><input class="input" name="timing" placeholder="60 min / day 4"></div>
+          <div class="span2" style="grid-column:1/-1;display:flex;justify-content:flex-end">
+            <button class="btn btn-sm btn-primary" type="submit">Add ingredient</button></div>
+        </form>
+        <datalist id="units"><option>lb</option><option>oz</option><option>kg</option><option>g</option><option>pkg</option><option>L</option><option>mL</option><option>gal</option><option>bbl</option></datalist>
+        <datalist id="stages"><option>Mash</option><option>Boil</option><option>Whirlpool</option><option>Dry hop</option><option>Fermenter</option><option>Brite</option><option>Keg</option></datalist>
+      </div>
+
+      <div class="band-wrap band-row"><span class="band">Log</span><span class="stat" id="logStat"></span></div>
+      <div class="card">
+        <form id="logForm" class="grid grid-3" autocomplete="off" style="margin-bottom:4px">
+          <div class="field"><label>When</label><input class="input" type="datetime-local" name="logged_at" required></div>
+          <div class="field"><label>Gravity</label><input class="input" type="number" step="0.001" min="0.9" max="1.3" inputmode="decimal" name="gravity" placeholder="1.020"></div>
+          <div class="field"><label>Temp °F</label><input class="input" type="number" step="0.1" inputmode="decimal" name="temperature" placeholder="66"></div>
+          <div class="field span2" style="grid-column:1/-1"><label>Note</label><input class="input" name="note" placeholder="Dry hopped, crashed to 34°F, tasted great…"></div>
+          <div style="grid-column:1/-1;display:flex;justify-content:flex-end">
+            <button class="btn btn-sm btn-primary" type="submit">Add entry</button></div>
+        </form>
+        <div id="logList"></div>
+      </div>
+
+      <div class="danger-zone">
+        <button class="btn" id="dupBtn" type="button">Duplicate recipe</button>
+        <button class="btn btn-danger" id="delBtn" type="button">Delete batch</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- new batch modal -->
+  <div class="modal hidden" id="newModal">
+    <form class="card" id="newForm" autocomplete="off">
+      <h3>New batch</h3>
+      <div class="grid">
+        <div class="field span2"><label>Beer name</label><input class="input" name="beer_name" required placeholder="Boulder Pusher Pale Ale"></div>
+        <div class="field"><label>Style</label><input class="input" name="style" placeholder="Pale Ale"></div>
+        <div class="field"><label>Batch #</label><input class="input" name="batch_number" placeholder="26-041"></div>
+        <div class="field"><label>Date brewed</label><input class="input" type="date" name="brew_date"></div>
+        <div class="field"><label>Fermenter</label><input class="input" name="fermenter" placeholder="FV2"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="newCancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" id="newSubmit">Create batch</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="saved" id="toast">Saved</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function () {
+    'use strict';
+    // Same Supabase project and staff sign-in as the door check-in app (../index.html).
+    var SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
+    var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
+    var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 1 } } });
+
+    var STATUS = { planned: 'Planned', brewing: 'Brew day', fermenting: 'Fermenting', conditioning: 'Conditioning',
+                   kegged: 'Kegged', on_tap: 'On tap', finished: 'Finished', dumped: 'Dumped' };
+    var ACTIVE = ['brewing', 'fermenting', 'conditioning', 'kegged'];
+    var CATS = ['grain', 'hops', 'yeast', 'adjunct', 'water', 'other'];
+    var CAT_LABEL = { grain: 'Grain', hops: 'Hops', yeast: 'Yeast', adjunct: 'Adjuncts', water: 'Water', other: 'Other' };
+
+    var batches = [];
+    var current = null;          // batch being viewed
+    var ingredients = [];
+    var logs = [];
+    var filter = 'active';
+    var search = '';
+
+    var $ = function (id) { return document.getElementById(id); };
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function todayISO() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function parseDate(s) { if (!s) return null; var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+    function fmtDate(s) { var d = parseDate(s); if (!d) return ''; return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); }
+    function daysBetween(a, b) { var da = parseDate(a), db = b ? parseDate(b) : new Date(); if (!da) return null; db.setHours(0,0,0,0); da.setHours(0,0,0,0); return Math.round((db - da) / 86400000); }
+    function fmtNum(n) { if (n == null || n === '') return ''; var x = Number(n); return Number.isInteger(x) ? String(x) : String(x).replace(/\.?0+$/, ''); }
+    function localDT(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+    function abvOf(og, fg) { if (og == null || fg == null || og === '' || fg === '') return null; return Math.round((og - fg) * 131.25 * 100) / 100; }
+
+    var toastTimer;
+    function toast(msg, isErr) {
+      var t = $('toast'); t.textContent = msg; t.classList.toggle('err', !!isErr); t.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, isErr ? 4000 : 1400);
+    }
+    function fail(res, what) { console.error(what, res.error); toast((what || 'Save') + ' failed: ' + (res.error.message || res.error), true); }
+
+    /* ---------------- auth ---------------- */
+    function showLock(on) { $('lock').classList.toggle('hidden', !on); }
+    $('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…'; $('loginError').textContent = '';
+      try {
+        var res = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+        if (res.error) { $('loginError').textContent = res.error.message; return; }
+        $('password').value = '';
+        showLock(false); start();
+      } catch (err) { $('loginError').textContent = 'Could not reach the server. Check your connection.'; }
+      finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+    });
+    $('signOut').addEventListener('click', async function () { await sb.auth.signOut(); batches = []; showLock(true); });
+
+    async function boot() {
+      var res = await sb.auth.getSession();
+      if (res.data && res.data.session) { showLock(false); start(); } else { showLock(true); }
+      sb.auth.onAuthStateChange(function (event, session) { if (event === 'SIGNED_OUT' || !session) showLock(true); });
+    }
+
+    /* ---------------- routing ---------------- */
+    var started = false;
+    function start() { if (started) { route(); return; } started = true; loadBatches().then(route); }
+    window.addEventListener('hashchange', route);
+    function route() {
+      var h = location.hash || '#/';
+      var m = h.match(/^#\/b\/([0-9a-f-]{36})$/);
+      if (m) { openBatch(m[1]); }
+      else { current = null; $('viewDetail').classList.add('hidden'); $('viewList').classList.remove('hidden'); renderList(); window.scrollTo(0, 0); }
+    }
+
+    /* ---------------- list ---------------- */
+    async function loadBatches() {
+      var res = await sb.from('batches').select('*').order('brew_date', { ascending: false, nullsFirst: true }).order('created_at', { ascending: false });
+      if (res.error) { fail(res, 'Load'); return; }
+      batches = res.data || [];
+    }
+
+    function matches(b) {
+      if (filter === 'active' && ACTIVE.indexOf(b.status) < 0) return false;
+      if (filter === 'on_tap' && b.status !== 'on_tap') return false;
+      if (filter === 'planned' && b.status !== 'planned') return false;
+      if (search) {
+        var hay = [b.beer_name, b.style, b.batch_number, b.fermenter].join(' ').toLowerCase();
+        if (hay.indexOf(search) < 0) return false;
+      }
+      return true;
+    }
+
+    function timeline(b) {
+      var parts = [];
+      if (b.brew_date) {
+        var s = 'Brewed <b>' + esc(fmtDate(b.brew_date)) + '</b>';
+        if (b.kegged_date) {
+          var d = daysBetween(b.brew_date, b.kegged_date);
+          s += ' → Kegged <b>' + esc(fmtDate(b.kegged_date)) + '</b>' + (d != null ? ' (' + d + ' days)' : '');
+        } else if (ACTIVE.indexOf(b.status) >= 0 || b.status === 'brewing') {
+          var n = daysBetween(b.brew_date, null);
+          s += ' · <b>day ' + (n + 1) + '</b>' + (b.fermenter ? ' in ' + esc(b.fermenter) : '');
+        }
+        parts.push('<span>' + s + '</span>');
+      } else if (b.kegged_date) {
+        parts.push('<span>Kegged <b>' + esc(fmtDate(b.kegged_date)) + '</b></span>');
+      }
+      return parts;
+    }
+
+    // Newest brew first; planned batches (no brew date yet) sit on top. Same order the database query uses.
+    function sortBatches() {
+      batches.sort(function (a, b) {
+        if (!a.brew_date !== !b.brew_date) return a.brew_date ? 1 : -1;
+        if (a.brew_date !== b.brew_date) return a.brew_date < b.brew_date ? 1 : -1;
+        return a.created_at < b.created_at ? 1 : -1;
+      });
+    }
+
+    function renderList() {
+      var el = $('batchList');
+      sortBatches();
+      var rows = batches.filter(matches);
+      $('hdrSub').textContent = batches.length ? batches.length + (batches.length === 1 ? ' batch' : ' batches') + ' · ' + batches.filter(function (b) { return ACTIVE.indexOf(b.status) >= 0; }).length + ' in the brewhouse' : 'Sisyphus brewhouse';
+      if (!rows.length) {
+        el.innerHTML = '<div class="empty"><b>' + (batches.length ? 'Nothing here' : 'No batches yet') + '</b>' +
+          (batches.length ? 'Try another filter or clear the search.' : 'Tap <em>New batch</em> to log your first brew.') + '</div>';
+        return;
+      }
+      el.innerHTML = rows.map(function (b) {
+        var meta = timeline(b);
+        var bits = [];
+        if (b.abv != null) bits.push('<span><b>' + fmtNum(b.abv) + '%</b> ABV</span>');
+        else if (b.og != null) bits.push('<span>OG <b>' + fmtNum(b.og) + '</b></span>');
+        if (b.volume != null) bits.push('<span><b>' + fmtNum(b.volume) + '</b> ' + esc(b.volume_unit) + '</span>');
+        if (b.keg_count != null) bits.push('<span><b>' + b.keg_count + '</b> kegs</span>');
+        var sub = [b.batch_number ? '#' + b.batch_number : null, b.style].filter(Boolean).map(esc).join(' · ');
+        return '<button class="card batch" type="button" data-id="' + b.id + '">' +
+          '<div class="batch-top"><div><div class="batch-name">' + esc(b.beer_name) + '</div>' +
+          (sub ? '<div class="batch-sub">' + sub + '</div>' : '') + '</div>' +
+          '<span class="pill ' + esc(b.status) + '">' + esc(STATUS[b.status] || b.status) + '</span></div>' +
+          (meta.length || bits.length ? '<div class="batch-meta">' + meta.concat(bits).join('') + '</div>' : '') +
+          '</button>';
+      }).join('');
+    }
+
+    $('batchList').addEventListener('click', function (e) {
+      var card = e.target.closest('.batch'); if (card) location.hash = '#/b/' + card.getAttribute('data-id');
+    });
+    $('search').addEventListener('input', function () { search = this.value.trim().toLowerCase(); renderList(); });
+    $('chips').addEventListener('click', function (e) {
+      var c = e.target.closest('.chip'); if (!c) return;
+      filter = c.getAttribute('data-filter');
+      Array.prototype.forEach.call(this.children, function (x) { x.classList.toggle('on', x === c); });
+      renderList();
+    });
+
+    /* ---------------- new batch ---------------- */
+    $('newBatchBtn').addEventListener('click', function () {
+      var f = $('newForm'); f.reset(); f.brew_date.value = '';
+      $('newModal').classList.remove('hidden'); setTimeout(function () { f.beer_name.focus(); }, 50);
+    });
+    $('newCancel').addEventListener('click', function () { $('newModal').classList.add('hidden'); });
+    $('newModal').addEventListener('click', function (e) { if (e.target === this) this.classList.add('hidden'); });
+    $('newForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var f = this, btn = $('newSubmit'); btn.disabled = true;
+      var row = {
+        beer_name: f.beer_name.value.trim(), style: f.style.value.trim() || null, batch_number: f.batch_number.value.trim() || null,
+        brew_date: f.brew_date.value || null, fermenter: f.fermenter.value.trim() || null,
+        status: f.brew_date.value && f.brew_date.value <= todayISO() ? 'fermenting' : 'planned'
+      };
+      var res = await sb.from('batches').insert(row).select().single();
+      btn.disabled = false;
+      if (res.error) { fail(res, 'Create'); return; }
+      $('newModal').classList.add('hidden');
+      batches.unshift(res.data);
+      location.hash = '#/b/' + res.data.id;
+    });
+
+    /* ---------------- detail ---------------- */
+    async function openBatch(id) {
+      var b = batches.filter(function (x) { return x.id === id; })[0];
+      if (!b) {
+        var res = await sb.from('batches').select('*').eq('id', id).maybeSingle();
+        if (res.error || !res.data) { toast('That batch is gone.', true); location.hash = '#/'; return; }
+        b = res.data; batches.push(b);
+      }
+      current = b;
+      $('viewList').classList.add('hidden'); $('viewDetail').classList.remove('hidden'); window.scrollTo(0, 0);
+      fillForm(b);
+      ingredients = []; logs = []; renderIngredients(); renderLogs();
+      var r = await Promise.all([
+        sb.from('batch_ingredients').select('*').eq('batch_id', id).order('sort_order').order('created_at'),
+        sb.from('batch_log').select('*').eq('batch_id', id).order('logged_at', { ascending: false })
+      ]);
+      if (current !== b) return;
+      if (r[0].error) fail(r[0], 'Load'); else ingredients = r[0].data || [];
+      if (r[1].error) fail(r[1], 'Load'); else logs = r[1].data || [];
+      renderIngredients(); renderLogs();
+      $('logForm').logged_at.value = localDT(new Date());
+    }
+
+    var FIELDS = ['beer_name', 'batch_number', 'style', 'fermenter', 'status', 'brew_date', 'kegged_date', 'volume', 'volume_unit', 'og', 'fg', 'keg_count', 'notes'];
+    function fillForm(b) {
+      var f = $('batchForm');
+      FIELDS.forEach(function (k) { f[k].value = b[k] == null ? '' : b[k]; });
+      f.volume_unit.value = b.volume_unit || 'bbl';
+      paintHead(b);
+    }
+    function paintHead(b) {
+      $('dTitle').textContent = b.beer_name || 'Untitled batch';
+      $('dSub').textContent = [b.batch_number ? '#' + b.batch_number : null, b.style, b.fermenter].filter(Boolean).join(' · ');
+      var pill = $('dPill'); pill.className = 'pill ' + b.status; pill.textContent = STATUS[b.status] || b.status;
+      var abv = abvOf(b.og, b.fg);
+      $('dAbv').textContent = abv == null ? '—' : fmtNum(abv) + '%';
+      $('dAbv').style.color = abv == null ? 'var(--slate-light)' : 'var(--white)';
+    }
+
+    // Autosave: any field change is written straight away.
+    $('batchForm').addEventListener('change', function (e) {
+      var k = e.target.name; if (!k) return;
+      var v = e.target.value;
+      if (e.target.type === 'number') v = v === '' ? null : Number(v);
+      else { v = v.trim(); if (v === '' && k !== 'beer_name') v = null; }
+      if (k === 'beer_name' && !v) { e.target.value = current.beer_name; return; }
+      var patch = {}; patch[k] = v;
+      saveBatch(patch);
+    });
+    $('batchForm').addEventListener('submit', function (e) { e.preventDefault(); });
+
+    async function saveBatch(patch) {
+      if (!current) return;
+      var b = current;
+      var res = await sb.from('batches').update(patch).eq('id', b.id).select().single();
+      if (res.error) { fail(res); fillForm(b); return; }
+      Object.assign(b, res.data);
+      if (current === b) paintHead(b);
+      toast('Saved');
+    }
+
+    $('quick').addEventListener('click', function (e) {
+      var q = e.target.closest('[data-quick]'); if (!q || !current) return;
+      var patch = {}, t = todayISO();
+      if (q.getAttribute('data-quick') === 'brewed') { patch.brew_date = t; patch.status = 'fermenting'; }
+      if (q.getAttribute('data-quick') === 'kegged') { patch.kegged_date = t; patch.status = 'kegged'; }
+      if (q.getAttribute('data-quick') === 'on_tap') { patch.status = 'on_tap'; }
+      if (q.getAttribute('data-quick') === 'finished') { patch.status = 'finished'; }
+      saveBatch(patch).then(function () { if (current) fillForm(current); });
+    });
+
+    $('backBtn').addEventListener('click', function () { location.hash = '#/'; });
+
+    /* ---------------- ingredients ---------------- */
+    function renderIngredients() {
+      var el = $('ingList');
+      if (!ingredients.length) { el.innerHTML = '<div class="stat" style="padding:4px 0 2px">No ingredients yet. Add the grain bill, hops and yeast below.</div>'; $('ingStat').textContent = ''; return; }
+      $('ingStat').textContent = ingredients.length + ' item' + (ingredients.length === 1 ? '' : 's');
+      el.innerHTML = CATS.map(function (c) {
+        var rows = ingredients.filter(function (i) { return i.category === c; });
+        if (!rows.length) return '';
+        return '<div class="cat">' + CAT_LABEL[c] + '</div>' + rows.map(function (i) {
+          var sub = [i.stage, i.timing, i.notes].filter(Boolean).map(esc).join(' · ');
+          return '<div class="list-row"><div><div class="main">' + esc(i.name) + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>' +
+            '<div class="row"><span class="amt">' + (i.amount != null ? fmtNum(i.amount) + ' ' + esc(i.unit || '') : '') + '</span>' +
+            '<button class="x" type="button" data-del-ing="' + i.id + '" aria-label="Remove">×</button></div></div>';
+        }).join('');
+      }).join('');
+    }
+    $('ingForm').addEventListener('submit', async function (e) {
+      e.preventDefault(); if (!current) return;
+      var f = this;
+      var row = { batch_id: current.id, category: f.category.value, name: f.name.value.trim(),
+        amount: f.amount.value === '' ? null : Number(f.amount.value), unit: f.unit.value.trim() || null,
+        stage: f.stage.value.trim() || null, timing: f.timing.value.trim() || null, sort_order: ingredients.length };
+      var res = await sb.from('batch_ingredients').insert(row).select().single();
+      if (res.error) { fail(res, 'Add'); return; }
+      ingredients.push(res.data); renderIngredients();
+      var keepCat = f.category.value, keepUnit = f.unit.value, keepStage = f.stage.value;
+      f.reset(); f.category.value = keepCat; f.unit.value = keepUnit; f.stage.value = keepStage; f.name.focus();
+      toast('Added');
+    });
+    $('ingList').addEventListener('click', async function (e) {
+      var x = e.target.closest('[data-del-ing]'); if (!x) return;
+      var id = x.getAttribute('data-del-ing');
+      var res = await sb.from('batch_ingredients').delete().eq('id', id);
+      if (res.error) { fail(res, 'Remove'); return; }
+      ingredients = ingredients.filter(function (i) { return i.id !== id; }); renderIngredients();
+    });
+
+    /* ---------------- log ---------------- */
+    function renderLogs() {
+      var el = $('logList');
+      $('logStat').textContent = logs.length ? logs.length + (logs.length === 1 ? ' entry' : ' entries') : '';
+      if (!logs.length) { el.innerHTML = '<div class="stat" style="padding:10px 0 2px">No entries yet. Gravity readings, temps and tasting notes go here.</div>'; return; }
+      el.innerHTML = logs.map(function (l) {
+        var d = new Date(l.logged_at);
+        var when = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        var nums = [];
+        if (l.gravity != null) nums.push('<b>' + fmtNum(l.gravity) + '</b> SG');
+        if (l.temperature != null) nums.push('<b>' + fmtNum(l.temperature) + '°</b>');
+        if (l.ph != null) nums.push('pH <b>' + fmtNum(l.ph) + '</b>');
+        return '<div class="list-row"><div><div class="sub">' + esc(when) + (current && current.brew_date ? ' · day ' + (daysBetween(current.brew_date, l.logged_at.slice(0, 10)) + 1) : '') + '</div>' +
+          (nums.length ? '<div class="main">' + nums.join(' &nbsp; ') + '</div>' : '') +
+          (l.note ? '<div>' + esc(l.note) + '</div>' : '') + '</div>' +
+          '<button class="x" type="button" data-del-log="' + l.id + '" aria-label="Remove">×</button></div>';
+      }).join('');
+    }
+    $('logForm').addEventListener('submit', async function (e) {
+      e.preventDefault(); if (!current) return;
+      var f = this;
+      var row = { batch_id: current.id, logged_at: new Date(f.logged_at.value).toISOString(),
+        gravity: f.gravity.value === '' ? null : Number(f.gravity.value),
+        temperature: f.temperature.value === '' ? null : Number(f.temperature.value),
+        note: f.note.value.trim() || null };
+      if (row.gravity == null && row.temperature == null && !row.note) { toast('Add a reading or a note first.', true); return; }
+      var res = await sb.from('batch_log').insert(row).select().single();
+      if (res.error) { fail(res, 'Add'); return; }
+      logs.unshift(res.data); logs.sort(function (a, b) { return a.logged_at < b.logged_at ? 1 : -1; }); renderLogs();
+      // A gravity reading on a batch with an OG is probably the current FG.
+      if (row.gravity != null && current.og != null && row.gravity < current.og && (current.fg == null || row.gravity <= current.fg)) {
+        saveBatch({ fg: row.gravity }).then(function () { if (current) fillForm(current); });
+      }
+      f.reset(); f.logged_at.value = localDT(new Date());
+      toast('Logged');
+    });
+    $('logList').addEventListener('click', async function (e) {
+      var x = e.target.closest('[data-del-log]'); if (!x) return;
+      var id = x.getAttribute('data-del-log');
+      var res = await sb.from('batch_log').delete().eq('id', id);
+      if (res.error) { fail(res, 'Remove'); return; }
+      logs = logs.filter(function (l) { return l.id !== id; }); renderLogs();
+    });
+
+    /* ---------------- duplicate / delete ---------------- */
+    $('dupBtn').addEventListener('click', async function () {
+      if (!current) return;
+      var src = current;
+      var row = { beer_name: src.beer_name, style: src.style, fermenter: src.fermenter, volume: src.volume, volume_unit: src.volume_unit,
+                  og: src.og, notes: src.notes, status: 'planned' };
+      var res = await sb.from('batches').insert(row).select().single();
+      if (res.error) { fail(res, 'Duplicate'); return; }
+      var nb = res.data;
+      if (ingredients.length) {
+        var copies = ingredients.map(function (i) { return { batch_id: nb.id, category: i.category, name: i.name, amount: i.amount, unit: i.unit, stage: i.stage, timing: i.timing, notes: i.notes, sort_order: i.sort_order }; });
+        var r2 = await sb.from('batch_ingredients').insert(copies);
+        if (r2.error) fail(r2, 'Copy ingredients');
+      }
+      batches.unshift(nb);
+      toast('New planned batch from this recipe');
+      location.hash = '#/b/' + nb.id;
+    });
+    $('delBtn').addEventListener('click', async function () {
+      if (!current) return;
+      if (!confirm('Delete "' + current.beer_name + '" and its ingredients and log? This cannot be undone.')) return;
+      var id = current.id;
+      var res = await sb.from('batches').delete().eq('id', id);
+      if (res.error) { fail(res, 'Delete'); return; }
+      batches = batches.filter(function (b) { return b.id !== id; });
+      toast('Batch deleted');
+      location.hash = '#/';
+    });
+
+    boot();
+  })();
+  </script>
+</body>
+</html>
