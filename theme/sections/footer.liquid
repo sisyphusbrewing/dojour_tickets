@@ -9,7 +9,7 @@
     {%- endif -%}
     <p class="sb-footer-motto">
       <span class="sb-footer-motto-fr">&laquo; Il faut imaginer Sisyphe heureux. &raquo;</span>
-      <span class="sb-footer-motto-en">One must imagine Sisyphus happy &middot; Albert Camus</span>
+      <span class="sb-footer-motto-en">One must imagine Sisyphus happy<span class="sb-footer-motto-sep"> &middot; </span><span class="sb-footer-motto-by">Albert Camus</span></span>
     </p>
     <div class="sb-footer-grid">
       
@@ -111,6 +111,10 @@
     font-size: 1.25rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
+  }
+  @media (max-width: 749px) {
+    .sb-footer .sb-footer-motto-sep { display: none; }
+    .sb-footer .sb-footer-motto-by { display: block; margin-top: 0.25rem; }
   }
   .sb-footer-logo img {
     display: block;
