@@ -11,9 +11,14 @@ times, price, and a QR code to the ticket page.
 * The photo is embedded at 300 dpi for its printed size. The only limit is the
   picture on the website: anything under ~150 dpi on the poster is flagged in the
   log and in `manifest.json`. Upload a bigger photo to the product and rerun.
-* Headshots are cropped to fill the top of the poster. A picture a crop would
-  cut badly (a flyer, a very tall or wide photo) is shown whole over a blurred
-  copy instead. Tag the product `poster: fit` or `poster: cover` to force either.
+* The photo fills the top ~60% of the sheet, the name band sits across it, and
+  the dates are centred between the band and a slim QR / price / badge footer.
+  `POSTER_STYLE=classic` brings back the older layout (smaller photo, big footer).
+* Headshots are cropped to fill, placed around the face (OpenCV face detection,
+  `opencv-python-headless`; without it the crop keeps the top of the picture).
+  A picture with no face that a crop would cut (a flyer, a tall or wide photo)
+  is shown whole over a blurred copy instead. Tag the product `poster: fit` or
+  `poster: cover` to force either.
 * Recurring shows (tagged `recurring: ...`, see `recurring_events.py`) say
   "EVERY THURSDAY · 8:00 PM" with the next dates under it.
 * Classes and workshops are skipped.
