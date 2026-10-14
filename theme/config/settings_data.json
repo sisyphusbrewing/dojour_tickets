@@ -9,8 +9,8 @@
  */
 {
   "current": {
-    "logo": "shopify://shop_images/sisyphus-badge-mic.png",
-    "favicon": "shopify://shop_images/sisyphus-favicon-mic.png",
+    "logo": "shopify://shop_images/sisyphus-badge-bluegray-dark-bg.png",
+    "favicon": "shopify://shop_images/sisyphus-favicon.png",
     "logo_width": 120,
     "type_header_font": "assistant_n4",
     "heading_scale": 100,
@@ -420,3 +420,4 @@
     ]
   }
 }
+

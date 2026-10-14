@@ -1,12 +1,16 @@
 <!-- SISYPHUS BREWING CUSTOM FOOTER -->
 <footer class="sb-footer">
   <div class="sb-footer-container">
-    {%- assign sb_footer_logo = images['sisyphus-badge-mic.png'] | default: settings.logo -%}
+    {%- assign sb_footer_logo = images['sisyphus-banner-blue.png'] | default: settings.logo -%}
     {%- if sb_footer_logo != blank -%}
       <a href="{{ routes.root_url }}" class="sb-footer-logo">
-        {{ sb_footer_logo | image_url: width: 320 | image_tag: width: 160, alt: 'Sisyphus', loading: 'lazy' }}
+        {{ sb_footer_logo | image_url: width: 440 | image_tag: width: 220, alt: shop.name, loading: 'lazy' }}
       </a>
     {%- endif -%}
+    <p class="sb-footer-motto">
+      <span class="sb-footer-motto-fr">&laquo; Il faut imaginer Sisyphe heureux. &raquo;</span>
+      <span class="sb-footer-motto-en">One must imagine Sisyphus happy<span class="sb-footer-motto-sep"> &middot; </span><span class="sb-footer-motto-by">Albert Camus</span></span>
+    </p>
     <div class="sb-footer-grid">
       
       <!-- Column 1: Location & Social -->
@@ -83,9 +87,38 @@
   }
   .sb-footer-logo {
     display: block;
-    width: 160px;
+    width: 220px;
     max-width: 70%;
-    margin: 0 auto 4rem auto;
+    margin: 0 auto 1.75rem auto;
+  }
+  /* The last line of Camus's Myth of Sisyphus, which the place is named for. */
+  .sb-footer .sb-footer-motto {
+    text-align: center;
+    max-width: 60ch;
+    margin: 0 auto 4rem;
+    line-height: 1.5;
+  }
+  .sb-footer .sb-footer-motto-fr {
+    display: block;
+    color: #e4e1e1 !important;
+    font-size: 1.9rem;
+    letter-spacing: 0.03em;
+  }
+  .sb-footer .sb-footer-motto-en {
+    display: block;
+    margin-top: 0.5rem;
+    color: #918f90 !important;
+    font-size: 1.25rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  /* The theme paints every span white; the author's name keeps the line's gray. */
+  .sb-footer .sb-footer-motto-en span {
+    color: inherit !important;
+  }
+  @media (max-width: 749px) {
+    .sb-footer .sb-footer-motto-sep { display: none; }
+    .sb-footer .sb-footer-motto-by { display: block; margin-top: 0.25rem; }
   }
   .sb-footer-logo img {
     display: block;
