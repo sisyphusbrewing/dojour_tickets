@@ -326,7 +326,7 @@
           <input 
             id="newCapacity" 
             type="number" 
-            value="75" 
+            value="90" 
             class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
           />
         </div>
@@ -651,7 +651,7 @@
     async function submitNewShowToPipeline() {
       var title = document.getElementById('newTitle').value.trim();
       var price = document.getElementById('newPrice').value.trim() || '20.00';
-      var capacity = parseInt(document.getElementById('newCapacity').value, 10) || 75;
+      var capacity = parseInt(document.getElementById('newCapacity').value, 10) || 90;
       var imageUrl = document.getElementById('uploadedImageUrl').value.trim();
       var rawBio = document.getElementById('newBio').value.trim();
 
@@ -694,7 +694,7 @@
       var title = document.getElementById('newTitle').value.trim() || 'Show Title';
       var showtimes = configuredShowtimes.join(' | ') || 'No showtimes configured';
       var price = document.getElementById('newPrice').value.trim() || '20.00';
-      var capacity = document.getElementById('newCapacity').value.trim() || '75';
+      var capacity = document.getElementById('newCapacity').value.trim() || '90';
       var imageUrl = document.getElementById('uploadedImageUrl').value.trim();
       var bio = document.getElementById('newBio').value.trim();
 
