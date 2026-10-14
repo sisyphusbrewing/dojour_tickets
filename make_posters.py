@@ -86,11 +86,13 @@ STYLES = {
     "classic": dict(photo_frac=None, fit_threshold=0.22, fit_dim=0.45, fade_in=2.1,
                     date_sizes={1: 46, 2: 42, 3: 42, 4: 40}, date_default=34, row_h=1.42,
                     tile=2.0, caption=0.5, footer_bottom=0.6, gap_footer=0.55, gap_band=0.58,
-                    band_max=120, band_overlap=0.55),
+                    band_max=120, band_overlap=0.55, band_line_gap=0.32, band_pad=0.38,
+                    rec_gap1=0.42, rec_gap2=0.62, price_gap=0.14),
     "photo": dict(photo_frac=0.40, fit_threshold=0.22, fit_dim=0.7, fade_in=1.6,
-                  date_sizes={1: 50, 2: 46, 3: 42, 4: 36}, date_default=32, row_h=1.36,
-                  tile=1.45, caption=0.42, footer_bottom=0.5, gap_footer=0.42, gap_band=0.52,
-                  band_max=124, band_overlap=0.5),
+                  date_sizes={1: 50, 2: 46, 3: 42, 4: 36}, date_default=32, row_h=1.55,
+                  tile=1.45, caption=0.62, footer_bottom=0.5, gap_footer=0.7, gap_band=0.75,
+                  band_max=124, band_overlap=0.5, band_line_gap=0.5, band_pad=0.45,
+                  rec_gap1=0.62, rec_gap2=0.95, price_gap=0.22),
 }
 STYLE_NAME = os.environ.get("POSTER_STYLE", "photo").strip().lower() or "photo"
 if STYLE_NAME not in STYLES:
@@ -458,8 +460,8 @@ def band_layout(title, font="JosefinSans-Bold"):
     if text_width(lines[0], font, size, size * 0.06) > max_w:
         lines = [l.upper() for l in split_title(title)]
         size = min(fit_size(line, font, max_w, 84, 28, 0.06) for line in lines)
-    line_gap = size * 0.32                     # space between the two lines' caps
-    pad = size * 0.38                          # band padding above and below the caps
+    line_gap = size * STYLE["band_line_gap"]   # space between the two lines' caps
+    pad = size * STYLE["band_pad"]             # band padding above and below the caps
     band_h = 2 * pad + size * CAP * len(lines) + line_gap * (len(lines) - 1)
     return lines, size, band_h
 
@@ -468,8 +470,8 @@ def draw_band(c, bottom_y, lines, size, band_h, font="JosefinSans-Bold", angle=-
     """The tilted slate band from the logo, with the show name in it. Its bottom edge sits at
     bottom_y (at the page centre); a long name wraps to two lines and the band grows upward."""
     spacing = size * 0.06
-    line_gap = size * 0.32
-    pad = size * 0.38
+    line_gap = size * STYLE["band_line_gap"]
+    pad = size * STYLE["band_pad"]
     half = PAGE_W / 2 + 1.6 * inch               # long enough to cover the page when tilted
 
     c.saveState()
@@ -608,7 +610,7 @@ def recurring_block(label, dates):
     headline, when = label
     size = fit_size(headline, "JosefinSans-Bold", PAGE_W - 2 * MARGIN, 52, 30, 0.08)
     when_size = size * 0.78
-    gap1, gap2 = size * 0.42, size * 0.62
+    gap1, gap2 = size * STYLE["rec_gap1"], size * STYLE["rec_gap2"]
     height = size * CAP + gap1 + when_size * CAP + gap2 + 17 * CAP
 
     def draw(c, top_y):
@@ -644,7 +646,7 @@ def draw_prices(c, cx, cy, prices):
     others = prices[1:]
     big = (80 if len(main_text) <= 4 else 62) * min(1.0, STYLE["tile"] / 1.8)
     label, small = 15, 16
-    gap = 0.14 * inch
+    gap = STYLE["price_gap"] * inch
     total = label * CAP + gap + big * CAP + sum(gap + small * CAP for _ in others)
     y = cy + total / 2 - label * CAP
     top_label = main_kind if len(prices) > 1 else ("ADMISSION" if main_text == "FREE" else "TICKETS")
@@ -672,14 +674,17 @@ def draw_footer(c, bottom_y, url, prices):
     free = len(prices) == 1 and prices[0][1] == "FREE"
     scan = "SCAN TO RSVP" if free else "SCAN FOR TICKETS"
     if caption_h >= 0.5 * inch:
-        line1, line2 = bottom_y + 0.24 * inch, bottom_y
-        draw_text(c, qr_x + tile / 2, line1, scan, "JosefinSans-SemiBold", 14, WHITE, 2.5, align="center")
-        draw_text(c, qr_x + tile / 2, line2, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY, 0.5,
-                  align="center")
-        draw_text(c, badge_x + badge_w / 2, line1, TAGLINE, "JosefinSans-SemiBold", 14, WHITE, 2.5,
-                  align="center")
-        draw_text(c, badge_x + badge_w / 2, line2, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1,
-                  align="center")
+        if STYLE_NAME == "classic":
+            line1, line2 = bottom_y + 0.24 * inch, bottom_y
+            lx, rx, la, ra = qr_x + tile / 2, badge_x + badge_w / 2, "center", "center"
+        else:                                 # captions flush with the page margins, clear of the tiles
+            line1 = tile_y - 0.3 * inch
+            line2 = line1 - 0.26 * inch
+            lx, rx, la, ra = qr_x, PAGE_W - MARGIN, "left", "right"
+        draw_text(c, lx, line1, scan, "JosefinSans-SemiBold", 14, WHITE, 2.5, align=la)
+        draw_text(c, lx, line2, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY, 0.5, align=la)
+        draw_text(c, rx, line1, TAGLINE, "JosefinSans-SemiBold", 14, WHITE, 2.5, align=ra)
+        draw_text(c, rx, line2, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1, align=ra)
     else:                                     # slim footer: one caption line under each tile
         line1 = tile_y - 0.22 * inch
         draw_text(c, qr_x + tile / 2, line1, scan, "JosefinSans-SemiBold", 12, WHITE, 2, align="center")
