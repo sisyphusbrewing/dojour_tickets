@@ -47,7 +47,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests pillow reportlab pypdf opencv-python-headless numpy
+        run: pip install requests pillow reportlab pypdf "opencv-python-headless==4.10.0.84"
 
       - name: Make posters
         env:
