@@ -37,6 +37,8 @@ import requests
 from PIL import Image, ImageFilter
 try:
     import cv2                                 # optional: finds faces so the crop keeps them
+    if not hasattr(cv2, "CascadeClassifier"):  # OpenCV 5 dropped the Haar face detector
+        cv2 = None
 except ImportError:                            # pragma: no cover
     cv2 = None
 from reportlab.graphics import renderPDF
