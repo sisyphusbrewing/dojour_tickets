@@ -35,6 +35,10 @@ from datetime import datetime, timedelta
 
 import requests
 from PIL import Image, ImageFilter
+try:
+    import cv2                                 # optional: finds faces so the crop keeps them
+except ImportError:                            # pragma: no cover
+    cv2 = None
 from reportlab.graphics import renderPDF
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
@@ -73,6 +77,23 @@ FONT_DIR = os.path.join(HERE, "posters", "fonts")
 BADGE = os.path.join(HERE, "posters", "assets", "sisyphus-badge-dark-bg.png")
 VENUE_LINE = "712 ONTARIO AVE W  ·  MINNEAPOLIS"
 TAGLINE = "COMEDY CLUB & BREWERY"
+
+# Layout styles (POSTER_STYLE). "classic" is the original bottom-up layout; "photo" gives the
+# headshot about 60 % of the sheet, with a slimmer footer.
+STYLES = {
+    "classic": dict(photo_frac=None, fit_threshold=0.22, fit_dim=0.45, fade_in=2.1,
+                    date_sizes={1: 46, 2: 42, 3: 42, 4: 40}, date_default=34, row_h=1.42,
+                    tile=2.0, caption=0.5, footer_bottom=0.6, gap_footer=0.55, gap_band=0.58,
+                    band_max=120, band_overlap=0.55),
+    "photo": dict(photo_frac=0.40, fit_threshold=0.22, fit_dim=0.7, fade_in=1.6,
+                  date_sizes={1: 50, 2: 46, 3: 42, 4: 36}, date_default=32, row_h=1.36,
+                  tile=1.45, caption=0.42, footer_bottom=0.5, gap_footer=0.42, gap_band=0.52,
+                  band_max=124, band_overlap=0.5),
+}
+STYLE_NAME = os.environ.get("POSTER_STYLE", "photo").strip().lower() or "photo"
+if STYLE_NAME not in STYLES:
+    sys.exit(f"POSTER_STYLE must be one of {', '.join(STYLES)}, not {STYLE_NAME!r}")
+STYLE = STYLES[STYLE_NAME]
 
 
 def register_fonts():
@@ -228,25 +249,84 @@ def fetch_image(url):
     return img.convert("RGB")
 
 
-def cover(img, w, h, focus_y=0.28):
-    """Crop to the target aspect (keeping the upper part, where faces are) and resize."""
+def find_faces(img):
+    """Face boxes (left, top, right, bottom) as shares of the image, biggest first; [] without
+    OpenCV. Tiny faces, faces in the lower half (cartoons on flyers) and faces much smaller than
+    the biggest one (backgrounds, stars) are ignored."""
+    if cv2 is None:
+        return []
+    import numpy as np
+    small = img.copy()
+    small.thumbnail((800, 800))
+    sx, sy = img.size[0] / small.size[0], img.size[1] / small.size[1]
+    gray = cv2.cvtColor(np.asarray(small), cv2.COLOR_RGB2GRAY)
+    edges = small.convert("L").resize((160, max(1, round(160 * small.size[1] / small.size[0]))))
+    edges = edges.filter(ImageFilter.FIND_EDGES)
+    if sum(1 for v in edges.getdata() if v > 60) / (edges.size[0] * edges.size[1]) > 0.2:
+        return []                              # busy with lettering: a flyer, shown whole
+    gray = cv2.equalizeHist(gray)
+    boxes = []
+    for k, name in enumerate(("haarcascade_frontalface_default.xml", "haarcascade_frontalface_alt2.xml",
+                              "haarcascade_profileface.xml")):
+        casc = cv2.CascadeClassifier(cv2.data.haarcascades + name)
+        for x, y, fw, fh in casc.detectMultiScale(gray, 1.08, 4, minSize=(40, 40)):
+            l, t = x * sx / img.size[0], y * sy / img.size[1]
+            r, b = (x + fw) * sx / img.size[0], (y + fh) * sy / img.size[1]
+            if r - l >= 0.06 and t < 0.45:
+                boxes.append(((l, t, r, b), k))
+    merged = []                                # merge overlapping boxes, biggest first
+    for box, k in sorted(boxes, key=lambda b: -(b[0][2] - b[0][0])):
+        for i, (m, ks) in enumerate(merged):
+            if box[0] < m[2] and box[2] > m[0] and box[1] < m[3] and box[3] > m[1]:
+                merged[i] = ((min(box[0], m[0]), min(box[1], m[1]), max(box[2], m[2]), max(box[3], m[3])),
+                             ks | {k})
+                break
+        else:
+            merged.append((box, {k}))
+    # a real face: two detectors agree, or one finds a big face high in the frame
+    merged = [m for m, ks in merged if len(ks) >= 2 or (m[2] - m[0] >= 0.2 and m[1] < 0.4)]
+    if merged:
+        biggest = merged[0][2] - merged[0][0]
+        merged = [b for b in merged if b[2] - b[0] >= 0.45 * biggest]
+    return merged
+
+
+def crop_window(img, w, h, faces=None, focus_y=0.28):
+    """The (left, top, right, bottom) source window of a cover crop to the w:h panel, placed so
+    the faces keep some headroom, or None when the faces would not fit in one window."""
     sw, sh = img.size
     target = w / h
     if sw / sh > target:                       # too wide: trim the sides
-        cw = int(round(sh * target))
-        left = (sw - cw) // 2
-        img = img.crop((left, 0, left + cw, sh))
-    else:                                      # too tall: keep the top part
-        ch = int(round(sw / target))
-        top = int(round((sh - ch) * focus_y))
-        img = img.crop((0, top, sw, top + ch))
-    return img.resize((w, h), Image.LANCZOS)
+        cw, ch = int(round(sh * target)), sh
+        cx = (min(f[0] for f in faces) + max(f[2] for f in faces)) / 2 * sw if faces else sw / 2
+        left = int(round(min(max(cx - cw / 2, 0), sw - cw)))
+        top = 0
+    else:                                      # too tall: keep the part with the face, else the top
+        cw, ch = sw, int(round(sw / target))
+        left = 0
+        if faces:
+            face_top = min(f[1] for f in faces) * sh
+            top = int(round(min(max(face_top - 0.16 * ch, 0), sh - ch)))
+        else:
+            top = int(round((sh - ch) * focus_y))
+    if faces:
+        fl, ft = min(f[0] for f in faces) * sw, min(f[1] for f in faces) * sh
+        fr, fb = max(f[2] for f in faces) * sw, max(f[3] for f in faces) * sh
+        if fl < left - 1 or fr > left + cw + 1 or ft < top - 1 or fb > top + ch + 1:
+            return None
+    return left, top, left + cw, top + ch
+
+
+def cover(img, w, h, faces=None, focus_y=0.28):
+    """Crop to the target aspect (around the faces when known, else keeping the upper part) and resize."""
+    window = crop_window(img, w, h, faces, focus_y) or crop_window(img, w, h, None, focus_y)
+    return img.crop(window).resize((w, h), Image.LANCZOS)
 
 
 def fit_on_blur(img, w, h):
     """Whole image, centred, over a blurred and darkened copy of itself (for flyers and odd shapes)."""
-    bg = cover(img, w, h, focus_y=0.5).filter(ImageFilter.GaussianBlur(w / 40))
-    bg = Image.blend(bg, Image.new("RGB", (w, h), CHARCOAL_RGB), 0.45)
+    bg = cover(img, w, h, focus_y=0.5).filter(ImageFilter.GaussianBlur(w / 25))
+    bg = Image.blend(bg, Image.new("RGB", (w, h), CHARCOAL_RGB), STYLE["fit_dim"])
     sw, sh = img.size
     scale = min(w / sw, h / sh)
     fg = img.resize((int(round(sw * scale)), int(round(sh * scale))), Image.LANCZOS)
@@ -275,27 +355,32 @@ def fade_bottom(img, fade_px, power=1.7):
 def headshot_panel(url, width_pt, height_pt, mode="auto"):
     """The photo filling the panel, faded into the charcoal at the bottom, as a JPEG ImageReader.
 
-    Headshots are cropped to fill ("cover", keeping the top where the face is). Images that a
-    crop would cut badly - flyers, very tall or very wide pictures - are shown whole over a
-    blurred copy ("fit"). A "poster: fit" / "poster: cover" tag on the product forces either.
-    Returns (image, source size, effective dpi, mode used).
+    Headshots are cropped to fill ("cover"), placed around the face when OpenCV finds one, else
+    keeping the top. Images with no face that a crop would cut badly - flyers, very tall or wide
+    pictures - are shown whole over a blurred copy ("fit"). A "poster: fit" / "poster: cover" tag
+    on the product forces either. Returns (image, source size, effective dpi, mode used).
     """
     src = fetch_image(url)
     w = int(round(width_pt / inch * DPI))
     h = int(round(height_pt / inch * DPI))
+    faces = find_faces(src) if mode != "fit" else []
+    if faces and crop_window(src, w, h, faces) is None:
+        top_face = [min(faces, key=lambda f: f[1])]  # keep the highest face (hands, shirts fool it)
+        faces = top_face if crop_window(src, w, h, top_face) else []
     if mode == "auto":
-        mode = "fit" if crop_loss(src, w, h) > 0.22 else "cover"
+        loss = crop_loss(src, w, h)
+        mode = "cover" if (faces and loss <= 0.5) or loss <= (STYLE["fit_threshold"] if cv2 is None else 0.06) \
+            else "fit"
     if mode == "fit":
         img = fit_on_blur(src, w, h)
         scale = min(w / src.size[0], h / src.size[1])
         effective_dpi = DPI / scale
         fade = 1.1 * inch
     else:
-        img = cover(src, w, h)
-        effective_dpi = min(src.size[0] / (w / DPI), src.size[1] / (h / DPI)) \
-            if crop_loss(src, w, h) == 0 else \
-            (src.size[0] / (w / DPI) if src.size[0] / src.size[1] <= w / h else src.size[1] / (h / DPI))
-        fade = 2.1 * inch
+        img = cover(src, w, h, faces)
+        left, top, right, bottom = crop_window(src, w, h, faces) or crop_window(src, w, h)
+        effective_dpi = (right - left) / (w / DPI)
+        fade = STYLE["fade_in"] * inch
     if effective_dpi < 150:                     # heavy upscale: soften the pixel edges a touch
         img = img.filter(ImageFilter.GaussianBlur(0.6))
     img = fade_bottom(img, int(round(fade / inch * DPI)))
@@ -336,18 +421,25 @@ def fit_size(text, font, max_width, max_size, min_size, spacing_ratio):
 
 
 def split_title(title):
-    """Break a long title into two lines at a natural point."""
-    for sep in (": ", " - ", " – ", " & ", " and "):
-        if sep in title:
-            a, b = title.split(sep, 1)
-            if sep == ": ":
-                return [a + ":", b]
-            if sep in (" - ", " – "):
-                return [a, b]
-            return [a, sep.strip() + " " + b]
+    """Break a long title into two lines of similar width, preferring a natural break
+    (after a colon or dash, before "&" / "and") when it is nearly as balanced."""
     words = title.split()
-    mid = len(words) // 2 + len(words) % 2
-    return [" ".join(words[:mid]), " ".join(words[mid:])]
+    if len(words) < 2:
+        return [title, ""]
+    best, best_w = None, None
+    natural, natural_w = None, None
+    for k in range(1, len(words)):
+        a, b = " ".join(words[:k]), " ".join(words[k:])
+        width = max(len(a), len(b))
+        if best_w is None or width < best_w:
+            best, best_w = (a, b), width
+        if words[k - 1][-1] in ":-–" or words[k].lower() in ("&", "and", "-", "–", "with", "w/", "present", "presents"):
+            if natural_w is None or width < natural_w:
+                natural, natural_w = (a, b), width
+    a, b = natural if natural and natural_w <= best_w * 1.3 else best
+    a = a.rstrip(" -–")
+    b = b.lstrip("-– ").strip()
+    return [a, b]
 
 
 CAP = 0.702                                   # Josefin Sans cap height (share of the font size)
@@ -360,7 +452,7 @@ def band_layout(title, font="JosefinSans-Bold"):
     """(lines, font size, band height) for a show name: one big line, or two when it is long."""
     max_w = PAGE_W - 2 * MARGIN
     lines = [title.upper()]
-    size = fit_size(lines[0], font, max_w, 120, 60, 0.06)
+    size = fit_size(lines[0], font, max_w, STYLE["band_max"], 60, 0.06)
     if text_width(lines[0], font, size, size * 0.06) > max_w:
         lines = [l.upper() for l in split_title(title)]
         size = min(fit_size(line, font, max_w, 84, 28, 0.06) for line in lines)
@@ -475,7 +567,7 @@ def dates_block(dates):
             continue
         rows = -(-len(shown) // cols)
         columns = [shown[i * rows:(i + 1) * rows] for i in range(cols)]
-        size = {1: 46, 2: 42, 3: 42, 4: 40}.get(rows, 34)
+        size = STYLE["date_sizes"].get(rows, STYLE["date_default"])
         while size > 18:
             total = sum(_date_table(col, size)[3] for col in columns) + col_gap * (cols - 1)
             if total <= PAGE_W - 2 * MARGIN:
@@ -484,7 +576,7 @@ def dates_block(dates):
         if best is None or size > best[0] + 2:
             best = (size, cols, rows, columns)
     size, cols, rows, columns = best
-    row_h = size * 1.42
+    row_h = size * STYLE["row_h"]
     extra_h = 0.42 * inch if extra else 0
     height = size * CAP + row_h * (rows - 1) + extra_h
 
@@ -548,7 +640,7 @@ def draw_prices(c, cx, cy, prices):
     """Price block, centred on cy (the middle of the QR tile)."""
     main_kind, main_text = prices[0]
     others = prices[1:]
-    big = 80 if len(main_text) <= 4 else 62
+    big = (80 if len(main_text) <= 4 else 62) * min(1.0, STYLE["tile"] / 1.8)
     label, small = 15, 16
     gap = 0.14 * inch
     total = label * CAP + gap + big * CAP + sum(gap + small * CAP for _ in others)
@@ -566,8 +658,8 @@ def draw_prices(c, cx, cy, prices):
 
 def draw_footer(c, bottom_y, url, prices):
     """QR tile (left), price (middle), badge (right), captions on shared baselines. Returns its top."""
-    tile = 2.0 * inch
-    caption_h = 0.5 * inch
+    tile = STYLE["tile"] * inch
+    caption_h = STYLE["caption"] * inch
     tile_y = bottom_y + caption_h
     qr_x = MARGIN
     draw_qr(c, qr_x, tile_y, tile, url)
@@ -575,16 +667,23 @@ def draw_footer(c, bottom_y, url, prices):
     badge_x = PAGE_W - MARGIN - badge_w
     c.drawImage(BADGE, badge_x, tile_y, badge_w, tile, mask="auto")
 
-    line1, line2 = bottom_y + 0.24 * inch, bottom_y
     free = len(prices) == 1 and prices[0][1] == "FREE"
-    draw_text(c, qr_x + tile / 2, line1, "SCAN TO RSVP" if free else "SCAN FOR TICKETS",
-              "JosefinSans-SemiBold", 14, WHITE, 2.5, align="center")
-    draw_text(c, qr_x + tile / 2, line2, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY, 0.5,
-              align="center")
-    draw_text(c, badge_x + badge_w / 2, line1, TAGLINE, "JosefinSans-SemiBold", 14, WHITE, 2.5,
-              align="center")
-    draw_text(c, badge_x + badge_w / 2, line2, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1,
-              align="center")
+    scan = "SCAN TO RSVP" if free else "SCAN FOR TICKETS"
+    if caption_h >= 0.5 * inch:
+        line1, line2 = bottom_y + 0.24 * inch, bottom_y
+        draw_text(c, qr_x + tile / 2, line1, scan, "JosefinSans-SemiBold", 14, WHITE, 2.5, align="center")
+        draw_text(c, qr_x + tile / 2, line2, "sisyphusbrewing.com", "Assistant-Regular", 12, GRAY, 0.5,
+                  align="center")
+        draw_text(c, badge_x + badge_w / 2, line1, TAGLINE, "JosefinSans-SemiBold", 14, WHITE, 2.5,
+                  align="center")
+        draw_text(c, badge_x + badge_w / 2, line2, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1,
+                  align="center")
+    else:                                     # slim footer: one caption line under each tile
+        line1 = tile_y - 0.22 * inch
+        draw_text(c, qr_x + tile / 2, line1, scan, "JosefinSans-SemiBold", 12, WHITE, 2, align="center")
+        draw_text(c, badge_x + badge_w / 2, line1, TAGLINE, "JosefinSans-SemiBold", 12, WHITE, 2,
+                  align="center")
+        draw_text(c, PAGE_W / 2, line1, VENUE_LINE, "Assistant-Regular", 11, GRAY, 1, align="center")
 
     draw_prices(c, (qr_x + tile + badge_x) / 2, tile_y + tile / 2, prices)
     return tile_y + tile
@@ -594,11 +693,13 @@ def draw_footer(c, bottom_y, url, prices):
 # The poster
 # ---------------------------------------------------------------------------
 def render_poster(show, path):
-    """Layout runs from the bottom up: footer, dates, name band, and the photo fills the rest."""
-    footer_bottom = 0.6 * inch
-    footer_top = footer_bottom + 0.5 * inch + 2.0 * inch
-    gap_footer = 0.55 * inch                     # footer -> dates
-    gap_band = 0.58 * inch                       # dates -> band (the tilt adds up to 0.15 in at the edges)
+    """Layout runs from the bottom up: footer, dates, name band, and the photo fills the rest.
+    In the "photo" style the band is pinned around 40 % up the sheet (lower only when the dates
+    need the room), so the headshot gets the top 60 %."""
+    footer_bottom = STYLE["footer_bottom"] * inch
+    footer_top = footer_bottom + (STYLE["caption"] + STYLE["tile"]) * inch
+    gap_footer = STYLE["gap_footer"] * inch         # footer -> dates
+    gap_band = STYLE["gap_band"] * inch             # dates -> band (the tilt adds up to 0.15 in at the edges)
 
     party = show.get("party")
     if show["recurring"]:
@@ -608,10 +709,16 @@ def render_poster(show, path):
     if party:
         block_h, draw_block = note_block("A SCREENING OF THE SPECIAL  ·  NOT A LIVE PERFORMANCE",
                                          (block_h, draw_block))
+    band_lines, band_size, band_h = band_layout(party["kind"] if party else show["title"])
     block_top = footer_top + gap_footer + block_h
     band_bottom = block_top + gap_band
-    band_lines, band_size, band_h = band_layout(party["kind"] if party else show["title"])
-    photo_bottom = band_bottom + band_h - 0.55 * inch   # the band overlaps the faded photo foot
+    if STYLE["photo_frac"] and not party:
+        # pin the band's centre at the style's height unless the dates push it up, then centre
+        # the dates in the room between the band and the footer
+        band_bottom = max(band_bottom, STYLE["photo_frac"] * PAGE_H - band_h / 2)
+        room_top, room_bottom = band_bottom - 0.15 * inch, footer_top
+        block_top = max((room_top + room_bottom + block_h) / 2, footer_top + gap_footer + block_h)
+    photo_bottom = band_bottom + band_h * STYLE["band_overlap"]   # the band overlaps the faded photo foot
 
     c = canvas.Canvas(path, pagesize=(PAGE_W + 2 * BLEED, PAGE_H + 2 * BLEED))
     c.setTitle(f"{show['title']} at Sisyphus")
@@ -637,7 +744,8 @@ def render_poster(show, path):
         draw_party_hero(c, photo_bottom, party)
         show["photo_mode"] = "texture"
     elif show["image_url"]:
-        img, src_size, eff_dpi, mode = headshot_panel(show["image_url"], photo_w, photo_h, show["photo_mode"])
+        img, src_size, eff_dpi, mode = headshot_panel(show["image_url"], photo_w, photo_h,
+                                                       show["photo_mode"])
         c.drawImage(img, -BLEED, photo_bottom, photo_w, photo_h)
         show["image_dpi"] = round(eff_dpi)
         show["photo_mode"] = mode
