@@ -19,7 +19,7 @@ on:
       room_capacity:
         description: 'Room Capacity / Ticket Limit per variant'
         required: true
-        default: '75'
+        default: '90'
         type: string
       bio:
         description: 'Event Description / Bio / Class Details'

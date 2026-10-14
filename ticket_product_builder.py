@@ -19,7 +19,7 @@ CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET", "")
 TITLE = os.environ.get("SHOW_TITLE") or os.environ.get("COMEDIAN_NAME") or "Untitled Event"
 SHOWTIMES_RAW = os.environ.get("SHOW_DATE") or os.environ.get("SHOWTIMES") or "General Admission"
 PRICE = os.environ.get("SHOW_PRICE") or os.environ.get("TICKET_PRICE") or "20.00"
-CAPACITY_RAW = os.environ.get("SHOW_CAPACITY") or os.environ.get("ROOM_CAPACITY") or "75"
+CAPACITY_RAW = os.environ.get("SHOW_CAPACITY") or os.environ.get("ROOM_CAPACITY") or "90"
 BIO_RAW = os.environ.get("SHOW_BIO") or os.environ.get("BIO") or ""
 IMAGE_URL = os.environ.get("SHOW_IMAGE_URL") or os.environ.get("IMAGE_URL") or ""
 
@@ -333,7 +333,7 @@ def main():
     try:
         capacity_num = int(CAPACITY_RAW)
     except ValueError:
-        capacity_num = 75
+        capacity_num = 90
 
     try:
         price_num = float(re.sub(r'[^0-9.]', '', str(PRICE)))
