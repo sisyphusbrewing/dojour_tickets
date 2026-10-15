@@ -1,0 +1,16 @@
+{% comment %}
+  Sisyphus: the "buy" area for events whose entry is paid at the door (tag "door-tickets").
+  templates/product.door.json renders it in place of the quantity box and add-to-cart button,
+  so nothing is sold through the site. When the product has a custom.register_url metafield
+  (the organiser's sign-up page, e.g. the link behind a flyer's QR code) it becomes the button.
+{% endcomment %}
+{%- liquid
+  assign sb_register = product.metafields.custom.register_url.value
+  assign sb_price = product.selected_or_first_available_variant.price | money_without_trailing_zeros | replace: '$ ', '$'
+-%}
+<div class="sb-door-tickets" style="margin: 1.5rem 0 2.5rem;">
+  {%- if sb_register != blank -%}
+    <a href="{{ sb_register }}" target="_blank" rel="noopener" class="button button--full-width" style="margin-bottom: 1.2rem;">Register</a>
+  {%- endif -%}
+  <p style="margin: 0;">&#127915; No tickets sold here. {{ sb_price }} at the door{% if sb_register != blank %}, or register ahead with the button{% endif %}.</p>
+</div>

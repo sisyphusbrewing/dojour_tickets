@@ -1,0 +1,18 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "title": {"type": "title", "settings": {}},
+        "subtitle": {"type": "text", "settings": {"text": "📍 Sisyphus Brewing Comedy Club • Minneapolis, MN", "text_style": "subtitle"}},
+        "price": {"type": "price", "settings": {}},
+        "variant_picker": {"type": "variant_picker", "settings": {"picker_type": "button"}},
+        "door": {"type": "custom_liquid", "settings": {"custom_liquid": "{% render 'sb-door-tickets' %}"}},
+        "description": {"type": "description", "settings": {}}
+      },
+      "block_order": ["title", "subtitle", "price", "variant_picker", "door", "description"],
+      "settings": {"enable_sticky_info": true, "media_size": "medium", "media_fit": "contain", "gallery_layout": "stacked", "media_position": "left", "image_zoom": "none", "hide_variants": false, "enable_video_looping": false}
+    }
+  },
+  "order": ["main"]
+}

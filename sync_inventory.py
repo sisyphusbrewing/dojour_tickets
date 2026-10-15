@@ -150,6 +150,12 @@ def ga_variant(variants):
     return variants[0]
 
 
+def door_tickets(product):
+    """Entry is paid at the door or elsewhere (tag "door-tickets"): nothing is sold here, so
+    there are no seat counts to mirror."""
+    return "door-tickets" in {t.strip().lower() for t in product.get("tags") or []}
+
+
 def plan_changes(products, external):
     """
     Returns (changes, baselines, unmatched).
@@ -159,7 +165,7 @@ def plan_changes(products, external):
     """
     changes, baselines, matched = [], [], set()
     for product in products:
-        if skip_reason(product):
+        if skip_reason(product) or door_tickets(product):
             continue
         by_show = defaultdict(list)
         for v in product["variants"]["nodes"]:
