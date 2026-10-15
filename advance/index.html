@@ -120,6 +120,7 @@
       var ctl;
       if (f.type === 'textarea') ctl = '<textarea class="input"' + attrs + '></textarea>';
       else if (f.type === 'select') ctl = '<select class="input"' + attrs + '><option value="">Pick one</option>' + f.options.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (f.type === 'checks') ctl = '<div class="checks" id="' + id + '">' + f.options.map(function (o) { return '<label class="check"><input type="checkbox" value="' + esc(o) + '"><span>' + esc(o) + '</span></label>'; }).join('') + '</div>';
       else if (f.type === 'file') ctl = '<div class="filebox"><input type="file" accept="image/*,.pdf"' + attrs + '><div class="filepreview" id="' + id + '_preview"></div></div>';
       else ctl = '<input class="input" type="' + (f.type || 'text') + '"' + attrs + (f.type === 'number' ? ' inputmode="numeric" min="' + (f.min || 0) + '" max="' + (f.max || 999) + '"' : '') + (f.type === 'url' ? ' inputmode="url"' : '') + '>';
       return '<div class="field' + (f.full ? ' full' : '') + '"><label for="' + id + '">' + esc(f.label) + (f.req ? ' <span class="req">*</span>' : '') + '</label>' + ctl + (f.help ? '<div class="help">' + esc(f.help) + '</div>' : '') + '</div>';
@@ -147,6 +148,7 @@
       allFields().forEach(function (f) {
         if (f.type === 'file') return;
         var el = $('f_' + f.k); if (!el) return;
+        if (f.type === 'checks') { var picked = Array.prototype.filter.call(el.querySelectorAll('input'), function (c) { return c.checked; }).map(function (c) { return c.value; }); if (picked.length) d[f.k] = picked.join(', '); return; }
         var v = el.value.trim(); if (v !== '') d[f.k] = f.type === 'number' ? Number(v) : v;
       });
       return d;
@@ -154,7 +156,9 @@
     function fill(d) {
       allFields().forEach(function (f) {
         if (f.type === 'file') return;
-        var el = $('f_' + f.k); if (el && d[f.k] != null) el.value = d[f.k];
+        var el = $('f_' + f.k); if (!el || d[f.k] == null) return;
+        if (f.type === 'checks') { var on = String(d[f.k]).split(', '); Array.prototype.forEach.call(el.querySelectorAll('input'), function (c) { c.checked = on.indexOf(c.value) >= 0; }); return; }
+        el.value = d[f.k];
       });
     }
     var draftKey = function () { return 'advance-draft:' + (token || 'open'); };
@@ -185,6 +189,7 @@
           $('statusPill').textContent = 'Sent'; $('statusPill').classList.remove('hidden');
           if (headshotPath) $('f_headshot_preview').innerHTML = '<img src="' + esc(publicUrl(headshotPath)) + '">We have this one. Upload again to replace it.';
         } else {
+          fill(advance.data || {});   // the trip planner may have saved some already
           loadDraft();
         }
       } else {

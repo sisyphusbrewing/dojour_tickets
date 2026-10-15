@@ -128,7 +128,8 @@
         <div class="linkbox">
           <input class="input" id="dLink" readonly>
           <button class="btn btn-sm" id="copyLink" type="button">Copy link</button>
-          <a class="btn btn-sm btn-primary" id="emailLink" href="#">Email it</a>
+          <button class="btn btn-sm btn-primary" id="welcomeBtn" type="button">Send the welcome 🎉</button>
+          <a class="btn btn-sm" id="emailLink" href="#">Email it myself</a>
         </div>
         <p class="fine" style="margin:10px 0 0" id="dLinkNote"></p>
       </div>
@@ -296,7 +297,8 @@
       $('dPill').textContent = a.status === 'submitted' ? 'Sent in' : 'Waiting'; $('dPill').className = 'pill ' + a.status;
       $('dLink').value = linkFor(a);
       $('emailLink').href = mailto(a);
-      $('dLinkNote').textContent = a.status === 'submitted' ? 'They sent it in ' + new Date(a.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. The same link lets them update it.' : 'Send this to the comedian or their agent. It only opens their show.';
+      $('dLinkNote').textContent = a.status === 'submitted' ? 'They sent it in ' + new Date(a.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. The same link lets them update it.' : 'Send the welcome: an excited email with this link inside. It only opens their show.';
+      if (a.welcome_sent_at) $('dLinkNote').textContent += ' Welcome sent ' + new Date(a.welcome_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '.';
       var f = $('showForm');
       ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { f.elements[k].value = a[k] || ''; });
 
@@ -322,6 +324,20 @@
       $('createBox').classList.add('hidden');
     }
     $('copyLink').addEventListener('click', function () { copy(linkFor(current), 'link'); });
+    // The excited "you're coming to Sisyphus" email (advance_welcome.py), with the link inside.
+    $('welcomeBtn').addEventListener('click', async function () {
+      var a = current;
+      if (!a.contact_email) { toast('Add their email under Show first'); return; }
+      if (a.welcome_sent_at && !confirm('They already got the welcome on ' + new Date(a.welcome_sent_at).toLocaleDateString() + '. Send it again?')) return;
+      var btn = $('welcomeBtn'); btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        var res = await sb.functions.invoke('run-workflow', { body: { workflow: 'advance_welcome.yml', inputs: { advance_id: a.id } } });
+        if (res.error) throw res.error;
+        toast('On its way to ' + a.contact_email);
+        a.welcome_sent_at = new Date().toISOString(); renderDetail();
+      } catch (e) { toast('Did not send: ' + ((e && e.message) || e)); }
+      finally { btn.disabled = false; btn.textContent = 'Send the welcome 🎉'; }
+    });
     var saveTimer;
     $('showForm').addEventListener('input', function () {
       clearTimeout(saveTimer);

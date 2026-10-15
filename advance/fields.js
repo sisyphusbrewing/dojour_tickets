@@ -4,7 +4,9 @@
 //
 // Everything after the "=" is plain JSON (advance_notify.py reads it as such).
 // type: text (default) | email | tel | url | number | select | textarea | file
+//       | checks (pick any; saved as "A, B")
 // req: required   full: full width   help: small print under the field
+// trip: the section is also asked by the welcome trip planner (trip.html)
 window.ADVANCE_SECTIONS = [
   {
     "id": "act",
@@ -235,6 +237,113 @@ window.ADVANCE_SECTIONS = [
           "Both"
         ],
         "help": "Tell us, so the lights are right and nobody walks through the shot."
+      }
+    ]
+  },
+  {
+    "id": "greenroom",
+    "title": "Green room",
+    "intro": "We stock it before you get here. Tell us what makes it a good night.",
+    "trip": true,
+    "fields": [
+      {
+        "k": "gr_snacks",
+        "type": "checks",
+        "full": true,
+        "label": "Snacks",
+        "options": [
+          "Salty",
+          "Sweet",
+          "Fruit",
+          "Veggies and dip",
+          "Cheese and crackers",
+          "Real food",
+          "Nothing, I eat after"
+        ]
+      },
+      {
+        "k": "gr_drinks",
+        "type": "checks",
+        "full": true,
+        "label": "Drinks",
+        "options": [
+          "Our beer",
+          "NA beer",
+          "Sparkling water",
+          "Still water",
+          "Soda",
+          "Coffee",
+          "Tea",
+          "Kombucha"
+        ]
+      },
+      {
+        "k": "gr_wish",
+        "full": true,
+        "label": "The one thing that makes it a good night",
+        "help": "Within reason. We are a brewery, not a yacht."
+      }
+    ]
+  },
+  {
+    "id": "security",
+    "title": "Security",
+    "intro": "However you like it. Only Sam and Grace read this part.",
+    "trip": true,
+    "fields": [
+      {
+        "k": "sec_style",
+        "type": "select",
+        "label": "How you want security",
+        "options": [
+          "Nobody needs to notice me",
+          "Someone near the stage, just in case",
+          "Walk me in and out",
+          "Escort all night",
+          "Call me, it is a whole thing"
+        ]
+      },
+      {
+        "k": "sec_heckle",
+        "type": "select",
+        "label": "If someone heckles",
+        "options": [
+          "I handle it, stay out of it",
+          "One warning, then out",
+          "Out, immediately",
+          "Let them cook"
+        ]
+      },
+      {
+        "k": "sec_concerns",
+        "type": "textarea",
+        "full": true,
+        "label": "Anyone we should keep an eye out for",
+        "help": "An ex, a superfan, a guy from Reddit. Photos help; email them to booking@sisyphusbrewing.com."
+      }
+    ]
+  },
+  {
+    "id": "guestsets",
+    "title": "Guest sets",
+    "intro": "Got a friend who should be on the show? Hand them a guest set.",
+    "trip": true,
+    "fields": [
+      {
+        "k": "gs_want",
+        "type": "select",
+        "label": "Giving out guest sets",
+        "options": [
+          "No",
+          "Yes"
+        ]
+      },
+      {
+        "k": "gs_who",
+        "type": "textarea",
+        "full": true,
+        "label": "Who, and how long",
+        "help": "Name, minutes, and a phone or Instagram so the host can find them."
       }
     ]
   },

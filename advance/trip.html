@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your Sisyphus Trip</title>
+  <meta name="description" content="You are coming to Sisyphus. Plan your night: the poster, the green room, security, your guest list and how you get paid.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#16222e">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="fields.js"></script>
+  <style>
+    /* The welcome trip planner. Same brand as the advance (slate, charcoal,
+       white), after dark, with a little gold for the magic. */
+    :root {
+      --night: #16222e; --night2: #24384a; --slate: #4a6c86; --slate-light: #a9c3d8;
+      --charcoal: #2b2929; --card: rgba(255,255,255,.07); --line: rgba(255,255,255,.16);
+      --gold: #f5c451; --gold-deep: #d9a521; --pink: #ff9bb8; --white: #fff; --muted: #c9d6e1;
+      --fun: 'Fredoka', 'Josefin Sans', sans-serif; --head: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+      --body: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; color: var(--white); background: var(--night); }
+    body { font-family: var(--body); font-size: 17px; line-height: 1.45; min-height: 100vh; -webkit-tap-highlight-color: transparent;
+           background: radial-gradient(ellipse at 50% 120%, #3b586e 0%, var(--night2) 38%, var(--night) 75%); background-attachment: fixed; overflow-x: hidden; }
+    html.framed body { min-height: 0; background-attachment: scroll; border-radius: 14px; }
+    a { color: var(--gold); }
+    button, input, textarea { font: inherit; color: inherit; }
+    .hidden { display: none !important; }
+
+    /* stars */
+    .sky { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    html.framed .sky { position: absolute; }
+    .star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; opacity: .6; animation: twinkle 3s ease-in-out infinite; }
+    .star.big { width: 3px; height: 3px; box-shadow: 0 0 6px 1px rgba(255,255,255,.6); }
+    @keyframes twinkle { 0%,100% { opacity: .15; } 50% { opacity: .9; } }
+    @media (prefers-reduced-motion: reduce) { .star, .tile, .bob, .boulder { animation: none !important; transition: none !important; } }
+
+    .wrap { position: relative; z-index: 1; max-width: 620px; margin: 0 auto; padding: 18px 16px 40px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+    .brand img { height: 38px; }
+    .brand b { font-family: var(--head); text-transform: uppercase; letter-spacing: .14em; font-size: 13px; line-height: 1.1; }
+    .brand small { display: block; font-family: var(--body); letter-spacing: .02em; text-transform: none; color: var(--slate-light); font-weight: 600; margin-top: 3px; }
+    .demo { font-family: var(--head); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; border: 1px dashed var(--gold); color: var(--gold); padding: 5px 9px 3px; border-radius: 999px; }
+
+    /* the hill: the boulder climbs it as you go */
+    .hill { margin: 14px 0 4px; height: 74px; position: relative; }
+    .hill svg { width: 100%; height: 100%; overflow: visible; display: block; }
+    .boulder { transition: transform .7s cubic-bezier(.34,1.56,.64,1); }
+    .hill-label { display: flex; justify-content: space-between; font-family: var(--head); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: var(--slate-light); }
+
+    /* a step */
+    .step { animation: pop .45s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes pop { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+    .land { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 6px 14px 5px 8px; border-radius: 999px; background: rgba(245,196,81,.14);
+            border: 1px solid rgba(245,196,81,.5); color: var(--gold); font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; }
+    .land i { font-style: normal; font-size: 20px; line-height: 1; }
+    h1 { font-family: var(--fun); font-weight: 700; font-size: clamp(30px, 8vw, 44px); line-height: 1.05; margin: 12px 0 6px; letter-spacing: -.01em; }
+    h1 .gold { color: var(--gold); }
+    .sub { color: var(--muted); margin: 0 0 18px; font-size: 18px; }
+
+    .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .tiles.wide { grid-template-columns: 1fr; }
+    @media (min-width: 520px) { .tiles:not(.wide) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 112px; padding: 14px 10px; border-radius: 18px;
+            background: var(--card); border: 2px solid var(--line); cursor: pointer; text-align: center; font-weight: 700; font-size: 16px; line-height: 1.2;
+            transition: transform .12s, border-color .15s, background .15s, box-shadow .15s; }
+    .tiles.wide .tile { flex-direction: row; justify-content: flex-start; min-height: 68px; text-align: left; padding: 12px 16px; gap: 14px; }
+    .tile .e { font-size: 40px; line-height: 1; }
+    .tiles.wide .tile .e { font-size: 30px; }
+    .tile:hover { border-color: rgba(255,255,255,.35); }
+    .tile:active { transform: scale(.96); }
+    .tile[aria-pressed=true] { border-color: var(--gold); background: rgba(245,196,81,.16); box-shadow: 0 0 0 4px rgba(245,196,81,.15), 0 8px 24px rgba(0,0,0,.25); animation: wiggle .4s; }
+    .tile[aria-pressed=true]::after { content: '✓'; position: absolute; top: 8px; right: 10px; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); color: var(--night);
+            font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .tile:focus-visible { outline: 3px solid var(--slate-light); outline-offset: 2px; }
+    @keyframes wiggle { 0% { transform: rotate(0); } 30% { transform: rotate(-3deg) scale(1.04); } 60% { transform: rotate(2deg); } 100% { transform: rotate(0); } }
+
+    .field { margin-top: 14px; }
+    .field label { display: block; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; color: var(--slate-light); margin-bottom: 6px; }
+    .input { width: 100%; min-height: 52px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: rgba(0,0,0,.25); color: var(--white); outline: none; font-size: 17px; }
+    textarea.input { min-height: 110px; resize: vertical; }
+    .input:focus { border-color: var(--gold); }
+    .input::placeholder { color: #8ea3b5; }
+    .help { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+    .stepper { display: flex; align-items: center; gap: 18px; justify-content: center; margin: 6px 0 4px; }
+    .stepper button { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--line); background: var(--card); font-size: 30px; cursor: pointer; }
+    .stepper button:active { transform: scale(.94); }
+    .stepper .n { font-family: var(--fun); font-weight: 700; font-size: 64px; min-width: 90px; text-align: center; line-height: 1; }
+    .stepper-note { text-align: center; color: var(--muted); min-height: 24px; }
+
+    .nav { display: flex; align-items: center; gap: 12px; margin-top: 26px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer;
+           font-family: var(--fun); font-weight: 600; font-size: 19px; text-decoration: none; transition: transform .1s, box-shadow .15s; }
+    .btn:active { transform: scale(.96); }
+    .btn-go { flex: 1; background: linear-gradient(180deg, #ffd66e, var(--gold-deep)); color: #2a2208; box-shadow: 0 6px 0 #a87d12, 0 12px 26px rgba(0,0,0,.3); }
+    .btn-go:active { box-shadow: 0 2px 0 #a87d12; transform: translateY(4px); }
+    .btn-back { background: transparent; color: var(--muted); border: 2px solid var(--line); min-width: 56px; padding: 12px 16px; }
+    .btn-plain { background: var(--card); color: var(--white); border: 2px solid var(--line); }
+    .skip { display: block; margin: 14px auto 0; background: none; border: 0; color: var(--slate-light); cursor: pointer; font-weight: 600; min-height: 44px; }
+    .err { color: #ffb4a6; margin-top: 10px; text-align: center; }
+
+    /* the ticket on the welcome screen */
+    .ticket { position: relative; margin: 22px 0 6px; border-radius: 20px; background: linear-gradient(135deg, #fff8e4, #ffe7a8); color: #2b2929; padding: 22px 22px 20px;
+              box-shadow: 0 18px 40px rgba(0,0,0,.35); transform: rotate(-1.2deg); }
+    .ticket::before, .ticket::after { content: ''; position: absolute; top: 50%; width: 26px; height: 26px; margin-top: -13px; border-radius: 50%; background: var(--night2); }
+    .ticket::before { left: -13px; } .ticket::after { right: -13px; }
+    .admit { font-family: var(--head); font-weight: 700; letter-spacing: .24em; text-transform: uppercase; font-size: 12px; color: var(--slate); }
+    .t-name { font-family: var(--fun); font-weight: 700; font-size: clamp(28px, 7.5vw, 40px); line-height: 1.05; margin: 6px 0 4px; }
+    .t-when { font-weight: 700; font-size: 17px; }
+    .t-where { color: #5d5959; font-size: 15px; }
+    .t-perf { border-top: 2px dashed rgba(43,41,41,.25); margin: 14px -22px 0; padding: 12px 22px 0; display: flex; align-items: baseline; gap: 10px; }
+    .t-count { font-family: var(--fun); font-weight: 700; font-size: 46px; line-height: 1; color: var(--slate); }
+    .t-count-l { font-weight: 700; line-height: 1.15; }
+    .bob { display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+    @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .perks { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
+    .perks li { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; font-weight: 600; }
+    .perks li span { font-size: 26px; }
+
+    /* the finale */
+    .stamps { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 16px 0 6px; }
+    .stamp { width: 66px; height: 66px; border-radius: 50%; border: 3px solid var(--gold); color: var(--gold); display: flex; flex-direction: column; align-items: center; justify-content: center;
+             font-size: 26px; transform: rotate(var(--r, -8deg)); background: rgba(245,196,81,.08); opacity: 0; animation: stamp .35s forwards; }
+    .stamp.missed { border-color: var(--line); color: var(--line); background: none; }
+    @keyframes stamp { from { opacity: 0; transform: scale(1.8) rotate(var(--r)); } to { opacity: 1; transform: scale(1) rotate(var(--r)); } }
+    .pass { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 6px 16px; margin-top: 16px; }
+    .pass div { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+    .pass div:last-child { border-bottom: 0; }
+    .pass b { flex: 0 0 34px; font-size: 22px; line-height: 1.1; }
+    .pass span { color: var(--muted); }
+    .pass em { font-style: normal; color: var(--white); font-weight: 600; display: block; }
+    .next-stop { margin-top: 22px; border-radius: 18px; padding: 18px; background: linear-gradient(135deg, rgba(74,108,134,.55), rgba(74,108,134,.25)); border: 1px solid var(--slate-light); }
+    .next-stop h2 { font-family: var(--fun); margin: 0 0 4px; font-size: 24px; }
+    .next-stop p { margin: 0 0 14px; color: var(--muted); }
+    .req { color: var(--pink); }
+    .q + .q { margin-top: 22px; }
+    .drop { display: flex; align-items: center; gap: 16px; padding: 14px; border-radius: 18px; border: 2px dashed rgba(245,196,81,.6); background: rgba(245,196,81,.06); cursor: pointer; }
+    .drop input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .drop-img { flex: 0 0 88px; height: 88px; border-radius: 14px; background: rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; }
+    .drop-img img { width: 100%; height: 100%; object-fit: cover; }
+    .drop:focus-within { outline: 3px solid var(--slate-light); outline-offset: 2px; }
+    .camus { text-align: center; font-style: italic; color: var(--slate-light); margin-top: 26px; font-size: 15px; }
+    .foot { text-align: center; color: #8ea3b5; font-size: 13px; margin-top: 10px; }
+    .center { text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="sky" id="sky"></div>
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="https://www.sisyphusbrewing.com" target="_top">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <b>Sisyphus<small>Comedy &amp; beer · Minneapolis</small></b>
+      </a>
+      <span class="demo hidden" id="demoPill">Preview</span>
+    </div>
+
+    <div class="hill hidden" id="hill" aria-hidden="true">
+      <svg viewBox="0 0 600 74" preserveAspectRatio="none">
+        <path id="hillPath" d="M10 66 C 150 64, 260 52, 360 34 S 520 12, 586 12" fill="none" stroke="rgba(169,195,216,.35)" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10"/>
+        <text x="586" y="8" font-size="18" text-anchor="middle">🚩</text>
+        <g class="boulder" id="boulder"><circle r="11" fill="#918f90" stroke="#fff" stroke-width="2"/><circle r="3" cx="-3" cy="-3" fill="rgba(255,255,255,.5)"/></g>
+      </svg>
+      <div class="hill-label"><span>The parking lot</span><span id="hillCount"></span><span>Showtime</span></div>
+    </div>
+
+    <main id="stage"><div class="center" style="padding:80px 0;color:var(--muted)">Polishing the boulder…</div></main>
+
+    <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+    <p class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis · <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a></p>
+  </div>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var FORM_URL = 'https://www.sisyphusbrewing.com/pages/advance';   // the rest of the advance
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+    var token = new URLSearchParams(location.search).get('s') || '';
+    var demo = !token;                       // no link: a look-around preview that saves nothing
+    var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Embedded in sisyphusbrewing.com/pages/trip (same messages as the advance form).
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ advanceHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+    function toTop() { if (framed) { try { parent.postMessage({ advanceScrollTop: true }, '*'); } catch (e) {} } else { window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); } }
+
+    // stars
+    (function () {
+      var sky = $('sky'), html = '';
+      for (var i = 0; i < 70; i++) {
+        html += '<i class="star' + (i % 9 === 0 ? ' big' : '') + '" style="left:' + (Math.random() * 100).toFixed(1) + '%;top:' + (Math.random() * 100).toFixed(1) +
+          '%;animation-delay:' + (Math.random() * 3).toFixed(2) + 's"></i>';
+      }
+      sky.innerHTML = html;
+    })();
+
+    /* ---------- the stops (labels and options come from fields.js) ---------- */
+    var FIELDS = {};
+    ADVANCE_SECTIONS.forEach(function (s) { s.fields.forEach(function (f) { FIELDS[f.k] = f; }); });
+
+    var EMOJI = {
+      role: { 'Headliner': '👑', 'Feature': '⭐', 'Host': '🎙️', 'Guest spot': '🎟️', 'Not sure, ask Grace': '🤷' },
+      travel_mode: { 'Car': '🚗', 'Plane': '✈️', 'I live here': '🏠', 'Other': '🛸' },
+      hotel: { 'I have it covered': '👍', 'Need one': '🛏️', 'Not sure yet': '🤔' },
+      ride: { 'No': '🙅', 'Yes': '🚕' },
+      gr_snacks: { 'Salty': '🥨', 'Sweet': '🍬', 'Fruit': '🍓', 'Veggies and dip': '🥕', 'Cheese and crackers': '🧀', 'Real food': '🍕', 'Nothing, I eat after': '🙅' },
+      gr_drinks: { 'Our beer': '🍺', 'NA beer': '🌿', 'Sparkling water': '🫧', 'Still water': '💧', 'Soda': '🥤', 'Coffee': '☕', 'Tea': '🍵', 'Kombucha': '🍄' },
+      mic: { 'Whatever is there': '🎤', 'Handheld, no stand': '✋', 'Handheld on a stand': '🎙️', 'Wireless, I wander': '🚶' },
+      stool: { 'No': '🧍', 'Yes': '🪑' },
+      recording: { 'No': '🙈', 'Audio': '🎧', 'Video': '🎥', 'Both': '🎬' },
+      sec_style: { 'Nobody needs to notice me': '🫥', 'Someone near the stage, just in case': '👀', 'Walk me in and out': '🚶', 'Escort all night': '🕴️', 'Call me, it is a whole thing': '📞' },
+      sec_heckle: { 'I handle it, stay out of it': '🎤', 'One warning, then out': '☝️', 'Out, immediately': '🚪', 'Let them cook': '🍳' },
+      gs_want: { 'No': '🙂', 'Yes': '🎁' },
+      merch: { 'No': '🙅', 'Yes, I will sell it': '🛍️', 'Yes, can someone sell it for me': '🤝' },
+      pay_method: { 'Check': '🧾', 'Venmo': '📱', 'Zelle': '⚡', 'PayPal': '💳', 'Cash': '💵', 'Direct deposit (we will send a form)': '🏦' },
+      w9: { 'I will send one': '📨', 'Already on file with you': '✅', 'What is a W-9': '🤔' },
+    };
+
+    // Each stop asks a few things. q: field keys from fields.js, or {k, label, ph, when: [key, value]}.
+    var STEPS = [
+      { kind: 'hello' },
+      { land: 'Name in Lights', e: '✨', title: 'How should the <span class="gold">marquee</span> read?', sub: 'Your name, as it goes on the poster.',
+        q: [{ k: 'stage_name', ph: 'Liz Miele' }, 'role', { k: 'hometown', ph: 'Brooklyn, NY' }] },
+      { land: 'Mission Control', e: '📡', title: 'Where do we <span class="gold">reach you</span>?', sub: 'For day-of texts like "we saved you a parking spot."',
+        q: ['email', 'phone', { k: 'agent_name', label: 'Agent or manager (if you have one)' }, { k: 'agent_email', label: 'Their email' }] },
+      { land: 'Poster Studio', e: '📸', title: 'Your face, <span class="gold">11 × 17</span>', sub: 'It goes on the poster, the website and the big screen. Make it a good one.',
+        q: ['headshot', { k: 'bio', ph: 'Two to four sentences. Credits welcome.' }, { k: 'credits', ph: 'As seen on…' }] },
+      { land: 'The Hype Machine', e: '📣', title: 'Where do people <span class="gold">find you</span>?', sub: 'We tag you in everything. Fill in what you have.',
+        q: [{ k: 'instagram', ph: '@' }, { k: 'tiktok', ph: '@' }, { k: 'youtube' }, { k: 'website', ph: 'https://' }, { k: 'clip_url', ph: 'https://' }] },
+      { land: 'The Long Road', e: '🛣️', title: 'How are you <span class="gold">getting here</span>?', sub: '712 Ontario Ave W, Minneapolis. Parking is a whole thing; we will send the map.',
+        q: ['travel_mode', { k: 'arrival', ph: 'Thursday afternoon' }, { k: 'ride', when: ['travel_mode', 'Plane'] }] },
+      { land: 'Dreamland Inn', e: '🛏️', title: 'Where are you <span class="gold">sleeping</span>?', sub: 'Somewhere nice, we hope.',
+        q: ['hotel', { k: 'hotel_nights', ph: 'Thu, Fri, Sat', when: ['hotel', 'Need one'] }] },
+      { land: 'Snackland', e: '🍿', title: 'Stock the <span class="gold">green room</span>', sub: 'Pick anything. Pick everything. We go shopping.', q: ['gr_snacks', 'gr_drinks'] },
+      { land: 'The Wishing Well', e: '🌠', title: 'Make a <span class="gold">wish</span>', sub: 'The one thing that makes it a good night. And anything you cannot eat.',
+        q: [{ k: 'gr_wish', ph: 'Peanut M&Ms. The blue ones are better, do not ask.' }, { k: 'dietary', label: 'Allergies or diet', ph: 'Allergies, diet, strong opinions' }] },
+      { land: 'The Main Stage', e: '🎤', title: 'Set up your <span class="gold">stage</span>', sub: 'Tell us now and nobody fiddles with a mic stand mid-joke.',
+        q: [{ k: 'set_length', label: 'Set length (minutes)', ph: '45' }, 'mic', 'stool'] },
+      { land: 'Walk-On Way', e: '🎶', title: 'Make an <span class="gold">entrance</span>', sub: 'The host reads your intro word for word. Write it the way you want to hear it.',
+        q: [{ k: 'walk_on', ph: 'Song and artist' }, { k: 'intro', ph: 'Keep it to a breath.' }, { k: 'no_go', label: 'Anything the host should never say about you' }] },
+      { land: 'Tech Tower', e: '🎛️', title: 'Lights, camera, <span class="gold">props</span>', sub: 'Recording? Tell us so the lights are right and nobody walks through the shot.',
+        q: ['recording', { k: 'av', ph: 'Projector, laptop, a live goat…' }, { k: 'bringing', ph: 'Name of your opener or feature' }] },
+      { land: 'Castle Guard', e: '🛡️', title: 'Your <span class="gold">security</span>, your way', sub: 'Most nights are sweet. Some are a lot. Only Sam and Grace read this stop.',
+        q: ['sec_style', 'sec_heckle', { k: 'sec_concerns', ph: 'An ex, a superfan, a guy from Reddit. What they look like, what to do.' }] },
+      { land: 'Friends & Family Gate', e: '🎟️', title: 'Bring your <span class="gold">people</span>', sub: 'Guest list walks right in. Got a funny friend? Hand them a guest set.',
+        q: ['guest_count', { k: 'guest_names', when: ['guest_count', '+'] }, 'gs_want', { k: 'gs_who', when: ['gs_want', 'Yes'] }] },
+      { land: 'Merch Market', e: '👕', title: 'Selling <span class="gold">merch</span>?', sub: 'We have a table. And a guy.', q: ['merch', { k: 'merch_notes', when: ['merch', '!No'], ph: 'Shirts $25, signed posters $10' }] },
+      { land: 'The Treasury', e: '💰', title: 'Getting <span class="gold">paid</span>', sub: 'You get 100% of the door. The $3 ticket fee pays the host and the feature. We settle up the night of the show.',
+        q: ['pay_method', { k: 'pay_handle', ph: 'Handle, email or phone' }, { k: 'payee', ph: 'Legal name or company' }, 'w9'] },
+      { land: 'The Last Word', e: '💌', title: 'Anything <span class="gold">else</span>?', sub: 'Questions, requests, confessions. Then you are done.', q: [{ k: 'anything', ph: 'We read every word.' }] },
+      { kind: 'finale' },
+    ];
+    var STOPS = STEPS.filter(function (s) { return s.land; });
+    function qk(q) { return typeof q === 'string' ? q : q.k; }
+    function qo(q) { return typeof q === 'string' ? { k: q } : q; }
+
+    /* ---------- state ---------- */
+    var advance = null, answers = {}, at = 0, visited = {}, headshotPath = null, headshotFile = null;
+    var draftKey = 'trip-draft:' + (token || 'demo');
+    function saveDraft() { try { localStorage.setItem(draftKey, JSON.stringify({ answers: answers, at: at, visited: visited })); } catch (e) {} }
+    function loadDraft() { try { return JSON.parse(localStorage.getItem(draftKey) || 'null'); } catch (e) { return null; } }
+
+    function parseDate(d) { var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+    function fmtDate(d) { return d ? parseDate(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : ''; }
+    function sleeps(d) { if (!d) return null; var t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((parseDate(d) - t) / 864e5); }
+    function list(v) { return v ? String(v).split(', ').filter(Boolean) : []; }
+    function publicUrl(path) { return SUPABASE_URL + '/storage/v1/object/public/advance/' + path; }
+
+    /* ---------- the hill ---------- */
+    function moveBoulder() {
+      var stop = STEPS[at], i = stop.kind === 'finale' ? STOPS.length : STOPS.indexOf(stop);
+      $('hill').classList.toggle('hidden', stop.kind === 'hello');
+      var path = $('hillPath'), frac = Math.max(0, i) / STOPS.length, pt = path.getPointAtLength(path.getTotalLength() * frac);
+      $('boulder').setAttribute('transform', 'translate(' + pt.x + ',' + (pt.y - 10) + ') rotate(' + Math.round(frac * 1080) + ')');
+      $('hillCount').textContent = stop.kind === 'finale' ? 'Made it!' : 'Stop ' + (i + 1) + ' of ' + STOPS.length;
+    }
+
+    /* ---------- render ---------- */
+    function shown(q, vals) {
+      if (!q.when) return true;
+      var v = vals[q.when[0]], want = q.when[1];
+      if (want === '+') return Number(v) > 0;
+      if (want.charAt(0) === '!') return !!v && v !== want.slice(1);
+      return v === want;
+    }
+    function question(q) {
+      var f = FIELDS[q.k], id = 'f_' + q.k, lab = esc(q.label || f.label) + (f.req ? ' <span class="req">*</span>' : ''), v = answers[q.k];
+      var inner;
+      if (f.type === 'select' || f.type === 'checks') {
+        var cur = f.type === 'checks' ? list(v) : [v], longest = Math.max.apply(null, f.options.map(function (o) { return o.length; }));
+        inner = '<div class="tiles' + (longest > 22 ? ' wide' : '') + '" data-k="' + q.k + '" data-multi="' + (f.type === 'checks') + '">' + f.options.map(function (o) {
+          return '<button type="button" class="tile" data-v="' + esc(o) + '" aria-pressed="' + (cur.indexOf(o) >= 0) + '"><span class="e">' + ((EMOJI[q.k] || {})[o] || '✨') + '</span><span>' + esc(o) + '</span></button>';
+        }).join('') + '</div>';
+      } else if (q.k === 'guest_count') {
+        inner = '<div class="stepper"><button type="button" data-step="-1" aria-label="One fewer">−</button><div class="n" id="' + id + '">' + (Number(v) || 0) + '</div><button type="button" data-step="1" aria-label="One more">+</button></div><div class="stepper-note" id="gNote"></div>';
+        lab = 'How many guests';
+      } else if (f.type === 'file') {
+        var have = headshotFile ? URL.createObjectURL(headshotFile) : headshotPath ? publicUrl(headshotPath) : '';
+        inner = '<label class="drop" for="' + id + '"><input type="file" accept="image/*" id="' + id + '"><span class="drop-img" id="dropImg">' + (have ? '<img src="' + esc(have) + '" alt="">' : '📸') + '</span>' +
+          '<span><b>' + (have ? 'Looking good. Tap to swap it.' : 'Tap to add your headshot') + '</b><br><span class="help">The biggest, sharpest one you have. No screenshots of screenshots.</span></span></label>';
+      } else if (f.type === 'textarea') {
+        inner = '<textarea class="input" id="' + id + '" placeholder="' + esc(q.ph || '') + '">' + esc(v || '') + '</textarea>';
+      } else {
+        var t = f.type === 'number' ? 'text" inputmode="numeric' : (f.type || 'text');
+        inner = '<input class="input" type="' + t + '" id="' + id + '" placeholder="' + esc(q.ph || '') + '" value="' + esc(v == null ? '' : v) + '"' +
+          (f.type === 'email' ? ' autocomplete="email"' : f.type === 'tel' ? ' autocomplete="tel"' : '') + '>';
+      }
+      return '<div class="field q' + (shown(q, answers) ? '' : ' hidden') + '" data-q="' + q.k + '"><label' + (f.type === 'select' || f.type === 'checks' ? '' : ' for="' + id + '"') + '>' + lab + '</label>' + inner + (f.help && f.type !== 'file' && !q.ph ? '<div class="help">' + esc(f.help) + '</div>' : '') + '</div>';
+    }
+    function nav(nextLabel) {
+      return '<div class="err hidden" id="err"></div><div class="nav">' + (at > 0 ? '<button class="btn btn-back" id="back" type="button" aria-label="Back">←</button>' : '') +
+        '<button class="btn btn-go" id="next" type="button">' + nextLabel + '</button></div>';
+    }
+    function render() {
+      var s = STEPS[at], html;
+      moveBoulder();
+      if (s.kind === 'hello') html = renderHello();
+      else if (s.kind === 'finale') html = renderFinale();
+      else {
+        var last = STEPS[at + 1].kind === 'finale';
+        html = '<div class="land"><i>' + s.e + '</i>' + esc(s.land) + '</div><h1>' + s.title + '</h1><p class="sub">' + esc(s.sub) + '</p>' +
+          s.q.map(function (q) { return question(qo(q)); }).join('') +
+          nav(last ? 'Send it in 🎆' : 'Onward ✨') + '<button class="skip" id="skip" type="button">' + (last ? 'Nothing else' : 'Skip this stop') + '</button>';
+        if (last) html = html.replace('id="skip"', 'id="skipLast"');
+      }
+      $('stage').innerHTML = '<section class="step">' + html + '</section>';
+      wire(s);
+    }
+
+    function renderHello() {
+      var a = advance || {}, n = sleeps(a.show_date), who = (a.contact_name || '').split(' ')[0];
+      var count = n == null ? '' : n > 1 ? '<span class="t-count">' + n + '</span><span class="t-count-l">sleeps until<br>showtime</span>'
+        : n === 1 ? '<span class="t-count">1</span><span class="t-count-l">sleep until<br>showtime!</span>'
+        : n === 0 ? '<span class="t-count">🎤</span><span class="t-count-l">It\'s tonight!</span>' : '<span class="t-count-l">Thanks for a great night.</span>';
+      var back = a.status === 'submitted' ? '<p class="sub" style="margin-top:18px">You already sent this in. Change anything you like and send it again.</p>' : '';
+      return '<h1 style="margin-top:18px">' + (who ? 'Pack your bags, ' + esc(who) + '!' : 'Pack your bags!') + '<br><span class="gold">You\'re coming to Sisyphus</span> <span class="bob">🎉</span></h1>' +
+        '<p class="sub">Welcome to the Disney World of Comedy. Congratulations. You earned this.</p>' +
+        '<div class="ticket"><div class="admit">Admit one comedian · and a few friends</div><div class="t-name">' + esc(a.show_name || 'Your Name Here') + '</div>' +
+        '<div class="t-when">' + esc([fmtDate(a.show_date), a.show_time].filter(Boolean).join(' · ') || 'Date to come') + '</div>' +
+        '<div class="t-where">712 Ontario Ave W, Minneapolis</div>' + (count ? '<div class="t-perf">' + count + '</div>' : '') + '</div>' + back +
+        '<p class="sub" style="margin-top:22px">Before you get here, we plan your whole night. ' + STOPS.length + ' quick stops up the hill. Tap, tap, done. Skip anything you like; it saves as you go.</p>' +
+        '<ul class="perks"><li><span>🍿</span>A green room stocked with whatever you say</li><li><span>🛡️</span>Security the way you like it</li><li><span>🎁</span>Guest sets for your friends</li><li><span>💸</span>100% of the door. Still true.</li></ul>' +
+        nav('Start the trip 🎢');
+    }
+
+    function renderFinale() {
+      var a = answers, rows = [
+        ['✨', 'On the marquee', [a.stage_name, a.role].filter(Boolean).join(' · ')],
+        ['🍿', 'Green room', [a.gr_snacks, a.gr_drinks].filter(Boolean).join(' · ')],
+        ['🌠', 'Your wish', a.gr_wish],
+        ['🛡️', 'Security', [a.sec_style, a.sec_heckle].filter(Boolean).join(' · ')],
+        ['🎟️', 'Guest list', a.guest_count ? a.guest_count + (a.guest_names ? ': ' + a.guest_names : '') : ''],
+        ['🎁', 'Guest sets', a.gs_want === 'Yes' ? (a.gs_who || 'Yes') : ''],
+        ['💰', 'Getting paid', a.pay_method],
+      ].filter(function (r) { return r[2]; });
+      var stamps = STOPS.map(function (s, i) { return '<div class="stamp' + (visited[s.land] ? '' : ' missed') + '" style="--r:' + ((i % 2 ? 7 : -9) + (i % 5)) + 'deg;animation-delay:' + (0.08 * i) + 's" title="' + esc(s.land) + '">' + s.e + '</div>'; }).join('');
+      var NEED = { stage_name: 'name for the poster', email: 'email', bio: 'bio', pay_method: 'how you want to get paid' };
+      var missing = Object.keys(NEED).filter(function (k) { return !a[k]; }).map(function (k) { return NEED[k]; });
+      return '<h1 style="margin-top:18px">You made it to <span class="gold">the top!</span> 🎆</h1>' +
+        '<p class="sub">' + (demo ? 'This is the preview, so nothing was sent. In real life, Grace has it now.' : 'Grace has it. The green room shopping list just got longer.') + ' See you soon.</p>' +
+        '<div class="stamps">' + stamps + '</div>' +
+        (missing.length ? '<div class="next-stop"><h2>Almost everything 📋</h2><p>We still need your ' + esc(missing.join(', ').replace(/, ([^,]*)$/, ' and $1')) + '. Hop back when you have them; the same link works.</p></div>' : '') +
+        (rows.length ? '<div class="pass">' + rows.map(function (r) { return '<div><b>' + r[0] + '</b><span>' + esc(r[1]) + '<em>' + esc(r[2]) + '</em></span></div>'; }).join('') + '</div>' : '') +
+        '<button class="skip" id="again" type="button">Change an answer</button>';
+    }
+
+    /* ---------- read a stop ---------- */
+    function readStop(s) {
+      var out = {};
+      s.q.map(qo).forEach(function (q) {
+        var f = FIELDS[q.k], box = document.querySelector('[data-q="' + q.k + '"]'), hidden = box && box.classList.contains('hidden');
+        if (f.type === 'file') return;
+        if (hidden) { out[q.k] = ''; return; }
+        if (f.type === 'select' || f.type === 'checks') {
+          out[q.k] = Array.prototype.filter.call(box.querySelectorAll('.tile'), function (t) { return t.getAttribute('aria-pressed') === 'true'; }).map(function (t) { return t.getAttribute('data-v'); }).join(', ');
+        } else if (q.k === 'guest_count') {
+          out[q.k] = Number($('f_guest_count').textContent) || '';
+        } else {
+          var v = $('f_' + q.k).value.trim(); out[q.k] = f.type === 'number' && v ? (Number(v.replace(/[^0-9.]/g, '')) || v) : v;
+        }
+      });
+      return out;
+    }
+    function refreshWhen(s) {
+      var now = Object.assign({}, answers, readStop(s));
+      s.q.map(qo).forEach(function (q) { if (q.when) { var b = document.querySelector('[data-q="' + q.k + '"]'); var on = shown(q, now); if (b.classList.contains('hidden') === on) { b.classList.toggle('hidden', !on); } } });
+    }
+
+    /* ---------- sparkle ---------- */
+    function sparkle(el) {
+      if (reduced || !window.confetti || !el) return;
+      var r = el.getBoundingClientRect();
+      confetti({ particleCount: 18, spread: 50, startVelocity: 18, scalar: .7, ticks: 60, colors: ['#f5c451', '#ffffff', '#a9c3d8', '#ff9bb8'],
+                 origin: { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight } });
+    }
+    function fireworks() {
+      if (reduced || !window.confetti) return;
+      var end = Date.now() + 1800, colors = ['#f5c451', '#ffffff', '#4a6c86', '#a9c3d8', '#ff9bb8'];
+      (function frame() {
+        confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: .7 }, colors: colors });
+        confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: .7 }, colors: colors });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+      setTimeout(function () { confetti({ particleCount: 120, spread: 100, origin: { y: .35 }, colors: colors }); }, 400);
+    }
+
+    /* ---------- wire up a stop ---------- */
+    function wire(s) {
+      Array.prototype.forEach.call(document.querySelectorAll('.tiles'), function (tiles) {
+        var multi = tiles.getAttribute('data-multi') === 'true';
+        tiles.addEventListener('click', function (e) {
+          var t = e.target.closest('.tile'); if (!t) return;
+          var on = t.getAttribute('aria-pressed') !== 'true';
+          if (!multi) Array.prototype.forEach.call(tiles.querySelectorAll('.tile'), function (x) { x.setAttribute('aria-pressed', 'false'); });
+          else if (on) {   // "Nothing" and the rest do not mix
+            var nothing = /^Nothing/.test(t.getAttribute('data-v'));
+            Array.prototype.forEach.call(tiles.querySelectorAll('.tile'), function (x) { if (x !== t && /^Nothing/.test(x.getAttribute('data-v')) !== nothing) x.setAttribute('aria-pressed', 'false'); });
+          }
+          t.setAttribute('aria-pressed', String(multi ? on : true));
+          if (on) sparkle(t);
+          refreshWhen(s);
+        });
+      });
+      var gN = $('f_guest_count');
+      if (gN) {
+        var set = function (d) {
+          var n = Math.max(0, Math.min(30, (Number(gN.textContent) || 0) + d)); gN.textContent = n;
+          $('gNote').textContent = n === 0 ? 'Just you. Respect.' : n < 5 ? 'Easy. Names below.' : n < 11 ? 'A crew! Names below, please.' : 'A busload. Grace will be in touch.';
+          if (d > 0) sparkle(gN);
+          refreshWhen(s);
+        };
+        Array.prototype.forEach.call(document.querySelectorAll('[data-step]'), function (b) { b.addEventListener('click', function () { set(+b.getAttribute('data-step')); }); });
+        set(0);
+      }
+      var hs = $('f_headshot');
+      if (hs) hs.addEventListener('change', function () {
+        var file = hs.files && hs.files[0]; if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { hs.value = ''; showErr('That one is over 20 MB. Impressive, but too big.'); return; }
+        headshotFile = file;
+        $('dropImg').innerHTML = /heic|heif/.test(file.type) ? '✅' : '<img src="' + URL.createObjectURL(file) + '" alt="">';
+        hs.closest('.drop').querySelector('b').textContent = 'Looking good. Tap to swap it.';
+        sparkle($('dropImg'));
+      });
+      if ($('back')) $('back').addEventListener('click', function () { go(at - 1); });
+      if ($('skip')) $('skip').addEventListener('click', function () { go(at + 1); });
+      if ($('again')) $('again').addEventListener('click', function () { go(1); });
+      var finish = async function (patch) {
+        var btn = $('next'); btn.disabled = true; btn.textContent = 'Sending…';
+        var ok = await send(patch);
+        btn.disabled = false; btn.textContent = 'Send it in 🎆';
+        if (!ok) return;
+        go(at + 1); setTimeout(fireworks, 250);
+      };
+      if ($('skipLast')) $('skipLast').addEventListener('click', function () { finish({}); });
+      if ($('next')) $('next').addEventListener('click', async function () {
+        if (s.kind === 'hello') { go(1); return; }
+        var patch = readStop(s);
+        Object.keys(patch).forEach(function (k) { answers[k] = patch[k]; });
+        visited[s.land] = true; saveDraft();
+        if (STEPS[at + 1].kind === 'finale') { finish(patch); return; }
+        var btn = $('next'); btn.disabled = true;
+        var ok = await save(patch);
+        btn.disabled = false;
+        if (ok) go(at + 1);
+      });
+    }
+    function showErr(m) { var e = $('err'); if (!e) return; e.textContent = m; e.classList.remove('hidden'); }
+
+    /* ---------- saving ---------- */
+    async function upload() {
+      if (!headshotFile || demo) return true;
+      var safe = headshotFile.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80), path = token + '/' + Date.now() + '-' + safe;
+      var up = await sb.storage.from('advance').upload(path, headshotFile, { contentType: headshotFile.type || 'application/octet-stream', upsert: false });
+      if (up.error) { showErr('The headshot did not upload: ' + up.error.message); return false; }
+      headshotPath = path; headshotFile = null; return true;
+    }
+    async function save(patch) {
+      if (demo) return true;
+      if (!(await upload())) return false;
+      var res = await sb.rpc('advance_trip', { p_token: token, p_data: patch, p_headshot_path: headshotPath });
+      if (res.error) { showErr('That did not save. Check your connection and try again, or email booking@sisyphusbrewing.com.'); return false; }
+      advance = res.data; return true;
+    }
+    // The last stop sends the whole thing in, same as the one-page form.
+    async function send() {
+      if (demo) return true;
+      if (!(await upload())) return false;
+      var data = {};
+      Object.keys(answers).forEach(function (k) { if (answers[k] !== '' && answers[k] != null) data[k] = answers[k]; });
+      var res = await sb.rpc('advance_submit', { p_token: token, p_data: data, p_headshot_path: headshotPath });
+      if (res.error) { showErr('That did not send. Check your connection and try again, or email booking@sisyphusbrewing.com.'); return false; }
+      advance = res.data;
+      try { localStorage.removeItem(draftKey); } catch (e) {}
+      sb.functions.invoke('advance-submitted', { body: { token: token } }).catch(function () {});
+      return true;
+    }
+
+    function go(i) { at = Math.max(0, Math.min(STEPS.length - 1, i)); if (STEPS[at].kind !== 'finale') saveDraft(); render(); toTop(); }
+
+    async function boot() {
+      if (demo) {
+        $('demoPill').classList.remove('hidden');
+        var d = new Date(); d.setDate(d.getDate() + 23);
+        advance = { show_name: 'Your Name Here', show_time: '7pm & 9:30pm', contact_name: '', show_date: d.toISOString().slice(0, 10), data: {} };
+      } else {
+        var res = await sb.rpc('advance_get', { p_token: token });
+        if (res.error || !res.data) {
+          $('stage').innerHTML = '<section class="step center"><h1 style="margin-top:40px">This map leads <span class="gold">nowhere</span> 🗺️</h1><p class="sub">Ask Grace for a fresh link: <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a>.</p></section>';
+          return;
+        }
+        advance = res.data; headshotPath = advance.headshot_path || null;
+      }
+      answers = Object.assign({}, advance.data || {});
+      var draft = loadDraft();
+      if (draft) { Object.assign(answers, draft.answers || {}); visited = draft.visited || {}; at = Math.min(draft.at || 0, STEPS.length - 2); }
+      STOPS.forEach(function (s) { if (s.q.map(qk).some(function (k) { return answers[k] || (k === 'headshot' && headshotPath); })) visited[s.land] = true; });
+      render();
+    }
+    boot();
+  </script>
+</body>
+</html>
