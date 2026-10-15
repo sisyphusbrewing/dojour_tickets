@@ -15,6 +15,7 @@ const REPO = "sisyphusbrewing/dojour_tickets";
 const ALLOWED_WORKFLOWS = new Set([
   "create_shopify_show.yml",
   "daily_sync.yml",
+  "advance_welcome.yml",
 ]);
 
 const CORS = {

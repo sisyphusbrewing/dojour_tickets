@@ -54,3 +54,16 @@ reword or reorder a field there and everything follows. The value after the
   runs `advance_notify.py` and emails booking@. It uses the same `GITHUB_TOKEN`
   secret as `run-workflow`. Set the repo variable `ADVANCE_EMAIL_TO` to change
   who gets the email.
+
+## The welcome and the trip
+
+When a comedian is booked, the desk's **Send the welcome 🎉** button emails
+them a "you're coming to Sisyphus" letter (`advance_welcome.py`, action
+**Comedian welcome**, started through `run-workflow`; it Bccs booking@ and
+stamps `welcome_sent_at`). Its button opens `trip.html`: the same advance,
+one playful stop at a time up the hill (green room, security, guest sets and
+everything the one-page form asks). Each stop saves with `advance_trip`
+(merges into `data`); the last stop sends it in with `advance_submit` like the
+form. `trip.html` with no `?s=` is a preview that saves nothing.
+
+Preview the email anywhere: run **Comedian welcome** with `to` filled in.

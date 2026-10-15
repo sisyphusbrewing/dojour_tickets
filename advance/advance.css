@@ -93,3 +93,11 @@ input[type=date].input { color-scheme: dark; }
 html.framed header, html.framed .foot { display: none; }
 html.framed body { padding-bottom: 8px; }
 html.framed .show-card { margin-top: 4px; }
+
+/* pick-any chips (type "checks") */
+.checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.check { position: relative; cursor: pointer; }
+.check input { position: absolute; opacity: 0; pointer-events: none; }
+.check span { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-weight: 600; font-size: 15px; }
+.check input:checked + span { background: var(--slate); border-color: var(--slate-light); }
+.check input:focus-visible + span { outline: 2px solid var(--slate-light); outline-offset: 2px; }
