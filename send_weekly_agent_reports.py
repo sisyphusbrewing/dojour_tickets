@@ -28,6 +28,11 @@ REPLY_TO = (os.environ.get("REPLY_TO_EMAIL") or FROM_EMAIL).strip()
 # Set DRY_RUN=1 to print what would be sent without emailing anyone.
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 
+# Set AGENT_TOKEN to send one agent's report now (the "Send me today's numbers"
+# button on their page goes through the agent-report function to do this).
+AGENT_TOKEN = (os.environ.get("AGENT_TOKEN") or "").strip()
+REPORT_PAGE = "https://www.sisyphusbrewing.com/pages/report"
+
 # GitHub runners are on UTC; show times are Minneapolis time.
 CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
 
@@ -111,7 +116,15 @@ def fetch_supabase(endpoint):
         offset += page_size
 
 
-def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=0):
+def agent_links(token):
+    """The two things an agent can do from the email, as (label, url)."""
+    if not token:
+        return []
+    return [("Send me today's numbers", f"{REPORT_PAGE}?t={token}&do=now"),
+            ("Change who gets this", f"{REPORT_PAGE}?t={token}")]
+
+
+def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=0, token=""):
     comedian_name = html.escape(comedian_name)
     rows_html = ""
     for s in shows:
@@ -131,6 +144,16 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
     comp_note = (f'<p style="font-size: 12px; color: #64748b; margin-top: 12px;">'
                  f'Plus {total_comps} comp ticket{"s" if total_comps != 1 else ""}, not included in tickets sold.</p>'
                  if total_comps else "")
+    buttons = "".join(
+        f'<a href="{html.escape(url)}" style="display: inline-block; margin: 6px 8px 0 0; padding: 11px 18px; border-radius: 8px; '
+        f'background-color: {"#4a6c86" if i == 0 else "#ffffff"}; color: {"#ffffff" if i == 0 else "#4a6c86"}; '
+        f'border: 1px solid #4a6c86; font-weight: 700; font-size: 14px; text-decoration: none;">{html.escape(label)}</a>'
+        for i, (label, url) in enumerate(agent_links(token)))
+    buttons_block = (f'<div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid #e2e8f0;">'
+                     f'<p style="margin: 0 0 4px; font-size: 13px; color: #475569;">Need it sooner than Monday, or should this go to someone else?</p>'
+                     f'{buttons}'
+                     f'<p style="margin: 10px 0 0; font-size: 11px; color: #94a3b8;">These links are yours alone; please do not forward them.</p></div>'
+                     if buttons else "")
 
     return f"""
     <!DOCTYPE html>
@@ -183,6 +206,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
             <div style="font-size: 26px; font-weight: 900; color: #78350f; margin-top: 2px;">{total_sold}</div>
           </div>
           {comp_note}
+          {buttons_block}
         </div>
         <div class="footer">
           Sisyphus Brewing • 712 Ontario Ave W, Minneapolis, MN<br>
@@ -193,7 +217,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
     </html>
     """
 
-def build_email_text(comedian_name, shows, total_sold, total_comps=0):
+def build_email_text(comedian_name, shows, total_sold, total_comps=0, token=""):
     lines = [f"Hi,", "", f"Here is the weekly ticket count for {comedian_name} at Sisyphus Brewing "
              f"as of {datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y')}:", ""]
     for s in shows:
@@ -202,6 +226,8 @@ def build_email_text(comedian_name, shows, total_sold, total_comps=0):
     lines += ["", f"Total tickets sold: {total_sold}"]
     if total_comps:
         lines.append(f"Plus {total_comps} comp tickets (not included in tickets sold).")
+    for label, url in agent_links(token):
+        lines += ["", f"{label}: {url}"]
     lines += ["", "Questions? Reply directly to this email.", "", "Sisyphus Brewing", "712 Ontario Ave W, Minneapolis, MN"]
     return "\n".join(lines)
 
@@ -250,6 +276,10 @@ def main():
 
     # 1. Fetch agent directory
     agent_records = fetch_supabase("show_agents?select=*")
+    if AGENT_TOKEN:
+        agent_records = [r for r in agent_records if r.get("token") == AGENT_TOKEN]
+        print(f"On-demand report for one agent ({len(agent_records)} record).")
+    token_map = {r["show_title"].strip(): r.get("token") or "" for r in agent_records}
     agent_map = {r["show_title"].strip(): r["agent_email"].strip() for r in agent_records if r.get("agent_email")}
     print(f"Loaded {len(agent_map)} agent email assignment(s) from Supabase.")
 
@@ -319,9 +349,11 @@ def main():
             run_comps = sum(s["comp_tickets"] for s in shows)
 
             show_word = "Show" if len(shows) == 1 else "Shows"
-            subject = f"Weekly Ticket Count: {comedian_name} ({len(shows)} {show_word}) - Sisyphus Brewing"
-            html_body = build_email_html(agent_email, comedian_name, shows, run_total, run_comps)
-            text_body = build_email_text(comedian_name, shows, run_total, run_comps)
+            when = "Today's" if AGENT_TOKEN else "Weekly"
+            subject = f"{when} Ticket Count: {comedian_name} ({len(shows)} {show_word}) - Sisyphus Brewing"
+            token = token_map.get(comedian_name, "")
+            html_body = build_email_html(agent_email, comedian_name, shows, run_total, run_comps, token)
+            text_body = build_email_text(comedian_name, shows, run_total, run_comps, token)
 
             print(f"Sending email for '{comedian_name}' ({len(shows)} showtimes, {run_total} sold) to {agent_email}...")
             try:
