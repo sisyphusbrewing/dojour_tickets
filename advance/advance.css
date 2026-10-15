@@ -88,3 +88,8 @@ input[type=date].input { color-scheme: dark; }
 .done-big { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 26px; line-height: 1.15; }
 .camus { color: var(--gray); font-style: italic; }
 .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 20px 16px 30px; }
+
+/* embedded in a page on sisyphusbrewing.com */
+html.framed header, html.framed .foot { display: none; }
+html.framed body { padding-bottom: 8px; }
+html.framed .show-card { margin-top: 4px; }
