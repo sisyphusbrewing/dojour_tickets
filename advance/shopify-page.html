@@ -1,0 +1,19 @@
+<!-- Sisyphus: body of the Shopify page "Advance" (handle: advance). Embeds the
+     comedian advance form from GitHub Pages and passes ?s=<token> through. -->
+<div class="sb-advance" style="max-width:720px;margin:0 auto;">
+  <iframe id="sbAdvance" title="Sisyphus comedian advance" src="about:blank"
+          style="display:block;width:100%;height:100vh;border:0;border-radius:14px;background:#2b2929;"
+          allow="camera" loading="eager"></iframe>
+</div>
+<script>
+  (function () {
+    var f = document.getElementById('sbAdvance');
+    var base = 'https://sisyphusbrewing.github.io/dojour_tickets/advance/';
+    f.src = base + window.location.search;
+    window.addEventListener('message', function (e) {
+      if (e.origin !== 'https://sisyphusbrewing.github.io' || !e.data) return;
+      if (e.data.advanceHeight) f.style.height = (e.data.advanceHeight + 16) + 'px';
+      if (e.data.advanceScrollTop) window.scrollTo({ top: f.getBoundingClientRect().top + window.pageYOffset - 90, behavior: 'smooth' });
+    });
+  })();
+</script>

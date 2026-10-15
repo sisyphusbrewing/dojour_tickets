@@ -94,6 +94,17 @@
     var $ = function (id) { return document.getElementById(id); };
 
     var token = new URLSearchParams(location.search).get('s') || '';
+
+    // Embedded in sisyphusbrewing.com/pages/advance: the site has its own header,
+    // and the iframe needs to know how tall we are.
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ advanceHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+    function toTop() { if (framed) { try { parent.postMessage({ advanceScrollTop: true }, '*'); } catch (e) {} } else { window.scrollTo(0, 0); } }
     var advance = null;          // what advance_get returned
     var headshotPath = null;     // existing upload, if any
 
@@ -151,7 +162,7 @@
     function loadDraft() { try { var d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); if (d) fill(d); } catch (e) {} }
 
     /* ---------- boot ---------- */
-    function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
+    function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); toTop(); }
     function showHeader() {
       if (advance) {
         $('showName').textContent = advance.show_name;
