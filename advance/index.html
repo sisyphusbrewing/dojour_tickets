@@ -162,7 +162,8 @@
     function loadDraft() { try { var d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); if (d) fill(d); } catch (e) {} }
 
     /* ---------- boot ---------- */
-    function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); toTop(); }
+    var shownOnce = false;
+    function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); if (shownOnce) toTop(); shownOnce = true; }
     function showHeader() {
       if (advance) {
         $('showName').textContent = advance.show_name;
