@@ -26,6 +26,20 @@ jobs:
       - name: Install Dependencies
         run: pip install requests
 
+      # Live website sales, so the numbers are up to the minute. DoJour counts
+      # stay as of the daily sync (it is being phased out). A failure here only
+      # means slightly older website numbers, so the report still goes out.
+      - name: Pull live Shopify sales
+        continue-on-error: true
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python fetch_tickets.py --shopify-only
+
       - name: Run Agent Report Dispatcher
         env:
           SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
