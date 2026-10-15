@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Ticket Report</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <style>
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .small { color: var(--gray); font-size: 14px; margin: 6px 0 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Ticket report<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewLoading"><div class="empty">Finding your show…</div></section>
+
+    <section id="viewLost" class="hidden">
+      <div class="empty"><b>That link doesn't go anywhere</b>
+        Reply to the last report email, or write <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a>.</div>
+    </section>
+
+    <section id="viewMain" class="hidden">
+      <div class="show-card">
+        <div class="show-eyebrow">Ticket counts for</div>
+        <div class="show-name" id="showName"></div>
+        <div class="show-when">Reports go to <b id="whoNow"></b> every Monday morning.</div>
+      </div>
+
+      <div class="band-wrap"><span class="band">Numbers now</span></div>
+      <div class="card">
+        <p style="margin:0">Can't wait for Monday? Fair. We'll email today's count in about a minute.</p>
+        <div class="actions">
+          <button class="btn btn-primary" id="sendNow" type="button">Send me today's numbers</button>
+          <div id="sendMsg" class="small"></div>
+        </div>
+      </div>
+
+      <div class="band-wrap"><span class="band">Who gets this</span></div>
+      <form class="card" id="contactForm" autocomplete="on">
+        <div class="grid">
+          <div class="field"><label>Name</label><input class="input" id="cName" placeholder="Optional"></div>
+          <div class="field"><label>Email <span class="req">*</span></label><input class="input" id="cEmail" type="email" required></div>
+        </div>
+        <div class="actions">
+          <button class="btn" type="submit" id="saveBtn">Update contact</button>
+          <div id="saveMsg" class="small">Changing this moves every future report for this act, including the one you just asked for.</div>
+        </div>
+      </form>
+      <p class="small" style="margin-top:18px">This link is yours. Anyone holding it can do the two things above, so don't forward it around.</p>
+    </section>
+  </main>
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis · Comedians get 100% of the door.</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var params = new URLSearchParams(location.search);
+    var token = params.get('t') || '';
+    var agent = null;
+
+    // Embedded in sisyphusbrewing.com/pages/report: the site has its own header.
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ advanceHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+
+    function view(id) { ['viewLoading', 'viewLost', 'viewMain'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); }
+    function fill() { $('showName').textContent = agent.show_title; $('whoNow').textContent = agent.agent_email; $('cEmail').value = agent.agent_email; $('cName').value = agent.agent_name || ''; }
+
+    async function sendNow() {
+      var btn = $('sendNow'), msg = $('sendMsg'); btn.disabled = true; btn.textContent = 'Sending…'; msg.textContent = '';
+      try {
+        var res = await sb.functions.invoke('agent-report', { body: { token: token } });
+        if (res.error) { var m = res.error.message; try { var b = await res.error.context.json(); if (b && b.error) m = b.error; } catch (e) {} msg.textContent = m; return; }
+        msg.innerHTML = '<span class="ok">On its way to ' + agent.agent_email.replace(/</g, '&lt;') + '.</span> Check spam if it is shy.';
+        btn.textContent = 'Sent';
+      } catch (e) { msg.textContent = 'Could not reach the server. Try again.'; }
+      finally { setTimeout(function () { btn.disabled = false; btn.textContent = "Send me today's numbers"; }, 10000); }
+    }
+
+    $('sendNow').addEventListener('click', sendNow);
+    $('contactForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('saveBtn'), msg = $('saveMsg'); btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        var res = await sb.rpc('agent_update_contact', { p_token: token, p_email: $('cEmail').value.trim(), p_name: $('cName').value.trim() || null });
+        if (res.error) { msg.textContent = res.error.message; return; }
+        agent = res.data; fill();
+        msg.innerHTML = '<span class="ok">Done.</span> Reports now go to ' + agent.agent_email.replace(/</g, '&lt;') + '.';
+      } catch (e2) { msg.textContent = 'Could not reach the server. Try again.'; }
+      finally { btn.disabled = false; btn.textContent = 'Update contact'; }
+    });
+
+    (async function boot() {
+      if (!token) { view('viewLost'); return; }
+      var res = await sb.rpc('agent_get', { p_token: token });
+      if (res.error || !res.data) { view('viewLost'); return; }
+      agent = res.data; fill(); view('viewMain');
+      if (params.get('do') === 'now') sendNow();
+    })();
+  </script>
+</body>
+</html>

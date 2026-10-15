@@ -4,7 +4,12 @@ on:
   schedule:
     # Runs every Monday at 9:00 AM Central (14:00 UTC)
     - cron: '0 14 * * 1'
-  workflow_dispatch: # Allows manual one-click testing anytime from GitHub
+  workflow_dispatch: # Manual run from GitHub, or one agent's on-demand report
+    inputs:
+      token:
+        description: 'show_agents.token: email just this agent, now (blank = everyone)'
+        required: false
+        type: string
 
 jobs:
   send-reports:
@@ -30,4 +35,5 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          AGENT_TOKEN: ${{ inputs.token }}
         run: python send_weekly_agent_reports.py
