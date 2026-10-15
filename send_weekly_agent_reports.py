@@ -239,13 +239,15 @@ def build_email_text(comedian_name, shows, total_sold, total_comps=0, token=""):
 
 
 def send_email(to_email, subject, html_content, text_content=""):
+    # agent_email can hold several addresses, comma separated
+    recipients = [a.strip() for a in to_email.replace(";", ",").split(",") if a.strip()]
     if not DRY_RUN and (not SMTP_USER or not SMTP_PASS):
         raise RuntimeError("SMTP credentials missing (SMTP_USER / SMTP_PASS).")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
-    msg["To"] = to_email
+    msg["To"] = ", ".join(recipients)
     if REPLY_TO:
         msg["Reply-To"] = REPLY_TO
     if text_content:
@@ -262,7 +264,7 @@ def send_email(to_email, subject, html_content, text_content=""):
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=30) as server:
             server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+            server.sendmail(FROM_EMAIL, recipients, msg.as_string())
         print(f"✓ Sent consolidated report to {to_email}")
     except smtplib.SMTPAuthenticationError as e:
         print(f"❌ Authentication failed: {e}")
