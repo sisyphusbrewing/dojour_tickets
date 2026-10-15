@@ -1,0 +1,34 @@
+name: Comedian advance
+
+# A comedian sent in their advance form (advance/index.html). The
+# "advance-submitted" Supabase function starts this, and it emails the answers
+# and headshot to booking@ (advance_notify.py).
+
+on:
+  workflow_dispatch:
+    inputs:
+      advance_id:
+        description: 'advances.id to email'
+        required: true
+        type: string
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email the advance to booking
+        env:
+          ADVANCE_ID: ${{ inputs.advance_id }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          ADVANCE_EMAIL_TO: ${{ vars.ADVANCE_EMAIL_TO }}
+        run: python advance_notify.py

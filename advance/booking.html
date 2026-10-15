@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Booking Desk</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Booking">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="advance.css">
+  <style>
+    #lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    #lock .card { width: 100%; max-width: 360px; }
+    #lock h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 4px; }
+    .adv { display: block; width: 100%; text-align: left; cursor: pointer; margin-bottom: 10px; color: inherit; }
+    .adv:hover { border-color: var(--gray); }
+    .adv-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .adv-name { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 17px; line-height: 1.15; padding-top: 2px; }
+    .adv-sub { color: var(--slate-light); font-size: 14px; margin-top: 3px; }
+    .adv-meta { color: #d9d6d6; font-size: 14px; margin-top: 8px; }
+    .toolbar { display: flex; gap: 8px; align-items: center; margin: 16px 0 12px; }
+    .toolbar .input { flex: 1; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: #d9d6d6; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+    .chip.on { background: var(--slate); border-color: var(--slate); color: #fff; }
+    .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .detail-title { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 24px; line-height: 1.1; }
+    .linkbox { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+    .linkbox .input { font-size: 13px; color: var(--slate-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (max-width: 480px) { .linkbox { grid-template-columns: 1fr 1fr; } .linkbox .input { grid-column: 1 / -1; } }
+    .answers { display: grid; grid-template-columns: 1fr; gap: 0; }
+    .ans { display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+    .ans:last-child { border-bottom: 0; }
+    .ans .k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-light); padding-top: 3px; }
+    .ans .v { white-space: pre-wrap; word-break: break-word; }
+    .ans .v.dim { color: var(--gray); }
+    @media (max-width: 480px) { .ans { grid-template-columns: 1fr; gap: 2px; } }
+    .headshot { display: flex; gap: 14px; align-items: flex-start; }
+    .headshot img { width: 140px; height: 140px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #fff; color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 60; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .fine { color: var(--gray); font-size: 13px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fields.js"></script>
+</head>
+<body>
+  <div id="lock">
+    <div class="card">
+      <h2>Booking desk</h2>
+      <p class="fine" style="margin:0 0 14px">Same sign-in as the door app.</p>
+      <form id="loginForm">
+        <div class="field"><label>Email</label><input class="input" id="email" type="email" required autocomplete="email"></div>
+        <div class="field" style="margin-top:10px"><label>Password</label><input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError" style="margin-top:10px"></div>
+        <button class="btn btn-primary" id="loginBtn" type="submit" style="width:100%;margin-top:14px">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="#/" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Booking desk<small>Comedian advances</small></div>
+      </a>
+      <div class="hdr-right">
+        <a class="btn btn-sm" href="../" title="Door app">Door</a>
+        <button class="btn btn-sm" id="signOut" type="button">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- list -->
+    <section id="viewList">
+      <div class="toolbar">
+        <input class="input" id="search" type="search" placeholder="Search shows and names" autocomplete="off">
+        <button class="btn btn-primary" id="newBtn" type="button">+ New advance</button>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip on" data-filter="upcoming" type="button">Upcoming</button>
+        <button class="chip" data-filter="waiting" type="button">Waiting on them</button>
+        <button class="chip" data-filter="submitted" type="button">Sent in</button>
+        <button class="chip" data-filter="past" type="button">Past</button>
+        <button class="chip" data-filter="all" type="button">All</button>
+      </div>
+      <div id="list"></div>
+    </section>
+
+    <!-- new -->
+    <section id="viewNew" class="hidden">
+      <button class="btn-link" id="newBack" type="button">‹ All advances</button>
+      <div class="band-wrap"><span class="band">New advance</span></div>
+      <form class="card" id="newForm" autocomplete="off">
+        <div class="grid">
+          <div class="field full"><label>Show or headliner name <span class="req">*</span></label><input class="input" name="show_name" required placeholder="Liz Miele"></div>
+          <div class="field"><label>Show date</label><input class="input" name="show_date" type="date"></div>
+          <div class="field"><label>Time</label><input class="input" name="show_time" placeholder="7pm"></div>
+          <div class="field"><label>Send to (name)</label><input class="input" name="contact_name" placeholder="Liz, or her agent"></div>
+          <div class="field"><label>Their email</label><input class="input" name="contact_email" type="email" placeholder="only used to draft the email"></div>
+        </div>
+        <div class="actions"><button class="btn btn-primary" type="submit">Make the link</button></div>
+        <p class="fine" style="margin:6px 0 0">You get a link to send. Nothing is emailed until you send it.</p>
+      </form>
+    </section>
+
+    <!-- detail -->
+    <section id="viewDetail" class="hidden">
+      <button class="btn-link" id="backBtn" type="button">‹ All advances</button>
+      <div class="detail-head">
+        <div>
+          <div class="detail-title" id="dTitle"></div>
+          <div class="adv-sub" id="dSub"></div>
+        </div>
+        <span class="pill" id="dPill"></span>
+      </div>
+
+      <div class="band-wrap"><span class="band">Their link</span></div>
+      <div class="card">
+        <div class="linkbox">
+          <input class="input" id="dLink" readonly>
+          <button class="btn btn-sm" id="copyLink" type="button">Copy link</button>
+          <a class="btn btn-sm btn-primary" id="emailLink" href="#">Email it</a>
+        </div>
+        <p class="fine" style="margin:10px 0 0" id="dLinkNote"></p>
+      </div>
+
+      <div class="band-wrap"><span class="band">Show</span></div>
+      <form class="card" id="showForm" autocomplete="off">
+        <div class="grid">
+          <div class="field full"><label>Show or headliner name</label><input class="input" name="show_name" required></div>
+          <div class="field"><label>Show date</label><input class="input" name="show_date" type="date"></div>
+          <div class="field"><label>Time</label><input class="input" name="show_time" placeholder="7pm"></div>
+          <div class="field"><label>Sent to (name)</label><input class="input" name="contact_name"></div>
+          <div class="field"><label>Their email</label><input class="input" name="contact_email" type="email"></div>
+          <div class="field full"><label>Staff notes</label><textarea class="input" name="staff_notes" placeholder="Hotel booked, comp list at the door…"></textarea></div>
+        </div>
+        <p class="fine" style="margin:8px 0 0">Saves as you type.</p>
+      </form>
+
+      <div id="dAnswers"></div>
+
+      <div class="band-wrap"><span class="band">Do things</span></div>
+      <div class="card">
+        <div class="actions">
+          <button class="btn btn-sm" id="copyBio" type="button">Copy bio</button>
+          <button class="btn btn-sm" id="copyIntro" type="button">Copy intro</button>
+          <button class="btn btn-sm" id="copyAll" type="button">Copy everything</button>
+          <button class="btn btn-sm" id="showCreate" type="button">Create show tickets</button>
+        </div>
+        <div id="createBox" class="hidden" style="margin-top:12px">
+          <div class="grid">
+            <div class="field full"><label>Show title</label><input class="input" id="cTitle"></div>
+            <div class="field full"><label>Showtimes (one per line)</label><textarea class="input" id="cTimes" style="min-height:64px"></textarea></div>
+            <div class="field"><label>Ticket price</label><input class="input" id="cPrice" value="20.00" inputmode="decimal"></div>
+            <div class="field"><label>Seats</label><input class="input" id="cCap" value="90" inputmode="numeric"></div>
+          </div>
+          <div class="actions"><button class="btn btn-primary" id="createGo" type="button">Publish to Shopify</button><button class="btn" id="createCancel" type="button">Never mind</button></div>
+          <p class="fine" style="margin:6px 0 0">Uses their bio and headshot. Same pipeline as the door app; live in about a minute, poster follows.</p>
+        </div>
+        <div class="actions" style="margin-top:18px">
+          <button class="btn btn-sm btn-danger" id="delBtn" type="button">Delete advance</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var FORM_URL = location.origin + location.pathname.replace(/booking\.html$/, '');
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var $ = function (id) { return document.getElementById(id); };
+    var advances = [], current = null, filter = 'upcoming';
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function toast(m) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 1800); }
+    function copy(text, what) { navigator.clipboard.writeText(text).then(function () { toast('Copied ' + what); }, function () { toast('Could not copy'); }); }
+    function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function parseDate(d) { var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+    function fmtDate(d, long) { if (!d) return ''; return parseDate(d).toLocaleDateString('en-US', long ? { weekday: 'long', month: 'long', day: 'numeric' } : { weekday: 'short', month: 'short', day: 'numeric' }); }
+    function when(a) { return [fmtDate(a.show_date), a.show_time].filter(Boolean).join(' · ') || 'No date yet'; }
+    function linkFor(a) { return FORM_URL + '?s=' + a.token; }
+    function publicUrl(path) { return SUPABASE_URL + '/storage/v1/object/public/advance/' + path; }
+    function allFields() { return ADVANCE_SECTIONS.reduce(function (x, s) { return x.concat(s.fields); }, []); }
+
+    /* ---------- auth ---------- */
+    function showLock(on) { $('lock').classList.toggle('hidden', !on); }
+    $('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…'; $('loginError').classList.add('hidden');
+      try {
+        var res = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+        if (res.error) { $('loginError').textContent = res.error.message; $('loginError').classList.remove('hidden'); return; }
+        $('password').value = ''; showLock(false); start();
+      } catch (err) { $('loginError').textContent = 'Could not reach the server.'; $('loginError').classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+    });
+    $('signOut').addEventListener('click', async function () { await sb.auth.signOut(); advances = []; showLock(true); });
+    async function boot() {
+      var res = await sb.auth.getSession();
+      if (res.data && res.data.session) { showLock(false); start(); } else { showLock(true); }
+      sb.auth.onAuthStateChange(function (event, session) { if (event === 'SIGNED_OUT' || !session) showLock(true); });
+    }
+
+    /* ---------- data ---------- */
+    async function loadAll() {
+      var res = await sb.from('advances').select('*').order('show_date', { ascending: true, nullsFirst: false });
+      if (res.error) { toast(res.error.message); return; }
+      advances = res.data || [];
+    }
+    async function save(id, patch) {
+      var res = await sb.from('advances').update(patch).eq('id', id).select().single();
+      if (res.error) { toast('Save failed: ' + res.error.message); return null; }
+      var i = advances.findIndex(function (a) { return a.id === id; }); if (i >= 0) advances[i] = res.data;
+      if (current && current.id === id) current = res.data;
+      return res.data;
+    }
+
+    /* ---------- routing ---------- */
+    var started = false;
+    function start() { if (started) { route(); return; } started = true; loadAll().then(route); }
+    window.addEventListener('hashchange', route);
+    function view(id) { ['viewList', 'viewNew', 'viewDetail'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
+    function route() {
+      var h = location.hash || '#/';
+      if (h === '#/new') { $('newForm').reset(); view('viewNew'); return; }
+      var m = h.match(/^#\/a\/(.+)$/);
+      if (m) { current = advances.find(function (a) { return a.id === m[1]; }); if (current) { renderDetail(); view('viewDetail'); return; } }
+      renderList(); view('viewList');
+    }
+
+    /* ---------- list ---------- */
+    function renderList() {
+      var q = $('search').value.trim().toLowerCase(), t = today();
+      var rows = advances.filter(function (a) {
+        if (q && !((a.show_name || '') + ' ' + (a.act_name || '') + ' ' + (a.contact_name || '')).toLowerCase().includes(q)) return false;
+        var past = a.show_date && a.show_date < t;
+        if (filter === 'upcoming') return !past;
+        if (filter === 'waiting') return !past && a.status !== 'submitted';
+        if (filter === 'submitted') return a.status === 'submitted';
+        if (filter === 'past') return past;
+        return true;
+      });
+      if (filter === 'past') rows = rows.slice().reverse();
+      if (!rows.length) { $('list').innerHTML = '<div class="empty"><b>Nothing here</b>Make a new advance and send the link.</div>'; return; }
+      $('list').innerHTML = rows.map(function (a) {
+        var sub = a.act_name && a.act_name !== a.show_name ? esc(a.act_name) : (a.contact_name ? 'Sent to ' + esc(a.contact_name) : '');
+        var meta = a.status === 'submitted' ? 'Sent in ' + new Date(a.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Link made ' + new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', nothing back yet';
+        return '<button class="card adv" type="button" data-id="' + a.id + '"><div class="adv-top"><div><div class="adv-name">' + esc(a.show_name) + '</div><div class="adv-sub">' + esc(when(a)) + (sub ? ' · ' + sub : '') + '</div></div>' +
+          '<span class="pill ' + a.status + '">' + (a.status === 'submitted' ? 'Sent in' : 'Waiting') + '</span></div><div class="adv-meta">' + meta + '</div></button>';
+      }).join('');
+      Array.prototype.forEach.call($('list').querySelectorAll('.adv'), function (el) { el.addEventListener('click', function () { location.hash = '#/a/' + el.getAttribute('data-id'); }); });
+    }
+    $('search').addEventListener('input', renderList);
+    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
+      c.addEventListener('click', function () { filter = c.getAttribute('data-filter'); document.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('on', x === c); }); renderList(); });
+    });
+    $('newBtn').addEventListener('click', function () { location.hash = '#/new'; });
+    $('newBack').addEventListener('click', function () { location.hash = '#/'; });
+    $('backBtn').addEventListener('click', function () { location.hash = '#/'; });
+
+    /* ---------- new ---------- */
+    $('newForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var f = $('newForm'), row = {};
+      ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email'].forEach(function (k) { var v = f.elements[k].value.trim(); if (v) row[k] = v; });
+      var res = await sb.from('advances').insert(row).select().single();
+      if (res.error) { toast(res.error.message); return; }
+      advances.push(res.data);
+      location.hash = '#/a/' + res.data.id;
+      toast('Link made');
+    });
+
+    /* ---------- detail ---------- */
+    function mailto(a) {
+      var who = a.contact_name ? a.contact_name.split(' ')[0] : 'there';
+      var on = a.show_date ? ' on ' + fmtDate(a.show_date, true) + (a.show_time ? ' at ' + a.show_time : '') : '';
+      var subject = 'Sisyphus advance: ' + a.show_name + (a.show_date ? ' ' + fmtDate(a.show_date) : '');
+      var body = 'Hi ' + who + ',\n\nYou\'re on at Sisyphus' + on + '. Fill this out so we get the poster, the intro and your money right:\n\n' + linkFor(a) +
+        '\n\nFive minutes. The headshot and bio are the big ones.\n\nGrace\nSisyphus · 712 Ontario Ave W, Minneapolis\nbooking@sisyphusbrewing.com';
+      return 'mailto:' + encodeURIComponent(a.contact_email || '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    }
+    function renderDetail() {
+      var a = current, d = a.data || {};
+      $('dTitle').textContent = a.show_name;
+      $('dSub').textContent = when(a) + (a.act_name && a.act_name !== a.show_name ? ' · ' + a.act_name : '');
+      $('dPill').textContent = a.status === 'submitted' ? 'Sent in' : 'Waiting'; $('dPill').className = 'pill ' + a.status;
+      $('dLink').value = linkFor(a);
+      $('emailLink').href = mailto(a);
+      $('dLinkNote').textContent = a.status === 'submitted' ? 'They sent it in ' + new Date(a.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. The same link lets them update it.' : 'Send this to the comedian or their agent. It only opens their show.';
+      var f = $('showForm');
+      ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { f.elements[k].value = a[k] || ''; });
+
+      if (a.status !== 'submitted') { $('dAnswers').innerHTML = '<div class="band-wrap"><span class="band">Answers</span></div><div class="empty">Nothing back yet.</div>'; }
+      else {
+        var html = '';
+        ADVANCE_SECTIONS.forEach(function (s) {
+          var rows = s.fields.map(function (fl) {
+            if (fl.type === 'file') {
+              if (!a.headshot_path) return '<div class="ans"><div class="k">' + esc(fl.label) + '</div><div class="v dim">none</div></div>';
+              var u = publicUrl(a.headshot_path);
+              return '<div class="ans"><div class="k">' + esc(fl.label) + '</div><div class="v"><div class="headshot"><a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" alt=""></a>' +
+                '<div><a class="btn btn-sm" href="' + esc(u) + '" target="_blank" rel="noopener" download>Open full size</a><br><button class="btn btn-sm" type="button" style="margin-top:8px" data-copy-url="' + esc(u) + '">Copy image link</button></div></div></div></div>';
+            }
+            var v = d[fl.k];
+            return '<div class="ans"><div class="k">' + esc(fl.label) + '</div><div class="v' + (v == null || v === '' ? ' dim' : '') + '">' + (v == null || v === '' ? '—' : esc(v)) + '</div></div>';
+          }).join('');
+          html += '<div class="band-wrap"><span class="band">' + esc(s.title) + '</span></div><div class="card answers">' + rows + '</div>';
+        });
+        $('dAnswers').innerHTML = html;
+        Array.prototype.forEach.call($('dAnswers').querySelectorAll('[data-copy-url]'), function (b) { b.addEventListener('click', function () { copy(b.getAttribute('data-copy-url'), 'image link'); }); });
+      }
+      $('createBox').classList.add('hidden');
+    }
+    $('copyLink').addEventListener('click', function () { copy(linkFor(current), 'link'); });
+    var saveTimer;
+    $('showForm').addEventListener('input', function () {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async function () {
+        var f = $('showForm'), patch = {};
+        ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { patch[k] = f.elements[k].value.trim() || null; });
+        if (!patch.show_name) return;
+        var row = await save(current.id, patch);
+        if (row) { $('dTitle').textContent = row.show_name; $('dSub').textContent = when(row); $('emailLink').href = mailto(row); }
+      }, 500);
+    });
+    $('copyBio').addEventListener('click', function () { var b = (current.data || {}).bio; b ? copy(b, 'bio') : toast('No bio yet'); });
+    $('copyIntro').addEventListener('click', function () { var b = (current.data || {}).intro; b ? copy(b, 'intro') : toast('No intro yet'); });
+    $('copyAll').addEventListener('click', function () {
+      var a = current, d = a.data || {}, out = [a.show_name + ' · ' + when(a), ''];
+      ADVANCE_SECTIONS.forEach(function (s) {
+        var lines = s.fields.filter(function (f) { return f.type === 'file' ? a.headshot_path : d[f.k] != null && d[f.k] !== ''; })
+          .map(function (f) { return f.label + ': ' + (f.type === 'file' ? publicUrl(a.headshot_path) : d[f.k]); });
+        if (lines.length) out = out.concat([s.title.toUpperCase()], lines, ['']);
+      });
+      copy(out.join('\n'), 'everything');
+    });
+    $('showCreate').addEventListener('click', function () {
+      var a = current;
+      $('cTitle').value = a.act_name || a.show_name;
+      var times = (a.show_time || '7pm').split(/\s*(?:&|,|and)\s*/).filter(Boolean);
+      $('cTimes').value = a.show_date ? times.map(function (t) { return fmtDate(a.show_date) + ' • ' + t; }).join('\n') : '';
+      $('createBox').classList.remove('hidden'); $('createBox').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    $('createCancel').addEventListener('click', function () { $('createBox').classList.add('hidden'); });
+    $('createGo').addEventListener('click', async function () {
+      var a = current, title = $('cTitle').value.trim(), times = $('cTimes').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+      if (!title || !times.length) { toast('Need a title and at least one showtime'); return; }
+      if (!confirm('Publish "' + title + '" (' + times.join(', ') + ') to Shopify?')) return;
+      var btn = $('createGo'); btn.disabled = true; btn.textContent = 'Publishing…';
+      try {
+        var res = await sb.functions.invoke('run-workflow', { body: { workflow: 'create_shopify_show.yml', inputs: {
+          comedian_name: title, showtimes: times.join(' | '), ticket_price: $('cPrice').value.trim() || '20.00', room_capacity: $('cCap').value.trim() || '90',
+          bio: (a.data || {}).bio || '', image_url: a.headshot_path ? publicUrl(a.headshot_path) : '' } } });
+        if (res.error) { var msg = res.error.message; try { var b = await res.error.context.json(); if (b && b.error) msg = b.error; } catch (e) {} toast('Failed: ' + msg); return; }
+        toast('Publishing. Live in about a minute.');
+        $('createBox').classList.add('hidden');
+        await save(a.id, { staff_notes: ((a.staff_notes || '') + '\nShow tickets created ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '.').trim() });
+        $('showForm').elements.staff_notes.value = current.staff_notes || '';
+      } finally { btn.disabled = false; btn.textContent = 'Publish to Shopify'; }
+    });
+    $('delBtn').addEventListener('click', async function () {
+      if (!confirm('Delete this advance and its headshot? No undo.')) return;
+      if (current.headshot_path) await sb.storage.from('advance').remove([current.headshot_path]);
+      var res = await sb.from('advances').delete().eq('id', current.id);
+      if (res.error) { toast(res.error.message); return; }
+      advances = advances.filter(function (a) { return a.id !== current.id; });
+      location.hash = '#/';
+    });
+    boot();
+  </script>
+</body>
+</html>
