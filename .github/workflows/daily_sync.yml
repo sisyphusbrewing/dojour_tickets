@@ -2,8 +2,16 @@ name: Sync Ticket Sales
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Inventory mirror only reports, changes nothing'
+        type: boolean
+        default: false
   schedule:
-    - cron: '0 13 * * *'
+    # Every 4 hours (7am, 11am, 3pm, 7pm, 11pm, 3am Central during CDT).
+    # Dojour and the website sell the same seats, so the counts are mirrored
+    # several times a day instead of once.
+    - cron: '0 */4 * * *'
 
 jobs:
   sync:
@@ -34,6 +42,16 @@ jobs:
           # keeps working after public access to the tickets table is turned off.
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python fetch_tickets.py
+
+      - name: Mirror Dojour sales into Shopify seat counts
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python sync_inventory.py
 
       - name: Archive past shows and sort listing
         env:
