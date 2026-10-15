@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Advance</title>
+  <meta name="description" content="The advance form for comedians playing Sisyphus in Minneapolis: promo, travel, stage needs, guest list, merch and how you get paid.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="advance.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fields.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Advance<small>Sisyphus · Minneapolis</small></div>
+      </a>
+      <span class="pill hidden" id="statusPill"></span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- loading / bad link -->
+    <section id="viewLoading"><div class="empty">Finding your show…</div></section>
+
+    <section id="viewLost" class="hidden">
+      <div class="empty"><b>That link doesn't go anywhere</b>
+        Ask Grace for a fresh one: <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a>.
+        Or <a href="./">fill it out without a link</a>.</div>
+    </section>
+
+    <!-- the form -->
+    <section id="viewForm" class="hidden">
+      <div class="show-card">
+        <div class="show-eyebrow">You're booked</div>
+        <div class="show-name" id="showName"></div>
+        <div class="show-when" id="showWhen"></div>
+      </div>
+
+      <p class="lede" id="lede">This is the part where we ask a lot of questions so the night goes right.
+        Five minutes, maybe ten if you overthink the bio. Anything you skip, Grace will ask about anyway.</p>
+
+      <div class="notice hidden" id="resubmitNote">You already sent this one. Change what you need to and send it again.</div>
+
+      <form id="advanceForm" autocomplete="on" novalidate>
+        <div id="noLink" class="hidden">
+          <div class="band-wrap"><span class="band">Which show</span></div>
+          <div class="card">
+            <p class="help" style="margin-top:0">No link? No problem. Tell us which show and carry on.</p>
+            <div class="grid">
+              <div class="field full"><label>Show or headliner name <span class="req">*</span></label><input class="input" id="openShowName" placeholder="Liz Miele"></div>
+              <div class="field"><label>Date</label><input class="input" id="openShowDate" type="date"></div>
+              <div class="field"><label>Time</label><input class="input" id="openShowTime" placeholder="7pm"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sections"></div>
+
+        <div class="submit-row">
+          <div class="err hidden" id="formError"></div>
+          <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Send it</button>
+          <div class="help">Goes straight to Grace at booking@sisyphusbrewing.com. Saves on this device as you type.</div>
+        </div>
+      </form>
+    </section>
+
+    <!-- done -->
+    <section id="viewDone" class="hidden">
+      <div class="done">
+        <div class="band-wrap"><span class="band">Got it</span></div>
+        <p class="done-big" id="doneLine"></p>
+        <p>Need to change something? This page is still live; come back to it and send again.</p>
+        <p>Questions go to Grace: <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a>.</p>
+        <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+        <button class="btn" id="editAgainBtn" type="button">Edit my answers</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis · Comedians get 100% of the door.</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+
+    var token = new URLSearchParams(location.search).get('s') || '';
+    var advance = null;          // what advance_get returned
+    var headshotPath = null;     // existing upload, if any
+
+    /* ---------- render ---------- */
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function fmtDate(d) {
+      if (!d) return '';
+      var p = d.split('-'); var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+      return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    }
+    function fieldHtml(f) {
+      var id = 'f_' + f.k, attrs = ' id="' + id + '" name="' + f.k + '"' + (f.req ? ' required' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '');
+      var ctl;
+      if (f.type === 'textarea') ctl = '<textarea class="input"' + attrs + '></textarea>';
+      else if (f.type === 'select') ctl = '<select class="input"' + attrs + '><option value="">Pick one</option>' + f.options.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (f.type === 'file') ctl = '<div class="filebox"><input type="file" accept="image/*,.pdf"' + attrs + '><div class="filepreview" id="' + id + '_preview"></div></div>';
+      else ctl = '<input class="input" type="' + (f.type || 'text') + '"' + attrs + (f.type === 'number' ? ' inputmode="numeric" min="' + (f.min || 0) + '" max="' + (f.max || 999) + '"' : '') + (f.type === 'url' ? ' inputmode="url"' : '') + '>';
+      return '<div class="field' + (f.full ? ' full' : '') + '"><label for="' + id + '">' + esc(f.label) + (f.req ? ' <span class="req">*</span>' : '') + '</label>' + ctl + (f.help ? '<div class="help">' + esc(f.help) + '</div>' : '') + '</div>';
+    }
+    function render() {
+      $('sections').innerHTML = ADVANCE_SECTIONS.map(function (s) {
+        return '<div class="band-wrap"><span class="band">' + esc(s.title) + '</span></div>' +
+          (s.intro ? '<p class="intro">' + esc(s.intro) + '</p>' : '') +
+          '<div class="card"><div class="grid">' + s.fields.map(fieldHtml).join('') + '</div></div>';
+      }).join('');
+      var hs = $('f_headshot');
+      if (hs) hs.addEventListener('change', function () {
+        var f = hs.files && hs.files[0]; var pv = $('f_headshot_preview'); pv.innerHTML = '';
+        if (!f) return;
+        if (f.size > 20 * 1024 * 1024) { pv.textContent = 'That one is over 20 MB. Impressive, but too big.'; hs.value = ''; return; }
+        if (/^image\//.test(f.type) && !/heic|heif/.test(f.type)) { var img = new Image(); img.src = URL.createObjectURL(f); pv.appendChild(img); }
+        pv.appendChild(document.createTextNode(f.name + ' · ' + (f.size / 1e6).toFixed(1) + ' MB'));
+      });
+    }
+
+    /* ---------- values ---------- */
+    function allFields() { return ADVANCE_SECTIONS.reduce(function (a, s) { return a.concat(s.fields); }, []); }
+    function collect() {
+      var d = {};
+      allFields().forEach(function (f) {
+        if (f.type === 'file') return;
+        var el = $('f_' + f.k); if (!el) return;
+        var v = el.value.trim(); if (v !== '') d[f.k] = f.type === 'number' ? Number(v) : v;
+      });
+      return d;
+    }
+    function fill(d) {
+      allFields().forEach(function (f) {
+        if (f.type === 'file') return;
+        var el = $('f_' + f.k); if (el && d[f.k] != null) el.value = d[f.k];
+      });
+    }
+    var draftKey = function () { return 'advance-draft:' + (token || 'open'); };
+    function saveDraft() { try { localStorage.setItem(draftKey(), JSON.stringify(collect())); } catch (e) {} }
+    function loadDraft() { try { var d = JSON.parse(localStorage.getItem(draftKey()) || 'null'); if (d) fill(d); } catch (e) {} }
+
+    /* ---------- boot ---------- */
+    function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
+    function showHeader() {
+      if (advance) {
+        $('showName').textContent = advance.show_name;
+        $('showWhen').textContent = [fmtDate(advance.show_date), advance.show_time].filter(Boolean).join(' · ') || 'Date to come';
+      } else {
+        $('showName').textContent = 'Which show?';
+        $('showWhen').textContent = 'Tell us below';
+      }
+    }
+    async function boot() {
+      render();
+      if (token) {
+        var res = await sb.rpc('advance_get', { p_token: token });
+        if (res.error || !res.data) { view('viewLost'); return; }
+        advance = res.data; headshotPath = advance.headshot_path;
+        if (advance.status === 'submitted') {
+          fill(advance.data || {});
+          $('resubmitNote').classList.remove('hidden');
+          $('statusPill').textContent = 'Sent'; $('statusPill').classList.remove('hidden');
+          if (headshotPath) $('f_headshot_preview').innerHTML = '<img src="' + esc(publicUrl(headshotPath)) + '">We have this one. Upload again to replace it.';
+        } else {
+          loadDraft();
+        }
+      } else {
+        $('noLink').classList.remove('hidden');
+        loadDraft();
+      }
+      showHeader();
+      view('viewForm');
+    }
+    function publicUrl(path) { return SUPABASE_URL + '/storage/v1/object/public/advance/' + path; }
+
+    /* ---------- submit ---------- */
+    $('advanceForm').addEventListener('input', saveDraft);
+    $('advanceForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = $('formError'); err.classList.add('hidden'); err.textContent = '';
+      var form = $('advanceForm');
+      if (!token && !$('openShowName').value.trim()) { $('openShowName').focus(); return fail('Which show? We need at least a name.'); }
+      if (!form.checkValidity()) {
+        var bad = form.querySelector(':invalid'); if (bad) { bad.focus(); bad.scrollIntoView({ block: 'center' }); }
+        return fail('A couple of required things are still blank.');
+      }
+      var btn = $('sendBtn'); btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        if (!token) {
+          var opened = await sb.rpc('advance_open', { p_show_name: $('openShowName').value.trim(), p_show_date: $('openShowDate').value || null, p_show_time: $('openShowTime').value.trim() || null });
+          if (opened.error) throw opened.error;
+          token = opened.data;
+          history.replaceState(null, '', '?s=' + token);
+          advance = { show_name: $('openShowName').value.trim(), show_date: $('openShowDate').value || null, show_time: $('openShowTime').value.trim() || null };
+        }
+        var hs = $('f_headshot');
+        var file = hs && hs.files && hs.files[0];
+        if (file) {
+          btn.textContent = 'Uploading headshot…';
+          var safe = file.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80);
+          var path = token + '/' + Date.now() + '-' + safe;
+          var up = await sb.storage.from('advance').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+          if (up.error) throw new Error('Headshot upload failed: ' + up.error.message);
+          headshotPath = path;
+        }
+        btn.textContent = 'Sending…';
+        var res = await sb.rpc('advance_submit', { p_token: token, p_data: collect(), p_headshot_path: headshotPath });
+        if (res.error) throw res.error;
+        advance = res.data;
+        try { localStorage.removeItem(draftKey()); } catch (e2) {}
+        // Tell booking@ (best effort; the desk shows it either way).
+        sb.functions.invoke('advance-submitted', { body: { token: token } }).catch(function () {});
+        $('doneLine').textContent = advance.show_date ? 'See you ' + fmtDate(advance.show_date) + (advance.show_time ? ' at ' + advance.show_time : '') + '.' : 'See you soon.';
+        view('viewDone');
+      } catch (ex) {
+        fail((ex && ex.message) || 'Something broke. Try again, or email Grace.');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send it';
+      }
+      function fail(m) { err.textContent = m; err.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Send it'; }
+    });
+    $('editAgainBtn').addEventListener('click', function () {
+      $('resubmitNote').classList.remove('hidden');
+      if (headshotPath) { $('f_headshot').value = ''; $('f_headshot_preview').innerHTML = '<img src="' + esc(publicUrl(headshotPath)) + '">We have this one. Upload again to replace it.'; }
+      view('viewForm');
+    });
+    boot();
+  </script>
+</body>
+</html>
