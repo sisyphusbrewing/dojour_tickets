@@ -3,7 +3,7 @@
 The form comedians and agents fill out before a show, and the desk where
 booking reads the answers. Served by GitHub Pages:
 
-    form:  https://sisyphusbrewing.com/pages/advance?s=<token>
+    form:  https://www.sisyphusbrewing.com/pages/advance?s=<token>
     desk:  https://sisyphusbrewing.github.io/dojour_tickets/advance/booking.html
 
 The form itself is served from this repo at `advance/index.html`; the Shopify
