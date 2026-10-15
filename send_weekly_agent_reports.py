@@ -22,7 +22,7 @@ SMTP_HOST = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
 SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
 SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
-FROM_NAME = "Sisyphus Brewing Box Office"
+FROM_NAME = "Sisyphus Box Office"
 REPLY_TO = (os.environ.get("REPLY_TO_EMAIL") or FROM_EMAIL).strip()
 
 # Set DRY_RUN=1 to print what would be sent without emailing anyone.
@@ -124,101 +124,106 @@ def agent_links(token):
             ("Change who gets this", f"{REPORT_PAGE}?t={token}")]
 
 
+BADGE_URL = "https://cdn.shopify.com/s/files/1/0310/0669/files/sisyphus-badge-bluegray-dark-bg.png?v=1791819264&width=240"
+HEAD_FONT = "'Josefin Sans', 'Century Gothic', Futura, 'Trebuchet MS', Helvetica, Arial, sans-serif"
+BODY_FONT = "Assistant, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+
+
+def band(title):
+    """The site's slate band heading, the email-safe way (no transforms)."""
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 22px 0 10px;"><tr><td '
+            f'style="background-color: #4a6c86; border-top: 2px solid #ffffff; border-bottom: 2px solid #ffffff; '
+            f'padding: 8px 16px 6px; font-family: {HEAD_FONT}; font-weight: 700; font-size: 13px; letter-spacing: 3px; '
+            f'text-transform: uppercase; color: #ffffff;">{html.escape(title)}</td></tr></table>')
+
+
 def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=0, token=""):
+    """The weekly (or on-demand) count, styled like sisyphusbrewing.com: charcoal, slate blue, band headings."""
     comedian_name = html.escape(comedian_name)
+    cell = 'padding: 10px 12px; font-size: 15px; color: #ffffff; border-bottom: 1px solid #4a4646;'
     rows_html = ""
     for s in shows:
-        comp_cell = (f'<td style="padding: 10px 12px; text-align: center; color: #475569;">{s["comp_tickets"]}</td>'
-                     if total_comps else "")
-        rows_html += f"""
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 10px 12px; font-weight: 600; color: #1e293b;">{html.escape(s['show_date'])}</td>
-          <td style="padding: 10px 12px; text-align: center; color: #475569;">{s['website_tickets']}</td>
-          <td style="padding: 10px 12px; text-align: center; color: #475569;">{s['dojour_tickets']}</td>
-          {comp_cell}
-          <td style="padding: 10px 12px; text-align: right; font-weight: 700; color: #0f172a;">{s['total']}</td>
-        </tr>
-        """
+        comp_cell = f'<td style="{cell} text-align: center; color: #d9d6d6;">{s["comp_tickets"]}</td>' if total_comps else ""
+        day, _, time = s["show_date"].partition("•")
+        when_cell = (f'<span style="white-space: nowrap;">{html.escape(day.strip())}</span>'
+                     + (f'<br><span style="white-space: nowrap; font-weight: 400; color: #a9c3d8;">{html.escape(time.strip())}</span>' if time.strip() else ""))
+        rows_html += (f'<tr><td style="{cell} font-weight: 600;">{when_cell}</td>'
+                      f'<td style="{cell} text-align: center; color: #d9d6d6;">{s["website_tickets"]}</td>'
+                      f'<td style="{cell} text-align: center; color: #d9d6d6;">{s["dojour_tickets"]}</td>'
+                      f'{comp_cell}'
+                      f'<td style="{cell} text-align: right; font-weight: 700;">{s["total"]}</td></tr>')
 
-    comp_header = '<th style="text-align: center;">Comps</th>' if total_comps else ""
-    comp_note = (f'<p style="font-size: 12px; color: #64748b; margin-top: 12px;">'
-                 f'Plus {total_comps} comp ticket{"s" if total_comps != 1 else ""}, not included in tickets sold.</p>'
-                 if total_comps else "")
-    buttons = "".join(
-        f'<a href="{html.escape(url)}" style="display: inline-block; margin: 6px 8px 0 0; padding: 11px 18px; border-radius: 8px; '
-        f'background-color: {"#4a6c86" if i == 0 else "#ffffff"}; color: {"#ffffff" if i == 0 else "#4a6c86"}; '
-        f'border: 1px solid #4a6c86; font-weight: 700; font-size: 14px; text-decoration: none;">{html.escape(label)}</a>'
-        for i, (label, url) in enumerate(agent_links(token)))
-    buttons_block = (f'<div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid #e2e8f0;">'
-                     f'<p style="margin: 0 0 4px; font-size: 13px; color: #475569;">Need it sooner than Monday, or should this go to someone else?</p>'
-                     f'{buttons}'
-                     f'<p style="margin: 10px 0 0; font-size: 11px; color: #94a3b8;">These links are yours alone; please do not forward them.</p></div>'
-                     if buttons else "")
+    th = (f'padding: 0 12px 8px; font-family: {HEAD_FONT}; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; '
+          f'text-transform: uppercase; color: #a9c3d8; border-bottom: 1px solid #4a4646;')
+    comp_header = f'<th style="{th} text-align: center;">Comps</th>' if total_comps else ""
+    comp_note = (f'<p style="margin: 10px 0 0; font-size: 13px; color: #918f90;">Plus {total_comps} comp '
+                 f'ticket{"s" if total_comps != 1 else ""}, not counted as sold.</p>' if total_comps else "")
 
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; }}
-        .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }}
-        .header {{ background-color: #0f172a; padding: 24px; color: #ffffff; }}
-        .title {{ font-size: 20px; font-weight: 800; margin: 0; color: #fbbf24; }}
-        .subtitle {{ font-size: 13px; color: #94a3b8; margin-top: 4px; }}
-        .content {{ padding: 24px; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }}
-        th {{ background-color: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }}
-        .total-box {{ background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin-top: 20px; text-align: right; }}
-        .footer {{ padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }}
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <div class="header">
-          <h1 class="title">Weekly Ticket Count Update</h1>
-          <div class="subtitle">{comedian_name} • Sisyphus Brewing</div>
-        </div>
-        <div class="content">
-          <p style="margin-top: 0; color: #334155; font-size: 14px; line-height: 1.5;">
-            Hi,
-            <br><br>
-            Here is the consolidated weekly ticket count for <strong>{comedian_name}</strong> at Sisyphus Brewing as of {datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y')}:
-          </p>
+    links = agent_links(token)
+    buttons = ""
+    for i, (label, url) in enumerate(links):
+        primary = i == 0
+        buttons += (f'<a href="{html.escape(url)}" style="display: inline-block; margin: 8px 8px 0 0; padding: 12px 18px 10px; '
+                    f'border-radius: 10px; background-color: {"#4a6c86" if primary else "#2b2929"}; '
+                    f'color: #ffffff; border: 1px solid {"#4a6c86" if primary else "#918f90"}; font-family: {HEAD_FONT}; '
+                    f'font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; text-decoration: none;">'
+                    f'{html.escape(label)}</a>')
+    buttons_block = ""
+    if buttons:
+        buttons_block = (band("Need something") +
+                         f'<p style="margin: 0; font-size: 15px; color: #d9d6d6;">Numbers sooner than Monday, or a different inbox for these? Help yourself.</p>'
+                         f'{buttons}'
+                         f'<p style="margin: 12px 0 0; font-size: 12px; color: #918f90;">These links are yours alone. Please do not forward them.</p>')
 
-          <table>
-            <thead>
-              <tr>
-                <th>Show Date & Time</th>
-                <th style="text-align: center;">Website</th>
-                <th style="text-align: center;">Dojour</th>
-                {comp_header}
-                <th style="text-align: right;">Total Sold</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows_html}
-            </tbody>
-          </table>
+    when = datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y')
+    return f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ticket count: {comedian_name}</title></head>
+<body style="margin: 0; padding: 24px 12px; background-color: #393636; font-family: {BODY_FONT};">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #2b2929; border: 1px solid #4a4646; border-radius: 14px;">
+    <tr><td style="padding: 24px 24px 18px; border-bottom: 1px solid #4a4646;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="padding-right: 16px; vertical-align: middle;"><img src="{BADGE_URL}" width="72" height="72" alt="Sisyphus" style="display: block; width: 72px; height: 72px; border: 0;"></td>
+        <td style="vertical-align: middle;">
+          <div style="font-family: {HEAD_FONT}; font-weight: 700; font-size: 22px; letter-spacing: 2px; text-transform: uppercase; color: #ffffff; line-height: 1.1;">Ticket count</div>
+          <div style="margin-top: 4px; font-size: 14px; color: #a9c3d8;">{comedian_name} &middot; Sisyphus, Minneapolis</div>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding: 8px 24px 24px;">
+      <p style="margin: 14px 0 0; font-size: 16px; line-height: 1.5; color: #ffffff;">Hi,<br><br>Here is where <strong>{comedian_name}</strong> stands as of {when}.</p>
+      {band("The numbers")}
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+        <thead><tr>
+          <th style="{th} text-align: left;">Show</th>
+          <th style="{th} text-align: center;">Website</th>
+          <th style="{th} text-align: center;">Dojour</th>
+          {comp_header}
+          <th style="{th} text-align: right;">Sold</th>
+        </tr></thead>
+        <tbody>{rows_html}</tbody>
+      </table>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 16px;"><tr>
+        <td style="background-color: #4a6c86; border-radius: 10px; padding: 14px 18px; text-align: right;">
+          <div style="font-family: {HEAD_FONT}; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #ffffff;">Total sold</div>
+          <div style="font-family: {HEAD_FONT}; font-size: 32px; font-weight: 700; color: #ffffff; line-height: 1.1; margin-top: 2px;">{total_sold}</div>
+        </td>
+      </tr></table>
+      {comp_note}
+      {buttons_block}
+    </td></tr>
+    <tr><td style="padding: 16px 24px 20px; border-top: 1px solid #4a4646; font-size: 12px; line-height: 1.6; color: #918f90; text-align: center;">
+      Sisyphus &middot; 712 Ontario Ave W, Minneapolis, MN &middot; Reply to this email with questions.<br>
+      <span style="font-style: italic;">&laquo; Il faut imaginer Sisyphe heureux. &raquo;</span>
+    </td></tr>
+  </table>
+</body>
+</html>
+"""
 
-          <div class="total-box">
-            <span style="font-size: 12px; text-transform: uppercase; font-weight: 700; color: #92400e;">Total Tickets Sold</span>
-            <div style="font-size: 26px; font-weight: 900; color: #78350f; margin-top: 2px;">{total_sold}</div>
-          </div>
-          {comp_note}
-          {buttons_block}
-        </div>
-        <div class="footer">
-          Sisyphus Brewing • 712 Ontario Ave W, Minneapolis, MN<br>
-          Questions? Reply directly to this email.
-        </div>
-      </div>
-    </body>
-    </html>
-    """
 
 def build_email_text(comedian_name, shows, total_sold, total_comps=0, token=""):
-    lines = [f"Hi,", "", f"Here is the weekly ticket count for {comedian_name} at Sisyphus Brewing "
+    lines = [f"Hi,", "", f"Here is where {comedian_name} at Sisyphus stands "
              f"as of {datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y')}:", ""]
     for s in shows:
         comp = f", {s['comp_tickets']} comps" if s["comp_tickets"] else ""
@@ -228,7 +233,7 @@ def build_email_text(comedian_name, shows, total_sold, total_comps=0, token=""):
         lines.append(f"Plus {total_comps} comp tickets (not included in tickets sold).")
     for label, url in agent_links(token):
         lines += ["", f"{label}: {url}"]
-    lines += ["", "Questions? Reply directly to this email.", "", "Sisyphus Brewing", "712 Ontario Ave W, Minneapolis, MN"]
+    lines += ["", "Questions? Reply directly to this email.", "", "Sisyphus", "712 Ontario Ave W, Minneapolis, MN"]
     return "\n".join(lines)
 
 
@@ -350,7 +355,7 @@ def main():
 
             show_word = "Show" if len(shows) == 1 else "Shows"
             when = "Today's" if AGENT_TOKEN else "Weekly"
-            subject = f"{when} Ticket Count: {comedian_name} ({len(shows)} {show_word}) - Sisyphus Brewing"
+            subject = f"{when} Ticket Count: {comedian_name} ({len(shows)} {show_word}) - Sisyphus"
             token = token_map.get(comedian_name, "")
             html_body = build_email_html(agent_email, comedian_name, shows, run_total, run_comps, token)
             text_body = build_email_text(comedian_name, shows, run_total, run_comps, token)
