@@ -100,7 +100,7 @@
     var framed = window.parent !== window;
     if (framed) {
       document.documentElement.classList.add('framed');
-      var tell = function () { try { parent.postMessage({ advanceHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {} };
+      var tell = function () { try { parent.postMessage({ advanceHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
       if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
       window.addEventListener('load', tell);
     }
