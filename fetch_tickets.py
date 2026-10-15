@@ -774,7 +774,25 @@ def cleanup_past_shows_from_supabase(active_upcoming_tickets: list, sources_ok: 
 # 5. Main Execution
 # ==============================================================================
 
+def refresh_shopify_only():
+    """Pull live website (Shopify) sales into Supabase and touch nothing else.
+
+    Used right before an agent's on-demand report so its numbers are up to the
+    minute. DoJour stays as of the daily sync (it is being phased out), and no
+    purging runs, since only one source was loaded.
+    """
+    tickets = fetch_shopify_tickets()
+    for t in tickets:
+        t.pop("_sort_dt", None)
+    if tickets:
+        sync_to_supabase(tickets)
+    print(f"Live Shopify refresh: {len(tickets)} upcoming website tickets.")
+
+
 def main():
+    if "--shopify-only" in sys.argv:
+        refresh_shopify_only()
+        return
     print("Starting Sisyphus Ticket Consolidation to Supabase & Google Sheets...")
     shopify_tickets = []
     dojour_tickets = []

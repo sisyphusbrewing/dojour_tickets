@@ -175,7 +175,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
                          f'{buttons}'
                          f'<p style="margin: 12px 0 0; font-size: 12px; color: #918f90;">These links are yours alone. Please do not forward them.</p>')
 
-    when = datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y')
+    when = datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y at %-I:%M %p').replace(" AM", " am").replace(" PM", " pm")
     return f"""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ticket count: {comedian_name}</title></head>
@@ -210,6 +210,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
         </td>
       </tr></table>
       {comp_note}
+      <p style="margin: 10px 0 0; font-size: 12px; color: #918f90;">Website sales are live as of this email. Dojour sales update once a day.</p>
       {buttons_block}
     </td></tr>
     <tr><td style="padding: 16px 24px 20px; border-top: 1px solid #4a4646; font-size: 12px; line-height: 1.6; color: #918f90; text-align: center;">
