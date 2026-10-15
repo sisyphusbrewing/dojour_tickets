@@ -44,11 +44,18 @@
   assign money_price_min = money_price_min | replace: '$ ', '$'
   assign money_price_max = money_price_max | replace: '$ ', '$'
 
+  # Sisyphus: entry paid at the door (tag "door-tickets"): "$20 at the door", nothing sold here.
+  assign sb_door = false
+  if product.tags contains 'door-tickets'
+    assign sb_door = true
+    assign money_price = price | money_without_trailing_zeros | replace: '$ ', '$' | append: ' at the door'
+  endif
+
   # Sisyphus: ticket + fee breakdown for shows whose price includes the fee.
   # Product pages (price--large) show it on its own line under the price;
   # everywhere else it sits on the same line, e.g. "$26.00 USD ($23 ticket + $3 fee)".
   assign sb_fee = product.metafields.custom.ticket_fee.value
-  if sb_fee and target != null and price > 0
+  if sb_fee and target != null and price > 0 and sb_door == false
     assign sb_fee_cents = sb_fee | times: 100 | round
     assign sb_base_cents = price | minus: sb_fee_cents
   endif

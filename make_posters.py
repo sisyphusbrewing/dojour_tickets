@@ -150,6 +150,10 @@ def build_show(product, now):
     """Return the poster data for a product, or None if it isn't a datable show."""
     if CLASS_PATTERN.search(product["title"]) or (product.get("product_type") or "").lower() == "class":
         return None
+    # Events whose entry is paid at the door or elsewhere (tag "door-tickets") come with their own
+    # flyer, and "no-poster" opts any show out; neither gets a poster.
+    if {"door-tickets", "no-poster"} & {t.strip().lower() for t in product.get("tags") or []}:
+        return None
     cutoff = now - timedelta(hours=GRACE_HOURS)
     times, prices = {}, {}
     for v in product.get("variants") or []:
