@@ -180,7 +180,33 @@
     .rcard .rc-src { margin-top: 16px; font-size: 12px; color: #918f90; }
     .rcard .rc-empty { color: #918f90; font-style: italic; }
     .rcard-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    /* ---------- grain order ---------- */
+    .plan-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .plan-row:last-child { border-bottom: 0; }
+    .plan-row a { color: var(--white); font-weight: 600; text-decoration: none; }
+    .stepper { display: flex; align-items: center; gap: 4px; }
+    .stepper button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; font-size: 18px; }
+    .stepper span { min-width: 22px; text-align: center; font-family: var(--head); font-weight: 700; }
+    .g-head, .g-row { display: grid; grid-template-columns: 1fr 64px 76px 78px; gap: 8px; align-items: center; }
+    .g-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-light); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+    .g-head span:not(:first-child), .g-row .n { text-align: right; }
+    .g-row { padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .g-row:last-child { border-bottom: 0; }
+    .g-row .main { font-weight: 600; }
+    .g-row .sub { color: var(--gray); font-size: 12px; line-height: 1.25; }
+    .g-row .n { font-family: var(--head); font-weight: 700; white-space: nowrap; }
+    .g-row .order { color: var(--slate-light); }
+    .g-row .order.zero { color: var(--gray); font-weight: 400; }
+    .g-row input { width: 100%; min-height: 36px; padding: 6px 8px; text-align: right; border-radius: 8px; }
+    .g-note { color: var(--gray); font-size: 13px; margin-top: 10px; }
     @media print {
+      body.print-grain #viewGrain { display: block !important; }
+      body.print-grain .no-print, body.print-grain #viewRecipe { display: none !important; }
+      body.print-grain .card { background: #fff; color: #222; border: 0; padding: 0; }
+      body.print-grain .band { background: #fff; color: #222; box-shadow: none; padding: 0; transform: none; }
+      body.print-grain .g-row input { border: 0; background: #fff; color: #222; }
+      body.print-grain .g-row .sub, body.print-grain .g-head { color: #555; }
+
       body { background: #fff !important; }
       header, #lock, .btn-link, .detail-head, .rcard-actions, #rEdit, .saved, .modal, #viewList, #viewDetail, #viewRecipes { display: none !important; }
       main { padding: 0; max-width: none; }
@@ -219,6 +245,7 @@
       <nav class="tabs">
         <button class="tab on" data-tab="batches" type="button">Batches</button>
         <button class="tab" data-tab="recipes" type="button">Recipes</button>
+        <button class="tab" data-tab="grain" type="button">Grain</button>
       </nav>
     </div>
   </header>
@@ -415,6 +442,28 @@
       </div>
     </section>
 
+    <!-- ===== grain order ===== -->
+    <section id="viewGrain" class="hidden">
+      <div class="band-wrap band-row"><span class="band">Brews coming up</span><span class="stat" id="planStat"></span></div>
+      <div class="card">
+        <div id="planList"></div>
+        <div class="add-form row no-print">
+          <select class="input" id="planAdd"><option value="">Add a recipe…</option></select>
+        </div>
+      </div>
+
+      <div class="band-wrap band-row"><span class="band">Grain order</span><span class="stat" id="grainStat"></span></div>
+      <div class="card">
+        <div id="grainList"></div>
+        <div class="g-note" id="grainNote"></div>
+      </div>
+      <div class="rcard-actions no-print">
+        <button class="btn btn-sm" id="grainClear" type="button">Clear brews</button>
+        <button class="btn btn-sm" id="grainPrint" type="button">Print</button>
+        <button class="btn btn-sm btn-primary" id="grainCopy" type="button">Copy order</button>
+      </div>
+    </section>
+
     <datalist id="units"><option>lb</option><option>oz</option><option>kg</option><option>g</option><option>pkg</option><option>L</option><option>mL</option><option>gal</option><option>bbl</option></datalist>
     <datalist id="stages"><option>Mash</option><option>Boil</option><option>Whirlpool</option><option>Dry hop</option><option>Fermenter</option><option>Brite</option><option>Keg</option></datalist>
   </main>
@@ -523,7 +572,7 @@
     var started = false;
     function start() { if (started) { route(); return; } started = true; loadAll().then(route); }
     window.addEventListener('hashchange', route);
-    var VIEWS = ['viewList', 'viewDetail', 'viewRecipes', 'viewRecipe'];
+    var VIEWS = ['viewList', 'viewDetail', 'viewRecipes', 'viewRecipe', 'viewGrain'];
     function show(view, tab) {
       VIEWS.forEach(function (v) { $(v).classList.toggle('hidden', v !== view); });
       Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) { t.classList.toggle('on', t.getAttribute('data-tab') === tab); });
@@ -534,12 +583,14 @@
       var m;
       if ((m = h.match(/^#\/b\/([0-9a-f-]{36})$/))) { openBatch(m[1]); return; }
       if ((m = h.match(/^#\/r\/([0-9a-f-]{36})$/))) { openRecipe(m[1]); return; }
+      if (h === '#/grain') { current = null; currentRecipe = null; show('viewGrain', 'grain'); openGrain(); return; }
       if (h === '#/recipes') { current = null; currentRecipe = null; show('viewRecipes', 'recipes'); renderRecipes(); return; }
       current = null; currentRecipe = null; show('viewList', 'batches'); renderList();
     }
     document.querySelector('.tabs').addEventListener('click', function (e) {
       var t = e.target.closest('.tab'); if (!t) return;
-      location.hash = t.getAttribute('data-tab') === 'recipes' ? '#/recipes' : '#/';
+      var tab = t.getAttribute('data-tab');
+      location.hash = tab === 'recipes' ? '#/recipes' : tab === 'grain' ? '#/grain' : '#/';
     });
 
     async function loadAll() {
@@ -1051,7 +1102,16 @@
       if (st === 'whirlpool') return ' @ Whirlpool';
       return '';
     }
+    // Malts the supplier no longer carries, and what Sam brews with instead (Oct 2026).
+    function maltSub(name) {
+      var s = String(name || '').toLowerCase();
+      if (/(crystal|caramel|\bc)[^0-9]*55\b/.test(s)) return 'Simpsons Crystal T-50';
+      if (/(crystal|caramel|\bc)[^0-9]*120/.test(s)) return 'Simpsons Dark Roast Crystal';
+      return null;
+    }
     function lineHtml(i) {
+      var sub = i.category === 'grain' && maltSub(i.name);
+      if (sub) return '<div>' + esc(qty(i) + sub) + ' <span style="color:#918f90">(sub for ' + esc(i.name) + ')</span></div>';
       return '<div>' + esc(qty(i) + i.name + when(i)) + (i.notes ? ' <span style="color:#918f90">(' + esc(i.notes) + ')</span>' : '') + '</div>';
     }
     function renderCard(r, items) {
@@ -1114,6 +1174,165 @@
       batches.forEach(function (b) { if (b.recipe_id === id) b.recipe_id = null; });
       toast('Recipe deleted');
       location.hash = '#/recipes';
+    });
+
+    /* ---------------- grain order ---------------- */
+    // Adds up the mash bill of every planned brew, groups the same malt written different ways,
+    // subtracts what's on hand and rounds up to whole bags.
+    var BAG_LB = 55;
+    var plan = [], stock = {}, grainLines = [], grainRows = [];
+
+    function maltName(raw) {
+      if (maltSub(raw)) return maltSub(raw);
+      var s = String(raw || '').toLowerCase().replace(/\([^)]*\)/g, ' ')
+        .replace(/\b(rahr|weyermann|briess|crisp|simpsons|us)\b/g, ' ').replace(/[,/]/g, ' ').replace(/\s+/g, ' ').trim();
+      var num = (s.match(/\b(\d{2,3})\s*l?\b/) || [])[1];
+      if (/acid/.test(s)) return 'Acidulated Malt';
+      if (/dextrin|cara[ -]?pils/.test(s)) return 'Carapils / Dextrine';
+      if (/pils/.test(s)) return 'Pilsner';
+      if (/roast/.test(s)) return 'Roasted Barley';
+      if (/golden naked/.test(s)) return 'Golden Naked Oats';
+      if (/golden promise/.test(s)) return 'Golden Promise';
+      if (/maris/.test(s)) return 'Maris Otter';
+      if (/2[ -]?row|^pale malt$/.test(s)) return '2-Row';
+      if (/pale ale/.test(s)) return 'Pale Ale Malt';
+      if (/malted oat/.test(s)) return 'Malted Oats';
+      if (/flaked|^barley$/.test(s)) {
+        var g = (s.match(/oat|barley|corn|rye|wheat|rice/) || ['grain'])[0];
+        return 'Flaked ' + ({ oat: 'Oats' }[g] || g.charAt(0).toUpperCase() + g.slice(1));
+      }
+      if (/wheat/.test(s)) return 'White Wheat';
+      if (/caramunich/.test(s)) return 'Caramunich I';
+      if (/carafa/.test(s)) return 'Carafa III';
+      if (/munich/.test(s)) return 'Munich I';
+      if (/vienna/.test(s)) return 'Vienna';
+      if (/chocolate/.test(s)) return /patagonia/.test(s) ? 'Chocolate (Patagonia)' : 'Chocolate';
+      if (/crystal|caramel/.test(s) && num === '50' || /\bt[ -]?50\b/.test(s)) return 'Simpsons Crystal T-50';
+      if (/crystal|caramel/.test(s) && num) return 'Crystal ' + num;
+      if (/black/.test(s)) return 'Black Malt';
+      if (/special b/.test(s)) return 'Special B';
+      if (/victory|biscuit/.test(s)) return 'Victory';
+      if (/^rice$/.test(s)) return 'Rice';
+      return String(raw).trim();
+    }
+    function toLb(amount, unit) {
+      if (amount == null || amount === '') return null;
+      var u = String(unit || 'lb').toLowerCase(), a = Number(amount);
+      if (/^bags?$/.test(u)) return a * BAG_LB;
+      if (/^(lb|lbs|pound)/.test(u)) return a;
+      if (u === 'oz') return a / 16;
+      if (u === 'kg') return a * 2.20462;
+      if (u === 'g') return a / 453.592;
+      return null;
+    }
+
+    async function openGrain() {
+      $('hdrSub').textContent = 'Grain order';
+      var r = await Promise.all([
+        sb.from('grain_plan').select('recipe_id, brews'),
+        sb.from('grain_stock').select('malt, on_hand_lb'),
+        sb.from('recipe_ingredients').select('recipe_id, category, name, amount, unit, stage').in('category', ['grain', 'adjunct'])
+      ]);
+      if (r[0].error) { fail(r[0], 'Load'); return; }
+      plan = (r[0].data || []).filter(function (p) { return byId(recipes, p.recipe_id); });
+      stock = {};
+      if (!r[1].error) (r[1].data || []).forEach(function (x) { stock[x.malt] = Number(x.on_hand_lb) || 0; });
+      grainLines = (r[2].data || []).filter(function (i) { return i.category === 'grain' || /mash/i.test(i.stage || ''); });
+      renderGrain();
+    }
+
+    function renderGrain() {
+      plan.sort(function (a, b) { return byId(recipes, a.recipe_id).name.localeCompare(byId(recipes, b.recipe_id).name); });
+      var brews = plan.reduce(function (n, p) { return n + p.brews; }, 0);
+      $('planStat').innerHTML = brews ? '<b>' + brews + '</b> brew' + (brews === 1 ? '' : 's') : '';
+      $('planList').innerHTML = plan.length ? plan.map(function (p) {
+        var r = byId(recipes, p.recipe_id);
+        return '<div class="plan-row" data-id="' + p.recipe_id + '"><a href="#/r/' + r.id + '">' + esc(r.name) +
+          (r.aka ? ' <span class="stat">(' + esc(r.aka) + ')</span>' : '') + '</a>' +
+          '<div class="stepper no-print"><button type="button" data-step="-1" aria-label="One fewer">−</button><span>' + p.brews +
+          '</span><button type="button" data-step="1" aria-label="One more">+</button></div>' +
+          '<button class="x no-print" type="button" data-del aria-label="Remove">×</button></div>';
+      }).join('') : '<div class="empty" style="padding:20px 8px"><b>No brews yet</b>Add the recipes you plan to brew.</div>';
+      var inPlan = {}; plan.forEach(function (p) { inPlan[p.recipe_id] = 1; });
+      $('planAdd').innerHTML = '<option value="">Add a recipe…</option>' + recipes.filter(function (r) { return !inPlan[r.id]; })
+        .map(function (r) { return '<option value="' + r.id + '">' + esc(r.name) + (r.aka ? ' (' + esc(r.aka) + ')' : '') + '</option>'; }).join('');
+
+      var by = {}, missing = [];
+      plan.forEach(function (p) {
+        var r = byId(recipes, p.recipe_id);
+        grainLines.forEach(function (i) {
+          if (i.recipe_id !== p.recipe_id) return;
+          var lb = toLb(i.amount, i.unit);
+          if (lb == null) { missing.push(i.name + ' in ' + r.name); return; }
+          var m = maltName(i.name), row = by[m] || (by[m] = { malt: m, need: 0, from: [] });
+          row.need += lb * p.brews;
+          row.from.push(r.name + (p.brews > 1 ? ' ×' + p.brews : ''));
+        });
+      });
+      grainRows = Object.keys(by).map(function (k) {
+        var x = by[k], have = stock[k] || 0;
+        x.need = Math.round(x.need * 10) / 10; x.have = have;
+        x.bags = Math.max(0, Math.ceil((x.need - have) / BAG_LB - 1e-9));
+        return x;
+      }).sort(function (a, b) { return b.need - a.need; });
+
+      var bags = grainRows.reduce(function (n, x) { return n + x.bags; }, 0);
+      $('grainStat').innerHTML = grainRows.length ? '<b>' + bags + '</b> bag' + (bags === 1 ? '' : 's') + ' to order' : '';
+      $('grainList').innerHTML = grainRows.length ? '<div class="g-head"><span>Malt</span><span>Need lb</span><span>On hand</span><span>Order</span></div>' +
+        grainRows.map(function (x) {
+          return '<div class="g-row"><div><div class="main">' + esc(x.malt) + '</div><div class="sub">' + esc(x.from.join(', ')) + '</div></div>' +
+            '<div class="n">' + fmtNum(x.need) + '</div>' +
+            '<div><input class="input" type="number" min="0" step="any" inputmode="decimal" data-malt="' + esc(x.malt) + '" value="' + (x.have ? fmtNum(x.have) : '') + '" placeholder="0" aria-label="' + esc(x.malt) + ' on hand, lb"></div>' +
+            '<div class="n order' + (x.bags ? '' : ' zero') + '">' + (x.bags ? x.bags + (x.bags === 1 ? ' bag' : ' bags') : 'covered') + '</div></div>';
+        }).join('') : '<div class="empty" style="padding:20px 8px">Add brews above to see the grain they need.</div>';
+      $('grainNote').textContent = grainRows.length ? 'Bags are ' + BAG_LB + ' lb. On hand is in pounds and saves as you type.' +
+        (missing.length ? ' Left out (no amount in the recipe): ' + missing.join('; ') + '.' : '') : '';
+    }
+
+    async function savePlan(id, brews) {
+      var res = brews > 0 ? await sb.from('grain_plan').upsert({ recipe_id: id, brews: brews })
+                          : await sb.from('grain_plan').delete().eq('recipe_id', id);
+      if (res.error) fail(res);
+    }
+    $('planList').addEventListener('click', function (e) {
+      var row = e.target.closest('.plan-row'); if (!row) return;
+      var id = row.getAttribute('data-id'), p = plan.filter(function (x) { return x.recipe_id === id; })[0];
+      var step = e.target.closest('[data-step]');
+      if (step) p.brews = Math.max(0, p.brews + Number(step.getAttribute('data-step')));
+      else if (e.target.closest('[data-del]')) p.brews = 0;
+      else return;
+      if (!p.brews) plan = plan.filter(function (x) { return x !== p; });
+      renderGrain(); savePlan(id, p.brews);
+    });
+    $('planAdd').addEventListener('change', function () {
+      var id = this.value; if (!id) return;
+      plan.push({ recipe_id: id, brews: 1 }); renderGrain(); savePlan(id, 1);
+    });
+    $('grainList').addEventListener('change', async function (e) {
+      var inp = e.target.closest('input[data-malt]'); if (!inp) return;
+      var malt = inp.getAttribute('data-malt'), v = Math.max(0, Number(inp.value) || 0);
+      stock[malt] = v; renderGrain();
+      var res = await sb.from('grain_stock').upsert({ malt: malt, on_hand_lb: v });
+      if (res.error) fail(res); else toast('Saved');
+    });
+    $('grainClear').addEventListener('click', async function () {
+      if (!plan.length || !confirm('Clear all planned brews?')) return;
+      var ids = plan.map(function (p) { return p.recipe_id; });
+      plan = []; renderGrain();
+      var res = await sb.from('grain_plan').delete().in('recipe_id', ids);
+      if (res.error) fail(res, 'Clear');
+    });
+    $('grainPrint').addEventListener('click', function () {
+      document.body.classList.add('print-grain'); window.print(); document.body.classList.remove('print-grain');
+    });
+    $('grainCopy').addEventListener('click', async function () {
+      var lines = grainRows.filter(function (x) { return x.bags; }).map(function (x) {
+        return x.malt + ': ' + x.bags + (x.bags === 1 ? ' bag' : ' bags') + ' (' + x.bags * BAG_LB + ' lb)';
+      });
+      if (!lines.length) { toast('Nothing to order'); return; }
+      var text = 'Sisyphus grain order\n' + lines.join('\n');
+      try { await navigator.clipboard.writeText(text); toast('Order copied'); }
+      catch (err) { window.prompt('Copy the order:', text); }
     });
 
     boot();
