@@ -1,0 +1,444 @@
+{
+  "version": 12,
+  "type": "full",
+  "companionBuild": "sisyphus-generator",
+  "pages": {
+    "1": {
+      "name": "SHOW",
+      "controls": {
+        "0": {
+          "0": {
+            "type": "pageup"
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "$(xair:l_ch1)",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0002",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 1,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                },
+                "upgradeIndex": 5
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0001",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        },
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "1": {
+          "0": {
+            "type": "pagenum"
+          }
+        },
+        "3": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "ROOM\\n$(xair:f_lr_d) dB",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0006",
+                "connectionId": "xair",
+                "definitionId": "lr",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                },
+                "upgradeIndex": 5
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0005",
+                      "connectionId": "xair",
+                      "definitionId": "mMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0004",
+                      "connectionId": "xair",
+                      "definitionId": "mFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0003",
+                      "connectionId": "xair",
+                      "definitionId": "mFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0010",
+                "connectionId": "xair",
+                "definitionId": "rtn_aux",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                },
+                "upgradeIndex": 5
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0009",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0008",
+                      "connectionId": "xair",
+                      "definitionId": "usbFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0007",
+                      "connectionId": "xair",
+                      "definitionId": "usbFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        }
+      },
+      "gridSize": {
+        "minColumn": 0,
+        "maxColumn": 3,
+        "minRow": 0,
+        "maxRow": 3
+      }
+    },
+    "2": {
+      "name": "BAR",
+      "controls": {
+        "0": {
+          "0": {
+            "type": "pageup"
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MENU\\nREFRESH",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1985658,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0011",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/bump_menu_refresh",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "1": {
+          "0": {
+            "type": "pagenum"
+          }
+        }
+      },
+      "gridSize": {
+        "minColumn": 0,
+        "maxColumn": 3,
+        "minRow": 0,
+        "maxRow": 3
+      }
+    }
+  },
+  "instances": {
+    "xair": {
+      "label": "xair",
+      "moduleId": "behringer-xair",
+      "lastUpgradeIndex": 5,
+      "config": {},
+      "isFirstInit": false,
+      "enabled": true,
+      "sortOrder": 0
+    },
+    "http": {
+      "label": "http",
+      "moduleId": "generic-http",
+      "lastUpgradeIndex": 3,
+      "config": {
+        "prefix": "",
+        "proxyAddress": "",
+        "authType": "none",
+        "rejectUnauthorized": true,
+        "insecureHTTPParser": false
+      },
+      "isFirstInit": false,
+      "enabled": true,
+      "sortOrder": 1
+    }
+  },
+  "triggers": {},
+  "custom_variables": {}
+}
