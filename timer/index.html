@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2b2929">
+  <title>Stage Timer · Sisyphus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Comic-facing stage timer. Driven from the Stream Deck through Supabase
+       (rpc timer_start / timer_stop / timer_add / timer_light), or by tapping
+       the screen. Colors from the official logo files. */
+    :root {
+      --bg: #2b2929; --fg: #ffffff; --slate: #4a6c86; --dim: #918f90;
+      --light: #c8102e; --font: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+      font-family: var(--font); overflow: hidden; -webkit-user-select: none; user-select: none; }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: background-color .3s; cursor: none; }
+    body.controls-open { cursor: auto; }
+
+    #clock { font-weight: 700; font-variant-numeric: tabular-nums; line-height: .9;
+      font-size: min(42vw, 78vh); letter-spacing: -.02em; }
+    #label { font-weight: 700; text-transform: uppercase; letter-spacing: .18em;
+      font-size: min(5vw, 9vh); color: var(--dim); margin-top: 2vh; min-height: 1.2em; }
+
+    body.idle #clock { color: #4a4646; }
+    body.light { background: var(--light); }
+    body.light #label { color: #fff; }
+    body.over { animation: over 1s steps(2, jump-none) infinite; }
+    body.over #label { color: #fff; }
+    @keyframes over { 0% { background: var(--light); } 100% { background: #000; } }
+
+    #status { position: fixed; bottom: 1.5vh; right: 2vw; width: 1.2vh; height: 1.2vh;
+      border-radius: 50%; background: #e0a800; opacity: .8; }
+    #status.ok { display: none; }
+
+    #controls { position: fixed; inset: auto 0 0 0; padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+      background: rgba(20, 19, 19, .94); display: none; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    body.controls-open #controls { display: flex; }
+    #controls button { font: 700 clamp(16px, 2.6vw, 26px)/1 var(--font); letter-spacing: .08em;
+      text-transform: uppercase; color: #fff; background: var(--slate); border: 0; border-radius: 8px;
+      padding: 18px 22px 14px; min-width: 96px; }
+    #controls button.alt { background: #4a4646; }
+    #controls button.warn { background: var(--light); }
+  </style>
+</head>
+<body class="idle">
+  <div id="clock">10:00</div>
+  <div id="label"></div>
+  <div id="status" title="Reconnecting"></div>
+
+  <div id="controls">
+    <button data-start="5">5 min</button>
+    <button data-start="7">7 min</button>
+    <button data-start="10">10 min</button>
+    <button data-start="15">15 min</button>
+    <button data-start="20">20 min</button>
+    <button data-add="60" class="alt">+1 min</button>
+    <button data-add="-60" class="alt">&minus;1 min</button>
+    <button data-rpc="timer_light" class="warn">Light</button>
+    <button data-rpc="timer_stop" class="alt">Stop</button>
+    <button data-close class="alt">Hide</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  (function () {
+    'use strict';
+    var SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
+    var SUPABASE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb";
+
+    var clockEl = document.getElementById('clock');
+    var labelEl = document.getElementById('label');
+    var statusEl = document.getElementById('status');
+    var state = null;   // last timer_state()
+    var offset = 0;     // server clock minus this device's clock, ms
+
+    function rpc(name, body) {
+      var sent = Date.now();
+      return fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      }).then(function (r) {
+        if (!r.ok) throw new Error(name + ' ' + r.status);
+        return r.json();
+      }).then(function (s) {
+        var got = Date.now();
+        offset = Date.parse(s.now) - (sent + got) / 2;
+        state = s;
+        statusEl.className = 'ok';
+        render();
+        return s;
+      }).catch(function () { statusEl.className = ''; });
+    }
+
+    function fmt(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+    }
+
+    function render() {
+      if (!state) return;
+      var cls, text, label = '';
+      if (!state.started_at) {
+        cls = 'idle'; text = fmt(state.set_seconds);
+        if (state.light_now) { cls = 'light'; label = 'Light'; }
+      } else {
+        var left = state.set_seconds - (Date.now() + offset - Date.parse(state.started_at)) / 1000;
+        if (left > 0) {
+          text = fmt(Math.ceil(left));
+          var lit = state.light_now || (state.light_seconds > 0 && left <= state.light_seconds);
+          cls = lit ? 'light' : 'running';
+          if (lit) label = 'Light';
+        } else {
+          cls = 'over'; text = '+' + fmt(-left); label = 'Time';
+        }
+      }
+      if (clockEl.textContent !== text) clockEl.textContent = text;
+      if (labelEl.textContent !== label) labelEl.textContent = label;
+      var open = document.body.classList.contains('controls-open');
+      document.body.className = cls + (open ? ' controls-open' : '');
+    }
+
+    // Live updates from the deck, with a slow poll as a safety net.
+    var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    sb.channel('stage_timer')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stage_timer' }, function () { rpc('timer_state'); })
+      .subscribe(function (status) {
+        if (status === 'SUBSCRIBED') rpc('timer_state');
+        else if (status !== 'CLOSED') statusEl.className = '';
+      });
+    rpc('timer_state');
+    setInterval(function () { rpc('timer_state'); }, 15000);
+    setInterval(render, 200);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) rpc('timer_state'); });
+
+    // Keep the screen awake.
+    function wake() { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(function () {}); }
+    wake();
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) wake(); });
+
+    // Tap anywhere for the controls (and fullscreen); they hide themselves after 10 s.
+    var hideTimer;
+    function openControls() {
+      document.body.classList.add('controls-open');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () { document.body.classList.remove('controls-open'); }, 10000);
+    }
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) {
+        if (document.documentElement.requestFullscreen && !document.fullscreenElement)
+          document.documentElement.requestFullscreen().catch(function () {});
+        wake();
+        return openControls();
+      }
+      if (b.dataset.start) rpc('timer_start', { minutes: +b.dataset.start });
+      else if (b.dataset.add) rpc('timer_add', { seconds: +b.dataset.add });
+      else if (b.dataset.rpc) rpc(b.dataset.rpc);
+      if (b.hasAttribute('data-close')) document.body.classList.remove('controls-open');
+      else openControls();
+    });
+  })();
+  </script>
+</body>
+</html>
