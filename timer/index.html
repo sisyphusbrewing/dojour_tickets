@@ -14,8 +14,8 @@
        (rpc timer_start / timer_stop / timer_add / timer_light), or by tapping
        the screen. Colors from the official logo files. */
     :root {
-      --bg: #2b2929; --fg: #ffffff; --slate: #4a6c86; --dim: #918f90;
-      --light: #c8102e; --font: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+      --bg: #000000; --fg: #ffffff; --slate: #4a6c86; --dim: #918f90;
+      --light: #ff2a2a; --font: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
@@ -29,12 +29,14 @@
     #label { font-weight: 700; text-transform: uppercase; letter-spacing: .18em;
       font-size: min(5vw, 9vh); color: var(--dim); margin-top: 2vh; min-height: 1.2em; }
 
-    body.idle #clock { color: #4a4646; }
-    body.light { background: var(--light); }
-    body.light #label { color: #fff; }
-    body.over { animation: over 1s steps(2, jump-none) infinite; }
-    body.over #label { color: #fff; }
-    @keyframes over { 0% { background: var(--light); } 100% { background: #000; } }
+    /* Low glow: black screen, only the digits light up, so the screen reads
+       from the stage without washing the back of the room. */
+    body.idle #clock { color: #2e2c2c; }
+    body.light #clock, body.light #label { color: var(--light); }
+    body.over #clock, body.over #label { color: var(--light); animation: over 1s steps(2, jump-none) infinite; }
+    @keyframes over { 0% { opacity: 1; } 100% { opacity: .15; } }
+    #now { position: fixed; top: 2vh; left: 0; right: 0; text-align: center; color: #4a4646;
+      font-weight: 600; font-size: min(4vw, 7vh); letter-spacing: .1em; font-variant-numeric: tabular-nums; }
 
     #status { position: fixed; bottom: 1.5vh; right: 2vw; width: 1.2vh; height: 1.2vh;
       border-radius: 50%; background: #e0a800; opacity: .8; }
@@ -51,6 +53,7 @@
   </style>
 </head>
 <body class="idle">
+  <div id="now"></div>
   <div id="clock">10:00</div>
   <div id="label"></div>
   <div id="status" title="Reconnecting"></div>
@@ -105,7 +108,10 @@
       return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
     }
 
+    var nowEl = document.getElementById('now');
     function render() {
+      var t = new Date(Date.now() + offset).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      if (nowEl.textContent !== t) nowEl.textContent = t;
       if (!state) return;
       var cls, text, label = '';
       if (!state.started_at) {
