@@ -209,12 +209,15 @@ PAGES = {
             (1, 0): PAGE_NUMBER,
             (0, 2): channel_mute_key(1),
             (1, 1): record_key(),
-            # knob 1: free. The house (Main LR) level stays where it is set in
-            # X AIR Edit so bartenders can't change it (Sam, Oct 16 2026).
-            # knob 2: stage mic (channel 1)
-            (3, 1): channel_knob("STAGE", 1),
+            # knob 1: main stage mic (channel 1). The house (Main LR) level
+            # stays where it is set in X AIR Edit, never on a knob (Sam, Oct 16 2026).
+            (3, 0): channel_knob("MIC 1", 1),
+            # knob 2: second stage mic (channel 2)
+            (3, 1): channel_knob("MIC 2", 2),
             # knob 3: music (XR18 Aux in 17/18)
             (3, 2): volume_knob("MUSIC", "usbFad_a", "usbMute", "rtn_aux", "f_rtn_aux_d"),
+            # knob 4: god mic (channel 5, wired, in the office)
+            (3, 3): channel_knob("GOD MIC", 5),
         },
     },
     2: {
