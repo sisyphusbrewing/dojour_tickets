@@ -35,6 +35,7 @@ BLACK = 0x000000
 RED = 0xC00000
 DARK = 0x202020
 MENU_BLUE = 0x1E4C7A
+TIMER_GREEN = 0x1F5F2E
 
 SUPABASE = "https://idsdwkubqnavkazlteis.supabase.co"
 SUPABASE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
@@ -134,22 +135,32 @@ def channel_mute_key(channel):
     )
 
 
-def menu_refresh_key():
-    """Tells the taproom TV menu board to reload."""
+def supabase_key(text, rpc, body=None, bgcolor=MENU_BLUE):
+    """A key that calls one of our Supabase functions (menu board, stage timer)."""
     return button(
-        "MENU\\nREFRESH",
+        text,
         press=[action(
             HTTP, "post",
-            url=f"{SUPABASE}/rest/v1/rpc/bump_menu_refresh",
-            body="{}",
+            url=f"{SUPABASE}/rest/v1/rpc/{rpc}",
+            body=json.dumps(body or {}),
             header=json.dumps({"apikey": SUPABASE_KEY}),
             contenttype="application/json",
             jsonResultDataVariable="",
             result_stringify=True,
             statusCodeVariable="",
         )],
-        bgcolor=MENU_BLUE,
+        bgcolor=bgcolor,
     )
+
+
+def menu_refresh_key():
+    """Tells the taproom TV menu board to reload."""
+    return supabase_key("MENU\\nREFRESH", "bump_menu_refresh")
+
+
+def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
+    """Stage timer (sisyphusbrewing.github.io/dojour_tickets/timer/, see timer/README.md)."""
+    return supabase_key(text, rpc, body, bgcolor)
 
 
 PAGE_UP = {"type": "pageup"}
@@ -178,6 +189,21 @@ PAGES = {
             (0, 0): PAGE_UP,
             (1, 0): PAGE_NUMBER,
             (0, 1): menu_refresh_key(),
+        },
+    },
+    3: {
+        "name": "TIMER",
+        "controls": {
+            (0, 0): PAGE_UP,
+            (1, 0): PAGE_NUMBER,
+            (0, 1): timer_key("5\\nMIN", "timer_start", {"minutes": 5}),
+            (0, 2): timer_key("7\\nMIN", "timer_start", {"minutes": 7}),
+            (0, 3): timer_key("10\\nMIN", "timer_start", {"minutes": 10}),
+            (1, 1): timer_key("15\\nMIN", "timer_start", {"minutes": 15}),
+            (1, 2): timer_key("+1\\nMIN", "timer_add", {"seconds": 60}, bgcolor=DARK),
+            (1, 3): timer_key("STOP", "timer_stop", bgcolor=RED),
+            # touch strip, above knob 1: tap to flash the light by hand
+            (2, 0): timer_key("LIGHT", "timer_light", bgcolor=0x7A5A00),
         },
     },
 }
