@@ -1,0 +1,39 @@
+name: Email a customer
+
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: 'Customer email address'
+        required: true
+      subject:
+        description: 'Subject'
+        required: true
+      body:
+        description: 'Message (use \n for line breaks)'
+        required: true
+      dry_run:
+        description: 'Preview only, do not send'
+        type: boolean
+        default: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Send
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          EXPECTED_FROM: ticketing@sisyphusbrewing.com
+          EMAIL_TO: ${{ inputs.to }}
+          EMAIL_SUBJECT: ${{ inputs.subject }}
+          EMAIL_BODY: ${{ inputs.body }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python send_customer_email.py
