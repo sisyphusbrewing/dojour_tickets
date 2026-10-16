@@ -3,9 +3,10 @@
 Comic-facing countdown at https://sisyphusbrewing.github.io/dojour_tickets/timer/
 
 Open it full screen on whatever screen the comic can see (a TV on the back wall,
-or a tablet at the stage edge). It goes red with LIGHT when the set has one
-minute left, flashes red/black with a count-up once time is out, and keeps the
-screen awake. Tap the screen for buttons (5/7/10/15/20 min, +/-1, Light, Stop);
+or a tablet at the stage edge). Black screen, only the digits glow, so it
+doesn't light the room. The digits turn red with LIGHT at one minute left and
+blink red with a count-up once time is out. Time of day sits small at the top.
+It keeps the screen awake. Tap the screen for buttons (5/7/10/15/20 min, +/-1, Light, Stop);
 they hide again after 10 seconds.
 
 State is one row in Supabase (`stage_timer`, migration
