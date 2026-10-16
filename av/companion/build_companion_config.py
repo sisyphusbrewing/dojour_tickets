@@ -112,16 +112,31 @@ def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks
 MUTED = {"bgcolor": RED, "color": WHITE}
 
 
-def volume_knob(name, fader_action, mute_action, mute_feedback, level_var, step=2):
-    """A knob that turns a fader up/down by `step` percent and mutes on push."""
-    fade = dict(duration=0, faderLim=True)  # never push past 0 dB
+def volume_knob(name, fader_action, mute_action, mute_feedback, level_var, step=2,
+                strip=None, mute_strip=None, feedback_strip=None):
+    """A knob that turns a fader up/down by `step` percent and mutes on push.
+
+    `strip` picks a numbered strip (e.g. {"type": "/ch/", "num": 1}); Main LR
+    and Aux in need none.
+    """
+    fade = dict(duration=0, faderLim=True, **(strip or {}))  # never push past 0 dB
     return button(
         f"{name}\\n$(xair:{level_var}) dB",
         turn_right=[action(XAIR, fader_action, ticks=str(step), **fade)],
         turn_left=[action(XAIR, fader_action, ticks=str(-step), **fade)],
-        press=[action(XAIR, mute_action, mute="2")],
-        feedbacks=[feedback(XAIR, mute_feedback, MUTED, state="1")],
+        press=[action(XAIR, mute_action, mute="2", **(mute_strip or {}))],
+        feedbacks=[feedback(XAIR, mute_feedback, MUTED, state="1", **(feedback_strip or {}))],
         size="14",
+    )
+
+
+def channel_knob(name, channel, step=2):
+    """Volume knob for a mic channel; push mutes it."""
+    return volume_knob(
+        name, "fad_a", "mute", "ch", f"f_ch{channel}_d", step,
+        strip={"type": "/ch/", "num": channel},
+        mute_strip={"type": "/ch/", "num": channel},
+        feedback_strip={"theChannel": channel},
     )
 
 
@@ -179,6 +194,8 @@ PAGES = {
             (0, 2): channel_mute_key(1),
             # knob 1: room volume (Main LR)
             (3, 0): volume_knob("ROOM", "mFad_a", "mMute", "lr", "f_lr_d"),
+            # knob 2: stage mic (channel 1)
+            (3, 1): channel_knob("STAGE", 1),
             # knob 3: music (XR18 Aux in 17/18)
             (3, 2): volume_knob("MUSIC", "usbFad_a", "usbMute", "rtn_aux", "f_rtn_aux_d"),
         },
