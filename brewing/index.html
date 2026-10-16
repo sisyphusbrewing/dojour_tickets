@@ -245,7 +245,7 @@
       <nav class="tabs">
         <button class="tab on" data-tab="batches" type="button">Batches</button>
         <button class="tab" data-tab="recipes" type="button">Recipes</button>
-        <button class="tab" data-tab="grain" type="button">Grain</button>
+        <button class="tab" data-tab="grain" type="button">Order</button>
       </nav>
     </div>
   </header>
@@ -452,11 +452,7 @@
         </div>
       </div>
 
-      <div class="band-wrap band-row"><span class="band">Grain order</span><span class="stat" id="grainStat"></span></div>
-      <div class="card">
-        <div id="grainList"></div>
-        <div class="g-note" id="grainNote"></div>
-      </div>
+      <div id="orderSections"></div>
       <div class="rcard-actions no-print">
         <button class="btn btn-sm" id="grainClear" type="button">Clear brews</button>
         <button class="btn btn-sm" id="grainPrint" type="button">Print</button>
@@ -1180,7 +1176,7 @@
     // Adds up the mash bill of every planned brew, groups the same malt written different ways,
     // subtracts what's on hand and rounds up to whole bags.
     var BAG_LB = 55;
-    var plan = [], stock = {}, grainLines = [], grainRows = [];
+    var plan = [], stock = {}, grainLines = [];
 
     function maltName(raw) {
       if (maltSub(raw)) return maltSub(raw);
@@ -1226,18 +1222,50 @@
       return null;
     }
 
+    function plural(n, w) { return n === 1 ? w : w === 'lb' ? 'lb' : w + 's'; }
+    function hopName(raw) {
+      var s = String(raw || '').replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (/ctz|columbus|tomahawk|zeus/i.test(s)) return 'CTZ';
+      if (/^fuggles?$/i.test(s)) return 'Fuggle';
+      return s;
+    }
+    function yeastName(raw) {
+      var s = String(raw || '').trim();
+      if (/w[ -]?34\/70/i.test(s)) return 'W-34/70';
+      if (/us[ -]?05/i.test(s)) return 'US-05';
+      if (/t[ -]?58/i.test(s)) return 'T-58';
+      return s;
+    }
+    function toG(amount, unit) {
+      var lb = toLb(amount, unit);
+      return lb == null || /^bags?$/i.test(unit || '') ? null : lb * 453.592;
+    }
+    // What goes on the supplier order. On-hand amounts share grain_stock, keyed by name, in each kind's unit.
+    var ORDER_KINDS = [
+      { key: 'grain', title: 'Grain', label: 'Malt', unit: 'lb', pack: BAG_LB, packName: 'bag', name: maltName, qty: toLb,
+        pick: function (i) { return i.category === 'grain' || (i.category === 'adjunct' && /mash/i.test(i.stage || '')); },
+        note: 'Bags are ' + BAG_LB + ' lb. On hand is in pounds and saves as you type.' },
+      { key: 'hops', title: 'Hops', label: 'Hop', unit: 'lb', pack: 1, packName: 'lb', name: hopName, qty: toLb,
+        pick: function (i) { return i.category === 'hops'; },
+        note: 'Rounded up to whole pounds. On hand is in pounds.' },
+      { key: 'yeast', title: 'Yeast', label: 'Yeast', unit: 'g', pack: 500, packName: 'brick', name: yeastName, qty: toG,
+        pick: function (i) { return i.category === 'yeast'; },
+        note: 'Dry yeast in 500 g bricks. On hand is in grams.' }
+    ];
+    var orderRows = {};
+
     async function openGrain() {
-      $('hdrSub').textContent = 'Grain order';
+      $('hdrSub').textContent = 'Order';
       var r = await Promise.all([
         sb.from('grain_plan').select('recipe_id, brews'),
         sb.from('grain_stock').select('malt, on_hand_lb'),
-        sb.from('recipe_ingredients').select('recipe_id, category, name, amount, unit, stage').in('category', ['grain', 'adjunct'])
+        sb.from('recipe_ingredients').select('recipe_id, category, name, amount, unit, stage').in('category', ['grain', 'adjunct', 'hops', 'yeast'])
       ]);
       if (r[0].error) { fail(r[0], 'Load'); return; }
       plan = (r[0].data || []).filter(function (p) { return byId(recipes, p.recipe_id); });
       stock = {};
       if (!r[1].error) (r[1].data || []).forEach(function (x) { stock[x.malt] = Number(x.on_hand_lb) || 0; });
-      grainLines = (r[2].data || []).filter(function (i) { return i.category === 'grain' || /mash/i.test(i.stage || ''); });
+      grainLines = r[2].data || [];
       renderGrain();
     }
 
@@ -1257,36 +1285,45 @@
       $('planAdd').innerHTML = '<option value="">Add a recipe…</option>' + recipes.filter(function (r) { return !inPlan[r.id]; })
         .map(function (r) { return '<option value="' + r.id + '">' + esc(r.name) + (r.aka ? ' (' + esc(r.aka) + ')' : '') + '</option>'; }).join('');
 
-      var by = {}, missing = [];
-      plan.forEach(function (p) {
-        var r = byId(recipes, p.recipe_id);
-        grainLines.forEach(function (i) {
-          if (i.recipe_id !== p.recipe_id) return;
-          var lb = toLb(i.amount, i.unit);
-          if (lb == null) { missing.push(i.name + ' in ' + r.name); return; }
-          var m = maltName(i.name), row = by[m] || (by[m] = { malt: m, need: 0, from: [] });
-          row.need += lb * p.brews;
-          row.from.push(r.name + (p.brews > 1 ? ' ×' + p.brews : ''));
+      orderRows = {};
+      $('orderSections').innerHTML = ORDER_KINDS.map(function (k) {
+        var by = {}, missing = [], noLines = [];
+        plan.forEach(function (p) {
+          var r = byId(recipes, p.recipe_id), any = false;
+          grainLines.forEach(function (i) {
+            if (i.recipe_id !== p.recipe_id || !k.pick(i)) return;
+            any = true;
+            var q = k.qty(i.amount, i.unit);
+            if (q == null) { missing.push(i.name + ' in ' + r.name); return; }
+            var m = k.name(i.name), row = by[m] || (by[m] = { name: m, need: 0, from: [] });
+            row.need += q * p.brews;
+            var tag = r.name + (p.brews > 1 ? ' ×' + p.brews : '');
+            if (row.from.indexOf(tag) < 0) row.from.push(tag);
+          });
+          if (!any) noLines.push(r.name);
         });
-      });
-      grainRows = Object.keys(by).map(function (k) {
-        var x = by[k], have = stock[k] || 0;
-        x.need = Math.round(x.need * 10) / 10; x.have = have;
-        x.bags = Math.max(0, Math.ceil((x.need - have) / BAG_LB - 1e-9));
-        return x;
-      }).sort(function (a, b) { return b.need - a.need; });
-
-      var bags = grainRows.reduce(function (n, x) { return n + x.bags; }, 0);
-      $('grainStat').innerHTML = grainRows.length ? '<b>' + bags + '</b> bag' + (bags === 1 ? '' : 's') + ' to order' : '';
-      $('grainList').innerHTML = grainRows.length ? '<div class="g-head"><span>Malt</span><span>Need lb</span><span>On hand</span><span>Order</span></div>' +
-        grainRows.map(function (x) {
-          return '<div class="g-row"><div><div class="main">' + esc(x.malt) + '</div><div class="sub">' + esc(x.from.join(', ')) + '</div></div>' +
-            '<div class="n">' + fmtNum(x.need) + '</div>' +
-            '<div><input class="input" type="number" min="0" step="any" inputmode="decimal" data-malt="' + esc(x.malt) + '" value="' + (x.have ? fmtNum(x.have) : '') + '" placeholder="0" aria-label="' + esc(x.malt) + ' on hand, lb"></div>' +
-            '<div class="n order' + (x.bags ? '' : ' zero') + '">' + (x.bags ? x.bags + (x.bags === 1 ? ' bag' : ' bags') : 'covered') + '</div></div>';
-        }).join('') : '<div class="empty" style="padding:20px 8px">Add brews above to see the grain they need.</div>';
-      $('grainNote').textContent = grainRows.length ? 'Bags are ' + BAG_LB + ' lb. On hand is in pounds and saves as you type.' +
-        (missing.length ? ' Left out (no amount in the recipe): ' + missing.join('; ') + '.' : '') : '';
+        var rows = orderRows[k.key] = Object.keys(by).map(function (n) {
+          var x = by[n], have = stock[n] || 0;
+          x.need = Math.round(x.need * 10) / 10; x.have = have;
+          x.packs = Math.max(0, Math.ceil((x.need - have) / k.pack - 1e-9));
+          return x;
+        }).sort(function (a, b) { return b.need - a.need; });
+        var total = rows.reduce(function (n, x) { return n + x.packs; }, 0);
+        var notes = [];
+        if (rows.length) notes.push(k.note);
+        if (k.key === 'yeast' && noLines.length) notes.push('No yeast in ' + noLines.join(', ') + '. Add it on the recipe with Edit recipe and it shows up here.');
+        if (missing.length) notes.push('Left out (no amount in the recipe): ' + missing.join('; ') + '.');
+        return '<div class="band-wrap band-row"><span class="band">' + k.title + '</span><span class="stat">' +
+          (rows.length ? '<b>' + total + '</b> ' + plural(total, k.packName) + ' to order' : '') + '</span></div>' +
+          '<div class="card" data-kind="' + k.key + '">' + (rows.length ? '<div class="g-head"><span>' + k.label + '</span><span>Need ' + k.unit +
+          '</span><span>On hand</span><span>Order</span></div>' + rows.map(function (x) {
+            return '<div class="g-row"><div><div class="main">' + esc(x.name) + '</div><div class="sub">' + esc(x.from.join(', ')) + '</div></div>' +
+              '<div class="n">' + fmtNum(x.need) + '</div>' +
+              '<div><input class="input" type="number" min="0" step="any" inputmode="decimal" data-malt="' + esc(x.name) + '" value="' + (x.have ? fmtNum(x.have) : '') + '" placeholder="0" aria-label="' + esc(x.name) + ' on hand, ' + k.unit + '"></div>' +
+              '<div class="n order' + (x.packs ? '' : ' zero') + '">' + (x.packs ? x.packs + ' ' + plural(x.packs, k.packName) : 'covered') + '</div></div>';
+          }).join('') : '<div class="empty" style="padding:20px 8px">' + (plan.length ? 'None in these recipes.' : 'Add brews above to see what they need.') + '</div>') +
+          (notes.length ? '<div class="g-note">' + esc(notes.join(' ')) + '</div>' : '') + '</div>';
+      }).join('');
     }
 
     async function savePlan(id, brews) {
@@ -1308,7 +1345,7 @@
       var id = this.value; if (!id) return;
       plan.push({ recipe_id: id, brews: 1 }); renderGrain(); savePlan(id, 1);
     });
-    $('grainList').addEventListener('change', async function (e) {
+    $('orderSections').addEventListener('change', async function (e) {
       var inp = e.target.closest('input[data-malt]'); if (!inp) return;
       var malt = inp.getAttribute('data-malt'), v = Math.max(0, Number(inp.value) || 0);
       stock[malt] = v; renderGrain();
@@ -1326,11 +1363,14 @@
       document.body.classList.add('print-grain'); window.print(); document.body.classList.remove('print-grain');
     });
     $('grainCopy').addEventListener('click', async function () {
-      var lines = grainRows.filter(function (x) { return x.bags; }).map(function (x) {
-        return x.malt + ': ' + x.bags + (x.bags === 1 ? ' bag' : ' bags') + ' (' + x.bags * BAG_LB + ' lb)';
-      });
-      if (!lines.length) { toast('Nothing to order'); return; }
-      var text = 'Sisyphus grain order\n' + lines.join('\n');
+      var parts = ORDER_KINDS.map(function (k) {
+        var lines = (orderRows[k.key] || []).filter(function (x) { return x.packs; }).map(function (x) {
+          return x.name + ': ' + x.packs + ' ' + plural(x.packs, k.packName) + (k.pack > 1 ? ' (' + fmtNum(x.packs * k.pack) + ' ' + k.unit + ')' : '');
+        });
+        return lines.length ? k.title + '\n' + lines.join('\n') : '';
+      }).filter(Boolean);
+      if (!parts.length) { toast('Nothing to order'); return; }
+      var text = 'Sisyphus order\n\n' + parts.join('\n\n');
       try { await navigator.clipboard.writeText(text); toast('Order copied'); }
       catch (err) { window.prompt('Copy the order:', text); }
     });
