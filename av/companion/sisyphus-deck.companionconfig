@@ -44,11 +44,11 @@
                   }
                 },
                 "isInverted": false,
+                "upgradeIndex": 5,
                 "style": {
                   "bgcolor": 12582912,
                   "color": 16777215
-                },
-                "upgradeIndex": 5
+                }
               }
             ],
             "steps": {
@@ -90,6 +90,73 @@
         "1": {
           "0": {
             "type": "pagenum"
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "REC\\n$(obs:recording_timecode)",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0004",
+                "connectionId": "obs",
+                "definitionId": "recording",
+                "options": {
+                  "fg": {
+                    "value": 16777215,
+                    "isExpression": false
+                  },
+                  "bg": {
+                    "value": 12582912,
+                    "isExpression": false
+                  },
+                  "fg_paused": {
+                    "value": 16777215,
+                    "isExpression": false
+                  },
+                  "bg_paused": {
+                    "value": 16746496,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0003",
+                      "connectionId": "obs",
+                      "definitionId": "StartStopRecording",
+                      "options": {},
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           }
         },
         "3": {
@@ -113,7 +180,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0006",
+                "id": "f0008",
                 "connectionId": "xair",
                 "definitionId": "lr",
                 "options": {
@@ -123,11 +190,11 @@
                   }
                 },
                 "isInverted": false,
+                "upgradeIndex": 5,
                 "style": {
                   "bgcolor": 12582912,
                   "color": 16777215
-                },
-                "upgradeIndex": 5
+                }
               }
             ],
             "steps": {
@@ -136,7 +203,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0005",
+                      "id": "a0007",
                       "connectionId": "xair",
                       "definitionId": "mMute",
                       "options": {
@@ -152,7 +219,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0004",
+                      "id": "a0006",
                       "connectionId": "xair",
                       "definitionId": "mFad_a",
                       "options": {
@@ -175,7 +242,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0003",
+                      "id": "a0005",
                       "connectionId": "xair",
                       "definitionId": "mFad_a",
                       "options": {
@@ -223,7 +290,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0010",
+                "id": "f0012",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -237,11 +304,11 @@
                   }
                 },
                 "isInverted": false,
+                "upgradeIndex": 5,
                 "style": {
                   "bgcolor": 12582912,
                   "color": 16777215
-                },
-                "upgradeIndex": 5
+                }
               }
             ],
             "steps": {
@@ -250,7 +317,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0009",
+                      "id": "a0011",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -274,7 +341,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0008",
+                      "id": "a0010",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -305,7 +372,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0007",
+                      "id": "a0009",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -361,7 +428,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0014",
+                "id": "f0016",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -371,11 +438,11 @@
                   }
                 },
                 "isInverted": false,
+                "upgradeIndex": 5,
                 "style": {
                   "bgcolor": 12582912,
                   "color": 16777215
-                },
-                "upgradeIndex": 5
+                }
               }
             ],
             "steps": {
@@ -384,7 +451,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0013",
+                      "id": "a0015",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -400,7 +467,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0012",
+                      "id": "a0014",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -423,7 +490,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0011",
+                      "id": "a0013",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -491,7 +558,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0015",
+                      "id": "a0017",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -581,7 +648,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0016",
+                      "id": "a0018",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -650,7 +717,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0017",
+                      "id": "a0019",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -719,7 +786,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0018",
+                      "id": "a0020",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -793,7 +860,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0019",
+                      "id": "a0021",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -862,7 +929,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0020",
+                      "id": "a0022",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -931,7 +998,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0021",
+                      "id": "a0023",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1002,7 +1069,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0022",
+                      "id": "a0024",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1081,6 +1148,19 @@
       "isFirstInit": false,
       "enabled": true,
       "sortOrder": 1
+    },
+    "obs": {
+      "label": "obs",
+      "moduleId": "obs-studio",
+      "lastUpgradeIndex": 5,
+      "config": {
+        "host": "127.0.0.1",
+        "port": 4455,
+        "pass": ""
+      },
+      "isFirstInit": false,
+      "enabled": true,
+      "sortOrder": 2
     }
   },
   "triggers": {},

@@ -25,9 +25,11 @@ OUT = pathlib.Path(__file__).with_name("sisyphus-deck.companionconfig")
 # connection; let Companion create HTTP as a new connection.
 XAIR = "xair"
 HTTP = "http"
+OBS = "obs"
 CONNECTIONS = {
     XAIR: {"label": "xair", "moduleId": "behringer-xair", "lastUpgradeIndex": 5},
     HTTP: {"label": "http", "moduleId": "generic-http", "lastUpgradeIndex": 3},
+    OBS: {"label": "obs", "moduleId": "obs-studio", "lastUpgradeIndex": 5},
 }
 
 WHITE = 0xFFFFFF
@@ -69,17 +71,20 @@ def action(connection, definition, **options):
     }
 
 
-def feedback(connection, definition, style, **options):
-    return {
+def feedback(connection, definition, style=None, **options):
+    """`style` for on/off feedbacks; leave it out for ones that set colors themselves."""
+    fb = {
         "type": "feedback",
         "id": _next_id("f"),
         "connectionId": connection,
         "definitionId": definition,
         "options": _opts(options),
         "isInverted": False,
-        "style": style,
         "upgradeIndex": CONNECTIONS[connection]["lastUpgradeIndex"],
     }
+    if style is not None:
+        fb["style"] = style
+    return fb
 
 
 def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks=(),
@@ -178,6 +183,17 @@ def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
     return supabase_key(text, rpc, body, bgcolor)
 
 
+def record_key():
+    """Starts/stops OBS recording; red with the running time while recording."""
+    return button(
+        "REC\\n$(obs:recording_timecode)",
+        press=[action(OBS, "StartStopRecording")],
+        feedbacks=[feedback(OBS, "recording",
+                            fg=WHITE, bg=RED, fg_paused=WHITE, bg_paused=0xFF8800)],
+        bgcolor=DARK,
+    )
+
+
 PAGE_UP = {"type": "pageup"}
 PAGE_NUMBER = {"type": "pagenum"}
 
@@ -192,6 +208,7 @@ PAGES = {
             (0, 0): PAGE_UP,
             (1, 0): PAGE_NUMBER,
             (0, 2): channel_mute_key(1),
+            (1, 1): record_key(),
             # knob 1: room volume (Main LR)
             (3, 0): volume_knob("ROOM", "mFad_a", "mMute", "lr", "f_lr_d"),
             # knob 2: stage mic (channel 1)
@@ -242,6 +259,7 @@ def build():
         cid: {**info, "config": {}, "isFirstInit": False, "enabled": True, "sortOrder": i}
         for i, (cid, info) in enumerate(CONNECTIONS.items())
     }
+    instances[OBS]["config"] = {"host": "127.0.0.1", "port": 4455, "pass": ""}
     instances[HTTP]["config"] = {
         "prefix": "", "proxyAddress": "", "authType": "none",
         "rejectUnauthorized": True, "insecureHTTPParser": False,
