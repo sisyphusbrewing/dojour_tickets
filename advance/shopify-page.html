@@ -1,15 +1,17 @@
 <!-- Sisyphus: body of the Shopify page "Advance" (handle: advance). Embeds the
-     comedian advance form from GitHub Pages and passes ?s=<token> through. -->
+     comedian advance from GitHub Pages and passes ?s=<token> through. With a
+     link it opens the trip (trip.html); without one, the one-page form. -->
 <div class="sb-advance" style="max-width:720px;margin:0 auto;">
   <iframe id="sbAdvance" title="Sisyphus comedian advance" src="about:blank"
-          style="display:block;width:100%;height:100vh;border:0;border-radius:14px;background:#2b2929;"
+          style="display:block;width:100%;height:100vh;border:0;border-radius:14px;background:#16222e;"
           allow="camera" loading="eager"></iframe>
 </div>
 <script>
   (function () {
     var f = document.getElementById('sbAdvance');
     var base = 'https://sisyphusbrewing.github.io/dojour_tickets/advance/';
-    f.src = base + window.location.search;
+    var hasLink = /[?&]s=[a-f0-9]+/.test(window.location.search);
+    f.src = base + (hasLink ? 'trip.html' : '') + window.location.search;
     window.addEventListener('message', function (e) {
       if (e.origin !== 'https://sisyphusbrewing.github.io' || !e.data) return;
       if (e.data.advanceHeight) f.style.height = (e.data.advanceHeight + 16) + 'px';
