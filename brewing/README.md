@@ -7,7 +7,7 @@ A phone-friendly brew log for the brewhouse, served by GitHub Pages at
 Sign in with the same staff account as the door check-in app. On a phone,
 "Add to Home Screen" gives it an icon and a full-screen window.
 
-Two tabs: **Batches** and **Recipes**. The batches tab opens with a board of
+Three tabs: **Batches**, **Recipes** and **Grain**. The batches tab opens with a board of
 the cellar (FV1 to FV8 and the brite tank) showing what is in each tank and
 its day count.
 
@@ -32,11 +32,21 @@ with the recipe's ingredients, size and target OG copied in. "Save as recipe"
 on a batch adds it to the library. "Duplicate batch" starts a new planned batch
 with the same ingredients.
 
+The **Grain** tab builds a grain order. List the brews coming up (with a
+count for each), type what's on hand in pounds, and it adds up every recipe's
+mash bill, groups the same malt written different ways (Rahr 2-Row, Pale Malt
+2-Row, …), subtracts stock and rounds up to 55 lb bags. "Copy order" puts the
+list on the clipboard to paste into an e-mail. Malts the supplier no longer
+carries are swapped in `maltSub()`: any 55L crystal/caramel becomes Simpsons
+Crystal T-50 and any 120L crystal becomes Simpsons Dark Roast Crystal (shown
+that way on recipe cards too).
+
 ## Data
 
 Tables in the Supabase project, created by the migrations in
 `supabase/migrations/`: `batches`, `batch_ingredients`, `batch_log`,
-`recipes`, `recipe_ingredients` and `tanks`. Deleting a batch removes its
+`recipes`, `recipe_ingredients`, `tanks`, `grain_plan` (brews coming up) and
+`grain_stock` (pounds on hand per malt). Deleting a batch removes its
 ingredients and log. Deleting a recipe keeps the batches brewed from it.
 Tanks are rows in `tanks`; add, rename or retire one there. Row-level security allows signed-in staff and the
 service key only, like the tickets table.
