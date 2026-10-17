@@ -1,0 +1,19 @@
+{% layout none %}{%- comment -%}
+  Web app manifest for the guest app. Served at /pages/app?view=manifest so it
+  is same-origin with the app page (page.app.liquid).
+{%- endcomment -%}
+{
+  "name": "Sisyphus",
+  "short_name": "Sisyphus",
+  "description": "Shows, what's on tap, parking and Boulder Club at Sisyphus, Minneapolis.",
+  "start_url": "/pages/app?source=homescreen",
+  "scope": "/pages/app",
+  "display": "standalone",
+  "background_color": "#2b2929",
+  "theme_color": "#2b2929",
+  "icons": [
+    { "src": "{{ 'sb-app-icon-192.png' | asset_url }}", "sizes": "192x192", "type": "image/png" },
+    { "src": "{{ 'sb-app-icon-512.png' | asset_url }}", "sizes": "512x512", "type": "image/png" },
+    { "src": "{{ 'sb-app-icon-512.png' | asset_url }}", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
