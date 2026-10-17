@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Work at Sisyphus</title>
+  <meta name="description" content="Bartending jobs at Sisyphus, the brewery and comedy club in Minneapolis. Nights and weekends.">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fields.js"></script>
+  <style>
+    .post { margin-top: 22px; }
+    .post h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 30px; line-height: 1.1; margin: 0 0 10px; }
+    .post p { color: #d9d6d6; font-size: 17px; margin: 0 0 12px; }
+    .post ul { margin: 0 0 4px; padding-left: 20px; color: #d9d6d6; font-size: 17px; }
+    .post li { margin-bottom: 6px; }
+    .facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+    .facts .pill { font-size: 12px; padding: 7px 11px 6px; }
+    .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://www.sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Jobs<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewForm">
+      <div class="post">
+        <div class="show-eyebrow">Now hiring · 2 bartenders</div>
+        <h1>Bartenders wanted</h1>
+        <p>We're a brewery and a comedy club. We make the beer. Comedians make the noise. You stand between them and the thirsty.</p>
+        <div class="facts">
+          <span class="pill">Nights &amp; weekends</span>
+          <span class="pill">Hourly + tips</span>
+          <span class="pill">North Loop</span>
+        </div>
+
+        <div class="band-wrap"><span class="band">The job</span></div>
+        <ul>
+          <li>Pour our beer, and soon guest beer, wine and cider at the new front bar.</li>
+          <li>Keep a packed room happy during shows. Quietly. Nobody needs a shaker during a punchline.</li>
+          <li>Know what's on tap and talk people into the good stuff.</li>
+        </ul>
+
+        <div class="band-wrap"><span class="band">You</span></div>
+        <ul>
+          <li>Have tended bar, or can prove you'll pick it up fast.</li>
+          <li>Can move fast without looking fast.</li>
+          <li>Like people, including the loud ones.</li>
+          <li>Work nights and weekends. That's when the jokes happen.</li>
+        </ul>
+      </div>
+
+      <form id="jobForm" autocomplete="on" novalidate>
+        <div id="sections"></div>
+        <div class="trap" aria-hidden="true"><label>Website <input id="website" tabindex="-1" autocomplete="off"></label></div>
+
+        <div class="submit-row">
+          <div class="err hidden" id="formError"></div>
+          <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Apply</button>
+          <div class="help">Goes straight to us. We read every one, including the jokes.</div>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="done">
+        <div class="band-wrap"><span class="band">Got it</span></div>
+        <p class="done-big">Thanks. We'll be in touch.</p>
+        <p>If it's a fit, we'll call or email to set up a time to come by. If your joke was really bad, sooner.</p>
+        <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var ROLE = new URLSearchParams(location.search).get('role') || 'bartender';
+
+    // Embedded in sisyphusbrewing.com/pages/jobs: the site has its own header,
+    // and the iframe needs to know how tall we are.
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ jobsHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+    function toTop() { if (framed) { try { parent.postMessage({ jobsScrollTop: true }, '*'); } catch (e) {} } else { window.scrollTo(0, 0); } }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function fieldHtml(f) {
+      var id = 'f_' + f.k, attrs = ' id="' + id + '" name="' + f.k + '"' + (f.req ? ' required' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '');
+      var ctl;
+      if (f.type === 'textarea') ctl = '<textarea class="input"' + attrs + '></textarea>';
+      else if (f.type === 'select') ctl = '<select class="input"' + attrs + '><option value="">Pick one</option>' + f.options.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (f.type === 'checks') ctl = '<div class="checks" id="' + id + '">' + f.options.map(function (o) { return '<label class="check"><input type="checkbox" value="' + esc(o) + '"><span>' + esc(o) + '</span></label>'; }).join('') + '</div>';
+      else if (f.type === 'file') ctl = '<div class="filebox"><input type="file" accept=".pdf,.doc,.docx,image/*"' + attrs + '><div class="filepreview" id="' + id + '_preview"></div></div>';
+      else ctl = '<input class="input" type="' + (f.type || 'text') + '"' + attrs + '>';
+      return '<div class="field' + (f.full ? ' full' : '') + '"><label for="' + id + '">' + esc(f.label) + (f.req ? ' <span class="req">*</span>' : '') + '</label>' + ctl + (f.help ? '<div class="help">' + esc(f.help) + '</div>' : '') + '</div>';
+    }
+    $('sections').innerHTML = JOB_SECTIONS.map(function (s) {
+      return '<div class="band-wrap"><span class="band">' + esc(s.title) + '</span></div><div class="card"><div class="grid">' + s.fields.map(fieldHtml).join('') + '</div></div>';
+    }).join('');
+    var fields = JOB_SECTIONS.reduce(function (a, s) { return a.concat(s.fields); }, []);
+
+    $('f_resume').addEventListener('change', function () {
+      var el = $('f_resume'), f = el.files && el.files[0], pv = $('f_resume_preview'); pv.textContent = '';
+      if (!f) return;
+      if (f.size > 10 * 1024 * 1024) { pv.textContent = 'Over 10 MB. That is a long résumé.'; el.value = ''; return; }
+      pv.textContent = f.name + ' · ' + (f.size / 1e6).toFixed(1) + ' MB';
+    });
+
+    function picked(el) { return Array.prototype.filter.call(el.querySelectorAll('input'), function (c) { return c.checked; }).map(function (c) { return c.value; }); }
+    function collect() {
+      var d = {};
+      fields.forEach(function (f) {
+        if (f.type === 'file') return;
+        var el = $('f_' + f.k);
+        if (f.type === 'checks') { var p = picked(el); if (p.length) d[f.k] = p.join(', '); return; }
+        var v = el.value.trim(); if (v) d[f.k] = v;
+      });
+      return d;
+    }
+    var draftKey = 'job-draft:' + ROLE;
+    function saveDraft() { try { localStorage.setItem(draftKey, JSON.stringify(collect())); } catch (e) {} }
+    try {
+      var saved = JSON.parse(localStorage.getItem(draftKey) || 'null') || {};
+      fields.forEach(function (f) {
+        var el = $('f_' + f.k); if (f.type === 'file' || saved[f.k] == null) return;
+        if (f.type === 'checks') { var on = saved[f.k].split(', '); Array.prototype.forEach.call(el.querySelectorAll('input'), function (c) { c.checked = on.indexOf(c.value) >= 0; }); }
+        else el.value = saved[f.k];
+      });
+    } catch (e) {}
+    $('jobForm').addEventListener('input', saveDraft);
+
+    $('jobForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = $('formError'), btn = $('sendBtn');
+      function fail(m) { err.textContent = m; err.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Apply'; }
+      err.classList.add('hidden');
+      var form = $('jobForm');
+      if (!form.checkValidity()) {
+        var bad = form.querySelector(':invalid'); if (bad) { bad.focus(); bad.scrollIntoView({ block: 'center' }); }
+        return fail('A couple of required things are still blank.');
+      }
+      var missing = fields.filter(function (f) { return f.type === 'checks' && f.req && !picked($('f_' + f.k)).length; })[0];
+      if (missing) { $('f_' + missing.k).scrollIntoView({ block: 'center' }); return fail('Pick at least one time you can work.'); }
+      if ($('website').value) { $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden'); return; }  // bots
+
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        var resumePath = null, file = $('f_resume').files[0];
+        if (file) {
+          btn.textContent = 'Uploading résumé…';
+          var rand = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+          resumePath = rand + '/' + file.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80);
+          var up = await sb.storage.from('jobs').upload(resumePath, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+          if (up.error) throw new Error('Résumé upload failed: ' + up.error.message);
+          btn.textContent = 'Sending…';
+        }
+        var res = await sb.rpc('job_apply', { p_role: ROLE, p_data: collect(), p_resume_path: resumePath });
+        if (res.error) throw res.error;
+        try { localStorage.removeItem(draftKey); } catch (e2) {}
+        // Email it to us (best effort; the row is saved either way).
+        sb.functions.invoke('job-applied', { body: { id: res.data } }).catch(function () {});
+        $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden'); toTop();
+      } catch (ex) {
+        fail((ex && ex.message) || 'Something broke. Try again, or email booking@sisyphusbrewing.com.');
+      }
+    });
+  </script>
+</body>
+</html>
