@@ -40,13 +40,14 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
 html, body { height: 100%; margin: 0 }
-body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; -webkit-text-size-adjust: 100%; overscroll-behavior-y: none }
+html, body { background: var(--bg) !important }
+body { color: var(--fg); font-family: var(--body); font-size: 16px; -webkit-text-size-adjust: 100%; overscroll-behavior-y: none }
 [hidden] { display: none !important }
 img { max-width: 100% }
 button { font: inherit; color: inherit }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--slate-lt); outline-offset: 2px }
-.app { height: 100%; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; position: relative; overflow: hidden }
-@media (min-width: 600px) { .app { border-left: 1px solid var(--line); border-right: 1px solid var(--line) } body { background: #1d1c1c } .app { background: var(--bg) } }
+.app { position: fixed; top: 0; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; overflow: hidden; background: var(--bg) }
+@media (min-width: 600px) { .app { border-left: 1px solid var(--line); border-right: 1px solid var(--line) } html, body { background: #1d1c1c !important } }
 
 .top { display: flex; align-items: center; gap: 12px; padding: calc(var(--top) + 14px) var(--gr) 10px var(--gl); border-bottom: 1px solid var(--line) }
 .top img { width: 46px; height: 46px }
