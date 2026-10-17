@@ -237,6 +237,48 @@ query CollById($id: ID!, $cursor: String) {
 }""" % _COLL_FIELDS
 
 
+# Anything tagged or typed like one of these is a show and belongs on the
+# Comedy and Events page, whether the builder made it or it was made by hand.
+SHOW_TAGS = {"comedy", "live event", "door-tickets", "comedy-ticket", "class", "free event", "ticket"}
+SHOW_TYPES = {"tickets", "comedy ticket", "comedy", "free event", "class", "event"}
+JOIN_COLLECTION = """
+mutation Join($id: ID!, $coll: [ID!]) {
+  productUpdate(product: { id: $id, collectionsToJoin: $coll }) { userErrors { field message } }
+}"""
+
+
+def is_show(product):
+    tags = {t.lower() for t in product.get("tags") or []}
+    if product.get("isGiftCard") or product["handle"] in SKIP_HANDLES or "no-collection" in tags:
+        return False
+    return bool(tags & SHOW_TAGS) or (product.get("productType") or "").lower() in SHOW_TYPES
+
+
+def add_shows_to_collection(shop, products):
+    """Put every active show in the Comedy and Events collection.
+
+    The app can't read the collection (it sees 0 collections), so it can't tell
+    who's already in. Joining is a no-op for products already there, so just
+    join every show each run.
+    """
+    shows = [p for p in products if is_show(p)]
+    if DRY_RUN:
+        print(f"Would make sure {len(shows)} show(s) are in the Comedy and Events collection.")
+        return
+    coll = [f"gid://shopify/Collection/{COLLECTION_ID}"]
+    failed = []
+    for p in shows:
+        try:
+            errors = shop.gql(JOIN_COLLECTION, {"id": p["id"], "coll": coll})["productUpdate"]["userErrors"]
+        except Exception as e:
+            errors = [str(e)[:200]]
+        if errors:
+            failed.append(f"{p['title']}: {errors}")
+    print(f"Comedy and Events collection: {len(shows) - len(failed)} show(s) in.")
+    for f in failed:
+        annotate("warning", f"Couldn't add to Comedy and Events - {f}")
+
+
 def sort_key(product, now):
     """Next upcoming showtime; classes and undated items go to the end."""
     dates = [d for d in (parse_show_datetime(v["title"], now=now) for v in product["variants"]["nodes"]) if d]
@@ -399,6 +441,7 @@ def main():
         if not DRY_RUN:
             recurring_events.apply_label_update(shop, p, add, remove)
 
+    add_shows_to_collection(shop, current)
     sort_collection(shop, now)
     print("Done.")
 

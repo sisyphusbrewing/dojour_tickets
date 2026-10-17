@@ -30,6 +30,7 @@ VENUE_NAME = "Sisyphus Brewing"
 TICKET_FEE = float(os.environ.get("TICKET_FEE") or "3.00")
 CLASS_PATTERN = re.compile(r"\b(class|classes|workshop|course)\b", re.IGNORECASE)
 COLLECTION_HANDLE = "comedy-and-events"
+COLLECTION_ID = os.environ.get("SHOPIFY_COLLECTION_ID", "472787812387").strip()
 API_VERSION = "2024-01"
 
 MONTH_MAP = {
@@ -427,16 +428,24 @@ def main():
                     })
             print(f"✓ Capacity set to {capacity_num} per variant at {locations[0].get('name')}.")
 
-    # Add to collection if custom collection
-    print(f"Ensuring product belongs to collection '{COLLECTION_HANDLE}'...")
-    col_resp = requests.get(f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/custom_collections.json?handle={COLLECTION_HANDLE}", headers=headers)
-    if col_resp.status_code == 200 and col_resp.json().get("custom_collections"):
-        col_id = col_resp.json()["custom_collections"][0]["id"]
-        requests.post(
-            f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/collects.json",
-            headers=headers,
-            json={"collect": {"collection_id": col_id, "product_id": product_id}}
-        )
+    # Add to the Comedy and Events collection. The app can't read collections
+    # (it sees none), but joining one by id works.
+    print("Adding product to the Comedy and Events collection...")
+    join_input = {"id": f"gid://shopify/Product/{product_id}",
+                  "collectionsToJoin": [f"gid://shopify/Collection/{COLLECTION_ID}"]}
+    errors = None
+    # Older API versions take `input:`, newer ones `product:`.
+    for arg, input_type in (("input", "ProductInput"), ("product", "ProductUpdateInput")):
+        try:
+            join = run_graphql(token, f"""
+            mutation join($p: {input_type}!) {{
+              productUpdate({arg}: $p) {{ userErrors {{ field message }} }}
+            }}""", {"p": join_input})
+            errors = join["productUpdate"]["userErrors"]
+            break
+        except Exception as e:
+            errors = [str(e)[:300]]
+    print(f"⚠️ Couldn't add to collection: {errors}" if errors else "✓ Added to Comedy and Events.")
 
     # Sort entire collection chronologically
     sort_collection_chronologically(token, COLLECTION_HANDLE)
