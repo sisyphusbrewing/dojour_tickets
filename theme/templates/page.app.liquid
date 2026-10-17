@@ -1,0 +1,534 @@
+{% layout none %}<!doctype html>
+{%- comment -%}
+  The Sisyphus guest app, served at www.sisyphusbrewing.com/pages/app.
+  A full-screen phone app guests add to their home screen. Four tabs:
+    Shows   - live from the Comedy and Events collection (products.json, same origin)
+    On Tap  - the GoTab feed the taproom TV uses
+    Visit   - entrance, parking, directions
+    Club    - Boulder Club: one push a day with the code on the taproom TV,
+              ten pushes = a free pint (Supabase RPCs club_*, see
+              supabase/migrations/20261017013000_boulder_club.sql)
+  The manifest is page.manifest.liquid (?view=manifest).
+{%- endcomment -%}
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sisyphus</title>
+<meta name="description" content="Shows, what's on tap, parking and Boulder Club at Sisyphus, Minneapolis.">
+<link rel="manifest" href="{{ page.url }}?view=manifest">
+<meta name="theme-color" content="#2b2929">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sisyphus">
+<link rel="apple-touch-icon" href="{{ 'sb-app-icon-180.png' | asset_url }}">
+<link rel="icon" type="image/png" href="{{ 'sb-app-icon-192.png' | asset_url }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap">
+{{ content_for_header }}
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #2b2929; --panel: #393636; --line: #4a4646;
+  --slate: #4a6c86; --slate-lt: #a9c3d8; --gray: #918f90; --fg: #f4f3f1; --dim: #bdb9b6; --ok: #8fc79a;
+  --display: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+  --body: 'Assistant', 'Segoe UI', system-ui, sans-serif;
+  --top: env(safe-area-inset-top, 0px); --bottom: env(safe-area-inset-bottom, 0px);
+  --gl: max(16px, env(safe-area-inset-left, 0px)); --gr: max(16px, env(safe-area-inset-right, 0px));
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
+html, body { height: 100%; margin: 0 }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; -webkit-text-size-adjust: 100%; overscroll-behavior-y: none }
+[hidden] { display: none !important }
+img { max-width: 100% }
+button { font: inherit; color: inherit }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--slate-lt); outline-offset: 2px }
+.app { height: 100%; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; position: relative; overflow: hidden }
+@media (min-width: 600px) { .app { border-left: 1px solid var(--line); border-right: 1px solid var(--line) } body { background: #1d1c1c } .app { background: var(--bg) } }
+
+.top { display: flex; align-items: center; gap: 12px; padding: calc(var(--top) + 14px) var(--gr) 10px var(--gl); border-bottom: 1px solid var(--line) }
+.top img { width: 46px; height: 46px }
+.top .name { font: 700 19px/1 var(--display); letter-spacing: .2em; text-transform: uppercase }
+.top .sub { font-size: 12.5px; color: var(--gray); letter-spacing: .06em; margin-top: 4px }
+.screen { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px var(--gr) 28px var(--gl) }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--panel); padding: 0 var(--gr) calc(var(--bottom) + 4px) var(--gl) }
+.tabs button { background: none; border: 0; color: var(--gray); font: 600 11.5px var(--display); letter-spacing: .1em; text-transform: uppercase; padding: 10px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer }
+.tabs svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8 }
+.tabs button[aria-selected="true"] { color: var(--fg) }
+.tabs button[aria-selected="true"] svg { stroke: var(--slate-lt) }
+
+.band { display: inline-block; background: var(--slate); color: #fff; font: 700 15px var(--display); text-transform: uppercase; letter-spacing: .14em;
+  padding: 7px 14px 4px; transform: rotate(-1.5deg); margin: 6px 0 14px 2px;
+  box-shadow: 0 -4px 0 -1px var(--bg), 0 -6px 0 -1px #fff, 0 4px 0 -1px var(--bg), 0 6px 0 -1px #fff }
+.msg { color: var(--gray); padding: 20px 0; text-align: center }
+.price { font: 700 14px var(--display); letter-spacing: .04em; color: var(--slate-lt); white-space: nowrap; font-variant-numeric: tabular-nums }
+.price.free { color: var(--fg) }
+.price.out { color: var(--gray) }
+
+/* shows */
+.install { display: flex; gap: 10px; align-items: center; background: var(--panel); border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; font-size: 14px; color: var(--dim) }
+.install b { color: var(--fg) }
+.install .x { margin-left: auto; background: none; border: 0; color: var(--gray); font-size: 22px; cursor: pointer; line-height: 1; padding: 0 2px }
+.install .go { background: var(--slate); border: 0; color: #fff; border-radius: 8px; padding: 7px 12px; font: 700 12px var(--display); letter-spacing: .1em; text-transform: uppercase; cursor: pointer }
+.hero { position: relative; border-radius: 14px; overflow: hidden; background: var(--panel); margin-bottom: 18px; cursor: pointer; display: block; width: 100%; border: 0; padding: 0; text-align: left }
+.hero img { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block }
+.hero .cap { position: absolute; inset: auto 0 0 0; padding: 40px 14px 12px; background: linear-gradient(transparent, rgba(20,19,19,.94)) }
+.when { font: 700 12px var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--slate-lt) }
+.hero .t { font: 700 24px/1.05 var(--display); text-transform: uppercase; letter-spacing: .03em; margin-top: 4px; text-wrap: balance }
+.chips { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap }
+.chip { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 999px; padding: 5px 13px; font: 600 13.5px var(--body); cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg) }
+.day { font: 700 12px var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--gray); margin: 16px 0 6px }
+.row { display: grid; grid-template-columns: 58px 1fr auto; gap: 12px; align-items: center; width: 100%; background: none; border: 0; text-align: left; padding: 8px 0; border-bottom: 1px solid var(--line); cursor: pointer }
+.row img, .row .noimg { width: 58px; height: 58px; border-radius: 8px; object-fit: cover; background: var(--panel); display: block }
+.row .t { font-weight: 700; font-size: 16px; line-height: 1.2 }
+.row .m { font-size: 13.5px; color: var(--gray); margin-top: 2px }
+
+/* show sheet */
+.sheet { position: absolute; inset: 0; background: var(--bg); z-index: 5; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .28s ease; visibility: hidden }
+.sheet.open { transform: none; visibility: visible }
+@media (prefers-reduced-motion: reduce) { .sheet, .boulder { transition: none !important } }
+.sheet .bar { display: flex; justify-content: space-between; align-items: center; padding: calc(var(--top) + 12px) var(--gr) 12px var(--gl); border-bottom: 1px solid var(--line) }
+.sheet .bar button { background: none; border: 0; color: var(--slate-lt); font: 600 16px var(--body); cursor: pointer; padding: 4px 0 }
+.sheet .body { flex: 1; overflow-y: auto; padding-bottom: calc(var(--bottom) + 20px) }
+.sheet .poster { width: 100%; max-height: 360px; object-fit: cover; display: block }
+.sheet .in { padding: 14px var(--gr) 0 var(--gl) }
+.sheet h1 { font: 700 26px/1.05 var(--display); text-transform: uppercase; margin: 6px 0 10px; text-wrap: balance }
+.sheet .blurb { color: var(--dim); line-height: 1.5; margin: 0 0 16px }
+.dates { display: grid; gap: 8px; margin-bottom: 16px }
+.date { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-weight: 600; color: var(--fg); text-decoration: none }
+.date span { color: var(--slate-lt); font: 700 13px var(--display); letter-spacing: .1em; text-transform: uppercase }
+.date.out { color: var(--gray) }
+.date.out span { color: var(--gray) }
+.cta { display: block; text-align: center; background: var(--slate); color: #fff; text-decoration: none; font: 700 16px var(--display); letter-spacing: .14em; text-transform: uppercase; padding: 15px; border-radius: 12px; border: 0; width: 100%; cursor: pointer }
+.cta[disabled] { opacity: .5 }
+.fine { font-size: 13px; color: var(--gray); text-align: center; margin-top: 10px; line-height: 1.4 }
+
+/* taps */
+.beer { padding: 11px 0; border-bottom: 1px solid var(--line) }
+.beer .h { display: flex; justify-content: space-between; gap: 10px; align-items: baseline }
+.beer .n { font: 700 17px var(--display); text-transform: uppercase; letter-spacing: .03em }
+.beer .s { font-size: 14px; color: var(--slate-lt); margin-top: 2px }
+.beer .d { font-size: 14px; color: var(--dim); line-height: 1.45; margin-top: 4px }
+.small { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px }
+.live { display: flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--gray); margin: -4px 0 6px 4px }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok) }
+.sec { margin-bottom: 22px }
+
+/* visit */
+.card { background: var(--panel); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px }
+.k { font: 700 12px var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--slate-lt); margin-bottom: 4px }
+.card .v { font-size: 16px; line-height: 1.45 }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 16px }
+.btn { display: block; text-align: center; text-decoration: none; color: var(--fg); border: 1px solid var(--slate); border-radius: 10px; padding: 12px 8px; font: 700 13px var(--display); letter-spacing: .12em; text-transform: uppercase; background: none; cursor: pointer }
+.btn.solid { background: var(--slate); color: #fff }
+.map { width: 100%; height: auto; border-radius: 14px; display: block; margin-bottom: 12px }
+ol.park { padding-left: 20px; margin: 4px 0 0; line-height: 1.45 }
+ol.park li { margin-bottom: 6px }
+
+/* club */
+.hill { width: 100%; height: auto; display: block; margin-top: -4px }
+.boulder { transition: transform 1.1s cubic-bezier(.3,.7,.3,1) }
+.count { text-align: center; font: 700 16px var(--display); letter-spacing: .12em; text-transform: uppercase; margin: 2px 0 4px }
+.count small { display: block; font: 400 15px/1.4 var(--body); letter-spacing: 0; text-transform: none; color: var(--dim); margin-top: 6px }
+.member { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--gray); margin: 14px 0 }
+.member b { color: var(--fg); font: 700 15px var(--display); letter-spacing: .08em; text-transform: uppercase }
+.codebox { background: var(--panel); border-radius: 14px; padding: 16px; margin: 14px 0 }
+.codebox label { display: block; font-size: 15px; color: var(--dim); margin-bottom: 10px; line-height: 1.4 }
+.codein { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; color: var(--fg); font: 700 34px var(--display); letter-spacing: .5em; text-align: center; padding: 12px 0 8px .5em; font-variant-numeric: tabular-nums }
+.namein { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; color: var(--fg); font: 600 18px var(--body); padding: 12px 14px; margin-bottom: 12px }
+.err { color: #e9a19a; font-size: 14px; margin: 8px 0 10px; min-height: 1.2em }
+.done { text-align: center; color: var(--dim); background: var(--panel); border-radius: 14px; padding: 16px; margin: 14px 0; line-height: 1.45 }
+.rules { margin: 18px 0 0 }
+.rule { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.4 }
+.rule .num { font: 700 15px var(--display); color: var(--slate-lt); width: 34px; flex: none; font-variant-numeric: tabular-nums }
+.rule span { color: var(--gray); display: block; font-size: 13.5px }
+.pint { text-align: center; background: var(--slate); border-radius: 16px; padding: 20px 16px; margin: 14px 0 }
+.pint .big { font: 700 30px/1 var(--display); text-transform: uppercase; letter-spacing: .08em }
+.pint p { margin: 10px 0 14px; line-height: 1.4 }
+.pint .cta { background: var(--fg); color: var(--bg) }
+.poured { text-align: center; border: 2px solid var(--ok); border-radius: 16px; padding: 18px; margin: 14px 0 }
+.poured .big { font: 700 26px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--ok) }
+.poured .clock { font: 700 40px var(--display); font-variant-numeric: tabular-nums; margin: 8px 0 4px; letter-spacing: .04em }
+.camus { text-align: center; font-style: italic; color: var(--gray); font-size: 14px; margin: 22px 0 4px }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <img src="https://cdn.shopify.com/s/files/1/0310/0669/files/sisyphus-badge-bluegray-dark-bg.png?v=1791819264&width=140" alt="Sisyphus badge" width="46" height="46">
+    <div><div class="name">Sisyphus</div><div class="sub">Comedy club &amp; brewery · Minneapolis</div></div>
+  </header>
+  <main class="screen" id="screen"><div class="msg">Loading…</div></main>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="shows" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/><path d="M14 7v12" stroke-dasharray="2 2"/></svg>Shows</button>
+    <button role="tab" data-tab="taps" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M6 4h10l-1 16H7z"/><path d="M16 8h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2.4"/><path d="M6.4 9h9.2"/></svg>On Tap</button>
+    <button role="tab" data-tab="visit" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Visit</button>
+    <button role="tab" data-tab="club" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M2 20 L16 8 L22 20 Z"/><circle cx="12.5" cy="8.5" r="2.6"/></svg>Club</button>
+  </nav>
+  <section class="sheet" id="sheet" aria-hidden="true">
+    <div class="bar"><button id="close">‹ Shows</button></div>
+    <div class="body" id="sheetBody"></div>
+  </section>
+</div>
+<script>
+{% raw %}
+(function () {
+  var SB_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+  var SHOWS_URL = '/collections/comedy-and-events/products.json?limit=250';
+  var MENU_URL = 'https://sisyphusmenu.stharriman.workers.dev/';
+  var $ = function (s) { return document.querySelector(s) };
+  var screen = $('#screen');
+  var DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v) } catch (e) { return null } }
+  function clock(d) { var h = d.getHours(), m = d.getMinutes(); return (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? ' AM' : ' PM') }
+  function midnight(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x }
+  function rel(d) {
+    var diff = Math.round((midnight(d) - midnight(new Date())) / 864e5);
+    if (diff === 0) return 'Tonight';
+    if (diff === 1) return 'Tomorrow';
+    if (diff > 1 && diff < 7) return DAYS[d.getDay()];
+    return DOW[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate();
+  }
+
+  /* Show dates, ported from show_dates.py: "Sat, Oct 17 • 7:00 PM", "Sat Nov 14th 6pm",
+     "Fri, Apr 2, 2027 • 9:00 PM". No year: the weekday decides, else the nearest
+     date that isn't long past. No clock time: not a single show (multi-week classes). */
+  var MD = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/i;
+  var TM = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i, YR = /\b(20\d{2})\b/, WD = /^\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*\b/i;
+  function parseShowDate(text) {
+    var md = MD.exec(text || ''); if (!md) return null;
+    var month = MON.indexOf(md[1].slice(0, 1).toUpperCase() + md[1].slice(1, 3).toLowerCase()), day = +md[2];
+    var tm = TM.exec(text.slice(md.index + md[0].length)); if (!tm) return null;
+    var hour = (+tm[1] % 12) + (/pm/i.test(tm[3]) ? 12 : 0), minute = tm[2] ? +tm[2] : 0;
+    var ym = YR.exec(text);
+    if (ym) return new Date(+ym[1], month, day, hour, minute);
+    var now = new Date(), cands = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
+      .map(function (y) { return new Date(y, month, day, hour, minute) }).filter(function (d) { return d.getDate() === day });
+    var wd = WD.exec(text);
+    if (wd) {
+      var target = DOW.indexOf(wd[1].slice(0, 1).toUpperCase() + wd[1].slice(1, 3).toLowerCase());
+      var m = cands.filter(function (d) { return d.getDay() === target }); if (m.length) cands = m;
+    }
+    var floor = new Date(now - 60 * 864e5), up = cands.filter(function (d) { return d >= floor });
+    return up.length ? up.reduce(function (a, b) { return a < b ? a : b }) : cands[cands.length - 1];
+  }
+
+  function toShows(products) {
+    var cutoff = new Date(Date.now() - 3 * 36e5);
+    return products.map(function (p) {
+      var byTime = {};
+      p.variants.forEach(function (v) {
+        var d = parseShowDate(v.title); if (!d || d < cutoff) return;
+        var k = +d, o = byTime[k] || (byTime[k] = { d: d, id: v.id, available: false, price: +v.price });
+        if (v.available && !o.available) { o.available = true; o.id = v.id }
+        o.price = Math.min(o.price, +v.price);
+      });
+      var dates = Object.keys(byTime).map(function (k) { return byTime[k] }).sort(function (a, b) { return a.d - b.d });
+      if (!dates.length) return null;
+      var tags = (p.tags || []).map(function (t) { return String(t).toLowerCase() });
+      var prices = p.variants.map(function (v) { return +v.price });
+      var body = (p.body_html || '').replace(/<(br|\/p|\/div|\/li)[^>]*>/gi, '\n').replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;|&rsquo;/g, '’').replace(/&quot;|&ldquo;|&rdquo;/g, '"').replace(/&[a-z]+;/g, ' ');
+      body = body.split('\n').map(function (l) { return l.replace(/\s+/g, ' ').trim() }).filter(Boolean)
+        .filter(function (l) { return !/will-call|paper tickets/i.test(l) }).join('\n');
+      return {
+        title: p.title, handle: p.handle, dates: dates, blurb: body,
+        img: p.images && p.images[0] ? p.images[0].src : '',
+        price: Math.min.apply(null, prices), free: Math.max.apply(null, prices) === 0,
+        door: tags.indexOf('door-tickets') >= 0
+      };
+    }).filter(Boolean);
+  }
+  function sized(src, w) { return src ? src + (src.indexOf('?') < 0 ? '?' : '&') + 'width=' + w : '' }
+
+  var shows = null, filter = 'all';
+  function loadShows() {
+    var cached = store('sb-app-shows');
+    if (cached) { try { shows = toShows(JSON.parse(cached)) } catch (e) {} }
+    return fetch(SHOWS_URL).then(function (r) { return r.json() }).then(function (j) {
+      store('sb-app-shows', JSON.stringify(j.products)); shows = toShows(j.products);
+    }).catch(function () {});
+  }
+  function priceTag(s, o) {
+    if (o && !o.available && !s.door && !s.free) return '<span class="price out">Sold out</span>';
+    if (s.free) return '<span class="price free">Free</span>';
+    return '<span class="price">$' + s.price.toFixed(0) + '</span>';
+  }
+
+  function renderShows() {
+    if (!shows) return '<div class="msg">Loading shows…</div>';
+    var occ = [];
+    shows.forEach(function (s, i) {
+      var byDay = {};
+      s.dates.forEach(function (o) {
+        var k = midnight(o.d).getTime();
+        if (byDay[k]) byDay[k].times.push(o); else occ.push(byDay[k] = { s: s, i: i, d: o.d, times: [o] });
+      });
+    });
+    occ.sort(function (a, b) { return a.d - b.d });
+    if (!occ.length) return '<div class="msg">No shows on the calendar. That never lasts.</div>';
+    var weekEnd = new Date(+midnight(new Date()) + 7 * 864e5);
+    var list = occ.filter(function (o) {
+      if (filter === 'week') return o.d < weekEnd;
+      if (filter === 'free') return o.s.free;
+      if (filter === 'headliners') return o.s.price >= 23;
+      return true;
+    });
+    var h = installHint();
+    var first = occ[0];
+    h += '<button class="hero" data-i="' + first.i + '">' + (first.s.img ? '<img src="' + esc(sized(first.s.img, 900)) + '" alt="">' : '') +
+      '<div class="cap"><div class="when">' + rel(first.d) + ' · ' + first.times.map(function (t) { return clock(t.d) }).join(' & ') +
+      '</div><div class="t">' + esc(first.s.title) + '</div></div></button>';
+    h += '<div class="chips">' + [['all', 'All'], ['week', 'This week'], ['headliners', 'Headliners'], ['free', 'Free']].map(function (c) {
+      return '<button class="chip" data-f="' + c[0] + '" aria-pressed="' + (filter === c[0]) + '">' + c[1] + '</button>';
+    }).join('') + '</div>';
+    var last = '';
+    list.forEach(function (o) {
+      var label = rel(o.d);
+      if (label !== last) { h += '<div class="day">' + label + '</div>'; last = label }
+      var anyOpen = o.times.some(function (t) { return t.available });
+      h += '<button class="row" data-i="' + o.i + '">' + (o.s.img ? '<img src="' + esc(sized(o.s.img, 160)) + '" alt="" loading="lazy">' : '<div class="noimg"></div>') +
+        '<div style="min-width:0"><div class="t">' + esc(o.s.title) + '</div><div class="m">' + o.times.map(function (t) { return clock(t.d) }).join(' & ') +
+        '</div></div>' + priceTag(o.s, { available: anyOpen }) + '</button>';
+    });
+    if (!list.length) h += '<div class="msg">Nothing in that bucket yet. Thursday open mic is free, though.</div>';
+    return h;
+  }
+
+  function openShow(i) {
+    var s = shows[i];
+    var link = function (id) { return '/products/' + encodeURIComponent(s.handle) + (id ? '?variant=' + id : '') };
+    var paras = s.blurb.split('\n').slice(0, 6).map(function (l) { return esc(l) }).join('<br><br>');
+    var b = (s.img ? '<img class="poster" src="' + esc(sized(s.img, 900)) + '" alt="">' : '') +
+      '<div class="in"><div class="band">' + (s.free ? 'Free show' : s.door ? 'At the door' : 'Live at Sisyphus') + '</div><h1>' + esc(s.title) + '</h1>' +
+      '<div class="dates">' + s.dates.slice(0, 12).map(function (o) {
+        var open = o.available || s.door || s.free;
+        return '<a class="date' + (open ? '' : ' out') + '" href="' + link(o.id) + '" target="_blank" rel="noopener">' + DOW[o.d.getDay()] + ', ' + MON[o.d.getMonth()] + ' ' + o.d.getDate() + ' · ' + clock(o.d) +
+          '<span>' + (open ? (s.free ? 'RSVP' : s.door ? 'Details' : 'Tickets') : 'Sold out') + '</span></a>';
+      }).join('') + '</div>' +
+      '<p class="blurb">' + paras + '</p>' +
+      '<a class="cta" href="' + link(s.dates[0].id) + '" target="_blank" rel="noopener">' + (s.free ? 'RSVP, it’s free' : s.door ? 'See details' : 'Get tickets · from $' + s.price.toFixed(0)) + '</a>' +
+      '<div class="fine">Tickets are will-call. Give your name at the door.<br>Comedians get 100% of the door.</div></div>';
+    $('#sheetBody').innerHTML = b; $('#sheetBody').scrollTop = 0;
+    $('#sheet').classList.add('open'); $('#sheet').setAttribute('aria-hidden', 'false');
+  }
+  function closeShow() { $('#sheet').classList.remove('open'); $('#sheet').setAttribute('aria-hidden', 'true') }
+  $('#close').onclick = closeShow;
+
+  /* Install hint: Android gets a real Install button, iPhone gets the Share-sheet line. */
+  var deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; if (tab === 'shows') render() });
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  function installHint() {
+    if (standalone || store('sb-app-hint-off')) return '';
+    if (deferredInstall) return '<div class="install"><span>Put Sisyphus on your home screen.</span><button class="go" data-install>Install</button><button class="x" data-hint-off aria-label="Dismiss">×</button></div>';
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) return '<div class="install"><span>Put this on your home screen: tap <b>Share</b>, then <b>Add to Home Screen</b>.</span><button class="x" data-hint-off aria-label="Dismiss">×</button></div>';
+    return '';
+  }
+
+  /* On tap: same feed and parser rules as the taproom TV (pages/tv-menu). */
+  var SB_STYLES = { samms: 'Light American Lager', kentuckycommon: 'Historical Amber Lager', cometchameleon: 'Hazy IPA', sisyfest: 'Oktoberfest', thefirstbeerwenamed: 'American IPA' };
+  function parseItem(item) {
+    var out = { name: item.name || '', price: money(item.price), abv: '', style: '', blurb: [] };
+    String(item.description || '').split('\n').forEach(function (raw) {
+      var l = raw.trim(); if (!l) return;
+      var abv = l.match(/(\d+(?:\.\d+)?)\s*%\s*ABV/i), ibu = l.match(/(\d+)\s*IBU/i);
+      if (abv) out.abv = abv[1] + '%';
+      var rest = l.replace(/(\d+(?:\.\d+)?)\s*%\s*ABV/i, '').replace(/(\d+)\s*IBU/i, '').trim();
+      if (abv || ibu) { if (!rest) return; l = rest }
+      var size = l.match(/^(\d+(?:\.\d+)?)\s*oz\b\s*(.*)$/i);
+      if (size) { l = size[2].trim(); if (!l) return }
+      if (!out.style && l.length <= 40 && !/[.!?]$/.test(l)) out.style = l;
+      else out.blurb.push(l);
+    });
+    var key = out.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (var k in SB_STYLES) if (key.indexOf(k) === 0) { out.style = SB_STYLES[k]; break }
+    return out;
+  }
+  function money(p) { var n = parseFloat(p); return isNaN(n) ? '' : '$' + (n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)) }
+  var menu = null;
+  function loadMenu() {
+    var cached = store('sb-app-menu'); if (cached) { try { menu = JSON.parse(cached) } catch (e) {} }
+    return fetch(MENU_URL + '?t=' + Date.now()).then(function (r) { return r.json() }).then(function (j) {
+      if (j && j.sections) { menu = j.sections; store('sb-app-menu', JSON.stringify(menu)) }
+    }).catch(function () {});
+  }
+  function renderTaps() {
+    if (!menu) return '<div class="msg">Checking the taps…</div>';
+    var h = '';
+    menu.filter(function (s) { return s.items && s.items.length }).forEach(function (sec) {
+      var beer = /beer|tap|draft/i.test(sec.category) && !/n\/?a|non/i.test(sec.category);
+      h += '<div class="sec"><div class="band">' + esc(beer ? 'On tap' : sec.category) + '</div>';
+      if (beer) h += '<div class="live"><i></i>Live from the bar</div>';
+      sec.items.forEach(function (raw) {
+        var it = parseItem(raw);
+        if (!beer) { h += '<div class="small"><span>' + esc(it.name) + '</span><span class="price">' + it.price + '</span></div>'; return }
+        var blurb = it.blurb.join(' ');
+        if (blurb.length > 170) blurb = blurb.slice(0, 170).replace(/\s\S*$/, '') + '…';
+        h += '<div class="beer"><div class="h"><span class="n">' + esc(it.name) + '</span><span class="price">' + it.price + '</span></div>' +
+          '<div class="s">' + esc([it.style, it.abv ? it.abv + ' ABV' : ''].filter(Boolean).join(' · ')) + '</div>' +
+          (blurb ? '<div class="d">' + esc(blurb) + '</div>' : '') + '</div>';
+      });
+      h += '</div>';
+    });
+    return h + '<div class="fine">House seltzers are gluten-free. Outside food welcome.</div>';
+  }
+
+  function renderVisit() {
+    return '<div class="band">Find us</div>' +
+      '<div class="card"><div class="k">Address</div><div class="v">712 Ontario Ave W, Minneapolis<br><b>The door is around the corner on Aldrich Ave.</b> The front of the building is a decoy.</div></div>' +
+      '<div class="btns"><a class="btn solid" href="https://www.google.com/maps/dir/?api=1&destination=712+Ontario+Ave+W+Minneapolis+MN+55403" target="_blank" rel="noopener">Directions</a>' +
+      '<a class="btn" href="/pages/parking" target="_blank" rel="noopener">Parking map</a></div>' +
+      '<svg class="map" viewBox="0 0 340 210" role="img" aria-label="Sisyphus is on the northeast corner of Ontario Ave W and Aldrich Ave N. The door faces Aldrich. Our lot is behind the building; the Dunwoody lot is across Ontario to the south.">' +
+        '<rect width="340" height="210" fill="#393636"/>' +
+        '<rect x="0" y="118" width="340" height="22" fill="#4a4646"/><text x="324" y="133" fill="#bdb9b6" font-size="10" font-family="Josefin Sans, sans-serif" text-anchor="end" letter-spacing="1.5">ONTARIO AVE W</text>' +
+        '<rect x="128" y="0" width="22" height="210" fill="#4a4646"/><text x="143" y="104" fill="#bdb9b6" font-size="10" font-family="Josefin Sans, sans-serif" transform="rotate(-90 143 104)" letter-spacing="1.5">ALDRICH AVE N</text>' +
+        '<rect x="160" y="62" width="120" height="48" rx="3" fill="#4a6c86"/><text x="220" y="91" fill="#fff" font-size="12" font-weight="700" font-family="Josefin Sans, sans-serif" text-anchor="middle" letter-spacing="2">SISYPHUS</text>' +
+        '<rect x="160" y="10" width="120" height="44" rx="3" fill="none" stroke="#a9c3d8" stroke-dasharray="4 3"/><text x="220" y="36" fill="#a9c3d8" font-size="10.5" font-family="Assistant, sans-serif" text-anchor="middle">Our lot</text>' +
+        '<rect x="160" y="150" width="120" height="44" rx="3" fill="none" stroke="#918f90" stroke-dasharray="4 3"/><text x="220" y="170" fill="#bdb9b6" font-size="10.5" font-family="Assistant, sans-serif" text-anchor="middle">Dunwoody lot</text><text x="220" y="184" fill="#918f90" font-size="9" font-family="Assistant, sans-serif" text-anchor="middle">weekdays after 4, weekends</text>' +
+        '<circle cx="156" cy="86" r="6" fill="#f4f3f1"/><text x="64" y="90" fill="#f4f3f1" font-size="11" font-weight="700" font-family="Assistant, sans-serif" text-anchor="middle">Door here →</text>' +
+        '<text x="16" y="24" fill="#918f90" font-size="10" font-family="Assistant, sans-serif">N ↑</text></svg>' +
+      '<div class="card"><div class="k">Parking, in order of laziness</div><ol class="park">' +
+        '<li>Street parking on Ontario and the east side of Aldrich. Free.</li>' +
+        '<li>Our lot behind the building, driveway off Aldrich.</li>' +
+        '<li>Dunwoody lot just south of Ontario. Weekdays after 4 PM, any time on weekends, no overnight.</li></ol>' +
+        '<div class="v" style="margin-top:8px;color:var(--gray);font-size:14px">The west side of Aldrich is a fire lane. The tow truck has no sense of humor.</div></div>' +
+      '<div class="card"><div class="k">Before the show</div><div class="v">The taproom stays open during shows. Come early, get a pint, find your seat. Tickets are will-call: give your name at the door.</div></div>' +
+      '<div class="btns"><a class="btn" href="/pages/taproom" target="_blank" rel="noopener">FAQ</a><a class="btn" href="/pages/rental" target="_blank" rel="noopener">Private events</a></div>';
+  }
+
+  /* Boulder Club. The token lives on this phone only. */
+  var club = null, clubErr = '', clubBusy = false, confirmPour = false, lastCode = '';
+  function rpc(fn, args) {
+    return fetch(SB_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args || {})
+    }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || 'Something broke. Try again.'); return j }) });
+  }
+  function loadClub() {
+    var t = store('sb-club-token'); if (!t) { club = false; return Promise.resolve() }
+    return rpc('club_state', { p_token: t }).then(function (s) { club = s || false; if (!s) store('sb-club-token', null) }).catch(function () { club = club || null });
+  }
+  function hill(pushes) {
+    var t = Math.max(0, Math.min(10, pushes)) / 10, x = 40 + t * 236, y = 176 - t * 122;
+    return '<svg class="hill" viewBox="0 0 320 200" role="img" aria-label="The boulder is ' + pushes + ' of 10 steps up the hill">' +
+      '<path d="M0 194 L40 182 L276 60 L320 72 L320 200 L0 200 Z" fill="#393636"/>' +
+      Array.apply(null, Array(11)).map(function (_, i) { var px = 40 + i * 23.6, py = 182 - i * 12.2; return '<circle cx="' + px + '" cy="' + py + '" r="' + (i <= pushes ? 3.2 : 2.2) + '" fill="' + (i <= pushes && pushes > 0 ? '#a9c3d8' : '#4a4646') + '"/>' }).join('') +
+      '<path d="M276 22 v38 M276 22 l20 7 l-20 7" stroke="#a9c3d8" stroke-width="2" fill="#4a6c86"/>' +
+      '<g class="boulder" style="transform: translate(' + x + 'px,' + (y - 19) + 'px)"><circle r="19" fill="#918f90"/><path d="M-9 -8 q6 -5 13 -1 M2 6 q5 2 9 -2" stroke="#6d6b6c" stroke-width="2" fill="none"/></g>' +
+      '</svg>';
+  }
+  function rules() {
+    return '<div class="rules">' +
+      '<div class="rule"><div class="num">+1</div><div>Each day you’re here, type the code from the taproom TV.<span>Shows, pints, a Tuesday. Any visit counts. One push a day.</span></div></div>' +
+      '<div class="rule"><div class="num">10</div><div>Ten pushes gets you to the top.<span>Show the bartender. Your next pint is on us.</span></div></div>' +
+      '<div class="rule"><div class="num">0</div><div>Then the boulder rolls back down.<span>It always does. You start again.</span></div></div></div>';
+  }
+  function renderClub() {
+    var h = '<div class="band">Boulder Club</div>';
+    if (club === null) return h + '<div class="msg">Finding your boulder…</div>';
+    if (club === false) {
+      return h + hill(0) +
+        '<div class="count">Your boulder is at the bottom<small>Every visit pushes it a little higher. At the top there’s a free pint.</small></div>' +
+        '<form class="codebox" id="joinForm"><label for="joinName">What should we call you?</label>' +
+        '<input class="namein" id="joinName" autocomplete="given-name" maxlength="40" placeholder="First name" required>' +
+        (clubErr ? '<div class="err">' + esc(clubErr) + '</div>' : '') + '<button class="cta" ' + (clubBusy ? 'disabled' : '') + '>Join Boulder Club</button></form>' +
+        rules() + '<div class="camus">« Il faut imaginer Sisyphe heureux. »</div>';
+    }
+    var c = club, poured = c.redeemed_at && (Date.now() - Date.parse(c.redeemed_at)) < 15 * 60e3;
+    h += hill(c.pushes);
+    if (poured) {
+      h += '<div class="poured"><div class="big">Pint poured</div><div class="clock" id="pourClock"></div>' +
+        '<div style="color:var(--dim)">Redeemed at ' + clock(new Date(c.redeemed_at)) + '. The boulder is back at the bottom.</div></div>';
+    } else if (c.pushes >= 10) {
+      h += '<div class="pint"><div class="big">Free pint</div><p>You made it to the top. Show this to the bartender.</p>' +
+        (confirmPour
+          ? '<button class="cta" data-pour="yes">Bartender: yes, pour it</button><button class="btn" style="margin-top:10px;width:100%;border-color:#fff;color:#fff" data-pour="no">Not yet</button>'
+          : '<button class="cta" data-pour="ask">Bartender: tap to pour</button>') + '<div class="err">' + esc(clubErr) + '</div></div>';
+    } else {
+      h += '<div class="count">' + c.pushes + ' of 10 pushes<small>' + (c.pushes === 0 ? 'Fresh start. The best kind.' : (10 - c.pushes) + ' more ' + (10 - c.pushes === 1 ? 'visit' : 'visits') + ' to a free pint.') + '</small></div>';
+      if (c.pushed_today) h += '<div class="done">You pushed today. The boulder will be here tomorrow.</div>';
+      else h += '<form class="codebox" id="pushForm"><label for="pushCode">Here today? Type the 4-digit code on the taproom TV.</label>' +
+        '<input class="codein" id="pushCode" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" placeholder="····" value="' + esc(lastCode) + '" required>' +
+        '<div class="err">' + esc(clubErr) + '</div><button class="cta" ' + (clubBusy ? 'disabled' : '') + '>Push the boulder</button></form>';
+    }
+    h += '<div class="member"><span>Member <b>' + esc(c.name) + '</b></span><span>No. ' + c.member_no + (c.pints ? ' · ' + c.pints + (c.pints === 1 ? ' pint' : ' pints') + ' earned' : '') + '</span></div>';
+    return h + rules() + '<div class="fine">Your card lives on this phone.</div><div class="camus">« Il faut imaginer Sisyphe heureux. »</div>';
+  }
+  var pourTimer = null;
+  function tickPour() {
+    var el = document.getElementById('pourClock');
+    if (!el) { clearInterval(pourTimer); pourTimer = null; return }
+    var d = new Date(); el.textContent = clock(d).replace(/ (AM|PM)/, ':' + String(d.getSeconds()).padStart(2, '0') + ' $1');
+  }
+
+  /* Tabs, rendering, events */
+  var views = { shows: renderShows, taps: renderTaps, visit: renderVisit, club: renderClub };
+  var tab = 'shows';
+  function render() {
+    screen.innerHTML = views[tab]();
+    if (tab === 'club' && document.getElementById('pourClock') && !pourTimer) { tickPour(); pourTimer = setInterval(tickPour, 1000) }
+  }
+  function show(t) {
+    tab = views[t] ? t : 'shows'; clubErr = ''; confirmPour = false;
+    document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)) });
+    closeShow(); render(); screen.scrollTop = 0;
+    store('sb-app-tab', tab);
+    if (history.replaceState) history.replaceState(null, '', '#' + tab);
+    if (tab === 'club') loadClub().then(function () { if (tab === 'club') render() });
+    if (tab === 'taps') loadMenu().then(function () { if (tab === 'taps') render() });
+  }
+  document.querySelector('.tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.tab) });
+  screen.addEventListener('click', function (e) {
+    var t = e.target;
+    var c = t.closest('.chip'); if (c) { filter = c.dataset.f; render(); return }
+    if (t.closest('[data-hint-off]')) { store('sb-app-hint-off', '1'); render(); return }
+    if (t.closest('[data-install]') && deferredInstall) { deferredInstall.prompt(); deferredInstall = null; render(); return }
+    var p = t.closest('[data-pour]');
+    if (p) {
+      var a = p.dataset.pour;
+      if (a === 'ask') { confirmPour = true; render() }
+      else if (a === 'no') { confirmPour = false; render() }
+      else { clubBusy = true; rpc('club_redeem', { p_token: store('sb-club-token') }).then(function (s) { club = s; clubErr = '' }).catch(function (er) { clubErr = er.message }).then(function () { clubBusy = false; confirmPour = false; render() }) }
+      return;
+    }
+    var r = t.closest('[data-i]'); if (r) openShow(+r.dataset.i);
+  });
+  screen.addEventListener('submit', function (e) {
+    e.preventDefault(); if (clubBusy) return;
+    if (e.target.id === 'joinForm') {
+      clubBusy = true; clubErr = '';
+      rpc('club_join', { p_name: document.getElementById('joinName').value }).then(function (j) {
+        store('sb-club-token', j.token); club = j.state;
+      }).catch(function (er) { clubErr = er.message }).then(function () { clubBusy = false; render() });
+    }
+    if (e.target.id === 'pushForm') {
+      var code = lastCode = document.getElementById('pushCode').value;
+      clubBusy = true; clubErr = '';
+      rpc('club_push', { p_token: store('sb-club-token'), p_code: code }).then(function (s) { club = s; lastCode = '' })
+        .catch(function (er) { clubErr = er.message }).then(function () { clubBusy = false; render() });
+    }
+  });
+  window.addEventListener('hashchange', function () { var t = location.hash.slice(1); if (views[t] && t !== tab) show(t) });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') return;
+    if (tab === 'club') loadClub().then(render);
+    if (tab === 'taps') loadMenu().then(render);
+  });
+
+  var start = location.hash.slice(1) || store('sb-app-tab') || 'shows';
+  show(start);
+  loadShows().then(function () { if (tab === 'shows') render() });
+  loadMenu();
+})();
+{% endraw %}
+</script>
+</body>
+</html>
