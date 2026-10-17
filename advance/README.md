@@ -57,11 +57,11 @@ reword or reorder a field there and everything follows. The value after the
 
 ## The welcome and the trip
 
-When a comedian is booked, the desk's **Send the welcome 🎉** button emails
-them a "you're coming to Sisyphus" letter (`advance_welcome.py`, action
+When a comedian is booked, the desk's **Send the welcome** button emails
+them a short "you're booked" note from Sam (`advance_welcome.py`, action
 **Comedian welcome**, started through `run-workflow`; it Bccs booking@ and
 stamps `welcome_sent_at`). Its button opens `trip.html`: the same advance,
-one playful stop at a time up the hill (green room, security, guest sets and
+one quick stop at a time up the hill (green room, security, guest sets and
 everything the one-page form asks). Each stop saves with `advance_trip`
 (merges into `data`); the last stop sends it in with `advance_submit` like the
 form. `trip.html` with no `?s=` is a preview that saves nothing.
