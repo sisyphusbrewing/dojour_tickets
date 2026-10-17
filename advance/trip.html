@@ -183,35 +183,17 @@
     // Copy is Sam's voice: short, first person, one dry joke at most.
     var STEPS = [
       { kind: 'hello' },
-      { land: 'The poster', title: 'How should the poster read?', sub: 'Your name, exactly how you want it. I print these at 11 x 17, so typos get big.',
-        q: [{ k: 'stage_name', ph: 'Liz Miele' }, 'role', { k: 'hometown', ph: 'Brooklyn, NY' }] },
-      { land: 'Contact', title: 'Where do I reach you?', sub: 'Day-of texts. Mostly about parking.',
-        q: ['email', 'phone', { k: 'agent_name', label: 'Agent or manager, if you have one' }, { k: 'agent_email', label: 'Their email' }] },
-      { land: 'Headshot', title: 'Send the good headshot.', sub: 'It goes on the poster, the site and the screen over the stage. The screen is big.',
-        q: ['headshot', { k: 'bio', ph: 'Two to four sentences. Credits welcome.' }, { k: 'credits', ph: 'As seen on…' }] },
-      { land: 'Promo', title: 'Where do people find you?', sub: 'I tag you in everything. Fill in what you\'ve got.',
-        q: [{ k: 'instagram', ph: '@' }, { k: 'tiktok', ph: '@' }, { k: 'youtube' }, { k: 'website', ph: 'https://' }, { k: 'clip_url', ph: 'https://' }] },
-      { land: 'Travel', title: 'How are you getting here?', sub: '712 Ontario Ave W, Minneapolis. Parking is a whole thing - I\'ll send the map.',
-        q: ['travel_mode', { k: 'arrival', ph: 'Thursday afternoon' }, { k: 'ride', when: ['travel_mode', 'Plane'] }] },
-      { land: 'Hotel', title: 'Where are you sleeping?', sub: 'If you need a room, tell me which nights.',
-        q: ['hotel', { k: 'hotel_nights', ph: 'Thu, Fri, Sat', when: ['hotel', 'Need one'] }] },
       { land: 'Green room', title: 'Stock the green room.', sub: 'I go shopping before you get here. Pick whatever.', q: ['gr_snacks', 'gr_drinks'] },
       { land: 'Requests', title: 'Anything special?', sub: 'The one thing that makes it a good night. Plus anything you can\'t eat.',
         q: [{ k: 'gr_wish', ph: 'Peanut M&Ms. Within reason.' }, { k: 'dietary', label: 'Allergies or diet', ph: 'Allergies, diet, strong opinions' }] },
-      { land: 'Stage', title: 'The stage.', sub: 'Tell me now so nobody is fixing a mic stand during your closer.',
-        q: [{ k: 'set_length', label: 'Set length (minutes)', ph: '45' }, 'mic', 'stool'] },
-      { land: 'Intro', title: 'Your intro.', sub: 'The host reads it word for word. Write it how you want to hear it.',
-        q: [{ k: 'walk_on', ph: 'Song and artist' }, { k: 'intro', ph: 'Keep it to a breath.' }, { k: 'no_go', label: 'Anything the host should never say about you' }] },
-      { land: 'Tech', title: 'Recording? Props?', sub: 'If you\'re recording, tell me, so the lights are right and nobody walks through the shot.',
-        q: ['recording', { k: 'av', ph: 'Projector, laptop, a live goat' }, { k: 'bringing', ph: 'Name of your opener or feature' }] },
       { land: 'Security', title: 'Security.', sub: 'Most nights are easy. Some aren\'t. Only Grace and I see this part.',
         q: ['sec_style', 'sec_heckle', { k: 'sec_concerns', ph: 'An ex, a superfan, a guy from Reddit. What they look like, what to do.' }] },
       { land: 'Guests', title: 'Bringing people?', sub: 'The guest list walks right in. Funny friend in town? Give them a guest set.',
         q: ['guest_count', { k: 'guest_names', when: ['guest_count', '+'] }, 'gs_want', { k: 'gs_who', when: ['gs_want', 'Yes'] }] },
-      { land: 'Merch', title: 'Selling merch?', sub: 'There\'s a table. There\'s a guy.', q: ['merch', { k: 'merch_notes', when: ['merch', '!No'], ph: 'Shirts $25, signed posters $10' }] },
-      { land: 'Pay', title: 'Getting paid.', sub: '100% of the door goes to you. The $3 ticket fee covers the host and the feature. We settle up the night of the show.',
-        q: ['pay_method', { k: 'pay_handle', ph: 'Handle, email or phone' }, { k: 'payee', ph: 'Legal name or company' }, 'w9'] },
-      { land: 'Anything else', title: 'Anything else?', sub: 'Questions, requests, confessions. Then you\'re done.', q: [{ k: 'anything', ph: 'I read all of it.' }] },
+      { land: 'Pay', title: 'Getting paid.', sub: '100% of the door goes to you. We settle up the night of the show.',
+        q: ['pay_method', { k: 'pay_handle', ph: 'Handle, email or phone', when: ['pay_method', '!Cash'] }] },
+      { land: 'Last thing', title: 'Walk-on song?', sub: 'Pick it, or the sound guy will. He likes Creed.',
+        q: [{ k: 'walk_on', ph: 'Song and artist' }, { k: 'anything', label: 'Anything else', ph: 'Questions, requests, confessions. I read all of it.' }] },
       { kind: 'finale' },
     ];
     var STOPS = STEPS.filter(function (s) { return s.land; });
@@ -303,27 +285,24 @@
         '<div class="ticket"><div class="admit">Admit one comedian, plus guests</div><div class="t-name">' + esc(a.show_name || 'Your Name Here') + '</div>' +
         '<div class="t-when">' + esc([fmtDate(a.show_date), a.show_time].filter(Boolean).join(' · ') || 'Date to come') + '</div>' +
         '<div class="t-where">712 Ontario Ave W, Minneapolis</div>' + (count ? '<div class="t-perf">' + count + '</div>' : '') + '</div>' + back +
-        '<p class="sub" style="margin-top:22px">Before you get here I need a few things. ' + STOPS.length + ' quick ones, mostly taps. It saves as you go, so wander off whenever. -Sam</p>' +
+        '<p class="sub" style="margin-top:22px">Your agent and Grace handle the boring stuff. This is just so I can be ready for you. ' + STOPS.length + ' quick ones, mostly taps. -Sam</p>' +
         '<ul class="perks"><li>A green room stocked how you like it</li><li>Security handled your way</li><li>Guest sets for your funny friends</li><li>100% of the door. <span>Since day one.</span></li></ul>' +
         nav('Let\'s go');
     }
 
     function renderFinale() {
       var a = answers, rows = [
-        ['On the poster', [a.stage_name, a.role].filter(Boolean).join(' · ')],
         ['Green room', [a.gr_snacks, a.gr_drinks].filter(Boolean).join(' · ')],
         ['The one thing', a.gr_wish],
         ['Security', [a.sec_style, a.sec_heckle].filter(Boolean).join(' · ')],
         ['Guest list', a.guest_count ? a.guest_count + (a.guest_names ? ': ' + a.guest_names : '') : ''],
         ['Guest sets', a.gs_want === 'Yes' ? (a.gs_who || 'Yes') : ''],
         ['Getting paid', a.pay_method],
+        ['Walk-on', a.walk_on],
       ].filter(function (r) { return r[1]; });
-      var NEED = { stage_name: 'name for the poster', email: 'email', bio: 'bio', pay_method: 'how you want to get paid' };
-      var missing = Object.keys(NEED).filter(function (k) { return !a[k]; }).map(function (k) { return NEED[k]; });
       return '<div class="band-wrap"><span class="band">The top</span></div>' +
         '<h1>That\'s it. You made it up the hill.</h1>' +
         '<p class="sub">' + (demo ? 'This is a preview, so nothing went anywhere.' : 'Grace has it.') + ' The boulder rolls back down tomorrow... that\'s the job. See you at the show. Cheers! -Sam</p>' +
-        (missing.length ? '<div class="next-stop"><h2>Still need</h2><p>Your ' + esc(missing.join(', ').replace(/, ([^,]*)$/, ' and $1')) + '. Come back to this link whenever.</p></div>' : '') +
         (rows.length ? '<div class="pass">' + rows.map(function (r) { return '<div><span>' + esc(r[0]) + '</span><em>' + esc(r[1]) + '</em></div>'; }).join('') + '</div>' : '') +
         '<button class="skip" id="again" type="button">Change an answer</button>';
     }
