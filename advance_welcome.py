@@ -115,7 +115,7 @@ def build(a):
       </td></tr>
     </table>
   </td></tr>
-  {p("Before you get here I need a few things: the poster, the green room, security, your guests and how you want to get paid. Sixteen quick ones, mostly taps.", 22)}
+  {p("Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room, security, your guests and how you want to get paid. Six quick ones, mostly taps.", 22)}
   <tr><td style="padding:22px 30px 4px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="{SLATE}" style="border-radius:10px">
       <a href="{esc(url)}" style="display:inline-block;padding:16px 30px 13px;font-family:{HEAD};font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:10px">Plan your night</a>
@@ -145,8 +145,8 @@ def build(a):
         "712 Ontario Ave W, Minneapolis",
         count,
         "",
-        "Before you get here I need a few things: the poster, the green room, security, your guests",
-        "and how you want to get paid. Sixteen quick ones, mostly taps:",
+        "Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room,",
+        "security, your guests and how you want to get paid. Six quick ones, mostly taps:",
         url,
         "",
         "What you get: a green room stocked how you like it, security handled your way,",
