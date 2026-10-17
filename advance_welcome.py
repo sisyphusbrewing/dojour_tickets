@@ -3,8 +3,8 @@ Sisyphus - the welcome email a comedian gets when they are booked.
 
 The "Comedian welcome" action runs this from the booking desk's "Send the
 welcome" button. It reads the advance from Supabase with the service key and
-sends the comedian (advances.contact_email) an excited, kid-going-to-Disney
-email whose big button opens their trip: the advance, one playful stop at a
+sends the comedian (advances.contact_email) a short "you're booked" note
+from Sam whose button opens their trip: the advance, one quick stop at a
 time (advance/trip.html, on the site at /pages/advance?s=<token>).
 
     ADVANCE_ID=<uuid> python advance_welcome.py
@@ -38,8 +38,8 @@ DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 TRIP_URL = "https://www.sisyphusbrewing.com/pages/advance?s="
 BADGE_URL = "https://cdn.shopify.com/s/files/1/0310/0669/files/sisyphus-badge-bluegray-dark-bg.png?v=1791819264&width=240"
 
-NIGHT, NIGHT2, SLATE, SLATE_LIGHT, GOLD, CREAM = "#16222e", "#24384a", "#4a6c86", "#a9c3d8", "#f5c451", "#fff3cf"
-FUN = "'Fredoka','Arial Rounded MT Bold','Trebuchet MS',Arial,sans-serif"
+BG, CARD, LINE, SLATE, SLATE_LIGHT, GRAY, PAPER = "#2b2929", "#393636", "#4a4646", "#4a6c86", "#a9c3d8", "#918f90", "#f4f1ea"
+HEAD = "'Josefin Sans','Century Gothic',Futura,Arial,sans-serif"
 BODY = "'Assistant',-apple-system,'Segoe UI',Roboto,Arial,sans-serif"
 
 
@@ -65,105 +65,99 @@ def show_day(d):
 
 
 def build(a):
+    """The email, in Sam's voice: short, first person, one dry joke."""
     esc = html.escape
     first = (a.get("contact_name") or "").split(" ")[0]
     day = show_day(a.get("show_date"))
     today = datetime.now(ZoneInfo("America/Chicago")).date()
-    sleeps = (day - today).days if day else None
+    days = (day - today).days if day else None
     when = " · ".join(x for x in (day.strftime("%A, %B %-d") if day else "", a.get("show_time") or "") if x) or "Date to come"
     url = TRIP_URL + a["token"]
+    count = "" if days is None or days < 0 else "Tonight." if days == 0 else "Tomorrow." if days == 1 else f"{days} days out"
+    hey = f"Hey {first}," if first else "Hey there,"
 
-    if sleeps is None or sleeps < 0:
-        count = ""
-    elif sleeps == 0:
-        count = "It's tonight!"
-    else:
-        count = f"{sleeps} sleep{'s' if sleeps != 1 else ''} until showtime"
+    def p(text, top=16, size=17, color="#ffffff"):
+        return (f'<tr><td style="padding:{top}px 30px 0;font-family:{BODY};font-size:{size}px;line-height:1.5;color:{color}">{text}</td></tr>')
 
-    perks = [("🍿", "A green room stocked with whatever you tell us"),
-             ("🍺", "Beer we brew ourselves, on tap all night"),
-             ("🛡️", "Security the way you like it"),
-             ("🎁", "Guest sets to hand out to your funny friends"),
-             ("💸", "100% of the door. Still true.")]
+    perks = ["A green room stocked how you like it", "Security handled your way",
+             "Guest sets for your funny friends", "100% of the door. Since day one."]
     perk_rows = "".join(
-        f'<tr><td style="padding:6px 0;width:40px;font-size:26px;line-height:1;vertical-align:middle">{e}</td>'
-        f'<td style="padding:6px 0;font-family:{BODY};font-size:17px;font-weight:600;color:#ffffff;vertical-align:middle">{esc(t)}</td></tr>'
-        for e, t in perks)
-    count_row = (f'<tr><td style="border-top:2px dashed #d8c48e;padding:14px 0 0;font-family:{FUN};font-size:26px;font-weight:700;color:{SLATE}">'
-                 f'{esc(count)}</td></tr>') if count else ""
+        f'<tr><td style="padding:9px 0;border-top:1px solid {LINE};font-family:{BODY};font-size:16px;font-weight:600;color:#ffffff">{esc(t)}</td></tr>'
+        for t in perks)
+    count_row = (f'<tr><td style="border-top:1px dashed #c9c3b6;padding:12px 0 0;font-family:{HEAD};font-size:20px;font-weight:700;'
+                 f'letter-spacing:1px;text-transform:uppercase;color:{SLATE}">{esc(count)}</td></tr>') if count else ""
 
     body = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
-<title>You're coming to Sisyphus</title></head>
-<body style="margin:0;padding:0;background:{NIGHT}">
-<div style="display:none;max-height:0;overflow:hidden">Pack your bags. Welcome to the Disney World of Comedy. 🎉</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{NIGHT}">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<title>You're booked at Sisyphus</title></head>
+<body style="margin:0;padding:0;background:{BG}">
+<div style="display:none;max-height:0;overflow:hidden">Congrats. A few quick questions before the show.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{BG}">
 <tr><td align="center" style="padding:24px 12px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:{NIGHT2};border-radius:22px">
-  <tr><td align="center" style="padding:28px 24px 0;font-size:22px;letter-spacing:10px;color:{GOLD}">✦ ✧ ✦ ✧ ✦</td></tr>
-  <tr><td align="center" style="padding:14px 24px 0"><img src="{BADGE_URL}" width="96" alt="Sisyphus" style="display:block;border:0;width:96px;height:auto"></td></tr>
-  <tr><td align="center" style="padding:18px 24px 0;font-family:{FUN};font-size:20px;font-weight:600;color:{SLATE_LIGHT}">{esc('Pack your bags, ' + first + '!' if first else 'Pack your bags!')}</td></tr>
-  <tr><td align="center" style="padding:6px 24px 0;font-family:{FUN};font-size:38px;line-height:1.1;font-weight:700;color:{GOLD}">You're coming to Sisyphus! 🎉</td></tr>
-  <tr><td align="center" style="padding:12px 30px 0;font-family:{BODY};font-size:18px;line-height:1.45;color:#dbe5ee">Welcome to the Disney World of Comedy. Congratulations. You earned this.</td></tr>
-  <tr><td style="padding:24px 24px 0">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{CREAM};border-radius:18px">
-      <tr><td style="padding:20px 22px 18px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:{CARD};border-radius:16px">
+  <tr><td align="center" style="padding:26px 24px 0"><img src="{BADGE_URL}" width="88" alt="Sisyphus" style="display:block;border:0;width:88px;height:auto"></td></tr>
+  <tr><td style="padding:22px 30px 0">
+    <span style="display:inline-block;background:{SLATE};color:#ffffff;padding:8px 16px 5px;font-family:{HEAD};font-weight:700;font-size:13px;letter-spacing:3px;text-transform:uppercase">You're booked</span>
+  </td></tr>
+  {p(esc(hey), 20)}
+  {p("Congrats - you're playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)", 10)}
+  <tr><td style="padding:20px 30px 0">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER};border-radius:12px">
+      <tr><td style="padding:18px 20px 16px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-family:{BODY};font-size:12px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:{SLATE}">Admit one comedian · and a few friends</td></tr>
-          <tr><td style="padding:8px 0 2px;font-family:{FUN};font-size:32px;line-height:1.1;font-weight:700;color:#2b2929">{esc(a['show_name'])}</td></tr>
+          <tr><td style="font-family:{HEAD};font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:{SLATE}">Admit one comedian, plus guests</td></tr>
+          <tr><td style="padding:8px 0 2px;font-family:{HEAD};font-size:28px;line-height:1.1;font-weight:700;text-transform:uppercase;color:#2b2929">{esc(a['show_name'])}</td></tr>
           <tr><td style="font-family:{BODY};font-size:17px;font-weight:700;color:#2b2929">{esc(when)}</td></tr>
-          <tr><td style="padding:2px 0 14px;font-family:{BODY};font-size:15px;color:#5d5959">712 Ontario Ave W, Minneapolis</td></tr>
+          <tr><td style="padding:2px 0 12px;font-family:{BODY};font-size:15px;color:#5d5959">712 Ontario Ave W, Minneapolis</td></tr>
           {count_row}
         </table>
       </td></tr>
     </table>
   </td></tr>
-  <tr><td style="padding:26px 30px 0;font-family:{FUN};font-size:22px;font-weight:600;color:#ffffff">Here's what's waiting for you</td></tr>
-  <tr><td style="padding:8px 30px 0"><table role="presentation" cellpadding="0" cellspacing="0">{perk_rows}</table></td></tr>
-  <tr><td style="padding:22px 30px 0;font-family:{BODY};font-size:17px;line-height:1.5;color:#dbe5ee">
-    Before you get here, we plan your whole night: the poster, the green room, security, your guest list and how you get paid.
-    It's a quick trip up the hill. Tap, tap, done.</td></tr>
-  <tr><td align="center" style="padding:26px 24px 6px">
-    <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="{GOLD}" style="border-radius:999px;border-bottom:5px solid #a87d12">
-      <a href="{esc(url)}" style="display:inline-block;padding:18px 38px;font-family:{FUN};font-size:21px;font-weight:700;color:#2a2208;text-decoration:none;border-radius:999px">Plan my trip 🎢</a>
+  {p("Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room, security, your guests and how you want to get paid. Six quick ones, mostly taps.", 22)}
+  <tr><td style="padding:22px 30px 4px">
+    <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="{SLATE}" style="border-radius:10px">
+      <a href="{esc(url)}" style="display:inline-block;padding:16px 30px 13px;font-family:{HEAD};font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:10px">Plan your night</a>
     </td></tr></table>
   </td></tr>
-  <tr><td align="center" style="padding:8px 30px 0;font-family:{BODY};font-size:14px;color:{SLATE_LIGHT}">It saves as you go. Skip anything you like.</td></tr>
-  <tr><td style="padding:28px 30px 0;font-family:{BODY};font-size:17px;line-height:1.5;color:#ffffff">See you at the top of the hill,<br><b>Grace &amp; Sam</b></td></tr>
-  <tr><td style="padding:6px 30px 0;font-family:{BODY};font-size:14px;line-height:1.5;color:{SLATE_LIGHT}">Questions? Just reply. It comes straight to us.</td></tr>
-  <tr><td align="center" style="padding:28px 24px 0;font-size:18px;letter-spacing:10px;color:{GOLD}">✧ ✦ ✧</td></tr>
-  <tr><td align="center" style="padding:10px 24px 26px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:{SLATE_LIGHT}">Il faut imaginer Sisyphe heureux.</td></tr>
+  <tr><td style="padding:24px 30px 0;font-family:{HEAD};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:{SLATE_LIGHT}">What you get</td></tr>
+  <tr><td style="padding:8px 30px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">{perk_rows}</table></td></tr>
+  {p("Questions? Just reply. It comes to Grace and me.", 20, 16, "#d9d6d6")}
+  {p("See you at the show. Cheers!<br>-Sam", 16)}
+  <tr><td align="center" style="padding:28px 24px 26px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:{SLATE_LIGHT}">Il faut imaginer Sisyphe heureux.</td></tr>
 </table>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
-  <tr><td align="center" style="padding:14px 24px 0;font-family:{BODY};font-size:13px;line-height:1.5;color:#8ea3b5">
+  <tr><td align="center" style="padding:14px 24px 0;font-family:{BODY};font-size:13px;line-height:1.5;color:{GRAY}">
     Sisyphus · Comedy &amp; Beer · 712 Ontario Ave W, Minneapolis<br>
-    <a href="{esc(url)}" style="color:#8ea3b5">{esc(url)}</a></td></tr>
+    <a href="{esc(url)}" style="color:{GRAY}">{esc(url)}</a></td></tr>
 </table>
 </td></tr></table>
 </body></html>"""
 
-    text = "\n".join([
-        f"Pack your bags{', ' + first if first else ''}! You're coming to Sisyphus!",
+    text = "\n".join(x for x in [
+        hey,
         "",
-        "Welcome to the Disney World of Comedy. Congratulations. You earned this.",
+        "Congrats - you're playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)",
         "",
-        f"{a['show_name']}",
+        a["show_name"],
         when,
         "712 Ontario Ave W, Minneapolis",
         count,
         "",
-        "Waiting for you: a green room stocked with whatever you tell us, beer we brew ourselves,",
-        "security the way you like it, guest sets for your funny friends, and 100% of the door.",
-        "",
-        "Plan your trip (the poster, the green room, security, guest list, getting paid):",
+        "Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room,",
+        "security, your guests and how you want to get paid. Six quick ones, mostly taps:",
         url,
         "",
-        "See you at the top of the hill,",
-        "Grace & Sam",
-        "Sisyphus · 712 Ontario Ave W, Minneapolis",
-    ])
-    subject = f"🎉 You're coming to Sisyphus{', ' + first if first else ''}!"
+        "What you get: a green room stocked how you like it, security handled your way,",
+        "guest sets for your funny friends, and 100% of the door. Since day one.",
+        "",
+        "Questions? Just reply. It comes to Grace and me.",
+        "",
+        "See you at the show. Cheers!",
+        "-Sam",
+    ] if x is not None)
+    subject = f"You're booked at Sisyphus: {a['show_name']}" + (f", {day.strftime('%b %-d')}" if day else "")
     return subject, body, text
 
 
@@ -179,7 +173,7 @@ def main():
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Sisyphus <{FROM_EMAIL}>"
+    msg["From"] = f"Sam at Sisyphus <{FROM_EMAIL}>"
     msg["To"] = ", ".join(recipients)
     msg["Reply-To"] = BOOKING
     msg.attach(MIMEText(text, "plain"))
