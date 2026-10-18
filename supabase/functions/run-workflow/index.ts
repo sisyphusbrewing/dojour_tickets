@@ -17,6 +17,7 @@ const ALLOWED_WORKFLOWS = new Set([
   "daily_sync.yml",
   "advance_welcome.yml",
 ]);
+const DOOR_WORKFLOWS = new Set(["daily_sync.yml"]);
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +53,16 @@ Deno.serve(async (req) => {
   const workflow = payload.workflow ?? "";
   if (!ALLOWED_WORKFLOWS.has(workflow)) {
     return respond(400, { error: `Workflow not allowed: ${workflow}` });
+  }
+
+  // Door staff can refresh the guest list; everything else is for managers.
+  if (!DOOR_WORKFLOWS.has(workflow)) {
+    const mgr = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/is_manager`, {
+      method: "POST",
+      headers: { Authorization: auth, apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "", "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!mgr.ok || (await mgr.json()) !== true) return respond(403, { error: "Managers only." });
   }
 
   const token = Deno.env.get("GITHUB_TOKEN");

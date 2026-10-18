@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Manager</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Manager">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    .show-sum { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .show-sum .t { font-family: var(--head); font-weight: 700; font-size: 19px; letter-spacing: .02em; line-height: 1.15; padding-top: 2px; }
+    .show-sum .d { color: var(--slate-light); font-size: 14px; font-weight: 600; margin-top: 2px; }
+    .splits { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 12px; font-size: 14px; color: var(--muted); }
+    .splits b { color: #fff; }
+    .agent-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .agent-row .input { flex: 1 1 200px; min-height: 40px; font-size: 14px; }
+    .tagbox { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tagbox .tag { font-size: 12px; padding: 6px 8px 4px; display: inline-flex; gap: 6px; align-items: center; }
+    .tagbox .tag button { background: none; border: 0; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .field label.btn { font-size: 15px; text-transform: none; letter-spacing: 0; color: #fff; margin: 0; }
+    .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+    .staff-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .staff-row:last-child { border-bottom: 0; }
+    .staff-row .n { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; padding-top: 2px; }
+    .staff-row .s { color: var(--gray); font-size: 13px; }
+    .staff-row > div:first-child { min-width: 0; }
+    .seg { flex: 0 0 auto; display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .seg button { min-height: 38px; padding: 6px 12px; border: 0; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+    .seg button.on { background: var(--slate); color: #fff; }
+    .seg button:disabled { cursor: default; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Manager</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Manager<small>Shows, comps, staff</small></div>
+        </a>
+        <div class="hdr-right">
+          <a class="btn btn-sm" href="../">Door</a>
+        </div>
+      </div>
+      <div class="hdr-tools">
+        <div class="chips tabs" id="tabs">
+          <button class="chip on" data-tab="door">Guest lists</button>
+          <button class="chip" data-tab="shows">Ticket counts</button>
+          <button class="chip" data-tab="create">New show</button>
+          <button class="chip" data-tab="staff">Staff logins</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
+
+    <!-- ===== Guest lists: any upcoming show, comps ===== -->
+    <section id="tab-door">
+      <div class="band-row"><span class="band">Guest list</span>
+        <button class="btn btn-sm" onclick="sync(this)">↻ Sync sales</button></div>
+      <div class="stack">
+        <select class="input" id="showSelect"><option>Loading shows…</option></select>
+        <div class="search">
+          <input class="input" id="search" type="search" placeholder="Search a name or email" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+          <button class="search-clear hidden" id="searchClear" aria-label="Clear">×</button>
+        </div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div class="count" style="text-align:left"><b id="countIn">–</b><small>checked in</small></div>
+          <button class="btn btn-primary" id="compToggle" onclick="toggleComp(true)">+ Add a comp</button>
+        </div>
+        <form id="compForm" class="card stack hidden">
+          <div class="lbl">Comp for <span id="compShow" style="color:#fff"></span></div>
+          <div class="grid2">
+            <div class="field"><label for="compName">Guest name</label><input class="input" id="compName" required maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="compCount">Tickets</label>
+              <select class="input" id="compCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+            <div class="field full"><label for="compNote">Note</label><input class="input" id="compNote" maxlength="80" placeholder="Comic's +1, comped by Steve" autocomplete="off"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" id="compSave" type="submit" style="flex:1">Add comp</button>
+            <button class="btn" type="button" onclick="toggleComp(false)">Cancel</button>
+          </div>
+        </form>
+      </div>
+      <div id="guestList"></div>
+    </section>
+
+    <!-- ===== Ticket counts for agents ===== -->
+    <section id="tab-shows" class="hidden">
+      <div class="band-row"><span class="band">Ticket counts</span>
+        <button class="btn btn-sm" onclick="copyAllShows()">Copy all</button></div>
+      <p class="help" style="margin-top:-4px">Agent emails saved here also get the automatic weekly report.</p>
+      <div id="reportList" class="stack"></div>
+    </section>
+
+    <!-- ===== New show ===== -->
+    <section id="tab-create" class="hidden">
+      <div class="band-row"><span class="band">New show</span></div>
+      <div class="card stack">
+        <div class="field"><label for="newTitle">Comedian or show title</label><input class="input" id="newTitle" placeholder="Sisyphus Thursday Open Mic"></div>
+
+        <div>
+          <div class="lbl">Showtimes</div>
+          <div class="grid2">
+            <input class="input" id="datePick" type="date">
+            <div style="display:flex;gap:8px"><input class="input" id="timePick" type="time" value="19:00"><button class="btn btn-primary" type="button" onclick="addShowtime()">Add</button></div>
+          </div>
+          <div class="presets">
+            <button class="btn btn-sm" type="button" onclick="setTime('19:00')">7 PM</button>
+            <button class="btn btn-sm" type="button" onclick="setTime('19:30')">7:30</button>
+            <button class="btn btn-sm" type="button" onclick="setTime('20:00')">8 PM</button>
+            <button class="btn btn-sm" type="button" onclick="setTime('21:00')">9 PM</button>
+            <button class="btn btn-sm" type="button" onclick="weekendDouble()">Fri/Sat 7 &amp; 9</button>
+            <button class="btn btn-sm" type="button" onclick="repeatWeekly(4)">Weekly × 4</button>
+            <button class="btn btn-sm" type="button" onclick="repeatWeekly(8)">Weekly × 8</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input class="input" id="customVariant" placeholder="Or type a showtime" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustom();}">
+            <button class="btn" type="button" onclick="addCustom()">Add</button>
+          </div>
+          <div class="tagbox" id="showtimeTags"></div>
+        </div>
+
+        <div class="grid2">
+          <div class="field"><label for="newPrice">Ticket price ($)</label><input class="input" id="newPrice" value="20.00" inputmode="decimal">
+            <div class="help">The $3 fee is added on top. <button class="btn-link" type="button" onclick="$('newPrice').value='0.00'">Free show</button></div></div>
+          <div class="field"><label for="newCapacity">Room limit</label><input class="input" id="newCapacity" type="number" value="90"></div>
+        </div>
+
+        <div class="field"><label>Poster</label>
+          <div style="display:flex;gap:10px;align-items:center">
+            <label class="btn" style="cursor:pointer">Choose image<input id="posterFile" type="file" accept="image/*" class="hidden" onchange="uploadPoster(this)"></label>
+            <img id="posterThumb" class="thumb hidden" alt="">
+            <span class="help" id="posterStatus" style="margin:0"></span>
+          </div>
+          <input class="input" id="posterUrl" type="url" placeholder="Or paste an image link" style="margin-top:8px">
+        </div>
+
+        <div class="field"><label for="newBio">Description / bio</label><textarea class="input" id="newBio" placeholder="Who they are, why it's funny."></textarea></div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-big" id="publishBtn" style="flex:1" onclick="publishShow()">Publish to the website</button>
+          <button class="btn" type="button" onclick="copyShowDetails()">Copy details</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Staff logins ===== -->
+    <section id="tab-staff" class="hidden">
+      <div class="band-row"><span class="band">Staff logins</span></div>
+      <p class="help" style="margin-top:-4px"><b>Door</b> logins see tonight's guest list and check people in. That's it.
+        <b>Manager</b> logins get this page, comps, brewing and everything else.</p>
+      <div class="card" id="staffList"><div class="empty" style="padding:20px">Loading…</div></div>
+
+      <div class="band-row"><span class="band">Add a login</span></div>
+      <form class="card stack" id="addStaffForm">
+        <div class="grid2">
+          <div class="field"><label for="newLogin">Username</label><input class="input" id="newLogin" required autocapitalize="none" autocorrect="off" placeholder="rjoseph"></div>
+          <div class="field"><label for="newPass">Password</label><input class="input" id="newPass" required minlength="8" autocomplete="new-password"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="seg" id="newRole"><button type="button" class="on" data-role="door">Door</button><button type="button" data-role="manager">Manager</button></div>
+          <button class="btn btn-primary" id="addStaffBtn" type="submit">Add login</button>
+        </div>
+        <div class="help">They sign in with just the username.</div>
+      </form>
+    </section>
+
+    <div class="foot"><span id="whoami"></span> · <button class="btn-link" onclick="signOut()">Sign out</button></div>
+  </main>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script>
+    var GRACE = 12 * 60 * 60 * 1000;
+    var guests = [];
+    var doneOpen = false;
+    var showSummary = [];
+    var agentDirectory = {};
+    var showtimes = [];
+
+    // ---------- Tabs ----------
+    document.querySelectorAll('#tabs .chip').forEach(function (b) {
+      b.addEventListener('click', function () { openTab(b.dataset.tab); });
+    });
+    function openTab(tab) {
+      document.querySelectorAll('#tabs .chip').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+      ['door', 'shows', 'create', 'staff'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== tab); });
+      if (tab === 'shows') loadReport();
+      if (tab === 'staff') loadStaff();
+      if (tab === 'create' && !$('datePick').value) {
+        var d = new Date(); d.setDate(d.getDate() + 1);
+        $('datePick').value = d.toISOString().split('T')[0];
+      }
+    }
+
+    // Supabase returns at most 1000 rows per request; page through everything.
+    async function fetchAllTicketRows(columns) {
+      var all = [];
+      for (var from = 0; ; from += 1000) {
+        var res = await sb.from('tickets').select(columns).range(from, from + 999);
+        if (res.error) return { data: null, error: res.error };
+        all = all.concat(res.data || []);
+        if ((res.data || []).length < 1000) break;
+      }
+      return { data: all, error: null };
+    }
+
+    async function sync(btn) {
+      btn.disabled = true;
+      var r = await runWorkflow('daily_sync.yml', {});
+      toast(r.ok ? 'Pulling in new sales. Give it a minute.' : 'Sync failed: ' + r.error, !r.ok);
+      setTimeout(function () { btn.disabled = false; loadShowList(); }, 5000);
+    }
+
+    // ---------- Guest lists ----------
+    async function loadShowList() {
+      var sel = $('showSelect'), prev = sel.value;
+      var res = await fetchAllTicketRows('show_date, show_title');
+      if (res.error) { sel.innerHTML = '<option value="">Couldn’t load shows</option>'; return; }
+      var seen = new Set(), list = [], now = Date.now();
+      res.data.forEach(function (d) {
+        var key = d.show_date + ' • ' + d.show_title;
+        if (seen.has(key)) return;
+        seen.add(key);
+        var ts = parseShowDateToMillis(d.show_date);
+        if (ts && ts < now - GRACE) return;
+        list.push({ show_date: d.show_date, show_title: d.show_title, label: key, ts: ts || Number.MAX_SAFE_INTEGER });
+      });
+      list.sort(function (a, b) { return a.ts - b.ts; });
+      if (!list.length) { sel.innerHTML = '<option value="">No upcoming shows</option>'; return; }
+      sel.innerHTML = list.map(function (s) {
+        return '<option value="' + escapeHtml(JSON.stringify(s)) + '">' + escapeHtml(s.label) + '</option>';
+      }).join('');
+      if (prev) for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === prev) sel.selectedIndex = i;
+      await loadGuests();
+    }
+
+    function selectedShow() {
+      try { return JSON.parse($('showSelect').value); } catch (e) { return null; }
+    }
+
+    async function loadGuests() {
+      var s = selectedShow();
+      if (!s) return;
+      var res = await sb.from('tickets').select('*').eq('show_date', s.show_date).eq('show_title', s.show_title).order('guest_name');
+      if (res.error) { toast('Couldn’t load the list: ' + res.error.message, true); return; }
+      guests = res.data || [];
+      $('compShow').textContent = s.label;
+      render();
+    }
+
+    function render() {
+      renderGuests($('guestList'), guests, { query: $('search').value, showDoneOpen: doneOpen, showEmail: true, removeComps: true, toggleFn: 'toggleDone' });
+      var total = guests.reduce(function (a, t) { return a + t.tickets; }, 0);
+      var inside = guests.reduce(function (a, t) { return a + t.checked_in_count; }, 0);
+      $('countIn').textContent = total ? inside + ' / ' + total : '–';
+    }
+    function toggleDone() { doneOpen = !doneOpen; render(); }
+
+    async function checkIn(id, count) {
+      var g = guests.find(function (t) { return t.unique_id === id; });
+      if (!g) return;
+      var before = { checked_in_count: g.checked_in_count, checked_in: g.checked_in, check_in_time: g.check_in_time };
+      g.checked_in_count = count;
+      g.checked_in = count > 0;
+      g.check_in_time = count > 0 ? new Date().toISOString() : null;
+      render();
+      chime(count > before.checked_in_count);
+      // .select() returns the saved row, so a silently blocked save is caught.
+      var res = await sb.from('tickets')
+        .update({ checked_in_count: g.checked_in_count, checked_in: g.checked_in, check_in_time: g.check_in_time })
+        .eq('unique_id', id).select('unique_id');
+      if (res.error || !res.data || !res.data.length) {
+        Object.assign(g, before);
+        render();
+        chime(false);
+        toast('Not saved. Check the wifi and tap again.', true);
+      }
+    }
+
+    function toggleComp(open) {
+      if (open && !selectedShow()) { toast('Pick a show first'); return; }
+      $('compForm').classList.toggle('hidden', !open);
+      $('compToggle').classList.toggle('hidden', open);
+      if (open) $('compName').focus(); else $('compForm').reset();
+    }
+
+    $('compForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var s = selectedShow();
+      var name = $('compName').value.trim();
+      if (!s || !name) return;
+      var note = $('compNote').value.trim();
+      var btn = $('compSave');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      var id = 'comp_' + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2));
+      try {
+        var res = await sb.from('tickets').insert({
+          unique_id: id, show_date: s.show_date, show_title: s.show_title, guest_name: name,
+          email: note ? 'Comp: ' + note : 'Comp', tickets: parseInt($('compCount').value, 10) || 1,
+          source: 'Comp', checked_in: false, checked_in_count: 0, check_in_time: null
+        });
+        if (res.error) { toast('Couldn’t add the comp: ' + res.error.message, true); return; }
+        toggleComp(false);
+        toast('Comp added for ' + name);
+        chime(true);
+        await loadGuests();
+      } finally {
+        btn.disabled = false; btn.textContent = 'Add comp';
+      }
+    });
+
+    async function removeComp(id) {
+      var g = guests.find(function (t) { return t.unique_id === id; });
+      if (!g || g.source !== 'Comp' || !confirm('Remove the comp for ' + g.guest_name + '?')) return;
+      var res = await sb.from('tickets').delete().eq('unique_id', id).eq('source', 'Comp').select('unique_id');
+      if (res.error || !res.data || !res.data.length) { toast('Couldn’t remove it' + (res.error ? ': ' + res.error.message : ''), true); return; }
+      toast('Comp removed');
+      await loadGuests();
+    }
+
+    $('showSelect').addEventListener('change', function () { toggleComp(false); doneOpen = false; loadGuests(); });
+    $('search').addEventListener('input', function () { $('searchClear').classList.toggle('hidden', !this.value); render(); });
+    $('searchClear').addEventListener('click', function () { $('search').value = ''; this.classList.add('hidden'); render(); });
+
+    // ---------- Ticket counts ----------
+    function compText(n) { return n ? ', ' + n + ' comp' + (n > 1 ? 's' : '') : ''; }
+    function runFor(title) { return showSummary.filter(function (s) { return s.show_title === title; }); }
+    function runSummary(title) {
+      var run = runFor(title);
+      return {
+        run: run,
+        lines: run.map(function (s) { return '• ' + s.show_date + ': ' + s.sold + ' sold (Web ' + s.web + ', Dojour ' + s.dojour + ')' + compText(s.comps); }),
+        total: run.reduce(function (a, s) { return a + s.sold; }, 0),
+        comps: run.reduce(function (a, s) { return a + s.comps; }, 0)
+      };
+    }
+
+    async function loadReport() {
+      var box = $('reportList');
+      box.innerHTML = '<div class="empty">Counting…</div>';
+      var results = await Promise.all([fetchAllTicketRows('show_date, show_title, tickets, source'), sb.from('show_agents').select('show_title, agent_email')]);
+      if (results[0].error) { box.innerHTML = '<div class="empty">Couldn’t load ticket counts.</div>'; return; }
+      agentDirectory = {};
+      (results[1].data || []).forEach(function (a) { if (a.show_title && a.agent_email) agentDirectory[a.show_title.trim()] = a.agent_email.trim(); });
+      var map = {}, now = Date.now();
+      results[0].data.forEach(function (t) {
+        if (!t.show_date || !t.show_title) return;
+        var ts = parseShowDateToMillis(t.show_date);
+        if (ts && ts < now - GRACE) return;
+        var key = t.show_date.trim() + ' • ' + t.show_title.trim();
+        var s = map[key] || (map[key] = { show_date: t.show_date.trim(), show_title: t.show_title.trim(), ts: ts || Number.MAX_SAFE_INTEGER, sold: 0, web: 0, dojour: 0, comps: 0 });
+        var n = parseInt(t.tickets, 10) || 1;
+        if (t.source === 'Comp') s.comps += n;      // comps are not "sold"
+        else { s.sold += n; if (t.source === 'Website') s.web += n; else s.dojour += n; }
+      });
+      showSummary = Object.values(map).sort(function (a, b) { return a.ts - b.ts; });
+      if (!showSummary.length) { box.innerHTML = '<div class="empty">No upcoming shows.</div>'; return; }
+      box.innerHTML = showSummary.map(function (s) {
+        var t = jsArg(s.show_title), n = runFor(s.show_title).length;
+        return '<div class="card">' +
+          '<div class="show-sum"><div><div class="t">' + escapeHtml(s.show_title) + '</div><div class="d">' + escapeHtml(s.show_date) + '</div></div>' +
+            '<div class="count"><b>' + s.sold + '</b><small>sold</small></div></div>' +
+          '<div class="splits"><span>Web <b>' + s.web + '</b></span><span>Dojour <b>' + s.dojour + '</b></span>' + (s.comps ? '<span>Comps <b>' + s.comps + '</b></span>' : '') + '</div>' +
+          '<div class="agent-row"><input class="input" type="email" placeholder="Agent email" value="' + escapeHtml(agentDirectory[s.show_title] || '') + '" onchange="saveAgent(' + t + ', this.value)">' +
+            '<button class="btn btn-sm" onclick="emailAgent(' + t + ')">Email' + (n > 1 ? ' all ' + n : '') + '</button>' +
+            '<button class="btn btn-sm" onclick="copyShow(' + t + ')">Copy</button></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function saveAgent(title, email) {
+      var clean = email.trim();
+      if (!clean) return;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) { toast('That doesn’t look like an email address', true); return; }
+      var res = await sb.from('show_agents').upsert({ show_title: title, agent_email: clean, updated_at: new Date().toISOString() }, { onConflict: 'show_title' });
+      if (res.error) { toast('Couldn’t save: ' + res.error.message, true); return; }
+      toast('Saved the agent for ' + title);
+      loadReport();   // fill the same email into this comedian's other showtimes
+    }
+
+    function copyText(text, msg) {
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast(msg); }).catch(function () {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); toast(msg); } catch (e) { toast('Couldn’t copy', true); }
+        document.body.removeChild(ta);
+      });
+    }
+    function copyShow(title) {
+      var r = runSummary(title);
+      copyText('Ticket Count: ' + title + '\n' + r.lines.join('\n') +
+        (r.run.length > 1 ? '\nTotal across ' + r.run.length + ' shows: ' + r.total + ' sold' + compText(r.comps) : ''), 'Copied');
+    }
+    function copyAllShows() {
+      if (!showSummary.length) return;
+      copyText('SISYPHUS - UPCOMING SHOW COUNTS (' + new Date().toLocaleDateString() + '):\n\n' + showSummary.map(function (s) {
+        return '• ' + s.show_title + ' (' + s.show_date + '): ' + s.sold + ' sold (Web: ' + s.web + ', Dojour: ' + s.dojour + ')' + compText(s.comps);
+      }).join('\n'), 'Copied every show');
+    }
+    function emailAgent(title) {
+      var r = runSummary(title), to = agentDirectory[title];
+      if (!to) { toast('Add the agent’s email first'); return; }
+      var multi = r.run.length > 1;
+      var subject = 'Ticket Count Update: ' + title + (multi ? '' : ' (' + r.run[0].show_date + ')') + ' - Sisyphus Brewing';
+      var body = 'Hi,\n\nHere are the current ticket counts for ' + title + ' at Sisyphus Brewing:\n\n' + r.lines.join('\n') + '\n' +
+        (multi ? '\nTotal across ' + r.run.length + ' shows: ' + r.total + ' sold' + compText(r.comps) + '\n' : '') +
+        (r.comps ? '\n(Comps are not included in the sold counts.)\n' : '') +
+        '\nLet us know if you have any questions!\n\nBest,\nSisyphus Brewing';
+      location.href = 'mailto:' + encodeURIComponent(to).replace(/%40/g, '@') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    }
+
+    // ---------- New show ----------
+    function setTime(v) { $('timePick').value = v; }
+    function fmtShowtime(dateStr, timeStr) {
+      var p = dateStr.split('-').map(Number), t = (timeStr || '19:00').split(':').map(Number);
+      var d = new Date(p[0], p[1] - 1, p[2], t[0], t[1]);
+      var h = d.getHours();
+      return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' +
+        d.getDate() + ' • ' + (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + (h >= 12 ? 'PM' : 'AM');
+    }
+    function isoPlus(dateStr, days) {
+      var p = dateStr.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2] + days);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function addTimes(list) {
+      list.forEach(function (v) { if (v && showtimes.indexOf(v) === -1) showtimes.push(v); });
+      renderTimes();
+    }
+    function addShowtime() {
+      if (!$('datePick').value) { toast('Pick a date first'); return; }
+      addTimes([fmtShowtime($('datePick').value, $('timePick').value)]);
+    }
+    function addCustom() { addTimes([$('customVariant').value.trim()]); $('customVariant').value = ''; }
+    function weekendDouble() {
+      var d = $('datePick').value;
+      if (!d) { toast('Pick the Friday first'); return; }
+      showtimes = [];
+      addTimes([fmtShowtime(d, '19:00'), fmtShowtime(d, '21:00'), fmtShowtime(isoPlus(d, 1), '19:00'), fmtShowtime(isoPlus(d, 1), '21:00')]);
+    }
+    function repeatWeekly(n) {
+      var d = $('datePick').value;
+      if (!d) { toast('Pick the first date'); return; }
+      var list = [];
+      for (var i = 0; i < n; i++) list.push(fmtShowtime(isoPlus(d, i * 7), $('timePick').value));
+      addTimes(list);
+    }
+    function removeTime(i) { showtimes.splice(i, 1); renderTimes(); }
+    function renderTimes() {
+      $('showtimeTags').innerHTML = showtimes.length ? showtimes.map(function (v, i) {
+        return '<span class="tag">' + escapeHtml(v) + '<button type="button" aria-label="Remove" onclick="removeTime(' + i + ')">×</button></span>';
+      }).join('') : '<span class="help">No showtimes yet.</span>';
+    }
+    renderTimes();
+
+    async function uploadPoster(input) {
+      var file = input.files[0];
+      if (!file) return;
+      $('posterThumb').src = URL.createObjectURL(file);
+      $('posterThumb').classList.remove('hidden');
+      $('posterStatus').textContent = 'Uploading…';
+      var path = 'posters/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      var res = await sb.storage.from('show-posters').upload(path, file, { upsert: true });
+      if (res.error) { $('posterStatus').textContent = 'Upload failed.'; return; }
+      $('posterUrl').value = sb.storage.from('show-posters').getPublicUrl(path).data.publicUrl;
+      $('posterStatus').textContent = 'Uploaded.';
+    }
+
+    function showInputs() {
+      return {
+        comedian_name: $('newTitle').value.trim(),
+        showtimes: showtimes.join(' | '),
+        ticket_price: $('newPrice').value.trim() || '20.00',
+        room_capacity: String(parseInt($('newCapacity').value, 10) || 90),
+        bio: $('newBio').value.trim(),
+        image_url: $('posterUrl').value.trim()
+      };
+    }
+    async function publishShow() {
+      var inp = showInputs();
+      if (!inp.comedian_name) { toast('Add a title'); return; }
+      if (!showtimes.length) { toast('Add at least one showtime'); return; }
+      var btn = $('publishBtn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      var r = await runWorkflow('create_shopify_show.yml', inp);
+      btn.disabled = false; btn.textContent = 'Publish to the website';
+      if (r.ok) { toast(inp.comedian_name + ' is on its way. Live in about a minute.'); chime(true); }
+      else toast('Didn’t publish: ' + r.error, true);
+    }
+    function copyShowDetails() {
+      var i = showInputs();
+      copyText('Show Title: ' + i.comedian_name + '\nShowtimes: ' + i.showtimes + '\nPrice: ' + i.ticket_price + '\nCapacity: ' + i.room_capacity +
+        '\nImage URL: ' + i.image_url + '\n\nDescription:\n' + i.bio, 'Copied');
+    }
+
+    // ---------- Staff logins ----------
+    async function staffCall(body) {
+      var res = await sb.functions.invoke('staff-admin', { body: body });
+      if (!res.error) return res.data;
+      var msg = res.error.message;
+      try { var b = await res.error.context.json(); if (b && b.error) msg = b.error; } catch (e) {}
+      throw new Error(msg);
+    }
+    async function loadStaff() {
+      try {
+        var data = await staffCall({ action: 'list' });
+        $('staffList').innerHTML = data.users.map(function (u) {
+          var id = jsArg(u.user_id);
+          var seen = u.last_sign_in_at ? 'Last in ' + new Date(u.last_sign_in_at).toLocaleDateString() : 'Never signed in';
+          return '<div class="staff-row"><div><div class="n">' + escapeHtml(u.login) + (u.me ? ' <span class="tag">You</span>' : '') + '</div>' +
+              '<div class="s">' + seen + ' · <button class="btn-link" onclick="resetPass(' + id + ',' + jsArg(u.login) + ')">New password</button>' +
+              (u.me ? '' : ' · <button class="btn-link" style="color:#f0b7ac" onclick="removeStaff(' + id + ',' + jsArg(u.login) + ')">Remove</button>') + '</div></div>' +
+            '<div class="seg">' + ['door', 'manager'].map(function (r) {
+              return '<button class="' + (u.role === r ? 'on' : '') + '"' + (u.me ? ' disabled' : '') + ' onclick="setRole(' + id + ',' + jsArg(r) + ')">' + (r === 'door' ? 'Door' : 'Manager') + '</button>';
+            }).join('') + '</div></div>';
+        }).join('');
+      } catch (e) {
+        $('staffList').innerHTML = '<div class="err">' + escapeHtml(e.message) + '</div>';
+      }
+    }
+    async function setRole(id, role) {
+      try { await staffCall({ action: 'set_role', user_id: id, role: role }); toast('Saved'); } catch (e) { toast(e.message, true); }
+      loadStaff();
+    }
+    async function resetPass(id, login) {
+      var p = prompt('New password for ' + login + ' (at least 8 characters)');
+      if (!p) return;
+      try { await staffCall({ action: 'set_password', user_id: id, password: p }); toast('Password changed for ' + login); } catch (e) { toast(e.message, true); }
+    }
+    async function removeStaff(id, login) {
+      if (!confirm('Remove the login for ' + login + '? They won’t be able to sign in.')) return;
+      try { await staffCall({ action: 'remove', user_id: id }); toast('Removed ' + login); } catch (e) { toast(e.message, true); }
+      loadStaff();
+    }
+    document.querySelectorAll('#newRole button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('#newRole button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      });
+    });
+    $('addStaffForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('addStaffBtn');
+      btn.disabled = true;
+      try {
+        await staffCall({ action: 'create', login: $('newLogin').value.trim(), password: $('newPass').value,
+          role: document.querySelector('#newRole button.on').dataset.role });
+        toast('Added ' + $('newLogin').value.trim());
+        this.reset();
+        loadStaff();
+      } catch (err) {
+        toast(err.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    setupSignIn(async function (role) {
+      var u = (await sb.auth.getUser()).data.user;
+      $('whoami').textContent = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
+      if (role !== 'manager') {
+        document.querySelectorAll('main > section, #tabs').forEach(function (el) { el.classList.add('hidden'); });
+        $('notManager').classList.remove('hidden');
+        return;
+      }
+      loadShowList();
+      setInterval(function () { if (!document.hidden && !$('tab-door').classList.contains('hidden')) loadGuests(); }, 30000);
+    });
+  </script>
+</body>
+</html>
