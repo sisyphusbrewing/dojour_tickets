@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="feedback.js"></script>
   <style>
     /* The pitch for comics, one screen at a time: what you get when you tap a
        Sisyphus card at a festival. Same brand as the site and the advance trip. */
@@ -82,7 +84,21 @@
     .btn-back { background: transparent; color: var(--muted); border: 1px solid var(--line); min-width: 56px; padding: 12px 16px; letter-spacing: 0; font-size: 20px; }
     .btn-line { background: transparent; border: 1px solid var(--line); color: var(--white); }
     .stack { display: grid; gap: 10px; margin-top: 18px; }
+    .hidden { display: none !important; }
     .hint { text-align: center; color: var(--gray); font-size: 13px; margin-top: 12px; }
+    /* the roast: feedback from comics Sam sent a named link to */
+    .q { margin-top: 22px; }
+    .q label, .q .ql { display: block; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; color: var(--slate-light); margin-bottom: 10px; line-height: 1.3; }
+    .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .tile { min-height: 52px; padding: 10px 12px; border-radius: 12px; text-align: left; background: var(--card); border: 1px solid var(--line); color: var(--white);
+            font: 600 15px/1.25 var(--body); cursor: pointer; }
+    .tile[aria-pressed=true] { border-color: var(--slate-light); background: var(--slate-dark); }
+    .tile:active { transform: scale(.98); }
+    .input { width: 100%; min-height: 50px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg2); color: var(--white); outline: none; font: 17px var(--body); }
+    textarea.input { min-height: 92px; resize: vertical; }
+    .input:focus { border-color: var(--slate-light); }
+    .input::placeholder { color: #7a7677; }
+    .err { color: #f0b7ac; margin-top: 10px; text-align: center; }
     .camus { text-align: center; font-style: italic; color: var(--slate-light); margin: 30px 0 0; font-size: 15px; }
     .foot { text-align: center; color: var(--gray); font-size: 13px; margin-top: 8px; }
   </style>
@@ -160,9 +176,83 @@
         '<p class="sign" style="margin-top:22px">-Sam</p>', last: true },
     ];
 
+    // ?c=<name>: a link Sam texted a comic for notes. They get a hello, the
+    // same pitch, then a screen to roast it. Views and answers go to Supabase.
+    var tag = (new URLSearchParams(location.search).get('c') || '').trim().slice(0, 80);
+    var who = tag.replace(/[-_.]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    var sb = null, answers = { name: who }, sent = false;
+    if (tag) {
+      sb = window.supabase.createClient('https://idsdwkubqnavkazlteis.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ',
+        { auth: { persistSession: false } });
+      STEPS[0] = { band: 'For ' + esc(who), title: 'Sam wants your notes.', html:
+        '<p>This is what comics get when they tap our card at a festival. Go through it like a stranger would.</p>' +
+        '<p>At the end you get to roast it. Be honest. I run a comedy club, I\'ve heard worse.</p>', go: 'Start' };
+      STEPS[STEPS.length - 1].last = false;
+      STEPS[STEPS.length - 1].go = 'Now roast it';
+      STEPS.push({ band: 'Your notes', title: 'Now roast it.', roast: true, html:
+        '<p>Six quick ones. Tap, type, done.</p>' });
+      STEPS.push({ band: 'Thank you', title: 'Notes received.', thanks: true, last: true, html:
+        '<p>I read every one, probably twice, probably at the bar.</p>' +
+        '<p>Next time you\'re in Minneapolis, the first beer\'s on me. A real one, not a metaphor.</p>' +
+        '<p class="sign">-Sam</p>' });
+    }
+    function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+    function roastHtml() {
+      return COMIC_FEEDBACK.map(function (q) {
+        var v = answers[q.k];
+        if (q.type === 'one' || q.type === 'many') {
+          return '<div class="q"><span class="ql">' + esc(q.label) + '</span><div class="tiles">' + q.options.map(function (o) {
+            var on = q.type === 'many' ? (v || []).indexOf(o) >= 0 : v === o;
+            return '<button type="button" class="tile" data-k="' + q.k + '" data-v="' + esc(o) + '" aria-pressed="' + on + '">' + esc(o) + '</button>';
+          }).join('') + '</div></div>';
+        }
+        var tagName = q.type === 'text' ? 'textarea' : 'input';
+        return '<div class="q"><label for="f_' + q.k + '">' + esc(q.label) + '</label><' + tagName + ' class="input" id="f_' + q.k + '" data-k="' + q.k + '" placeholder="' + esc(q.ph || '') + '">' +
+               (tagName === 'textarea' ? esc(v || '') + '</textarea>' : '') + '</div>';
+      }).join('') + '<p class="err hidden" id="err"></p>';
+    }
+    function wireRoast() {
+      Array.prototype.forEach.call(document.querySelectorAll('.tile'), function (b) {
+        b.onclick = function () {
+          $('err').classList.add('hidden');
+          var q = COMIC_FEEDBACK.filter(function (x) { return x.k === b.dataset.k; })[0], v = b.dataset.v;
+          if (q.type === 'many') {
+            var list = answers[q.k] || [], at = list.indexOf(v);
+            at >= 0 ? list.splice(at, 1) : list.push(v); answers[q.k] = list;
+            b.setAttribute('aria-pressed', at < 0);
+          } else {
+            answers[q.k] = answers[q.k] === v ? '' : v;
+            Array.prototype.forEach.call(document.querySelectorAll('.tile[data-k="' + q.k + '"]'), function (o) { o.setAttribute('aria-pressed', o.dataset.v === answers[q.k]); });
+          }
+        };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('.input'), function (el) {
+        if (el.tagName === 'INPUT') el.value = answers[el.dataset.k] || '';
+        el.oninput = function () { answers[el.dataset.k] = el.value; };
+      });
+    }
+    function send() {
+      var btn = $('next'), err = $('err');
+      var any = COMIC_FEEDBACK.some(function (q) { var v = answers[q.k]; return q.k !== 'name' && v && (v.length || v.trim); });
+      if (!any) { err.textContent = 'Give me at least one note. Even "fine" is a note.'; err.classList.remove('hidden'); return; }
+      btn.disabled = true; btn.textContent = 'Sending…';
+      sb.rpc('comic_feedback_submit', { p_tag: tag, p_data: answers, p_max_screen: i + 1 }).then(function (res) {
+        if (res.error) throw res.error;
+        sent = true;
+        sb.functions.invoke('job-applied', { body: { id: res.data, kind: 'comic' } }).catch(function () {});
+        go(i + 1);
+      }).catch(function (e) {
+        btn.disabled = false; btn.textContent = 'Send the notes →';
+        err.textContent = (e && e.message) || 'That didn\'t send. Try again?'; err.classList.remove('hidden');
+      });
+    }
+
     var $ = function (id) { return document.getElementById(id); };
     var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     var i = Math.max(0, Math.min(STEPS.length - 1, parseInt((location.hash.match(/^#(\d+)$/) || [])[1] || '1', 10) - 1));
+    if (STEPS[i].thanks) i--;
 
     // Embedded in sisyphusbrewing.com/pages/comics: tell the page how tall we are.
     var framed = window.parent !== window;
@@ -182,23 +272,30 @@
       $('stage').innerHTML =
         '<section class="step">' +
           '<div class="band-wrap"><span class="band">' + s.band + '</span></div>' +
-          '<h1>' + s.title + '</h1>' + s.html +
+          '<h1>' + s.title + '</h1>' + s.html + (s.roast ? roastHtml() : '') +
           '<div class="nav">' +
-            (i ? '<button class="btn btn-back" id="back" aria-label="Back">&larr;</button>' : '') +
+            (i && !s.thanks ? '<button class="btn btn-back" id="back" aria-label="Back">&larr;</button>' : '') +
             (s.last ? '<button class="btn btn-line" id="again" style="flex:1">Start over</button>'
-                    : '<button class="btn btn-go" id="next">' + (s.go || 'Next') + ' &rarr;</button>') +
+                    : '<button class="btn btn-go" id="next">' + (s.roast ? 'Send the notes' : s.go || 'Next') + ' &rarr;</button>') +
           '</div>' +
           (i === 0 ? '<p class="hint">Or swipe.</p>' : '') +
         '</section>';
       $('count').textContent = (i + 1) + ' / ' + STEPS.length;
       var path = $('hillPath'), len = path.getTotalLength(), pt = path.getPointAtLength(len * i / (STEPS.length - 1));
       $('boulder').setAttribute('transform', 'translate(' + pt.x + ',' + (pt.y - 9) + ')');
-      if ($('next')) $('next').onclick = next;
+      if (s.roast) wireRoast();
+      if ($('next')) $('next').onclick = s.roast ? send : next;
+      if (sb) sb.rpc('comic_view', { p_tag: tag, p_screen: i + 1 }).then(function () {}, function () {});
       if ($('back')) $('back').onclick = back;
       if ($('again')) $('again').onclick = function () { go(0); };
       try { history.replaceState(null, '', i ? '#' + (i + 1) : location.pathname + location.search); } catch (e) {}
     }
-    function go(n) { if (n < 0 || n >= STEPS.length || n === i) return; i = n; render(); toTop(); }
+    function go(n) {
+      if (n < 0 || n >= STEPS.length || n === i) return;
+      if (STEPS[n].thanks && !sent) return;            // only by sending
+      if (sent && STEPS[n].roast) return;              // no second round
+      i = n; render(); toTop();
+    }
     function next() { go(i + 1); }
     function back() { go(i - 1); }
 
@@ -208,6 +305,7 @@
     document.addEventListener('touchend', function (e) {
       if (sx == null) return;
       var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+      if (e.target.closest && e.target.closest('.input')) return;
       if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { dx < 0 ? next() : back(); }
     }, { passive: true });
     document.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') next(); if (e.key === 'ArrowLeft') back(); });
