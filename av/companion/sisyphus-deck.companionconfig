@@ -300,10 +300,14 @@
                 "type": "feedback",
                 "id": "f0009",
                 "connectionId": "xair",
-                "definitionId": "rtn_aux",
+                "definitionId": "ch",
                 "options": {
                   "state": {
                     "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -324,10 +328,18 @@
                       "type": "action",
                       "id": "a0008",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -583,7 +595,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_ch15_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -598,10 +610,14 @@
                 "type": "feedback",
                 "id": "f0034",
                 "connectionId": "xair",
-                "definitionId": "rtn_aux",
+                "definitionId": "ch",
                 "options": {
                   "state": {
                     "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -622,10 +638,18 @@
                       "type": "action",
                       "id": "a0033",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -976,10 +1000,18 @@
                       "type": "action",
                       "id": "a0037",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -992,7 +1024,7 @@
                       "type": "action",
                       "id": "a0036",
                       "connectionId": "xair",
-                      "definitionId": "usbFad_a",
+                      "definitionId": "fad_a",
                       "options": {
                         "ticks": {
                           "value": "-2",
@@ -1005,6 +1037,14 @@
                         "faderLim": {
                           "value": true,
                           "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
+                          "isExpression": false
                         }
                       },
                       "upgradeIndex": 5
@@ -1015,7 +1055,7 @@
                       "type": "action",
                       "id": "a0035",
                       "connectionId": "xair",
-                      "definitionId": "usbFad_a",
+                      "definitionId": "fad_a",
                       "options": {
                         "ticks": {
                           "value": "2",
@@ -1027,6 +1067,14 @@
                         },
                         "faderLim": {
                           "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -1505,7 +1553,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_ch15_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -1520,10 +1568,14 @@
                 "type": "feedback",
                 "id": "f0054",
                 "connectionId": "xair",
-                "definitionId": "rtn_aux",
+                "definitionId": "ch",
                 "options": {
                   "state": {
                     "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -1544,10 +1596,18 @@
                       "type": "action",
                       "id": "a0053",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -1898,10 +1958,18 @@
                       "type": "action",
                       "id": "a0057",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -1914,7 +1982,7 @@
                       "type": "action",
                       "id": "a0056",
                       "connectionId": "xair",
-                      "definitionId": "usbFad_a",
+                      "definitionId": "fad_a",
                       "options": {
                         "ticks": {
                           "value": "-2",
@@ -1927,6 +1995,14 @@
                         "faderLim": {
                           "value": true,
                           "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
+                          "isExpression": false
                         }
                       },
                       "upgradeIndex": 5
@@ -1937,7 +2013,7 @@
                       "type": "action",
                       "id": "a0055",
                       "connectionId": "xair",
-                      "definitionId": "usbFad_a",
+                      "definitionId": "fad_a",
                       "options": {
                         "ticks": {
                           "value": "2",
@@ -1949,6 +2025,14 @@
                         },
                         "faderLim": {
                           "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -2787,7 +2871,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_ch15_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -2802,10 +2886,14 @@
                 "type": "feedback",
                 "id": "f0074",
                 "connectionId": "xair",
-                "definitionId": "rtn_aux",
+                "definitionId": "ch",
                 "options": {
                   "state": {
                     "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -2826,10 +2914,18 @@
                       "type": "action",
                       "id": "a0073",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -3180,10 +3276,18 @@
                       "type": "action",
                       "id": "a0077",
                       "connectionId": "xair",
-                      "definitionId": "usbMute",
+                      "definitionId": "mute",
                       "options": {
                         "mute": {
                           "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -3196,7 +3300,7 @@
                       "type": "action",
                       "id": "a0076",
                       "connectionId": "xair",
-                      "definitionId": "usbFad_a",
+                      "definitionId": "fad_a",
                       "options": {
                         "ticks": {
                           "value": "-2",
@@ -3209,6 +3313,14 @@
                         "faderLim": {
                           "value": true,
                           "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
+                          "isExpression": false
                         }
                       },
                       "upgradeIndex": 5
@@ -3219,7 +3331,7 @@
                       "type": "action",
                       "id": "a0075",
                       "connectionId": "xair",
-                      "definitionId": "usbFad_a",
+                      "definitionId": "fad_a",
                       "options": {
                         "ticks": {
                           "value": "2",
@@ -3231,6 +3343,14 @@
                         },
                         "faderLim": {
                           "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 15,
                           "isExpression": false
                         }
                       },

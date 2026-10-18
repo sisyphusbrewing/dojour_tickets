@@ -186,8 +186,9 @@ CHANNEL = lambda n: dict(  # noqa: E731
     strip={"type": "/ch/", "num": n}, mute_strip={"type": "/ch/", "num": n},
     feedback_strip={"theChannel": n},
 )
-MUSIC = dict(fader_action="usbFad_a", mute_action="usbMute", mute_feedback="rtn_aux",
-             level_var="f_rtn_aux_d")  # XR18 Aux in 17/18
+# Pre-show music comes from the office PC over USB (Windows output OUT 1-2) into
+# channels 15/16, stereo-linked in X AIR Edit, so channel 15 moves both (Sam, Oct 18 2026).
+MUSIC = CHANNEL(15)
 SOURCES = [("MIC 1", CHANNEL(1)), ("MIC 2", CHANNEL(2)), ("MUSIC", MUSIC), ("GOD MIC", CHANNEL(5))]
 
 
