@@ -26,6 +26,7 @@ OUT = pathlib.Path(__file__).with_name("sisyphus-deck.companionconfig")
 XAIR = "xair"
 HTTP = "http"
 OBS = "obs"
+INTERNAL = "internal"  # Companion's own actions; not a connection, never exported
 CONNECTIONS = {
     XAIR: {"label": "xair", "moduleId": "behringer-xair", "lastUpgradeIndex": 5},
     HTTP: {"label": "http", "moduleId": "generic-http", "lastUpgradeIndex": 3},
@@ -41,6 +42,13 @@ TIMER_GREEN = 0x1F5F2E
 
 SUPABASE = "https://idsdwkubqnavkazlteis.supabase.co"
 SUPABASE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
+
+# Prints today's taproom menu on the office printer (menu/print-menu.ps1, fetched fresh each press)
+PRINT_MENU_COMMAND = (
+    'powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create('
+    "(New-Object Net.WebClient).DownloadString("
+    "'https://sisyphusbrewing.github.io/dojour_tickets/menu/print-menu.ps1')))\""
+)
 
 # --------------------------------------------------------------------------
 # Building blocks
@@ -61,14 +69,16 @@ def _opts(options):
 
 
 def action(connection, definition, **options):
-    return {
+    act = {
         "type": "action",
         "id": _next_id("a"),
         "connectionId": connection,
         "definitionId": definition,
         "options": _opts(options),
-        "upgradeIndex": CONNECTIONS[connection]["lastUpgradeIndex"],
     }
+    if connection in CONNECTIONS:  # Companion's internal actions carry no upgrade index
+        act["upgradeIndex"] = CONNECTIONS[connection]["lastUpgradeIndex"]
+    return act
 
 
 def feedback(connection, definition, style=None, **options):
@@ -155,6 +165,16 @@ def channel_mute_key(channel):
     )
 
 
+def music_mute_key():
+    """A key that toggles the music (Aux in) mute and turns red while muted."""
+    return button(
+        "MUSIC\\nMUTE",
+        press=[action(XAIR, "usbMute", mute="2")],
+        feedbacks=[feedback(XAIR, "rtn_aux", MUTED, state="1")],
+        bgcolor=DARK,
+    )
+
+
 def supabase_key(text, rpc, body=None, bgcolor=MENU_BLUE):
     """A key that calls one of our Supabase functions (menu board, stage timer)."""
     return button(
@@ -183,6 +203,26 @@ def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
     return supabase_key(text, rpc, body, bgcolor)
 
 
+def shell_key(text, command, bgcolor=MENU_BLUE):
+    """A key that runs a command on the office PC.
+
+    Needs Companion's launcher settings, "Dangerous Features", shell commands on.
+    Companion stops a command after at most 20 s, so `start` detaches it to run
+    as long as it needs.
+    """
+    return button(
+        text,
+        press=[action(INTERNAL, "exec", path=f'start "" /min {command}', cwd="",
+                      timeout=5000, targetVariable="")],
+        bgcolor=bgcolor,
+    )
+
+
+def print_menu_key():
+    """Prints today's taproom menu (menu/print-menu.ps1)."""
+    return shell_key("PRINT\\nMENU", PRINT_MENU_COMMAND)
+
+
 def record_key():
     """Starts/stops OBS recording; red with the running time while recording."""
     return button(
@@ -208,6 +248,7 @@ PAGES = {
             (0, 0): PAGE_UP,
             (1, 0): PAGE_NUMBER,
             (0, 2): channel_mute_key(1),
+            (0, 3): music_mute_key(),
             (1, 1): record_key(),
             # knob 1: main stage mic (channel 1). The house (Main LR) level
             # stays where it is set in X AIR Edit, never on a knob (Sam, Oct 16 2026).
@@ -226,6 +267,7 @@ PAGES = {
             (0, 0): PAGE_UP,
             (1, 0): PAGE_NUMBER,
             (0, 1): menu_refresh_key(),
+            (0, 2): print_menu_key(),
         },
     },
     3: {
