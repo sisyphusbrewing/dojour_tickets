@@ -93,6 +93,9 @@
     sisyfest: 'Oktoberfest',
     thefirstbeerwenamed: 'American IPA'
   };
+  // Pour sizes for beers whose GoTab description has no "16oz" line: 16 oz, or 13 oz at 6.5% ABV and up.
+  // List a beer here only when its pour breaks that rule, e.g. somebeer: '10 oz'.
+  var SB_SIZES = {};
   // ?blurbs=0 drops the one-line beer descriptions for a tighter menu.
   var BLURBS = !/[?&]blurbs=0/.test(location.search);
   var box = document.getElementById('pm-menu'), sheet = document.getElementById('pm');
@@ -116,6 +119,10 @@
     });
     var key = o.name.toLowerCase().replace(/[^a-z0-9]/g, '');
     for (var k in SB_STYLES) if (key.indexOf(k) === 0) { o.style = SB_STYLES[k]; break; }
+    if (!o.size && o.abv) {
+      for (var z in SB_SIZES) if (key.indexOf(z) === 0) o.size = SB_SIZES[z];
+      if (!o.size) o.size = parseFloat(o.abv) >= 6.5 ? '13 oz' : '16 oz';
+    }
     // First sentence of the blurb, capped at a word so every beer stays about one line.
     var b = rest.join(' ').replace(/\s+/g, ' ').trim(), m = b.match(/^.+?[.!?](?=\s|$)/);
     b = m ? m[0] : b;
