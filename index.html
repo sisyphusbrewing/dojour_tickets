@@ -1,1413 +1,197 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Sisyphus Door Check-In</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>">
-  
-  <style>
-    body { 
-      -webkit-tap-highlight-color: transparent; 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: #020617;
-      color: #f8fafc;
-      margin: 0;
-      padding: 0;
-    }
-    .touch-target { min-height: 48px; }
-    .hidden { display: none !important; }
-    
-    #lockModal {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background-color: rgba(2, 6, 23, 0.95);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    #lockModal.hidden { display: none !important; }
-  </style>
-
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Sisyphus Door</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Door">
+  <link rel="icon" type="image/png" href="brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="staff.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="staff.js"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans pb-10">
-
-  <!-- CONFIGURATION: Supabase Credentials -->
-  <script>
-    const RAW_SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co";
-    const SUPABASE_URL = RAW_SUPABASE_URL.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ";
-
-    window.addEventListener('error', function(event) {
-      if (event && event.message && event.message.includes('WebSocket')) {
-        event.preventDefault();
-      }
-    });
-
-    function canUseRealtimeWebSocket() {
-      try {
-        if (typeof WebSocket === 'undefined') return false;
-        if (window.self !== window.top && window.location.hostname !== 'sisyphusbrewing.github.io') {
-          return false;
-        }
-        return true;
-      } catch (e) {
-        return false;
-      }
-    }
-
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    window.supabaseClient = supabaseClient;
-  </script>
-
-  <!-- Auth Modal: Email & Password -->
-  <div id="lockModal">
-    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-      <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 mx-auto flex items-center justify-center text-xl mb-2">
-          🔐
-        </div>
-        <h2 class="text-base font-bold text-slate-100">Sisyphus Staff Access</h2>
-        <p class="text-xs text-slate-400">Sign in to manage shows and door check-in</p>
-      </div>
-
-      <form id="loginForm" class="space-y-3">
-        <div>
-          <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email</label>
-          <input 
-            id="staffEmail"
-            type="email" 
-            placeholder="staff@sisyphusbrewing.com"
-            required
-            autocomplete="email"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
-          />
-        </div>
-
-        <div>
-          <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Password</label>
-          <input 
-            id="staffPassword"
-            type="password" 
-            placeholder="••••••••••••"
-            required
-            autocomplete="current-password"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
-          />
-        </div>
-
-        <div id="loginError" class="hidden text-xs font-semibold text-rose-400 text-center py-1"></div>
-
-        <button 
-          id="loginBtn"
-          type="submit" 
-          class="touch-target w-full bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-bold rounded-xl text-sm py-2.5 shadow-lg shadow-amber-500/10">
-          Sign In
-        </button>
+<body>
+  <!-- Door staff: tonight's guest list and check-in, nothing else.
+       Managers have the rest at manager/. The database enforces the split. -->
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Door</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
       </form>
     </div>
   </div>
 
-  <!-- Header -->
-  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-md">
-    <div class="max-w-2xl mx-auto space-y-2">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <h1 class="text-lg font-black tracking-wide text-amber-400">SISYPHUS DOOR</h1>
-          <button onclick="handleStaffSignOut()" title="Sign Out" class="text-xs bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 px-2 py-0.5 rounded border border-slate-700 transition-all">
-            Sign Out
-          </button>
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <div class="hdr-brand">
+          <img src="posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Door<small id="tonightLabel">Tonight</small></div>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs font-bold">
-            <button id="tabDoorBtn" onclick="switchTab('door')" class="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 transition-all">
-              Door
-            </button>
-            <button id="tabReportsBtn" onclick="switchTab('reports')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
-              📊 Reports
-            </button>
-            <button id="tabCreateBtn" onclick="switchTab('create')" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all">
-              ➕ Create Show
-            </button>
-          </div>
-
-          <div id="statsBadge" class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300">
-            Loading...
-          </div>
-          <button 
-            id="refreshBtn" 
-            onclick="manualRefresh()" 
-            title="Trigger GitHub Action Sync & reload guest list" 
-            class="touch-target flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-400 hover:text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold transition-all">
-            <svg id="refreshIcon" class="w-3.5 h-3.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span id="refreshLabel">Sync</span>
-          </button>
+        <div class="hdr-right">
+          <div class="count"><b id="countIn">–</b><small id="countOf">checked in</small><div class="meter"><i id="meter" style="width:0"></i></div></div>
+          <button class="btn btn-sm" id="syncBtn" onclick="sync()" title="Pull in the latest ticket sales">
+            <span id="syncIcon">↻</span> Sync</button>
         </div>
       </div>
-
-      <div id="doorControls" class="space-y-2">
-        <select id="showSelector" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg p-2.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 outline-none">
-          <option value="">Loading upcoming shows...</option>
-        </select>
-
-        <div class="relative">
-          <input 
-            id="searchInput" 
-            type="text" 
-            placeholder="Search guest name or email..." 
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400"
-            autocomplete="off"
-            autocorrect="off"
-          >
-          <button id="clearSearch" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-sm font-bold">✕</button>
+      <div class="hdr-tools">
+        <div class="chips" id="showChips"></div>
+        <div class="search">
+          <input class="input" id="search" type="search" placeholder="Search a name" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+          <button class="search-clear hidden" id="searchClear" aria-label="Clear">×</button>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Door View -->
-  <main id="doorView" class="max-w-2xl w-full mx-auto px-4 py-4 flex-1">
-    <div id="compPanel" class="mb-3">
-      <button id="addCompToggle" type="button" onclick="toggleCompForm()" class="touch-target w-full flex items-center justify-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-sm font-bold transition-all">
-        🎁 Add Comp to This Show
-      </button>
-      <form id="compForm" class="hidden bg-slate-900 border border-emerald-800/50 rounded-xl p-4 space-y-3">
-        <div class="text-sm font-bold text-emerald-300">Add a comp for <span id="compShowLabel" class="text-slate-100"></span></div>
-        <div class="grid grid-cols-12 gap-2">
-          <input id="compName" type="text" required maxlength="80" placeholder="Guest name" autocomplete="off"
-            class="col-span-8 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400" />
-          <select id="compCount" class="col-span-4 bg-slate-950 border border-slate-700 rounded-lg px-2 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-400">
-            <option value="1">1 ticket</option><option value="2" selected>2 tickets</option><option value="3">3 tickets</option>
-            <option value="4">4 tickets</option><option value="5">5 tickets</option><option value="6">6 tickets</option>
-          </select>
-        </div>
-        <input id="compNote" type="text" maxlength="80" placeholder="Note (optional) e.g. Comic's +1, comped by Steve" autocomplete="off"
-          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400" />
-        <div class="flex gap-2">
-          <button id="compSaveBtn" type="submit" class="touch-target flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-sm">Add Comp</button>
-          <button type="button" onclick="toggleCompForm(false)" class="touch-target px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-sm font-bold">Cancel</button>
-        </div>
-      </form>
-    </div>
-
-    <div id="guestList" class="space-y-3">
-      <div class="text-center text-slate-500 py-10">Select a show to load the door list.</div>
+  <main class="wrap">
+    <div id="guestList"><div class="empty">Loading tonight…</div></div>
+    <div class="foot">
+      <span id="whoami"></span> · <button class="btn-link" onclick="signOut()">Sign out</button>
+      <span id="managerLink" class="hidden"> · <a href="manager/">Manager page</a></span>
     </div>
   </main>
 
-  <!-- Reports View -->
-  <main id="reportsView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow">
-      <div>
-        <h2 class="text-base font-bold text-slate-100">Agent Ticket Summaries</h2>
-        <p class="text-xs text-slate-400">Agent emails sync centrally to Supabase for automated weekly reports.</p>
-      </div>
-      <button 
-        onclick="copyAllShowsSummary()" 
-        class="touch-target px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
-        📋 Copy All Shows Overview
-      </button>
-    </div>
-
-    <div id="reportsList" class="space-y-3">
-      <div class="text-center text-slate-500 py-10">Loading upcoming show summaries...</div>
-    </div>
-  </main>
-
-  <!-- Create Show View -->
-  <main id="createView" class="hidden max-w-2xl w-full mx-auto px-4 py-4 flex-1 space-y-5">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
-      <div class="border-b border-slate-800 pb-3">
-        <h2 class="text-base font-bold text-slate-100">Create Shopify Ticketed Show</h2>
-        <p class="text-xs text-slate-400">Supports paid shows, recurring weekly events, and free walk-in/RSVP events without checkout fees.</p>
-      </div>
-
-      <!-- Title -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event / Comedian / Showcase Title *</label>
-        <input 
-          id="newTitle" 
-          type="text" 
-          placeholder="e.g. Sisyphus Thursday Open Mic" 
-          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-semibold"
-        />
-      </div>
-
-      <!-- Showtime Builder -->
-      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
-        <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-          📅 Date Picker & Showtimes
-        </label>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-          <div class="sm:col-span-5">
-            <input 
-              id="calendarPicker" 
-              type="date" 
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
-            />
-          </div>
-          <div class="sm:col-span-4">
-            <input 
-              id="timePicker" 
-              type="time" 
-              value="19:00"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-400"
-            />
-          </div>
-          <div class="sm:col-span-3">
-            <button 
-              type="button" 
-              onclick="addSelectedShowtime()" 
-              class="w-full h-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs py-2 transition-all">
-              + Add Time
-            </button>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-1.5 pt-1 text-[11px]">
-          <span class="text-slate-500 self-center">Presets:</span>
-          <button type="button" onclick="setTimeVal('19:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">7:00 PM</button>
-          <button type="button" onclick="setTimeVal('19:30')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">7:30 PM</button>
-          <button type="button" onclick="setTimeVal('20:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">8:00 PM</button>
-          <button type="button" onclick="setTimeVal('21:00')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">9:00 PM</button>
-          <button type="button" onclick="applyWeekendPreset('2night_double')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700">Fri/Sat 7 & 9 PM</button>
-          <button type="button" onclick="applyRepeatWeekly(4)" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700/60 font-bold">🔁 Repeat Weekly (4 wks)</button>
-          <button type="button" onclick="applyRepeatWeekly(8)" class="px-2 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded border border-indigo-700/60 font-bold">🔁 Repeat Weekly (8 wks)</button>
-        </div>
-
-        <div class="pt-2 flex gap-2">
-          <input 
-            id="customVariantInput" 
-            type="text" 
-            placeholder="Or type custom variant..." 
-            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomVariant();}"
-          />
-          <button 
-            type="button" 
-            onclick="addCustomVariant()" 
-            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-all">
-            + Add Variant
-          </button>
-        </div>
-
-        <div id="showtimesTagContainer" class="flex flex-wrap gap-1.5 pt-2">
-          <span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above or type a variant.</span>
-        </div>
-      </div>
-
-      <!-- Price & Capacity -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ticket Price ($) <span class="normal-case font-semibold text-slate-500">+ $3 fee added automatically</span></label>
-            <div class="flex gap-1">
-              <button type="button" onclick="setPricePreset('0.00')" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-400 font-bold hover:bg-emerald-900">Free ($0)</button>
-              <button type="button" onclick="setPricePreset('20.00')" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700">$20</button>
-            </div>
-          </div>
-          <input 
-            id="newPrice" 
-            type="text" 
-            value="20.00" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
-          />
-        </div>
-        <div class="space-y-1.5">
-          <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Room Limit (Capacity)</label>
-          <input 
-            id="newCapacity" 
-            type="number" 
-            value="90" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400"
-          />
-        </div>
-      </div>
-
-      <!-- Image Upload -->
-      <div class="space-y-2 bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
-        <div class="flex items-center justify-between">
-          <label class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-            🖼️ Promo Flyer / Image
-          </label>
-          <span id="uploadStatusText" class="text-[11px] text-slate-400">Desktop to Supabase</span>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <label class="flex-1 cursor-pointer flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-amber-400/60 rounded-xl p-3 bg-slate-900/60 transition-all text-center">
-            <span class="text-xs font-semibold text-slate-300">Choose File</span>
-            <input id="desktopImageFile" type="file" accept="image/*" class="hidden" onchange="handleDesktopImageSelected(this)" />
-          </label>
-
-          <div id="imagePreviewContainer" class="hidden w-16 h-16 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden relative flex-shrink-0">
-            <img id="imagePreviewThumb" src="" alt="Promo preview" class="w-full h-full object-cover" />
-          </div>
-        </div>
-
-        <input 
-          id="uploadedImageUrl" 
-          type="url" 
-          placeholder="Or paste an image URL directly..." 
-          class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-400"
-        />
-      </div>
-
-      <!-- Description -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-bold text-slate-300 uppercase tracking-wide">Event Description / Bio</label>
-        <textarea 
-          id="newBio" 
-          rows="5" 
-          placeholder="Comedian bio or event description..." 
-          class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-400 font-mono leading-relaxed"
-        ></textarea>
-      </div>
-
-      <!-- Submit Controls -->
-      <div class="pt-2 flex flex-col sm:flex-row items-center gap-3">
-        <button 
-          id="publishShowBtn" 
-          onclick="submitNewShowToPipeline()" 
-          class="touch-target w-full sm:w-auto flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 transition-all text-slate-950 font-black rounded-xl text-sm py-3 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
-          🚀 Publish Show to Shopify
-        </button>
-        <button 
-          type="button" 
-          onclick="copyActionInputs()" 
-          class="touch-target w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all">
-          📋 Copy Details
-        </button>
-      </div>
-    </div>
-  </main>
-
-  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 bg-amber-400 text-slate-950 px-4 py-2 rounded-full font-black text-xs shadow-2xl flex items-center gap-1.5">
-    <span id="toastMsg">Sync complete</span>
-  </div>
+  <div class="toast hidden" id="toast"></div>
 
   <script>
-    var tickets = [];
-    var audioCtx = null;
-    var currentTab = 'door';
-    var allUpcomingShows = [];
-    var showSummaryData = [];
-    var agentDirectory = {};
-    var configuredShowtimes = [];
-    var checkedInCollapsed = true;
-    var isAuthenticated = false;
+    var shows = [];
+    var currentKey = null;
+    var guests = [];
+    var doneOpen = false;
 
-    // Escape text before putting it into HTML. Guest names and emails come from
-    // public checkout forms, so they must never be inserted as raw HTML.
-    function escapeHtml(value) {
-      return String(value == null ? '' : value)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-    // Safely embed a value as a JS string argument inside an onclick="..." attribute.
-    function jsArg(value) {
-      return escapeHtml(JSON.stringify(String(value == null ? '' : value)));
-    }
+    function showKey(s) { return s.show_date + '|' + s.show_title; }
+    function currentShow() { return shows.find(function (s) { return showKey(s) === currentKey; }); }
 
-    // Supabase returns at most 1000 rows per request; page through everything.
-    async function fetchAllTicketRows(columns) {
-      var all = [];
-      var pageSize = 1000;
-      for (var from = 0; ; from += pageSize) {
-        var res = await supabaseClient.from('tickets').select(columns).range(from, from + pageSize - 1);
-        if (res.error) return { data: null, error: res.error };
-        var rows = res.data || [];
-        all = all.concat(rows);
-        if (rows.length < pageSize) break;
-      }
-      return { data: all, error: null };
-    }
-
-    function switchTab(tab) {
-      currentTab = tab;
-      var doorView = document.getElementById('doorView');
-      var reportsView = document.getElementById('reportsView');
-      var createView = document.getElementById('createView');
-      var doorControls = document.getElementById('doorControls');
-      var tabDoorBtn = document.getElementById('tabDoorBtn');
-      var tabReportsBtn = document.getElementById('tabReportsBtn');
-      var tabCreateBtn = document.getElementById('tabCreateBtn');
-
-      tabDoorBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
-      tabReportsBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
-      tabCreateBtn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all";
-
-      doorView.classList.add('hidden');
-      reportsView.classList.add('hidden');
-      createView.classList.add('hidden');
-      doorControls.classList.add('hidden');
-
-      if (tab === 'reports') {
-        reportsView.classList.remove('hidden');
-        tabReportsBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
-        loadAllShowsReport();
-      } else if (tab === 'create') {
-        createView.classList.remove('hidden');
-        tabCreateBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
-        var picker = document.getElementById('calendarPicker');
-        if (!picker.value) {
-          var d = new Date();
-          d.setDate(d.getDate() + 1);
-          picker.value = d.toISOString().split('T')[0];
-        }
-      } else {
-        doorControls.classList.remove('hidden');
-        doorView.classList.remove('hidden');
-        tabDoorBtn.className = "px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black transition-all";
-      }
-    }
-
-    function setTimeVal(val) {
-      document.getElementById('timePicker').value = val;
-    }
-
-    function setPricePreset(amount) {
-      document.getElementById('newPrice').value = amount;
-      showToast('Price set to $' + amount);
-    }
-
-    function addCustomVariant() {
-      var input = document.getElementById('customVariantInput');
-      var val = input.value.trim();
-      if (!val) return;
-      if (!configuredShowtimes.includes(val)) {
-        configuredShowtimes.push(val);
-        renderShowtimeTags();
-      }
-      input.value = '';
-    }
-
-    function formatPickerVariant(dateStr, timeStr) {
-      if (!timeStr) timeStr = "19:00";
-      var parts = dateStr.split('-');
-      var tParts = timeStr.split(':');
-      var dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), Number(tParts[0]), Number(tParts[1]));
-      
-      var weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      var hour = dt.getHours();
-      var minute = dt.getMinutes();
-      var ampm = hour >= 12 ? 'PM' : 'AM';
-      var dispHour = hour % 12 === 0 ? 12 : hour % 12;
-      var dispMin = String(minute).padStart(2, '0');
-      
-      return weekdays[dt.getDay()] + ' ' + months[dt.getMonth()] + ' ' + dt.getDate() + ' • ' + dispHour + ':' + dispMin + ' ' + ampm;
-    }
-
-    function addSelectedShowtime() {
-      var dateVal = document.getElementById('calendarPicker').value;
-      var timeVal = document.getElementById('timePicker').value;
-      if (!dateVal) {
-        showToast('Please select a date on the calendar first');
-        return;
-      }
-      var label = formatPickerVariant(dateVal, timeVal);
-      if (!configuredShowtimes.includes(label)) {
-        configuredShowtimes.push(label);
-        renderShowtimeTags();
-      }
-    }
-
-    function removeShowtime(index) {
-      configuredShowtimes.splice(index, 1);
-      renderShowtimeTags();
-    }
-
-    function renderShowtimeTags() {
-      var container = document.getElementById('showtimesTagContainer');
-      if (configuredShowtimes.length === 0) {
-        container.innerHTML = '<span class="text-xs text-slate-500 italic">No showtimes added yet. Pick a date above or type a variant.</span>';
-        return;
-      }
-      container.innerHTML = configuredShowtimes.map(function(item, idx) {
-        return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">' +
-          item +
-          '<button type="button" onclick="removeShowtime(' + idx + ')" class="text-amber-400 hover:text-white font-bold">×</button>' +
-        '</span>';
-      }).join('');
-    }
-
-    function applyWeekendPreset(presetType) {
-      var dateVal = document.getElementById('calendarPicker').value;
-      if (!dateVal) {
-        showToast('Select starting date on calendar first');
-        return;
-      }
-      var parts = dateVal.split('-').map(Number);
-      var baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
-
-      var addDateShow = function(offsetDays, timeStr) {
-        var d = new Date(baseDate);
-        d.setDate(d.getDate() + offsetDays);
-        var yStr = d.getFullYear();
-        var mStr = String(d.getMonth() + 1).padStart(2, '0');
-        var dStr = String(d.getDate()).padStart(2, '0');
-        return formatPickerVariant(yStr + '-' + mStr + '-' + dStr, timeStr);
-      };
-
-      if (presetType === '2night_double') {
-        configuredShowtimes = [
-          addDateShow(0, '19:00'),
-          addDateShow(0, '21:00'),
-          addDateShow(1, '19:00'),
-          addDateShow(1, '21:00')
-        ];
-      }
-      renderShowtimeTags();
-      showToast('Showtimes populated!');
-    }
-
-    function applyRepeatWeekly(numWeeks) {
-      var dateVal = document.getElementById('calendarPicker').value;
-      var timeVal = document.getElementById('timePicker').value || '19:00';
-      if (!dateVal) {
-        showToast('Select starting date on calendar first');
-        return;
-      }
-      var parts = dateVal.split('-').map(Number);
-      var baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
-
-      for (var i = 0; i < numWeeks; i++) {
-        var d = new Date(baseDate);
-        d.setDate(d.getDate() + (i * 7));
-        var yStr = d.getFullYear();
-        var mStr = String(d.getMonth() + 1).padStart(2, '0');
-        var dStr = String(d.getDate()).padStart(2, '0');
-        var formatted = formatPickerVariant(yStr + '-' + mStr + '-' + dStr, timeVal);
-        if (!configuredShowtimes.includes(formatted)) {
-          configuredShowtimes.push(formatted);
-        }
-      }
-      renderShowtimeTags();
-      showToast('Added ' + numWeeks + ' weekly dates!');
-    }
-
-    async function handleDesktopImageSelected(inputEl) {
-      var file = inputEl.files[0];
-      if (!file) return;
-
-      var statusEl = document.getElementById('uploadStatusText');
-      var thumb = document.getElementById('imagePreviewThumb');
-      var thumbContainer = document.getElementById('imagePreviewContainer');
-      var urlInput = document.getElementById('uploadedImageUrl');
-
-      thumb.src = URL.createObjectURL(file);
-      thumbContainer.classList.remove('hidden');
-      statusEl.textContent = 'Uploading to Supabase...';
-
-      try {
-        var cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        var filePath = 'posters/' + Date.now() + '_' + cleanName;
-
-        var res = await supabaseClient.storage.from('show-posters').upload(filePath, file, { upsert: true });
-        if (res.error) {
-          statusEl.textContent = 'Upload failed.';
-          return;
-        }
-
-        var pubData = supabaseClient.storage.from('show-posters').getPublicUrl(filePath).data;
-        if (pubData && pubData.publicUrl) {
-          urlInput.value = pubData.publicUrl;
-          statusEl.textContent = '✓ Ready on Supabase Storage!';
-          showToast('Image uploaded!');
-          playChime(true);
-        }
-      } catch (err) {
-        statusEl.textContent = 'Upload failed.';
-      }
-    }
-
-    // Starts a GitHub Action through the "run-workflow" Supabase function,
-    // using the staff member's sign-in (no GitHub token on the device).
-    async function runWorkflow(workflow, inputs) {
-      try {
-        var res = await supabaseClient.functions.invoke('run-workflow', {
-          body: { workflow: workflow, inputs: inputs }
-        });
-        if (!res.error) return { ok: true };
-        var msg = res.error.message;
-        try {
-          var body = await res.error.context.json();
-          if (body && body.error) msg = body.error;
-        } catch (e) {}
-        return { ok: false, error: msg };
-      } catch (err) {
-        return { ok: false, error: 'network error' };
-      }
-    }
-
-    async function submitNewShowToPipeline() {
-      var title = document.getElementById('newTitle').value.trim();
-      var price = document.getElementById('newPrice').value.trim() || '20.00';
-      var capacity = parseInt(document.getElementById('newCapacity').value, 10) || 90;
-      var imageUrl = document.getElementById('uploadedImageUrl').value.trim();
-      var rawBio = document.getElementById('newBio').value.trim();
-
-      if (!title) {
-        showToast('Please enter an event title');
-        return;
-      }
-      if (configuredShowtimes.length === 0) {
-        showToast('Please add at least one showtime date');
-        return;
-      }
-
-      var btn = document.getElementById('publishShowBtn');
-      btn.disabled = true;
-      btn.textContent = '⏳ Dispatching to Pipeline...';
-
-      try {
-        var result = await runWorkflow('create_shopify_show.yml', {
-          comedian_name: title,
-          showtimes: configuredShowtimes.join(' | '),
-          ticket_price: price,
-          room_capacity: String(capacity),
-          bio: rawBio,
-          image_url: imageUrl
-        });
-
-        if (result.ok) {
-          showToast('🚀 "' + title + '" dispatched! Live in ~60s.');
-          playChime(true);
-        } else {
-          showToast('Dispatch failed: ' + result.error);
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '🚀 Publish Show to Shopify';
-      }
-    }
-
-    function copyActionInputs() {
-      var title = document.getElementById('newTitle').value.trim() || 'Show Title';
-      var showtimes = configuredShowtimes.join(' | ') || 'No showtimes configured';
-      var price = document.getElementById('newPrice').value.trim() || '20.00';
-      var capacity = document.getElementById('newCapacity').value.trim() || '90';
-      var imageUrl = document.getElementById('uploadedImageUrl').value.trim();
-      var bio = document.getElementById('newBio').value.trim();
-
-      var blurb = 'Show Title: ' + title + '\n' +
-                  'Showtimes: ' + showtimes + '\n' +
-                  'Price: ' + price + '\n' +
-                  'Capacity: ' + capacity + '\n' +
-                  'Image URL: ' + imageUrl + '\n\n' +
-                  'Description:\n' + bio;
-
-      fallbackCopyText(blurb, "Show details copied to clipboard!");
-    }
-
-    function compText(n) {
-      return n ? ', ' + n + ' comp' + (n > 1 ? 's' : '') : '';
-    }
-
-    function copyAllShowsSummary() {
-      if (!showSummaryData || showSummaryData.length === 0) {
-        showToast("No show data available to copy");
-        return;
-      }
-
-      var report = 'SISYPHUS BREWING - UPCOMING COMEDY SHOW COUNTS (' + new Date().toLocaleDateString() + '):\n\n';
-      showSummaryData.forEach(function(s) {
-        report += '• ' + s.show_title + ' (' + s.show_date + '): ' + s.totalTickets + ' sold (Web: ' + s.websiteTickets + ', Dojour: ' + s.dojourTickets + ')' + compText(s.compTickets) + '\n';
-      });
-
-      report += '\nGenerated via Sisyphus Door System.';
-      fallbackCopyText(report, "Copied all shows overview to clipboard!");
-    }
-
-    // Every upcoming showtime for one comedian/title, soonest first.
-    function getRunForTitle(title) {
-      return showSummaryData.filter(function(s) { return s.show_title === title; });
-    }
-
-    function buildRunSummary(title) {
-      var run = getRunForTitle(title);
-      var lines = run.map(function(s) {
-        return '• ' + s.show_date + ': ' + s.totalTickets + ' sold (Web ' + s.websiteTickets + ', Dojour ' + s.dojourTickets + ')' + compText(s.compTickets);
-      });
-      var total = run.reduce(function(a, s) { return a + s.totalTickets; }, 0);
-      var comps = run.reduce(function(a, s) { return a + s.compTickets; }, 0);
-      return { run: run, lines: lines, total: total, comps: comps };
-    }
-
-    function copySingleShowSummary(title) {
-      var r = buildRunSummary(title);
-      if (!r.run.length) return;
-      var blurb = 'Ticket Count: ' + title + '\n' + r.lines.join('\n') +
-        (r.run.length > 1 ? '\nTotal across ' + r.run.length + ' shows: ' + r.total + ' sold' + compText(r.comps) : '');
-      fallbackCopyText(blurb, "Copied ticket update!");
-    }
-
-    function fallbackCopyText(text, successMsg) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function() {
-          showToast(successMsg || "Copied to clipboard!");
-          playChime(true);
-        }).catch(function() {
-          execCopy(text, successMsg);
-        });
-      } else {
-        execCopy(text, successMsg);
-      }
-    }
-
-    function execCopy(text, successMsg) {
-      var tempArea = document.createElement("textarea");
-      tempArea.value = text;
-      tempArea.style.position = "fixed";
-      tempArea.style.left = "-9999px";
-      document.body.appendChild(tempArea);
-      tempArea.select();
-      try {
-        document.execCommand('copy');
-        showToast(successMsg || "Copied to clipboard!");
-        playChime(true);
-      } catch (e) {
-        showToast("Unable to copy to clipboard");
-      }
-      document.body.removeChild(tempArea);
-    }
-
-    function emailAgent(title) {
-      var r = buildRunSummary(title);
-      if (!r.run.length) return;
-
-      var recipient = agentDirectory[title] || '';
-      if (!recipient) {
-        showToast('Add the agent\'s email first');
-        return;
-      }
-      var multi = r.run.length > 1;
-      var subject = 'Ticket Count Update: ' + title + (multi ? '' : ' (' + r.run[0].show_date + ')') + ' - Sisyphus Brewing';
-      var body =
-        'Hi,\n\nHere are the current ticket counts for ' + title + ' at Sisyphus Brewing:\n\n' +
-        r.lines.join('\n') + '\n' +
-        (multi ? '\nTotal across ' + r.run.length + ' shows: ' + r.total + ' sold' + compText(r.comps) + '\n' : '') +
-        (r.comps ? '\n(Comps are not included in the sold counts.)\n' : '') +
-        '\nLet us know if you have any questions!\n\nBest,\nSisyphus Brewing';
-
-      window.location.href = 'mailto:' + encodeURIComponent(recipient).replace(/%40/g, '@') +
-        '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-    }
-
-    function playChime(success) {
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        var osc = audioCtx.createOscillator();
-        var gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(success ? 880 : 300, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.15);
-      } catch (e) {}
-    }
-
-    function showToast(msg) {
-      var toast = document.getElementById('toast');
-      var toastMsg = document.getElementById('toastMsg');
-      if (!toast || !toastMsg) return;
-      toastMsg.textContent = msg;
-      toast.classList.remove('opacity-0');
-      toast.classList.add('opacity-100');
-      setTimeout(function() {
-        toast.classList.remove('opacity-100');
-        toast.classList.add('opacity-0');
-      }, 2200);
-    }
-
-    // Turns "Sat, Apr 3 • 7:00 PM" into a timestamp. When no year is written,
-    // the weekday decides it: Apr 3 is a Saturday in 2027, not 2026.
-    function parseShowDateToMillis(str) {
-      if (!str) return 0;
-      var months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
-      var weekdays = { sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6 };
-
-      var md = str.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})\b/i);
-      if (!md) return 0;
-      var month = months[md[1].toLowerCase().slice(0, 3)];
-      var day = parseInt(md[2], 10);
-
-      var hour = 19, minute = 0;
-      var tm = str.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
-      if (tm) {
-        hour = parseInt(tm[1], 10) % 12;
-        minute = tm[2] ? parseInt(tm[2], 10) : 0;
-        if (tm[3].toLowerCase() === 'pm') hour += 12;
-      }
-
-      var ym = str.match(/\b(20\d{2})\b/);
-      if (ym) return new Date(parseInt(ym[1], 10), month, day, hour, minute).getTime();
-
-      var now = new Date();
-      var candidates = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(function(y) {
-        return new Date(y, month, day, hour, minute);
-      }).filter(function(d) { return d.getMonth() === month; });   // drops Feb 29 in non-leap years
-
-      var wd = str.match(/^\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)/i);
-      if (wd) {
-        var target = weekdays[wd[1].toLowerCase()];
-        var matching = candidates.filter(function(d) { return d.getDay() === target; });
-        if (matching.length) candidates = matching;
-      }
-      if (!candidates.length) return 0;
-
-      var floor = now.getTime() - 60 * 24 * 60 * 60 * 1000;
-      var upcoming = candidates.filter(function(d) { return d.getTime() >= floor; });
-      var pick = upcoming.length ? upcoming[0] : candidates[candidates.length - 1];
-      return pick.getTime();
+    // The show at the door right now: the last one that starts within the hour.
+    function pickDefaultShow() {
+      var soon = Date.now() + 60 * 60 * 1000;
+      var pick = shows[0];
+      shows.forEach(function (s) { if (s.ts && s.ts <= soon) pick = s; });
+      return pick;
     }
 
     async function loadShows() {
-      var select = document.getElementById('showSelector');
-      var prev = select.value;
+      var res = await sb.rpc('door_shows');
+      if (res.error) { toast('Couldn’t load tonight: ' + res.error.message, true); return; }
+      shows = (res.data || []).map(function (s) {
+        s.ts = parseShowDateToMillis(s.show_date);
+        return s;
+      }).sort(function (a, b) { return a.ts - b.ts; });
 
-      try {
-        var res = await fetchAllTicketRows('show_date, show_title');
-        if (res.error || !res.data) {
-          select.innerHTML = '<option value="">No shows loaded</option>';
-          return;
-        }
-
-        var uniqueShows = [];
-        var seen = new Set();
-        var now = Date.now();
-        var GRACE = 12 * 60 * 60 * 1000;
-
-        res.data.forEach(function(d) {
-          var key = d.show_date + ' • ' + d.show_title;
-          if (!seen.has(key)) {
-            seen.add(key);
-            var ts = parseShowDateToMillis(d.show_date);
-            if (ts && ts < (now - GRACE)) return;
-            uniqueShows.push({
-              show_date: d.show_date,
-              show_title: d.show_title,
-              label: key,
-              timestamp: ts || Number.MAX_SAFE_INTEGER
-            });
-          }
-        });
-
-        uniqueShows.sort(function(a, b) { return a.timestamp - b.timestamp; });
-        allUpcomingShows = uniqueShows;
-
-        if (uniqueShows.length === 0) {
-          select.innerHTML = '<option value="">No upcoming shows found</option>';
-          return;
-        }
-
-        select.innerHTML = uniqueShows.map(function(s) {
-          return '<option value="' + encodeURIComponent(JSON.stringify(s)) + '">' + escapeHtml(s.label) + '</option>';
-        }).join('');
-
-        if (prev) {
-          for (var i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === prev) {
-              select.selectedIndex = i;
-              break;
-            }
-          }
-        }
-        await loadTicketsForCurrentShow();
-      } catch (err) {
-        console.error("loadShows error:", err);
-      }
-    }
-
-    async function loadTicketsForCurrentShow() {
-      var select = document.getElementById('showSelector');
-      if (!select.value) return;
-
-      try {
-        var show = JSON.parse(decodeURIComponent(select.value));
-        var res = await supabaseClient
-          .from('tickets')
-          .select('*')
-          .eq('show_date', show.show_date)
-          .eq('show_title', show.show_title)
-          .order('guest_name');
-
-        tickets = res.data || [];
-        document.getElementById('compShowLabel').textContent = show.label || (show.show_date + ' • ' + show.show_title);
-        renderList();
-        updateStats();
-      } catch (err) {
-        console.error("loadTickets error:", err);
-      }
-    }
-
-    async function manualRefresh() {
-      var icon = document.getElementById('refreshIcon');
-      var label = document.getElementById('refreshLabel');
-      if (icon) icon.classList.add('animate-spin');
-      if (label) label.textContent = 'Syncing...';
-
-      var result = await runWorkflow('daily_sync.yml', {});
-      showToast(result.ok ? 'Sync action triggered!' : 'Sync failed: ' + result.error);
-
-      setTimeout(async function() {
-        await loadShows();
-        if (icon) icon.classList.remove('animate-spin');
-        if (label) label.textContent = 'Sync';
-      }, 5000);
-    }
-
-    async function loadAllShowsReport() {
-      var container = document.getElementById('reportsList');
-      container.innerHTML = '<div class="text-center text-slate-500 py-10">Loading ticket counts...</div>';
-
-      try {
-        var results = await Promise.all([
-          fetchAllTicketRows('show_date, show_title, tickets, source'),
-          supabaseClient.from('show_agents').select('show_title, agent_email')
-        ]);
-        var tRes = results[0], aRes = results[1];
-
-        var data = tRes.data || [];
-        var agentRecords = aRes.data || [];
-        agentDirectory = {};
-        agentRecords.forEach(function(a) {
-          if (a.show_title && a.agent_email) agentDirectory[a.show_title.trim()] = a.agent_email.trim();
-        });
-
-        var showMap = {};
-        var now = Date.now();
-        var GRACE = 12 * 60 * 60 * 1000;
-
-        data.forEach(function(t) {
-          if (!t.show_date || !t.show_title) return;
-          var key = t.show_date.trim() + ' • ' + t.show_title.trim();
-          var ts = parseShowDateToMillis(t.show_date);
-          if (ts && ts < (now - GRACE)) return;
-
-          if (!showMap[key]) {
-            showMap[key] = {
-              show_date: t.show_date.trim(),
-              show_title: t.show_title.trim(),
-              timestamp: ts || Number.MAX_SAFE_INTEGER,
-              totalTickets: 0,
-              websiteTickets: 0,
-              dojourTickets: 0,
-              compTickets: 0
-            };
-          }
-
-          var count = parseInt(t.tickets, 10) || 1;
-          if (t.source === 'Comp') {
-            showMap[key].compTickets += count;          // comps are not "sold"
-          } else {
-            showMap[key].totalTickets += count;
-            if (t.source === 'Website') showMap[key].websiteTickets += count;
-            else showMap[key].dojourTickets += count;
-          }
-        });
-
-        showSummaryData = Object.values(showMap);
-        showSummaryData.sort(function(a, b) { return a.timestamp - b.timestamp; });
-
-        if (showSummaryData.length === 0) {
-          container.innerHTML = '<div class="text-center text-slate-500 py-10">No upcoming shows found.</div>';
-          return;
-        }
-
-        container.innerHTML = showSummaryData.map(function(s) {
-          var titleArg = jsArg(s.show_title);
-          var agentEmail = agentDirectory[s.show_title] || '';
-          var runCount = getRunForTitle(s.show_title).length;
-          var emailLabel = runCount > 1 ? '✉️ Email (all ' + runCount + ')' : '✉️ Email';
-
-          return '<div class="p-4 rounded-xl border bg-slate-900 border-slate-800 space-y-3">' +
-            '<div class="flex items-start justify-between gap-2">' +
-              '<div class="min-w-0">' +
-                '<div class="font-bold text-base text-slate-100 break-words">' + escapeHtml(s.show_title) + '</div>' +
-                '<div class="text-xs text-amber-400 font-semibold">' + escapeHtml(s.show_date) + '</div>' +
-              '</div>' +
-              '<div class="text-right">' +
-                '<div class="text-xl font-black text-slate-100">' + s.totalTickets + '</div>' +
-                '<div class="text-[10px] uppercase font-bold text-slate-400">Total Sold</div>' +
-              '</div>' +
-            '</div>' +
-            '<div class="flex flex-wrap items-center gap-3 text-xs text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">' +
-              '<div>🌐 Web: <span class="font-bold text-indigo-400">' + s.websiteTickets + '</span></div>' +
-              '<div>🎟 Dojour: <span class="font-bold text-orange-400">' + s.dojourTickets + '</span></div>' +
-              (s.compTickets ? '<div>🎁 Comps: <span class="font-bold text-emerald-400">' + s.compTickets + '</span></div>' : '') +
-            '</div>' +
-            '<div class="pt-1 flex items-center justify-between gap-2">' +
-              '<input type="email" placeholder="Agent email..." value="' + escapeHtml(agentEmail) + '" onchange="saveAgentEmail(' + titleArg + ', this.value)" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-400" />' +
-              '<button onclick="emailAgent(' + titleArg + ')" class="touch-target px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold transition-all whitespace-nowrap">' + emailLabel + '</button>' +
-              '<button onclick="copySingleShowSummary(' + titleArg + ')" class="touch-target px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all">📋 Copy</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      } catch (err) {
-        container.innerHTML = '<div class="text-center text-rose-500 py-10">Error loading reports.</div>';
-      }
-    }
-
-    async function saveAgentEmail(title, email) {
-      var showTitle = String(title).trim();
-      var cleanEmail = email.trim();
-      if (!cleanEmail) return;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-        showToast('That doesn\'t look like an email address');
+      if (!shows.length) {
+        $('showChips').innerHTML = '';
+        $('guestList').innerHTML = '<div class="empty"><b>No shows tonight</b>The boulder rests. So can you.</div>';
+        guests = []; updateCount();
         return;
       }
+      $('tonightLabel').textContent = 'Tonight · ' + shows[0].show_date.split('•')[0].trim();
+      if (!currentShow()) currentKey = showKey(pickDefaultShow());
+      renderChips();
+      await loadGuests();
+    }
 
-      var res = await supabaseClient.from('show_agents').upsert({
-        show_title: showTitle,
-        agent_email: cleanEmail,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'show_title' });
+    function renderChips() {
+      var multiTitle = new Set(shows.map(function (s) { return s.show_title; })).size > 1;
+      $('showChips').innerHTML = shows.map(function (s) {
+        var on = showKey(s) === currentKey;
+        return '<button class="chip' + (on ? ' on' : '') + '" onclick="pickShow(' + jsArg(showKey(s)) + ')">' +
+          '<b>' + escapeHtml(showTime(s.show_date)) + '</b>' + (multiTitle || shows.length === 1 ? ' ' + escapeHtml(s.show_title) : '') +
+          '<small>' + s.checked_in + ' of ' + s.tickets + ' in</small></button>';
+      }).join('');
+    }
 
-      if (res.error) {
-        showToast('Failed to save to Supabase');
-      } else {
-        agentDirectory[showTitle] = cleanEmail;
-        showToast('Saved agent for "' + showTitle + '"!');
-        playChime(true);
-        loadAllShowsReport();   // fill the same email into this comedian's other showtimes
+    function pickShow(key) {
+      currentKey = key;
+      doneOpen = false;
+      renderChips();
+      $('guestList').innerHTML = '<div class="empty">Loading…</div>';
+      loadGuests();
+    }
+
+    async function loadGuests() {
+      var s = currentShow();
+      if (!s) return;
+      var res = await sb.rpc('door_guests', { p_show_date: s.show_date, p_show_title: s.show_title });
+      if (res.error) { toast('Couldn’t load the list: ' + res.error.message, true); return; }
+      if (showKey(s) !== currentKey) return;   // switched shows while loading
+      guests = res.data || [];
+      render();
+    }
+
+    function render() {
+      renderGuests($('guestList'), guests, { query: $('search').value, showDoneOpen: doneOpen, toggleFn: 'toggleDone' });
+      updateCount();
+    }
+
+    function toggleDone() { doneOpen = !doneOpen; render(); }
+
+    function updateCount() {
+      var total = guests.reduce(function (a, t) { return a + (t.tickets || 1); }, 0);
+      var inside = guests.reduce(function (a, t) { return a + (t.checked_in_count || 0); }, 0);
+      $('countIn').textContent = total ? inside + '/' + total : '–';
+      $('countOf').textContent = 'checked in';
+      $('meter').style.width = total ? Math.round(inside / total * 100) + '%' : '0';
+      var s = currentShow();
+      if (s) { s.tickets = total; s.checked_in = inside; renderChips(); }
+    }
+
+    async function checkIn(id, count) {
+      var g = guests.find(function (t) { return t.unique_id === id; });
+      if (!g) return;
+      var before = g.checked_in_count;
+      g.checked_in_count = count;
+      render();
+      chime(count > before);
+      var res = await sb.rpc('door_check_in', { p_unique_id: id, p_count: count });
+      if (res.error || !res.data || !res.data.length) {
+        g.checked_in_count = before;
+        render();
+        chime(false);
+        toast('Not saved. Check the wifi and tap again.', true);
       }
     }
 
-    async function updateCheckIn(uniqueId, newCount) {
-      var record = tickets.find(function(t) { return t.unique_id === uniqueId; });
-      if (!record) return;
-
-      var previous = {
-        checked_in_count: record.checked_in_count,
-        checked_in: record.checked_in,
-        check_in_time: record.check_in_time
-      };
-      var checkedIn = newCount > 0;
-      var checkInTime = checkedIn ? new Date().toISOString() : null;
-
-      record.checked_in_count = newCount;
-      record.checked_in = checkedIn;
-      record.check_in_time = checkInTime;
-      renderList();
-      updateStats();
-      playChime(checkedIn);
-
-      // .select() makes Supabase return the saved row, so we can tell if the
-      // save was silently blocked (e.g. expired login) instead of assuming it worked.
-      var res = await supabaseClient
-        .from('tickets')
-        .update({ checked_in_count: newCount, checked_in: checkedIn, check_in_time: checkInTime })
-        .eq('unique_id', uniqueId)
-        .select('unique_id');
-
-      if (res.error || !res.data || res.data.length === 0) {
-        record.checked_in_count = previous.checked_in_count;
-        record.checked_in = previous.checked_in;
-        record.check_in_time = previous.check_in_time;
-        renderList();
-        updateStats();
-        playChime(false);
-        showToast('⚠️ Check-in NOT saved — check connection and tap again');
-      }
+    async function sync() {
+      $('syncIcon').classList.add('spin');
+      var r = await runWorkflow('daily_sync.yml', {});
+      toast(r.ok ? 'Pulling in new sales. Give it a minute.' : 'Sync failed: ' + r.error, !r.ok);
+      setTimeout(async function () { await loadShows(); $('syncIcon').classList.remove('spin'); }, 5000);
     }
 
-    function toggleCompForm(forceOpen) {
-      var form = document.getElementById('compForm');
-      var btn = document.getElementById('addCompToggle');
-      var open = typeof forceOpen === 'boolean' ? forceOpen : form.classList.contains('hidden');
-      if (open && !document.getElementById('showSelector').value) {
-        showToast('Pick a show first');
-        return;
-      }
-      form.classList.toggle('hidden', !open);
-      btn.classList.toggle('hidden', open);
-      if (open) document.getElementById('compName').focus();
-      else form.reset();
-    }
-
-    async function submitComp(e) {
-      e.preventDefault();
-      var select = document.getElementById('showSelector');
-      if (!select.value) { showToast('Pick a show first'); return; }
-      var show = JSON.parse(decodeURIComponent(select.value));
-
-      var name = document.getElementById('compName').value.trim();
-      var count = parseInt(document.getElementById('compCount').value, 10) || 1;
-      var note = document.getElementById('compNote').value.trim();
-      if (!name) { showToast('Enter the guest name'); return; }
-
-      var btn = document.getElementById('compSaveBtn');
-      btn.disabled = true;
-      btn.textContent = 'Saving...';
-
-      var id = 'comp_' + (window.crypto && crypto.randomUUID
-        ? crypto.randomUUID()
-        : Date.now() + '_' + Math.random().toString(36).slice(2));
-
-      try {
-        var res = await supabaseClient.from('tickets').insert({
-          unique_id: id,
-          show_date: show.show_date,
-          show_title: show.show_title,
-          guest_name: name,
-          email: note ? 'Comp: ' + note : 'Comp',
-          tickets: count,
-          source: 'Comp',
-          checked_in: false,
-          checked_in_count: 0,
-          check_in_time: null
-        });
-        if (res.error) {
-          showToast('Could not add comp: ' + res.error.message);
-          playChime(false);
-          return;
-        }
-        toggleCompForm(false);
-        showToast('🎁 Comp added for ' + name);
-        playChime(true);
-        await loadTicketsForCurrentShow();
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Add Comp';
-      }
-    }
-
-    async function removeComp(uniqueId) {
-      var record = tickets.find(function(t) { return t.unique_id === uniqueId; });
-      if (!record || record.source !== 'Comp') return;
-      if (!confirm('Remove comp for ' + record.guest_name + '?')) return;
-
-      var res = await supabaseClient.from('tickets').delete()
-        .eq('unique_id', uniqueId).eq('source', 'Comp').select('unique_id');
-      if (res.error || !res.data || res.data.length === 0) {
-        showToast('Could not remove comp' + (res.error ? ': ' + res.error.message : ''));
-        return;
-      }
-      showToast('Comp removed');
-      await loadTicketsForCurrentShow();
-    }
-
-    function toggleCheckedInTray() {
-      checkedInCollapsed = !checkedInCollapsed;
-      renderList();
-    }
-
-    function renderTicketCard(t) {
-      var isComplete = t.checked_in_count >= t.tickets;
-      var isPartial = t.checked_in_count > 0 && !isComplete;
-      var isComp = t.source === 'Comp';
-      var id = jsArg(t.unique_id);
-
-      var bgClass = isComplete ? 'bg-emerald-950/20 border-emerald-800/40 opacity-90' : (isPartial ? 'bg-amber-950/30 border-amber-800/60' : 'bg-slate-900 border-slate-800 shadow-sm');
-      var sourceClass = t.source === 'Website' ? 'bg-indigo-900/60 text-indigo-300'
-        : (isComp ? 'bg-emerald-900/60 text-emerald-300' : 'bg-orange-900/60 text-orange-300');
-
-      var btnHtml = '';
-      if (t.tickets === 1) {
-        var actionText = t.checked_in ? '✓ In' : 'Check In';
-        var actionBg = t.checked_in ? 'bg-emerald-600/90 text-white' : 'bg-slate-800 text-slate-200 border border-slate-700';
-        btnHtml = '<button onclick="updateCheckIn(' + id + ',' + (t.checked_in ? 0 : 1) + ')" class="touch-target px-4 py-2.5 rounded-lg text-sm font-bold ' + actionBg + '">' + actionText + '</button>';
-      } else {
-        btnHtml = '<div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg p-1">' +
-          '<button onclick="updateCheckIn(' + id + ', ' + Math.max(0, t.checked_in_count - 1) + ')" class="w-10 h-10 rounded bg-slate-800 text-slate-200 font-bold">-</button>' +
-          '<span class="w-12 text-center text-xs font-extrabold ' + (isComplete ? 'text-emerald-400' : 'text-amber-400') + '">' + t.checked_in_count + '/' + t.tickets + '</span>' +
-          '<button onclick="updateCheckIn(' + id + ', ' + Math.min(t.tickets, t.checked_in_count + 1) + ')" class="w-10 h-10 rounded bg-slate-800 text-slate-200 font-bold">+</button>' +
-        '</div>';
-      }
-
-      var removeHtml = isComp
-        ? '<button onclick="removeComp(' + id + ')" title="Remove comp" class="ml-2 text-[11px] text-slate-500 hover:text-rose-400 underline">remove</button>'
-        : '';
-
-      // VIP / premium seating badge (General Admission shows nothing extra)
-      var ticketType = (t.ticket_type || '').trim();
-      var typeLower = ticketType.toLowerCase();
-      var isVip = typeLower.indexOf('vip') !== -1 || typeLower.indexOf('premium') !== -1 || typeLower.indexOf('reserved') !== -1;
-      var vipLabel = typeLower.indexOf('vip') !== -1 ? 'VIP' : (typeLower.indexOf('premium') !== -1 ? 'Premium' : 'Reserved');
-      var typeHtml = isVip
-        ? '<span title="' + escapeHtml(ticketType) + '" class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-400 text-slate-950">★ ' + vipLabel + '</span>'
-        : (ticketType && typeLower !== 'general admission'
-            ? '<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-700 text-slate-200">' + escapeHtml(ticketType) + '</span>'
-            : '');
-      if (isVip && !isComplete) bgClass += ' border-l-4 border-l-amber-400';
-
-      return '<div class="p-3.5 rounded-xl border ' + bgClass + '">' +
-        '<div class="flex items-start justify-between gap-2">' +
-          '<div class="min-w-0">' +
-            '<div class="font-bold text-base text-slate-100 break-words">' + (isComplete ? '<span class="text-emerald-400 mr-1">✓</span>' : '') + escapeHtml(t.guest_name) + '</div>' +
-            '<div class="text-xs text-slate-400 break-all">' + escapeHtml(t.email || 'No email provided') + '</div>' +
-            '<div class="flex flex-wrap items-center gap-2 mt-1.5">' +
-              typeHtml +
-              '<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ' + sourceClass + '">' + escapeHtml(t.source) + '</span>' +
-              '<span class="text-xs font-semibold text-slate-300">' + t.tickets + ' Ticket' + (t.tickets > 1 ? 's' : '') + '</span>' +
-              removeHtml +
-            '</div>' +
-          '</div>' +
-          '<div class="flex items-center gap-1.5 flex-shrink-0">' + btnHtml + '</div>' +
-        '</div>' +
-      '</div>';
-    }
-
-    function renderList() {
-      var query = document.getElementById('searchInput').value.toLowerCase().trim();
-      var container = document.getElementById('guestList');
-
-      if (!tickets || tickets.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-500 py-10">No guests found for this show.</div>';
-        return;
-      }
-
-      var filtered = tickets.filter(function(t) {
-        return (t.guest_name || '').toLowerCase().includes(query) || (t.email && t.email.toLowerCase().includes(query));
-      });
-
-      if (filtered.length === 0) {
-        container.innerHTML = '<div class="text-center text-slate-500 py-10">No guests match "' + escapeHtml(query) + '"</div>';
-        return;
-      }
-
-      var pending = filtered.filter(function(t) { return t.checked_in_count < t.tickets; });
-      var completed = filtered.filter(function(t) { return t.checked_in_count >= t.tickets; });
-      var isExpanded = query.length > 0 ? true : !checkedInCollapsed;
-
-      var html = '';
-      if (pending.length > 0) {
-        html += '<div class="space-y-2.5"><span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Awaiting Arrival (' + pending.length + ')</span>' +
-          pending.map(renderTicketCard).join('') + '</div>';
-      } else if (!query) {
-        html += '<div class="bg-emerald-950/20 border border-emerald-800/40 rounded-2xl p-6 text-center text-emerald-300 font-bold">🎉 All Guests Checked In!</div>';
-      }
-
-      if (completed.length > 0) {
-        html += '<div class="pt-4 border-t border-slate-800/80 space-y-2.5">' +
-          '<button type="button" onclick="toggleCheckedInTray()" class="w-full flex items-center justify-between bg-slate-900 border border-slate-800 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-300">' +
-            '<span>Checked In (' + completed.length + ')</span>' +
-            '<span>' + (isExpanded ? 'Hide' : 'Show') + '</span>' +
-          '</button>' +
-          '<div class="' + (isExpanded ? 'space-y-2.5' : 'hidden') + '">' + completed.map(renderTicketCard).join('') + '</div>' +
-        '</div>';
-      }
-
-      container.innerHTML = html;
-    }
-
-    function updateStats() {
-      var totalSold = tickets.reduce(function(acc, t) { return acc + t.tickets; }, 0);
-      var totalChecked = tickets.reduce(function(acc, t) { return acc + t.checked_in_count; }, 0);
-      var pct = totalSold ? Math.round((totalChecked / totalSold) * 100) : 0;
-      document.getElementById('statsBadge').textContent = totalChecked + ' / ' + totalSold + ' In (' + pct + '%)';
-    }
-
-    document.getElementById('searchInput').addEventListener('input', function(e) {
-      document.getElementById('clearSearch').classList.toggle('hidden', !e.target.value);
-      renderList();
+    $('search').addEventListener('input', function () {
+      $('searchClear').classList.toggle('hidden', !this.value);
+      render();
     });
-    document.getElementById('clearSearch').addEventListener('click', function() {
-      document.getElementById('searchInput').value = '';
+    $('searchClear').addEventListener('click', function () {
+      $('search').value = '';
       this.classList.add('hidden');
-      renderList();
-    });
-    document.getElementById('showSelector').addEventListener('change', function() {
-      toggleCompForm(false);
-      loadTicketsForCurrentShow();
-    });
-    document.getElementById('compForm').addEventListener('submit', submitComp);
-
-    // Keep multiple door devices in step: refresh the open show every 30 seconds.
-    setInterval(function() {
-      if (isAuthenticated && currentTab === 'door' && !document.hidden) {
-        loadTicketsForCurrentShow();
-      }
-    }, 30000);
-
-    // Form Submit Event Listener
-    document.getElementById('loginForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      var email = document.getElementById('staffEmail').value.trim();
-      var password = document.getElementById('staffPassword').value;
-      var errorMsg = document.getElementById('loginError');
-      var btn = document.getElementById('loginBtn');
-
-      errorMsg.classList.add('hidden');
-      btn.disabled = true;
-      btn.textContent = 'Verifying...';
-
-      try {
-        var res = await supabaseClient.auth.signInWithPassword({
-          email: email,
-          password: password
-        });
-
-        if (res.error) {
-          errorMsg.textContent = res.error.message;
-          errorMsg.classList.remove('hidden');
-          return;
-        }
-
-        isAuthenticated = true;
-        document.getElementById('lockModal').classList.add('hidden');
-        document.getElementById('staffPassword').value = '';
-        initApp();
-      } catch (err) {
-        errorMsg.textContent = 'Login failed. Check network connection.';
-        errorMsg.classList.remove('hidden');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Sign In';
-      }
+      render();
+      $('search').focus();
     });
 
-    async function handleStaffSignOut() {
-      await supabaseClient.auth.signOut();
-      isAuthenticated = false;
-      document.getElementById('lockModal').classList.remove('hidden');
-      tickets = [];
-      renderList();
-    }
-
-    async function checkAuthSession() {
-      try {
-        var res = await supabaseClient.auth.getSession();
-        if (res.data && res.data.session) {
-          isAuthenticated = true;
-          document.getElementById('lockModal').classList.add('hidden');
-          initApp();
-        } else {
-          isAuthenticated = false;
-          document.getElementById('lockModal').classList.remove('hidden');
-        }
-
-        supabaseClient.auth.onAuthStateChange(function(event, session) {
-          if (event === 'SIGNED_OUT' || !session) {
-            isAuthenticated = false;
-            document.getElementById('lockModal').classList.remove('hidden');
-          } else if (event === 'SIGNED_IN' && session) {
-            isAuthenticated = true;
-            document.getElementById('lockModal').classList.add('hidden');
-          }
-        });
-      } catch (e) {
-        document.getElementById('lockModal').classList.remove('hidden');
-      }
-    }
-
-    function initApp() {
-      try { localStorage.removeItem('sisyphus_gh_pat'); } catch (e) {}
-      loadShows();
-    }
-
-    checkAuthSession();
+    setupSignIn(async function (role) {
+      var u = (await sb.auth.getUser()).data.user;
+      $('whoami').textContent = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
+      $('managerLink').classList.toggle('hidden', role !== 'manager');
+      await loadShows();
+      // Keep every door device in step.
+      setInterval(function () { if (!document.hidden) loadShows(); }, 20000);
+    });
   </script>
 </body>
 </html>
