@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sam's Tank · Pitches</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <style>
+    #lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    #lock .card { width: 100%; max-width: 360px; }
+    #lock h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 4px; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 16px 0 8px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: #d9d6d6; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+    .chip.on { background: var(--slate); border-color: var(--slate); color: #fff; }
+    .pitch { margin-bottom: 12px; }
+    .pitch.winner { border-color: var(--ok); }
+    .p-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .p-name { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 20px; line-height: 1.15; padding-top: 2px; }
+    .p-sub { color: var(--slate-light); font-size: 14px; margin-top: 3px; }
+    .p-line { color: #fff; font-size: 17px; margin: 10px 0 0; }
+    .p-more { color: #d9d6d6; font-size: 14px; margin-top: 8px; white-space: pre-wrap; word-break: break-word; }
+    .p-more b { color: var(--slate-light); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .p-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+    .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .seg button { border: 0; background: transparent; color: #d9d6d6; font-weight: 600; font-size: 14px; padding: 8px 12px; min-height: 36px; cursor: pointer; }
+    .seg button.on { background: var(--slate); color: #fff; }
+    .seg button.on[data-s=winner] { background: var(--ok); color: #1d2a20; }
+    .notes { margin-top: 10px; min-height: 60px; font-size: 15px; }
+    .pill.new { background: var(--slate); border-color: var(--slate); color: #fff; }
+    .pill.winner { background: var(--ok); color: #1d2a20; border-color: var(--ok); }
+    .pill.pass { color: var(--gray); }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #fff; color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 60; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fields.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <h2>Sam's Tank</h2>
+      <p class="help" style="margin:0 0 14px">Same sign-in as the door app.</p>
+      <form id="loginForm">
+        <div class="field"><label>Email</label><input class="input" id="email" type="email" required autocomplete="email"></div>
+        <div class="field" style="margin-top:10px"><label>Password</label><input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError" style="margin-top:10px"></div>
+        <button class="btn btn-primary" id="loginBtn" type="submit" style="width:100%;margin-top:14px">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap hdr">
+      <div class="hdr-brand">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Sam's Tank<small id="count">Pitches</small></div>
+      </div>
+      <div class="hdr-right">
+        <a class="btn btn-sm" href="https://www.sisyphusbrewing.com/pages/sams-tank" target="_blank" rel="noopener">The form</a>
+        <button class="btn btn-sm" id="signOut" type="button">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="chips" id="chips"></div>
+    <div id="list"></div>
+  </main>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var $ = function (id) { return document.getElementById(id); };
+    var STATUSES = [['new', 'New'], ['maybe', 'Maybe'], ['winner', 'Winner'], ['pass', 'Pass']];
+    var FILTERS = [['all', 'All']].concat(STATUSES);
+    var pitches = [], filter = 'all';
+    var MORE = TANK_SECTIONS.reduce(function (a, s) { return a.concat(s.fields); }, [])
+      .filter(function (f) { return ['show_name', 'logline', 'video', 'video_url', 'name', 'email', 'phone', 'format', 'run'].indexOf(f.k) < 0; });
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function toast(m) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 1800); }
+    function day(d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+
+    function showLock(on) { $('lock').classList.toggle('hidden', !on); }
+    $('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…'; $('loginError').classList.add('hidden');
+      try {
+        var res = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+        if (res.error) { $('loginError').textContent = res.error.message; $('loginError').classList.remove('hidden'); return; }
+        $('password').value = ''; showLock(false); load();
+      } catch (err) { $('loginError').textContent = 'Could not reach the server.'; $('loginError').classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+    });
+    $('signOut').addEventListener('click', async function () { await sb.auth.signOut(); pitches = []; render(); showLock(true); });
+
+    async function load() {
+      var res = await sb.from('tank_pitches').select('*').order('created_at', { ascending: false });
+      if (res.error) { toast(res.error.message); return; }
+      pitches = res.data || []; render();
+    }
+    async function save(id, patch) {
+      var res = await sb.from('tank_pitches').update(patch).eq('id', id).select().single();
+      if (res.error) { toast('Save failed: ' + res.error.message); return; }
+      var i = pitches.findIndex(function (p) { return p.id === id; }); if (i >= 0) pitches[i] = res.data;
+      render(); toast('Saved');
+    }
+    async function watch(p) {
+      if (!p.video_path) { window.open(p.video_url, '_blank', 'noopener'); return; }
+      var w = window.open('', '_blank');
+      var res = await sb.storage.from('tank').createSignedUrl(p.video_path, 3600);
+      if (res.error) { if (w) w.close(); toast(res.error.message); return; }
+      if (w) w.location = res.data.signedUrl; else location.href = res.data.signedUrl;
+    }
+
+    function render() {
+      var n = pitches.length;
+      $('count').textContent = n + (n === 1 ? ' pitch' : ' pitches');
+      $('chips').innerHTML = FILTERS.map(function (f) {
+        var c = f[0] === 'all' ? n : pitches.filter(function (p) { return p.status === f[0]; }).length;
+        return '<button class="chip' + (filter === f[0] ? ' on' : '') + '" data-f="' + f[0] + '" type="button">' + f[1] + ' · ' + c + '</button>';
+      }).join('');
+      var rows = pitches.filter(function (p) { return filter === 'all' || p.status === filter; });
+      if (!rows.length) { $('list').innerHTML = '<div class="empty"><b>Nothing here</b>' + (n ? 'Try another filter.' : 'No pitches yet. The tank is empty.') + '</div>'; return; }
+      $('list').innerHTML = rows.map(function (p) {
+        var d = p.data || {};
+        var more = MORE.filter(function (f) { return d[f.k]; }).map(function (f) { return '<div class="p-more"><b>' + esc(f.label) + '</b><br>' + esc(d[f.k]) + '</div>'; }).join('');
+        var who = [p.name, p.email, p.phone].filter(Boolean).map(esc).join(' · ');
+        return '<div class="card pitch ' + p.status + '" data-id="' + p.id + '">' +
+          '<div class="p-top"><div><div class="p-name">' + esc(p.show_name) + '</div><div class="p-sub">' + esc([d.format, d.run].filter(Boolean).join(' · ')) + '</div></div>' +
+          '<span class="pill ' + p.status + '">' + day(p.created_at) + '</span></div>' +
+          (d.logline ? '<p class="p-line">' + esc(d.logline) + '</p>' : '') +
+          '<div class="p-more">' + who + '</div>' + more +
+          '<div class="p-actions"><button class="btn btn-primary btn-sm" data-act="watch" type="button">Watch the pitch</button>' +
+          '<a class="btn btn-sm" href="mailto:' + esc(p.email) + '?subject=' + encodeURIComponent("Sam's Tank: " + p.show_name) + '">Email</a>' +
+          '<div class="seg">' + STATUSES.map(function (s) { return '<button type="button" data-s="' + s[0] + '" class="' + (p.status === s[0] ? 'on' : '') + '">' + s[1] + '</button>'; }).join('') + '</div></div>' +
+          '<textarea class="input notes" placeholder="Notes">' + esc(p.staff_notes || '') + '</textarea></div>';
+      }).join('');
+    }
+
+    $('chips').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; render(); } });
+    $('list').addEventListener('click', function (e) {
+      var card = e.target.closest('.pitch'); if (!card) return;
+      var p = pitches.find(function (x) { return x.id === card.dataset.id; });
+      if (e.target.closest('[data-act=watch]')) { watch(p); return; }
+      var s = e.target.closest('[data-s]'); if (s && s.dataset.s !== p.status) save(p.id, { status: s.dataset.s });
+    });
+    $('list').addEventListener('change', function (e) {
+      if (!e.target.classList.contains('notes')) return;
+      var id = e.target.closest('.pitch').dataset.id;
+      save(id, { staff_notes: e.target.value.trim() || null });
+    });
+
+    (async function boot() {
+      var res = await sb.auth.getSession();
+      if (res.data && res.data.session) { showLock(false); load(); } else { showLock(true); }
+      sb.auth.onAuthStateChange(function (event, session) { if (event === 'SIGNED_OUT' || !session) showLock(true); });
+    })();
+  </script>
+</body>
+</html>

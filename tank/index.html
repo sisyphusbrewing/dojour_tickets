@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sam's Tank · Sisyphus</title>
+  <meta name="description" content="Pitch a monthly show at Sisyphus, the brewery and comedy club in Minneapolis. Two minutes, on video. Sam picks one.">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="fields.js"></script>
+  <style>
+    .post { margin-top: 22px; }
+    .post h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 40px; line-height: 1; margin: 6px 0 12px; }
+    .post p { color: #d9d6d6; font-size: 17px; margin: 0 0 12px; }
+    .post .big { color: #fff; font-size: 20px; line-height: 1.35; }
+    .steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+    .steps li { counter-increment: s; position: relative; padding: 0 0 12px 44px; color: #d9d6d6; font-size: 17px; }
+    .steps li::before { content: counter(s); position: absolute; left: 0; top: -2px; width: 30px; height: 30px; border-radius: 50%; background: var(--slate);
+                        color: #fff; font-family: var(--head); font-weight: 700; display: flex; align-items: center; justify-content: center; padding-top: 3px; }
+    .steps b { color: #fff; }
+    .post ul { margin: 0 0 4px; padding-left: 20px; color: #d9d6d6; font-size: 17px; }
+    .post li { margin-bottom: 6px; }
+    .facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+    .facts .pill { font-size: 12px; padding: 7px 11px 6px; }
+    .or { text-align: center; color: var(--gray); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: -4px 0; }
+    .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://www.sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Sam's Tank<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewForm">
+      <div class="post">
+        <div class="show-eyebrow">Pitches open · One monthly show</div>
+        <h1>Sam's Tank</h1>
+        <p class="big">Pitch me a show. Two minutes, on video. The best one gets a night a month at Sisyphus.</p>
+        <p>It's Shark Tank without the sharks. It's just me. I'm the tank.</p>
+        <div class="facts">
+          <span class="pill">2 minutes</span>
+          <span class="pill">Any format</span>
+          <span class="pill">1 winner</span>
+        </div>
+
+        <div class="band-wrap"><span class="band">How it works</span></div>
+        <ol class="steps">
+          <li><b>Film your pitch.</b> Phone is fine. Lighting is optional. Confidence is not.</li>
+          <li><b>Send it below.</b> A link or an upload.</li>
+          <li><b>I watch every one.</b> I pick one. That show gets the room once a month.</li>
+        </ol>
+
+        <div class="band-wrap"><span class="band">The rules</span></div>
+        <ul>
+          <li>Two minutes. I stop watching at 2:01. That's not a threat, it's a format.</li>
+          <li>Any kind of show. Stand-up, storytelling, a game show, a panel of people who are wrong about movies.</li>
+          <li>Tell me why it's funny, who it's for, and why it should be yours.</li>
+          <li>You get the stage, the sound, the lights and a room full of people holding beer. We'll talk details over one.</li>
+        </ul>
+      </div>
+
+      <form id="tankForm" autocomplete="on" novalidate>
+        <div id="sections"></div>
+        <div class="trap" aria-hidden="true"><label>Website <input id="website" tabindex="-1" autocomplete="off"></label></div>
+
+        <div class="submit-row">
+          <div class="err hidden" id="formError"></div>
+          <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Send my pitch</button>
+          <div class="help">Goes straight to me. I watch all of them. All two minutes.</div>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="done">
+        <div class="band-wrap"><span class="band">In the tank</span></div>
+        <p class="done-big">Pitch received.</p>
+        <p>I'll watch it. If it's the one, I'll call. If it's not, I still watched it, which is more than most people get from their family.</p>
+        <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var MAX_MB = 50;
+
+    // Embedded in sisyphusbrewing.com/pages/sams-tank: the site has its own
+    // header, and the iframe needs to know how tall we are.
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ tankHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+    function toTop() { if (framed) { try { parent.postMessage({ tankScrollTop: true }, '*'); } catch (e) {} } else { window.scrollTo(0, 0); } }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function fieldHtml(f) {
+      var id = 'f_' + f.k, attrs = ' id="' + id + '" name="' + f.k + '"' + (f.req ? ' required' : '') + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '');
+      var ctl;
+      if (f.type === 'textarea') ctl = '<textarea class="input"' + attrs + '></textarea>';
+      else if (f.type === 'select') ctl = '<select class="input"' + attrs + '><option value="">Pick one</option>' + f.options.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (f.type === 'file') ctl = '<div class="filebox"><input type="file" accept="video/*"' + attrs + '><div class="filepreview" id="' + id + '_preview"></div></div>';
+      else ctl = '<input class="input" type="' + (f.type || 'text') + '"' + attrs + '>';
+      return '<div class="field' + (f.full ? ' full' : '') + '"><label for="' + id + '">' + esc(f.label) + (f.req ? ' <span class="req">*</span>' : '') + '</label>' + ctl + (f.help ? '<div class="help">' + esc(f.help) + '</div>' : '') + '</div>';
+    }
+    $('sections').innerHTML = TANK_SECTIONS.map(function (s) {
+      var inner = s.fields.map(fieldHtml).join('');
+      if (s.title === 'The pitch') inner = inner.replace('<div class="field full"><label for="f_video"', '<div class="full or">or</div><div class="field full"><label for="f_video"');
+      return '<div class="band-wrap"><span class="band">' + esc(s.title) + '</span></div><div class="card"><div class="grid">' + inner + '</div></div>';
+    }).join('');
+    var fields = TANK_SECTIONS.reduce(function (a, s) { return a.concat(s.fields); }, []);
+
+    $('f_video').addEventListener('change', function () {
+      var el = $('f_video'), f = el.files && el.files[0], pv = $('f_video_preview'); pv.textContent = '';
+      if (!f) return;
+      if (f.size > MAX_MB * 1024 * 1024) { pv.textContent = 'That one is ' + Math.round(f.size / 1e6) + ' MB. Post it to YouTube (unlisted) and paste the link instead.'; el.value = ''; return; }
+      pv.textContent = f.name + ' · ' + (f.size / 1e6).toFixed(1) + ' MB';
+    });
+
+    function collect() {
+      var d = {};
+      fields.forEach(function (f) {
+        if (f.type === 'file') return;
+        var v = $('f_' + f.k).value.trim(); if (v) d[f.k] = v;
+      });
+      if (d.video_url && !/^https?:\/\//i.test(d.video_url)) d.video_url = 'https://' + d.video_url;
+      return d;
+    }
+    var draftKey = 'tank-draft';
+    function saveDraft() { try { localStorage.setItem(draftKey, JSON.stringify(collect())); } catch (e) {} }
+    try {
+      var saved = JSON.parse(localStorage.getItem(draftKey) || 'null') || {};
+      fields.forEach(function (f) { if (f.type !== 'file' && saved[f.k] != null) $('f_' + f.k).value = saved[f.k]; });
+    } catch (e) {}
+    $('tankForm').addEventListener('input', saveDraft);
+
+    $('tankForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = $('formError'), btn = $('sendBtn');
+      function fail(m) { err.textContent = m; err.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Send my pitch'; }
+      err.classList.add('hidden');
+      var form = $('tankForm');
+      if (!form.checkValidity()) {
+        var bad = form.querySelector(':invalid'); if (bad) { bad.focus(); bad.scrollIntoView({ block: 'center' }); }
+        return fail('A couple of required things are still blank.');
+      }
+      var file = $('f_video').files[0];
+      if (!$('f_video_url').value.trim() && !file) { $('f_video_url').scrollIntoView({ block: 'center' }); $('f_video_url').focus(); return fail('The video is the whole thing. Add a link or upload one.'); }
+      if ($('website').value) { $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden'); return; }  // bots
+
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        var videoPath = null;
+        if (file) {
+          btn.textContent = 'Uploading video…';
+          var rand = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+          videoPath = rand + '/' + file.name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(-80);
+          var up = await sb.storage.from('tank').upload(videoPath, file, { contentType: file.type || 'video/mp4', upsert: false });
+          if (up.error) throw new Error('Video upload failed: ' + up.error.message + '. A YouTube link works too.');
+          btn.textContent = 'Sending…';
+        }
+        var res = await sb.rpc('tank_pitch', { p_data: collect(), p_video_path: videoPath });
+        if (res.error) throw res.error;
+        try { localStorage.removeItem(draftKey); } catch (e2) {}
+        // Email it to us (best effort; the row is saved either way).
+        sb.functions.invoke('job-applied', { body: { id: res.data, kind: 'tank' } }).catch(function () {});
+        $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden'); toTop();
+      } catch (ex) {
+        fail((ex && ex.message) || 'Something broke. Try again, or email booking@sisyphusbrewing.com.');
+      }
+    });
+  </script>
+</body>
+</html>

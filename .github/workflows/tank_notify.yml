@@ -1,0 +1,35 @@
+name: Sam's Tank pitch
+
+# Someone pitched a show on tank/index.html (sisyphusbrewing.com/pages/sams-tank).
+# The "job-applied" Supabase function starts this, and it emails the pitch to
+# booking@ (tank_notify.py). Set the TANK_EMAIL_TO repo variable to send them
+# somewhere else.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pitch_id:
+        description: 'tank_pitches.id to email'
+        required: true
+        type: string
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email the pitch to booking
+        env:
+          PITCH_ID: ${{ inputs.pitch_id }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TANK_EMAIL_TO: ${{ vars.TANK_EMAIL_TO }}
+        run: python tank_notify.py
