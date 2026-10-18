@@ -85,6 +85,70 @@
               }
             },
             "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MUSIC\\nMUTE",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0004",
+                "connectionId": "xair",
+                "definitionId": "rtn_aux",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0003",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           }
         },
         "1": {
@@ -111,7 +175,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0004",
+                "id": "f0006",
                 "connectionId": "obs",
                 "definitionId": "recording",
                 "options": {
@@ -142,7 +206,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0003",
+                      "id": "a0005",
                       "connectionId": "obs",
                       "definitionId": "StartStopRecording",
                       "options": {},
@@ -180,7 +244,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0008",
+                "id": "f0010",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -207,7 +271,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0007",
+                      "id": "a0009",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -231,7 +295,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0006",
+                      "id": "a0008",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -262,7 +326,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0005",
+                      "id": "a0007",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -318,7 +382,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0012",
+                "id": "f0014",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -345,7 +409,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0011",
+                      "id": "a0013",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -369,7 +433,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0010",
+                      "id": "a0012",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -400,7 +464,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0009",
+                      "id": "a0011",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -456,7 +520,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0016",
+                "id": "f0018",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -479,7 +543,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0015",
+                      "id": "a0017",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -495,7 +559,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0014",
+                      "id": "a0016",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -518,7 +582,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0013",
+                      "id": "a0015",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -566,7 +630,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0020",
+                "id": "f0022",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -593,7 +657,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0019",
+                      "id": "a0021",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -617,7 +681,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0018",
+                      "id": "a0020",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -648,7 +712,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0017",
+                      "id": "a0019",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -724,7 +788,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0021",
+                      "id": "a0023",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -758,6 +822,62 @@
                         }
                       },
                       "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "PRINT\\nMENU",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1985658,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0024",
+                      "connectionId": "internal",
+                      "definitionId": "exec",
+                      "options": {
+                        "path": {
+                          "value": "start \"\" /min powershell -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://sisyphusbrewing.github.io/dojour_tickets/menu/print-menu.ps1')))\"",
+                          "isExpression": false
+                        },
+                        "cwd": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "timeout": {
+                          "value": 5000,
+                          "isExpression": false
+                        },
+                        "targetVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -814,7 +934,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0022",
+                      "id": "a0025",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -883,7 +1003,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0023",
+                      "id": "a0026",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -952,7 +1072,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0024",
+                      "id": "a0027",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1026,7 +1146,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0025",
+                      "id": "a0028",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1095,7 +1215,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0026",
+                      "id": "a0029",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1164,7 +1284,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0027",
+                      "id": "a0030",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1235,7 +1355,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0028",
+                      "id": "a0031",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
