@@ -219,7 +219,7 @@ def extract_tickets_count(res: dict) -> int:
 
 
 def dojour_ticket_type(res: dict):
-    """"Reserved Seating" (or VIP/Premium) when a Dojour reservation bought that tier, else None.
+    """"VIP / Reserved Seating" (or a VIP/Premium tier name) when a Dojour reservation bought that tier, else None.
     Dojour names a tier like "Reserved Seating - Sam Jay /// October 15-18"."""
     names = []
     for key in ("option_set", "full_ticket_set"):
@@ -231,7 +231,9 @@ def dojour_ticket_type(res: dict):
                     names += [str(d.get(k) or "") for k in ("title", "name", "label")]
     for name in names:
         if re.search(r"vip|premium|reserved", name, re.I):
-            return name.split(" - ", 1)[0].strip()
+            tier = name.split(" - ", 1)[0].strip()
+            # Match the website's "VIP / Reserved Seating" so the door list says VIP.
+            return tier if re.search(r"vip|premium", tier, re.I) else f"VIP / {tier}"
     return None
 
 
