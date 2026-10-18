@@ -1,9 +1,10 @@
 // Sisyphus - someone just sent a public form: a job application
-// (jobs/index.html) or a Sam's Tank pitch (tank/index.html, kind "tank").
+// (jobs/index.html), a Sam's Tank pitch (tank/index.html, kind "tank") or a
+// comic's notes on the comics pitch (comics/index.html, kind "comic").
 //
 // The form calls this with the new row's id. We check it is a real, fresh,
 // not-yet-emailed row with the service key, then start the GitHub Action that
-// emails it to booking@ (job_notify.yml or tank_notify.yml).
+// emails it to booking@ (job_notify.yml, tank_notify.yml or comic_notify.yml).
 //
 // Needs the same GITHUB_TOKEN secret as run-workflow (Edge Functions > Secrets).
 
@@ -11,6 +12,7 @@ const REPO = "sisyphusbrewing/dojour_tickets";
 const KINDS: Record<string, { table: string; workflow: string; input: string }> = {
   job: { table: "job_applications", workflow: "job_notify.yml", input: "application_id" },
   tank: { table: "tank_pitches", workflow: "tank_notify.yml", input: "pitch_id" },
+  comic: { table: "comic_feedback", workflow: "comic_notify.yml", input: "feedback_id" },
 };
 
 const CORS = {

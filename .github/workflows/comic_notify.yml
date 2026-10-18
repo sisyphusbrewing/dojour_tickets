@@ -1,0 +1,35 @@
+name: Comic feedback
+
+# A comic roasted the comics pitch (comics/index.html, last screen). The
+# "job-applied" Supabase function starts this, and it emails the notes to
+# booking@ (comic_notify.py). Set the COMIC_EMAIL_TO repo variable to send them
+# somewhere else.
+
+on:
+  workflow_dispatch:
+    inputs:
+      feedback_id:
+        description: 'comic_feedback.id to email'
+        required: true
+        type: string
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email the notes to booking
+        env:
+          FEEDBACK_ID: ${{ inputs.feedback_id }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          COMIC_EMAIL_TO: ${{ vars.COMIC_EMAIL_TO }}
+        run: python comic_notify.py
