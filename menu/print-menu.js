@@ -95,7 +95,9 @@
   };
   // Pour sizes for beers whose GoTab description has no "16oz" line: 16 oz, or 13 oz at 6.5% ABV and up.
   // List a beer here only when its pour breaks that rule, e.g. somebeer: '10 oz'.
-  var SB_SIZES = {};
+  var SB_SIZES = {
+    neverlastinggobstopper: '13 oz'
+  };
   // ?blurbs=0 drops the one-line beer descriptions for a tighter menu.
   var BLURBS = !/[?&]blurbs=0/.test(location.search);
   var box = document.getElementById('pm-menu'), sheet = document.getElementById('pm');
