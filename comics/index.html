@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus for Comics</title>
+  <meta name="description" content="Sisyphus is a 90-seat comedy club inside a brewery in Minneapolis. Comics get 100% of the door. Here's the short version.">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* The pitch for comics, one screen at a time: what you get when you tap a
+       Sisyphus card at a festival. Same brand as the site and the advance trip. */
+    :root {
+      --bg: #2b2929; --bg2: #232121; --card: #393636; --line: #4a4646; --slate: #4a6c86; --slate-dark: #3b586e; --slate-light: #a9c3d8;
+      --gray: #918f90; --white: #fff; --muted: #d9d6d6; --paper: #f4f1ea;
+      --head: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+      --body: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; color: var(--white); background: var(--bg); }
+    body { font-family: var(--body); font-size: 18px; line-height: 1.45; min-height: 100vh; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+    html.framed body { min-height: 0; border-radius: 14px; }
+    a { color: var(--slate-light); }
+    @media (prefers-reduced-motion: reduce) { .step, .boulder { animation: none !important; transition: none !important; } }
+
+    .wrap { max-width: 560px; margin: 0 auto; padding: 18px 18px 36px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+    .brand img { height: 38px; }
+    .brand b { font-family: var(--head); text-transform: uppercase; letter-spacing: .14em; font-size: 13px; line-height: 1.1; }
+    .brand small { display: block; font-family: var(--body); letter-spacing: .02em; text-transform: none; color: var(--slate-light); font-weight: 600; margin-top: 3px; }
+    .count { font-family: var(--head); font-size: 12px; letter-spacing: .12em; color: var(--gray); }
+
+    /* the hill: the boulder climbs it as you go */
+    .hill { margin: 14px 0 0; height: 46px; }
+    .hill svg { width: 100%; height: 100%; overflow: visible; display: block; }
+    .boulder { transition: transform .5s ease-out; }
+
+    .step { animation: rise .3s ease-out; touch-action: pan-y; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .band-wrap { margin: 18px 0 4px; padding: 8px 0; }
+    .band { display: inline-block; background: var(--slate); color: #fff; padding: 8px 16px 5px; font-family: var(--head); font-weight: 700; text-transform: uppercase;
+            letter-spacing: .14em; font-size: 13px; transform: rotate(-1.5deg);
+            box-shadow: 0 -4px 0 -1px var(--bg), 0 -6px 0 -1px #fff, 0 4px 0 -1px var(--bg), 0 6px 0 -1px #fff; }
+    h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; font-size: clamp(27px, 7.4vw, 38px); line-height: 1.08; margin: 14px 0 12px; }
+    p { margin: 0 0 14px; color: var(--muted); }
+    p b { color: var(--white); }
+    .sign { font-family: var(--head); font-weight: 700; letter-spacing: .08em; color: var(--white); margin-top: 6px; }
+
+    .photo { margin: 6px -18px 16px; }
+    .photo img { display: block; width: 100%; height: auto; }
+    @media (min-width: 560px) { .photo { margin: 6px 0 16px; } .photo img { border-radius: 12px; } }
+
+    .quote { margin: 20px 0 6px; padding: 16px 18px 14px; border-left: 3px solid var(--slate); background: var(--card); border-radius: 0 12px 12px 0; }
+    .quote em { display: block; font-size: 21px; color: var(--white); font-style: italic; line-height: 1.3; }
+    .quote span { display: block; margin-top: 6px; color: var(--gray); font-size: 14px; }
+
+    .facts { list-style: none; padding: 0; margin: 6px 0 0; border-top: 1px solid var(--line); }
+    .facts li { padding: 11px 0; border-bottom: 1px solid var(--line); font-weight: 600; display: flex; gap: 12px; align-items: baseline; }
+    .facts li span { color: var(--gray); font-weight: 400; }
+    .facts li::before { content: ''; flex: 0 0 8px; height: 8px; border-radius: 50%; background: var(--slate-light); transform: translateY(-2px); }
+
+    .money { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 16px; }
+    .money div { background: var(--paper); color: #2b2929; border-radius: 14px; padding: 16px 14px 12px; }
+    .money b { display: block; font-family: var(--head); font-weight: 700; font-size: clamp(34px, 11vw, 48px); line-height: 1; color: var(--slate); }
+    .money span { display: block; margin-top: 8px; font-weight: 700; font-size: 15px; line-height: 1.25; }
+    .money small { display: block; color: #5d5959; font-size: 13px; margin-top: 2px; }
+
+    .names { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 18px; padding: 0; list-style: none; }
+    .names li { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 15px; padding: 10px 12px 7px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+    .names li.big { background: var(--slate-dark); border-color: var(--slate); }
+
+    .nav { display: flex; align-items: center; gap: 10px; margin-top: 26px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; padding: 14px 22px 10px; border-radius: 12px; border: 0; cursor: pointer;
+           font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 16px; text-decoration: none; color: #fff; }
+    .btn:active { transform: scale(.98); }
+    .btn-go { flex: 1; background: var(--slate); }
+    .btn-go:hover { background: var(--slate-dark); }
+    .btn-back { background: transparent; color: var(--muted); border: 1px solid var(--line); min-width: 56px; padding: 12px 16px; letter-spacing: 0; font-size: 20px; }
+    .btn-line { background: transparent; border: 1px solid var(--line); color: var(--white); }
+    .stack { display: grid; gap: 10px; margin-top: 18px; }
+    .hint { text-align: center; color: var(--gray); font-size: 13px; margin-top: 12px; }
+    .camus { text-align: center; font-style: italic; color: var(--slate-light); margin: 30px 0 0; font-size: 15px; }
+    .foot { text-align: center; color: var(--gray); font-size: 13px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="https://www.sisyphusbrewing.com" target="_top">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <b>Sisyphus<small>Comedy &amp; beer · Minneapolis</small></b>
+      </a>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div class="hill" aria-hidden="true">
+      <svg viewBox="0 0 600 50" preserveAspectRatio="none">
+        <path id="hillPath" d="M10 44 C 150 43, 260 34, 360 22 S 520 8, 586 8" fill="none" stroke="#4a4646" stroke-width="3" stroke-linecap="round"/>
+        <g class="boulder" id="boulder"><circle r="9" fill="#918f90" stroke="#2b2929" stroke-width="2"/></g>
+      </svg>
+    </div>
+
+    <main id="stage"></main>
+
+    <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+    <p class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis · <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a></p>
+  </div>
+
+  <script>
+    var BOOK = 'mailto:booking@sisyphusbrewing.com?subject=' + encodeURIComponent('I tapped the card. I want a weekend.') +
+               '&body=' + encodeURIComponent('Name:\nAvails:\nClip:\nWhere we met:\n');
+
+    // Copy is Sam's voice: short, dry, first person. One joke a screen, then move on.
+    var STEPS = [
+      { band: 'For comics', title: 'You tapped a stranger\'s card at a festival.', html:
+        '<p>Bold. I respect it.</p>' +
+        '<p>This is <b>Sisyphus</b>, a comedy club inside a brewery in Minneapolis. Six short screens. Shorter than your tight five.</p>',
+        go: 'Start' },
+      { band: 'The name', title: 'Named after a guy who pushes a rock up a hill forever.', html:
+        '<p>Camus said we have to imagine him happy. I read that in college and it honestly kept me alive.</p>' +
+        '<p>So I opened a brewery, which is also pushing a rock up a hill. Then I added comedy. Same rock. Better lighting.</p>' +
+        '<div class="quote"><em>Il faut imaginer Sisyphe heureux.</em><span>One must imagine Sisyphus happy. Albert Camus</span></div>' },
+      { band: 'The room', title: 'Ninety seats. Built for comedy.', html:
+        '<div class="photo"><img src="room.jpg" alt="A packed Sisyphus showroom watching Michael Che"></div>' +
+        '<p>Low ceiling, dark room, candles on every table, the crowd sits close. A comedy club that happens to make its own beer. Not a brewery with a mic in the corner.</p>' +
+        '<ul class="facts"><li>90 seats <span>Friday and Saturday headliners</span></li><li>Thursday open mic <span>free, with a headliner</span></li><li>Minneapolis <span>next to Loring Park</span></li></ul>' },
+      { band: 'The money', title: 'You get 100% of the door.', html:
+        '<div class="money">' +
+          '<div><b>100%</b><span>of the door</span><small>to the comics</small></div>' +
+          '<div><b>$3</b><span>ticket fee</span><small>all of it to host + feature pay</small></div>' +
+        '</div>' +
+        '<p>All of it. I make my money selling beer to people who are laughing. That\'s the business plan. My accountant has notes.</p>' +
+        '<p>We settle up the night of the show.</p>' },
+      { band: 'Recent company', title: 'Who\'s been up lately.', html:
+        '<ul class="names">' +
+          ['Michael Che', 'Sam Jay', 'Sam Tallent', 'Geoff Asmus'].map(function (n) { return '<li class="big">' + n + '</li>'; }).join('') +
+          ['Punkie Johnson', 'Sabrina Wu', 'Michael Longfellow', 'Liz Miele', 'Ian Fidance', 'Tyler Horvath', 'Nathan Lund'].map(function (n) { return '<li>' + n + '</li>'; }).join('') +
+        '</ul>' +
+        '<p>Nathan Lund once ate dog food on stage because the show sold out. Not required. But it\'s on the table.</p>' },
+      { band: 'Your night', title: 'The Disney World of comedy.', html:
+        '<p>That\'s the goal. Fewer lawyers. Before the show you get a short trip on your phone, and then:</p>' +
+        '<ul class="facts">' +
+          '<li>A green room stocked with what you picked</li>' +
+          '<li>Your walk-on song <span>not the sound guy\'s</span></li>' +
+          '<li>A guest list, and a guest set for your funny friend</li>' +
+          '<li>Security that reads your notes</li>' +
+          '<li>Paid that night</li>' +
+        '</ul>' },
+      { band: 'Your turn', title: 'Want a weekend?', html:
+        '<p>Send me your avails and a clip. I read every one, usually from behind the bar.</p>' +
+        '<div class="stack">' +
+          '<a class="btn btn-go" href="' + BOOK + '" target="_top">Email for a date</a>' +
+          '<a class="btn btn-line" href="https://www.sisyphusbrewing.com/collections/comedy-and-events" target="_top">See who\'s coming up</a>' +
+          '<a class="btn btn-line" href="https://www.instagram.com/sisyphusbrewing/" target="_blank" rel="noopener">Instagram</a>' +
+        '</div>' +
+        '<p class="sign" style="margin-top:22px">-Sam</p>', last: true },
+    ];
+
+    var $ = function (id) { return document.getElementById(id); };
+    var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var i = Math.max(0, Math.min(STEPS.length - 1, parseInt((location.hash.match(/^#(\d+)$/) || [])[1] || '1', 10) - 1));
+
+    // Embedded in sisyphusbrewing.com/pages/comics: tell the page how tall we are.
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ comicsHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+    function toTop() {
+      if (framed) { try { parent.postMessage({ comicsScrollTop: true }, '*'); } catch (e) {} }
+      else window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    }
+
+    function render() {
+      var s = STEPS[i];
+      $('stage').innerHTML =
+        '<section class="step">' +
+          '<div class="band-wrap"><span class="band">' + s.band + '</span></div>' +
+          '<h1>' + s.title + '</h1>' + s.html +
+          '<div class="nav">' +
+            (i ? '<button class="btn btn-back" id="back" aria-label="Back">&larr;</button>' : '') +
+            (s.last ? '<button class="btn btn-line" id="again" style="flex:1">Start over</button>'
+                    : '<button class="btn btn-go" id="next">' + (s.go || 'Next') + ' &rarr;</button>') +
+          '</div>' +
+          (i === 0 ? '<p class="hint">Or swipe.</p>' : '') +
+        '</section>';
+      $('count').textContent = (i + 1) + ' / ' + STEPS.length;
+      var path = $('hillPath'), len = path.getTotalLength(), pt = path.getPointAtLength(len * i / (STEPS.length - 1));
+      $('boulder').setAttribute('transform', 'translate(' + pt.x + ',' + (pt.y - 9) + ')');
+      if ($('next')) $('next').onclick = next;
+      if ($('back')) $('back').onclick = back;
+      if ($('again')) $('again').onclick = function () { go(0); };
+      try { history.replaceState(null, '', i ? '#' + (i + 1) : location.pathname + location.search); } catch (e) {}
+    }
+    function go(n) { if (n < 0 || n >= STEPS.length || n === i) return; i = n; render(); toTop(); }
+    function next() { go(i + 1); }
+    function back() { go(i - 1); }
+
+    // swipe left/right anywhere on the card
+    var sx = null, sy = null;
+    document.addEventListener('touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (sx == null) return;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { dx < 0 ? next() : back(); }
+    }, { passive: true });
+    document.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') next(); if (e.key === 'ArrowLeft') back(); });
+
+    render();
+  </script>
+</body>
+</html>
