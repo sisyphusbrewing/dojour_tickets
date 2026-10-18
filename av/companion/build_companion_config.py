@@ -12,8 +12,10 @@ have to track Companion's newer, much more verbose button layout.
 
 Stream Deck + grid in Companion (4 columns):
     row 0, row 1  the 8 keys
-    row 2         the touch strip, one segment above each knob
-    row 3         the 4 knobs (turn = rotate actions, push = press actions)
+    row 2         the touch strip, one segment above each knob; it is the only
+                  screen the knobs have, so it labels them. Tap = press actions.
+                  A sideways swipe changes page (Surfaces settings can turn that off).
+    row 3         the 4 knobs (turn = rotate actions, push = press actions; no screen)
 """
 
 import json
@@ -124,54 +126,97 @@ def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks
     }
 
 
-MUTED = {"bgcolor": RED, "color": WHITE}
+LIVE_GREEN = 0x1E5E2A
+SHOW_COLOR = 0x5A2A82
+BAR_COLOR = MENU_BLUE
+TIMER_COLOR = TIMER_GREEN
 
 
-def volume_knob(name, fader_action, mute_action, mute_feedback, level_var, step=2,
-                strip=None, mute_strip=None, feedback_strip=None):
-    """A knob that turns a fader up/down by `step` percent and mutes on push.
+def muted(text):
+    """Style for an on/off feedback: red, and the text says it is muted."""
+    return {"bgcolor": RED, "color": WHITE, "text": text}
 
-    `strip` picks a numbered strip (e.g. {"type": "/ch/", "num": 1}); Main LR
-    and Aux in need none.
+
+def volume_knob(fader_action, mute_action, strip=None, mute_strip=None, step=2):
+    """A knob: turn for volume (`step` percent per click), push to mute.
+
+    The knobs have no screen; the touch strip segment above each one is its label
+    (see strip_label). `strip` picks a numbered strip (e.g. {"type": "/ch/", "num": 1}).
     """
     fade = dict(duration=0, faderLim=True, **(strip or {}))  # never push past 0 dB
     return button(
-        f"{name}\\n$(xair:{level_var}) dB",
+        "",
         turn_right=[action(XAIR, fader_action, ticks=str(step), **fade)],
         turn_left=[action(XAIR, fader_action, ticks=str(-step), **fade)],
         press=[action(XAIR, mute_action, mute="2", **(mute_strip or {}))],
-        feedbacks=[feedback(XAIR, mute_feedback, MUTED, state="1", **(feedback_strip or {}))],
+    )
+
+
+def strip_label(name, level_var, mute_action, mute_feedback, mute_strip=None, feedback_strip=None):
+    """The touch strip segment above a knob: what it controls and its level; tap mutes.
+
+    Turns red and says MUTED while muted.
+    """
+    return button(
+        f"{name}\\n$(xair:{level_var}) dB\\nturn knob",
+        press=[action(XAIR, mute_action, mute="2", **(mute_strip or {}))],
+        feedbacks=[feedback(XAIR, mute_feedback, muted(f"{name}\\nMUTED\\ntap to unmute"),
+                            state="1", **(feedback_strip or {}))],
+        bgcolor=DARK,
         size="14",
     )
 
 
-def channel_knob(name, channel, step=2):
-    """Volume knob for a mic channel; push mutes it."""
-    return volume_knob(
-        name, "fad_a", "mute", "ch", f"f_ch{channel}_d", step,
-        strip={"type": "/ch/", "num": channel},
-        mute_strip={"type": "/ch/", "num": channel},
-        feedback_strip={"theChannel": channel},
+def mute_key(name, mute_action, mute_feedback, mute_strip=None, feedback_strip=None):
+    """A key that mutes/unmutes; green ON, red MUTED."""
+    return button(
+        f"{name}\\nON\\npress to mute",
+        press=[action(XAIR, mute_action, mute="2", **(mute_strip or {}))],
+        feedbacks=[feedback(XAIR, mute_feedback, muted(f"{name}\\nMUTED\\npress for on"),
+                            state="1", **(feedback_strip or {}))],
+        bgcolor=LIVE_GREEN,
+        size="14",
     )
 
 
-def channel_mute_key(channel):
-    """A key that toggles a mic channel's mute and turns red while muted."""
-    return button(
-        f"$(xair:l_ch{channel})",
-        press=[action(XAIR, "mute", type="/ch/", num=channel, mute="2")],
-        feedbacks=[feedback(XAIR, "ch", MUTED, state="1", theChannel=channel)],
-        bgcolor=DARK,
-    )
+# What each knob controls. The house (Main LR) level stays where it is set in
+# X AIR Edit, never on a knob (Sam, Oct 16 2026).
+CHANNEL = lambda n: dict(  # noqa: E731
+    fader_action="fad_a", mute_action="mute", mute_feedback="ch", level_var=f"f_ch{n}_d",
+    strip={"type": "/ch/", "num": n}, mute_strip={"type": "/ch/", "num": n},
+    feedback_strip={"theChannel": n},
+)
+MUSIC = dict(fader_action="usbFad_a", mute_action="usbMute", mute_feedback="rtn_aux",
+             level_var="f_rtn_aux_d")  # XR18 Aux in 17/18
+SOURCES = [("MIC 1", CHANNEL(1)), ("MIC 2", CHANNEL(2)), ("MUSIC", MUSIC), ("GOD MIC", CHANNEL(5))]
 
 
-def music_mute_key():
-    """A key that toggles the music (Aux in) mute and turns red while muted."""
+def sound_controls():
+    """Knobs, touch strip labels and mute keys, identical on every page so the
+    knobs always do the same thing whatever page the deck is on."""
+    controls = {}
+    for col, (name, s) in enumerate(SOURCES):
+        controls[(2, col)] = strip_label(name, s["level_var"], s["mute_action"], s["mute_feedback"],
+                                         s.get("mute_strip"), s.get("feedback_strip"))
+        controls[(3, col)] = volume_knob(s["fader_action"], s["mute_action"],
+                                         s.get("strip"), s.get("mute_strip"))
+    return controls
+
+
+def show_mute_keys():
+    """Bottom key row: one mute key above each knob, same order."""
+    return {(1, col): mute_key(name, s["mute_action"], s["mute_feedback"],
+                               s.get("mute_strip"), s.get("feedback_strip"))
+            for col, (name, s) in enumerate(SOURCES)}
+
+
+def page_key(this_page, next_page, number, color):
+    """Top-left key on every page: names the page you are on; press for the next one."""
     return button(
-        "MUSIC\\nMUTE",
-        press=[action(XAIR, "usbMute", mute="2")],
-        feedbacks=[feedback(XAIR, "rtn_aux", MUTED, state="1")],
-        bgcolor=DARK,
+        f"{this_page} page\\n\\nnext: {next_page}",
+        press=[action(INTERNAL, "set_page", surfaceId="self", page=number)],
+        bgcolor=color,
+        size="14",
     )
 
 
@@ -195,7 +240,7 @@ def supabase_key(text, rpc, body=None, bgcolor=MENU_BLUE):
 
 def menu_refresh_key():
     """Tells the taproom TV menu board to reload."""
-    return supabase_key("MENU\\nREFRESH", "bump_menu_refresh")
+    return supabase_key("REFRESH\\nTV MENU", "bump_menu_refresh")
 
 
 def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
@@ -220,13 +265,13 @@ def shell_key(text, command, bgcolor=MENU_BLUE):
 
 def print_menu_key():
     """Prints today's taproom menu (menu/print-menu.ps1)."""
-    return shell_key("PRINT\\nMENU", PRINT_MENU_COMMAND)
+    return shell_key("PRINT\\nMENU\\n(paper)", PRINT_MENU_COMMAND)
 
 
 def record_key():
     """Starts/stops OBS recording; red with the running time while recording."""
     return button(
-        "REC\\n$(obs:recording_timecode)",
+        "RECORD\\nvideo\\n$(obs:recording_timecode)",
         press=[action(OBS, "StartStopRecording")],
         feedbacks=[feedback(OBS, "recording",
                             fg=WHITE, bg=RED, fg_paused=WHITE, bg_paused=0xFF8800)],
@@ -234,38 +279,25 @@ def record_key():
     )
 
 
-PAGE_UP = {"type": "pageup"}
-PAGE_NUMBER = {"type": "pagenum"}
-
 # --------------------------------------------------------------------------
-# PAGES: edit here. Keys are (row, column).
+# PAGES: edit here. Keys are (row, column). Every page also gets
+# sound_controls(): rows 2-3, the touch strip labels and the four knobs.
 # --------------------------------------------------------------------------
 
 PAGES = {
     1: {
         "name": "SHOW",
         "controls": {
-            (0, 0): PAGE_UP,
-            (1, 0): PAGE_NUMBER,
-            (0, 2): channel_mute_key(1),
-            (0, 3): music_mute_key(),
-            (1, 1): record_key(),
-            # knob 1: main stage mic (channel 1). The house (Main LR) level
-            # stays where it is set in X AIR Edit, never on a knob (Sam, Oct 16 2026).
-            (3, 0): channel_knob("MIC 1", 1),
-            # knob 2: second stage mic (channel 2)
-            (3, 1): channel_knob("MIC 2", 2),
-            # knob 3: music (XR18 Aux in 17/18)
-            (3, 2): volume_knob("MUSIC", "usbFad_a", "usbMute", "rtn_aux", "f_rtn_aux_d"),
-            # knob 4: god mic (channel 5, wired, in the office)
-            (3, 3): channel_knob("GOD MIC", 5),
+            (0, 0): page_key("SHOW", "BAR", 2, SHOW_COLOR),
+            (0, 1): record_key(),
+            # (0, 2), (0, 3): free, for DOORS / SHOW / INTERMISSION scenes later
+            **show_mute_keys(),
         },
     },
     2: {
         "name": "BAR",
         "controls": {
-            (0, 0): PAGE_UP,
-            (1, 0): PAGE_NUMBER,
+            (0, 0): page_key("BAR", "TIMER", 3, BAR_COLOR),
             (0, 1): menu_refresh_key(),
             (0, 2): print_menu_key(),
         },
@@ -273,19 +305,20 @@ PAGES = {
     3: {
         "name": "TIMER",
         "controls": {
-            (0, 0): PAGE_UP,
-            (1, 0): PAGE_NUMBER,
-            (0, 1): timer_key("5\\nMIN", "timer_start", {"minutes": 5}),
-            (0, 2): timer_key("7\\nMIN", "timer_start", {"minutes": 7}),
-            (0, 3): timer_key("10\\nMIN", "timer_start", {"minutes": 10}),
-            (1, 1): timer_key("15\\nMIN", "timer_start", {"minutes": 15}),
-            (1, 2): timer_key("+1\\nMIN", "timer_add", {"seconds": 60}, bgcolor=DARK),
-            (1, 3): timer_key("STOP", "timer_stop", bgcolor=RED),
-            # touch strip, above knob 1: tap to flash the light by hand
-            (2, 0): timer_key("LIGHT", "timer_light", bgcolor=0x7A5A00),
+            (0, 0): page_key("TIMER", "SHOW", 1, TIMER_COLOR),
+            (0, 1): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
+            (0, 2): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
+            (0, 3): timer_key("START\\n10 MIN\\ntimer", "timer_start", {"minutes": 10}),
+            (1, 0): timer_key("START\\n15 MIN\\ntimer", "timer_start", {"minutes": 15}),
+            (1, 1): timer_key("ADD\\n1 MIN\\nto timer", "timer_add", {"seconds": 60}, bgcolor=DARK),
+            (1, 2): timer_key("STOP\\ntimer", "timer_stop", bgcolor=RED),
+            # flash the comic's light by hand
+            (1, 3): timer_key("FLASH\\nLIGHT", "timer_light", bgcolor=0x7A5A00),
         },
     },
 }
+for _page in PAGES.values():
+    _page["controls"].update(sound_controls())
 
 GRID = {"minColumn": 0, "maxColumn": 3, "minRow": 0, "maxRow": 3}
 

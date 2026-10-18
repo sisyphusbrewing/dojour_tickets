@@ -8,49 +8,23 @@
       "controls": {
         "0": {
           "0": {
-            "type": "pageup"
-          },
-          "2": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "$(xair:l_ch1)",
+              "text": "SHOW page\\n\\nnext: BAR",
               "textExpression": false,
-              "size": "auto",
+              "size": "14",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
-              "bgcolor": 2105376,
+              "bgcolor": 5909122,
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [
-              {
-                "type": "feedback",
-                "id": "f0002",
-                "connectionId": "xair",
-                "definitionId": "ch",
-                "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 1,
-                    "isExpression": false
-                  }
-                },
-                "isInverted": false,
-                "upgradeIndex": 5,
-                "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215
-                }
-              }
-            ],
+            "feedbacks": [],
             "steps": {
               "0": {
                 "action_sets": {
@@ -58,23 +32,18 @@
                     {
                       "type": "action",
                       "id": "a0001",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "connectionId": "internal",
+                      "definitionId": "set_page",
                       "options": {
-                        "type": {
-                          "value": "/ch/",
+                        "surfaceId": {
+                          "value": "self",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 1,
-                          "isExpression": false
-                        },
-                        "mute": {
-                          "value": "2",
+                        "page": {
+                          "value": 2,
                           "isExpression": false
                         }
-                      },
-                      "upgradeIndex": 5
+                      }
                     }
                   ],
                   "up": []
@@ -85,75 +54,6 @@
               }
             },
             "localVariables": []
-          },
-          "3": {
-            "type": "button",
-            "options": {
-              "stepProgression": "auto",
-              "rotaryActions": false
-            },
-            "style": {
-              "text": "MUSIC\\nMUTE",
-              "textExpression": false,
-              "size": "auto",
-              "alignment": "center:center",
-              "pngalignment": "center:center",
-              "color": 16777215,
-              "bgcolor": 2105376,
-              "show_topbar": "default",
-              "png64": null
-            },
-            "feedbacks": [
-              {
-                "type": "feedback",
-                "id": "f0004",
-                "connectionId": "xair",
-                "definitionId": "rtn_aux",
-                "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  }
-                },
-                "isInverted": false,
-                "upgradeIndex": 5,
-                "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215
-                }
-              }
-            ],
-            "steps": {
-              "0": {
-                "action_sets": {
-                  "down": [
-                    {
-                      "type": "action",
-                      "id": "a0003",
-                      "connectionId": "xair",
-                      "definitionId": "usbMute",
-                      "options": {
-                        "mute": {
-                          "value": "2",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": 5
-                    }
-                  ],
-                  "up": []
-                },
-                "options": {
-                  "runWhileHeld": []
-                }
-              }
-            },
-            "localVariables": []
-          }
-        },
-        "1": {
-          "0": {
-            "type": "pagenum"
           },
           "1": {
             "type": "button",
@@ -162,7 +62,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "REC\\n$(obs:recording_timecode)",
+              "text": "RECORD\\nvideo\\n$(obs:recording_timecode)",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -175,7 +75,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0006",
+                "id": "f0003",
                 "connectionId": "obs",
                 "definitionId": "recording",
                 "options": {
@@ -206,10 +106,606 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0005",
+                      "id": "a0002",
                       "connectionId": "obs",
                       "definitionId": "StartStopRecording",
                       "options": {},
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "1": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 1\\nON\\npress to mute",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1990186,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0005",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 1,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 1\\nMUTED\\npress for on"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0004",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 2\\nON\\npress to mute",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1990186,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0007",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 2,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 2\\nMUTED\\npress for on"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0006",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MUSIC\\nON\\npress to mute",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1990186,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0009",
+                "connectionId": "xair",
+                "definitionId": "rtn_aux",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MUSIC\\nMUTED\\npress for on"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0008",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "GOD MIC\\nON\\npress to mute",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1990186,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0011",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 5,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "GOD MIC\\nMUTED\\npress for on"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0010",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "2": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 1\\n$(xair:f_ch1_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0024",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 1,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 1\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0023",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 2\\n$(xair:f_ch2_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0029",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 2,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 2\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0028",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0034",
+                "connectionId": "xair",
+                "definitionId": "rtn_aux",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MUSIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0033",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "GOD MIC\\n$(xair:f_ch5_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0039",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 5,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "GOD MIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0038",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
                       "upgradeIndex": 5
                     }
                   ],
@@ -231,9 +727,9 @@
               "rotaryActions": true
             },
             "style": {
-              "text": "MIC 1\\n$(xair:f_ch1_d) dB",
+              "text": "",
               "textExpression": false,
-              "size": "14",
+              "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
@@ -241,37 +737,14 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [
-              {
-                "type": "feedback",
-                "id": "f0010",
-                "connectionId": "xair",
-                "definitionId": "ch",
-                "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 1,
-                    "isExpression": false
-                  }
-                },
-                "isInverted": false,
-                "upgradeIndex": 5,
-                "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215
-                }
-              }
-            ],
+            "feedbacks": [],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0009",
+                      "id": "a0027",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -295,7 +768,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0008",
+                      "id": "a0026",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -326,7 +799,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0007",
+                      "id": "a0025",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -369,9 +842,9 @@
               "rotaryActions": true
             },
             "style": {
-              "text": "MIC 2\\n$(xair:f_ch2_d) dB",
+              "text": "",
               "textExpression": false,
-              "size": "14",
+              "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
@@ -379,37 +852,14 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [
-              {
-                "type": "feedback",
-                "id": "f0014",
-                "connectionId": "xair",
-                "definitionId": "ch",
-                "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 2,
-                    "isExpression": false
-                  }
-                },
-                "isInverted": false,
-                "upgradeIndex": 5,
-                "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215
-                }
-              }
-            ],
+            "feedbacks": [],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0013",
+                      "id": "a0032",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -433,7 +883,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0012",
+                      "id": "a0031",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -464,7 +914,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0011",
+                      "id": "a0030",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -507,9 +957,9 @@
               "rotaryActions": true
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB",
+              "text": "",
               "textExpression": false,
-              "size": "14",
+              "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
@@ -517,33 +967,14 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [
-              {
-                "type": "feedback",
-                "id": "f0018",
-                "connectionId": "xair",
-                "definitionId": "rtn_aux",
-                "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  }
-                },
-                "isInverted": false,
-                "upgradeIndex": 5,
-                "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215
-                }
-              }
-            ],
+            "feedbacks": [],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0017",
+                      "id": "a0037",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -559,7 +990,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0016",
+                      "id": "a0036",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -582,7 +1013,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0015",
+                      "id": "a0035",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -617,9 +1048,9 @@
               "rotaryActions": true
             },
             "style": {
-              "text": "GOD MIC\\n$(xair:f_ch5_d) dB",
+              "text": "",
               "textExpression": false,
-              "size": "14",
+              "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
@@ -627,37 +1058,14 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [
-              {
-                "type": "feedback",
-                "id": "f0022",
-                "connectionId": "xair",
-                "definitionId": "ch",
-                "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 5,
-                    "isExpression": false
-                  }
-                },
-                "isInverted": false,
-                "upgradeIndex": 5,
-                "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215
-                }
-              }
-            ],
+            "feedbacks": [],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0021",
+                      "id": "a0042",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -681,7 +1089,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0020",
+                      "id": "a0041",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -712,7 +1120,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0019",
+                      "id": "a0040",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -762,7 +1170,52 @@
       "controls": {
         "0": {
           "0": {
-            "type": "pageup"
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "BAR page\\n\\nnext: TIMER",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 1985658,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0012",
+                      "connectionId": "internal",
+                      "definitionId": "set_page",
+                      "options": {
+                        "surfaceId": {
+                          "value": "self",
+                          "isExpression": false
+                        },
+                        "page": {
+                          "value": 3,
+                          "isExpression": false
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           },
           "1": {
             "type": "button",
@@ -771,7 +1224,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MENU\\nREFRESH",
+              "text": "REFRESH\\nTV MENU",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -788,7 +1241,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0023",
+                      "id": "a0013",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -840,7 +1293,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "PRINT\\nMENU",
+              "text": "PRINT\\nMENU\\n(paper)",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -857,7 +1310,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0024",
+                      "id": "a0014",
                       "connectionId": "internal",
                       "definitionId": "exec",
                       "options": {
@@ -890,9 +1343,740 @@
             "localVariables": []
           }
         },
-        "1": {
+        "2": {
           "0": {
-            "type": "pagenum"
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 1\\n$(xair:f_ch1_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0044",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 1,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 1\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0043",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 2\\n$(xair:f_ch2_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0049",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 2,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 2\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0048",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0054",
+                "connectionId": "xair",
+                "definitionId": "rtn_aux",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MUSIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0053",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "GOD MIC\\n$(xair:f_ch5_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0059",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 5,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "GOD MIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0058",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "3": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0047",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0046",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0045",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0052",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0051",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0050",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0057",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0056",
+                      "connectionId": "xair",
+                      "definitionId": "usbFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0055",
+                      "connectionId": "xair",
+                      "definitionId": "usbFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0062",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0061",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0060",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           }
         }
       },
@@ -908,7 +2092,52 @@
       "controls": {
         "0": {
           "0": {
-            "type": "pageup"
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "TIMER page\\n\\nnext: SHOW",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2055982,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0015",
+                      "connectionId": "internal",
+                      "definitionId": "set_page",
+                      "options": {
+                        "surfaceId": {
+                          "value": "self",
+                          "isExpression": false
+                        },
+                        "page": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           },
           "1": {
             "type": "button",
@@ -917,7 +2146,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "5\\nMIN",
+              "text": "START\\n5 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -934,7 +2163,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0025",
+                      "id": "a0016",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -986,7 +2215,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "7\\nMIN",
+              "text": "START\\n7 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -1003,7 +2232,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0026",
+                      "id": "a0017",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1055,7 +2284,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "10\\nMIN",
+              "text": "START\\n10 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -1072,7 +2301,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0027",
+                      "id": "a0018",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1120,16 +2349,13 @@
         },
         "1": {
           "0": {
-            "type": "pagenum"
-          },
-          "1": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "15\\nMIN",
+              "text": "START\\n15 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -1146,7 +2372,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0028",
+                      "id": "a0019",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1191,14 +2417,14 @@
             },
             "localVariables": []
           },
-          "2": {
+          "1": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "+1\\nMIN",
+              "text": "ADD\\n1 MIN\\nto timer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -1215,7 +2441,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0029",
+                      "id": "a0020",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1260,14 +2486,14 @@
             },
             "localVariables": []
           },
-          "3": {
+          "2": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "STOP",
+              "text": "STOP\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -1284,12 +2510,81 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0030",
+                      "id": "a0021",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
                         "url": {
                           "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_stop",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "FLASH\\nLIGHT",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 8018432,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0022",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_light",
                           "isExpression": false
                         },
                         "body": {
@@ -1338,13 +2633,311 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "LIGHT",
+              "text": "MIC 1\\n$(xair:f_ch1_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0064",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 1,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 1\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0063",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 2\\n$(xair:f_ch2_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0069",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 2,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 2\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0068",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0074",
+                "connectionId": "xair",
+                "definitionId": "rtn_aux",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MUSIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0073",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "GOD MIC\\n$(xair:f_ch5_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0079",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 5,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "GOD MIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0078",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "3": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
-              "bgcolor": 8018432,
+              "bgcolor": 0,
               "show_topbar": "default",
               "png64": null
             },
@@ -1355,43 +2948,410 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0031",
-                      "connectionId": "http",
-                      "definitionId": "post",
+                      "id": "a0067",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
                       "options": {
-                        "url": {
-                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_light",
+                        "mute": {
+                          "value": "2",
                           "isExpression": false
                         },
-                        "body": {
-                          "value": "{}",
+                        "type": {
+                          "value": "/ch/",
                           "isExpression": false
                         },
-                        "header": {
-                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
-                          "isExpression": false
-                        },
-                        "contenttype": {
-                          "value": "application/json",
-                          "isExpression": false
-                        },
-                        "jsonResultDataVariable": {
-                          "value": "",
-                          "isExpression": false
-                        },
-                        "result_stringify": {
-                          "value": true,
-                          "isExpression": false
-                        },
-                        "statusCodeVariable": {
-                          "value": "",
+                        "num": {
+                          "value": 1,
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 3
+                      "upgradeIndex": 5
                     }
                   ],
-                  "up": []
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0066",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0065",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0072",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0071",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0070",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0077",
+                      "connectionId": "xair",
+                      "definitionId": "usbMute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0076",
+                      "connectionId": "xair",
+                      "definitionId": "usbFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0075",
+                      "connectionId": "xair",
+                      "definitionId": "usbFad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0082",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0081",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0080",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
                 },
                 "options": {
                   "runWhileHeld": []
