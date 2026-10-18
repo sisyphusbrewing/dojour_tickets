@@ -218,6 +218,25 @@ def extract_tickets_count(res: dict) -> int:
     return 1
 
 
+def dojour_ticket_type(res: dict):
+    """"VIP / Reserved Seating" (or a VIP/Premium tier name) when a Dojour reservation bought that tier, else None.
+    Dojour names a tier like "Reserved Seating - Sam Jay /// October 15-18"."""
+    names = []
+    for key in ("option_set", "full_ticket_set"):
+        for entry in res.get(key) or []:
+            if not isinstance(entry, dict):
+                continue
+            for d in (entry, entry.get("option"), entry.get("ticket_option")):
+                if isinstance(d, dict):
+                    names += [str(d.get(k) or "") for k in ("title", "name", "label")]
+    for name in names:
+        if re.search(r"vip|premium|reserved", name, re.I):
+            tier = name.split(" - ", 1)[0].strip()
+            # Match the website's "VIP / Reserved Seating" so the door list says VIP.
+            return tier if re.search(r"vip|premium", tier, re.I) else f"VIP / {tier}"
+    return None
+
+
 # ==============================================================================
 # 2. Dojour Ticket Fetcher
 # ==============================================================================
@@ -376,7 +395,7 @@ def fetch_dojour_tickets():
 
             tickets = extract_tickets_count(res)
 
-            dojour_tickets.append({
+            row = {
                 "unique_id": unique_id,
                 "show_date": format_show_date(r_dt) or formatted_date,
                 "show_title": r_title,
@@ -385,7 +404,13 @@ def fetch_dojour_tickets():
                 "tickets": tickets,
                 "source": "Dojour",
                 "_sort_dt": r_dt or detected_dt
-            })
+            }
+            # Only send a ticket type when Dojour names a VIP tier, so a VIP tag set by hand
+            # on the door list survives the next sync.
+            vip_type = dojour_ticket_type(res)
+            if vip_type:
+                row["ticket_type"] = vip_type
+            dojour_tickets.append(row)
 
     print(f"Retrieved {len(dojour_tickets)} upcoming Dojour attendee reservations.")
     return dojour_tickets
@@ -673,14 +698,16 @@ def sync_to_supabase(tickets: list):
     chunk_size = 300
     endpoint = f"{supabase_url.rstrip('/')}/rest/v1/tickets?on_conflict=unique_id"
 
-    # Supabase needs every row in a batch to have the same fields.
-    # Dojour rows have no ticket type, so give them an empty one.
-    for t in tickets:
-        t.setdefault("ticket_type", None)
+    # Supabase needs every row in a batch to have the same fields, so rows with a ticket type
+    # and rows without one go in separate batches. Rows without one (most Dojour sales) leave
+    # the stored ticket type alone, so a VIP tag set by hand is kept.
+    typed = [t for t in tickets if "ticket_type" in t]
+    untyped = [t for t in tickets if "ticket_type" not in t]
+    chunks = [typed[i:i + chunk_size] for i in range(0, len(typed), chunk_size)]
+    chunks += [untyped[i:i + chunk_size] for i in range(0, len(untyped), chunk_size)]
     include_ticket_type = True
 
-    for i in range(0, len(tickets), chunk_size):
-        chunk = tickets[i:i + chunk_size]
+    for chunk in chunks:
         if not include_ticket_type:
             chunk = [{k: v for k, v in t.items() if k != "ticket_type"} for t in chunk]
         resp = requests.post(endpoint, headers=headers, json=chunk, timeout=30)
