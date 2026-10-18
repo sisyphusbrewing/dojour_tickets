@@ -6,7 +6,6 @@ performer's name (e.g. "Ryan Kahl"). Works for past shows too. The totals
 appear on the run's summary page.
 """
 import os
-import re
 import sys
 from collections import defaultdict
 
@@ -62,28 +61,6 @@ def shopify_sales():
 
 
 # ---------------------------------------------------------------- Dojour
-MONEY_KEY = re.compile(r"price|amount|total|fee|paid|cost|revenue|gross|net|refund|tax|discount|payout|charge", re.I)
-
-
-def money_fields(obj, prefix="", out=None):
-    """Numeric money-looking fields anywhere in a Dojour record (no names or emails)."""
-    out = {} if out is None else out
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            path = f"{prefix}{k}"
-            if isinstance(v, (dict, list)):
-                money_fields(v, path + ".", out)
-            elif MONEY_KEY.search(str(k)) and isinstance(v, (int, float, str)) and not isinstance(v, bool):
-                try:
-                    out[path] = out.get(path, 0) + float(v)
-                except (TypeError, ValueError):
-                    pass
-    elif isinstance(obj, list):
-        for v in obj:
-            money_fields(v, prefix, out)
-    return out
-
-
 def dojour_sales():
     token = get_dojour_token()
     s = requests.Session()
@@ -109,9 +86,6 @@ def dojour_sales():
                     seen[iid] = (str(item.get("start_dt") or ""), f"{item.get('title')} / {opt}")
                 if iid and Q in haystack:
                     instances[iid] = (title, item.get("start_dt"))
-                    m = money_fields(item)
-                    if m:
-                        annotate(f"Dojour show {iid} money fields: {m}")
             url = data.get("next") if isinstance(data, dict) else None
 
     annotate(f"Dojour: searched {len(seen)} shows, {len(instances)} matched '{QUERY}'.")
@@ -122,22 +96,17 @@ def dojour_sales():
             continue
         rep = r.json()
         tickets = orders = 0
-        money = {}
-        if isinstance(rep, dict):
-            money_fields({k: v for k, v in rep.items() if k != "reservation_set"}, "report.", money)
-        sample = next((r for r in rep.get("reservation_set", []) if isinstance(r, dict)), None)
-        if sample:
-            annotate(f"Dojour reservation fields: {sorted(sample.keys())}")
+        # Dojour report totals are in cents. Revenue is ticket price only; buyer fees sit on top.
+        revenue = (rep.get("total_revenue") or 0) / 100 if isinstance(rep, dict) else 0
         for res in rep.get("reservation_set", []):
             if not isinstance(res, dict) or res.get("is_cancelled") or res.get("waitlist") \
                     or res.get("is_on_waitlist") or res.get("checkout_complete") is False:
                 continue
             tickets += extract_tickets_count(res)
             orders += 1
-            money_fields(res, "res.", money)
         dt = parse_show_datetime(start)
         rows[(title, dt.strftime("%a, %b %-d %Y • %-I:%M %p") if dt else start or "?")] = {"tickets": tickets, "orders": orders,
-                                                                                     "money": {k: round(v, 2) for k, v in money.items()}}
+                                                                                     "revenue": revenue}
     return rows
 
 
@@ -158,12 +127,13 @@ def main():
 
     try:
         dj_rows = dojour_sales()
-        lines += ["### Dojour", "| Show | Date | Tickets | Orders |", "|---|---|---|---|"]
+        lines += ["### Dojour", "| Show | Date | Tickets | Orders | Ticket revenue* |", "|---|---|---|---|---|"]
         for (title, date), r in sorted(dj_rows.items(), key=lambda kv: str(kv[0][1])):
-            lines.append(f"| {title} | {date} | {r['tickets']} | {r['orders']} |")
+            lines.append(f"| {title} | {date} | {r['tickets']} | {r['orders']} | ${r['revenue']:,.2f} |")
             total += r["tickets"]
         if not dj_rows:
-            lines.append("| none found | | | |")
+            lines.append("| none found | | | | |")
+        lines.append("\n*Ticket price only, before Dojour's buyer fees and sales tax. Holds count as tickets but carry no revenue.\n")
         dj_total = sum(r["tickets"] for r in dj_rows.values())
     except Exception as e:
         lines.append(f"\n**Dojour couldn't be read:** {e}")
@@ -181,7 +151,7 @@ def main():
         annotate(f"Website | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders, ${r['gross']:,.2f}")
     if dj_total is not None:
         for (title, date), r in dj_rows.items():
-            annotate(f"Dojour | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders | money {r['money']}")
+            annotate(f"Dojour | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders, ${r['revenue']:,.2f}")
 
 
 if __name__ == "__main__":
