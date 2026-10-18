@@ -96,6 +96,8 @@ def dojour_sales():
             continue
         rep = r.json()
         tickets = orders = 0
+        # Dojour report totals are in cents. Revenue is ticket price only; buyer fees sit on top.
+        revenue = (rep.get("total_revenue") or 0) / 100 if isinstance(rep, dict) else 0
         for res in rep.get("reservation_set", []):
             if not isinstance(res, dict) or res.get("is_cancelled") or res.get("waitlist") \
                     or res.get("is_on_waitlist") or res.get("checkout_complete") is False:
@@ -103,7 +105,8 @@ def dojour_sales():
             tickets += extract_tickets_count(res)
             orders += 1
         dt = parse_show_datetime(start)
-        rows[(title, dt.strftime("%a, %b %-d %Y • %-I:%M %p") if dt else start or "?")] = {"tickets": tickets, "orders": orders}
+        rows[(title, dt.strftime("%a, %b %-d %Y • %-I:%M %p") if dt else start or "?")] = {"tickets": tickets, "orders": orders,
+                                                                                     "revenue": revenue}
     return rows
 
 
@@ -124,12 +127,13 @@ def main():
 
     try:
         dj_rows = dojour_sales()
-        lines += ["### Dojour", "| Show | Date | Tickets | Orders |", "|---|---|---|---|"]
+        lines += ["### Dojour", "| Show | Date | Tickets | Orders | Ticket revenue* |", "|---|---|---|---|---|"]
         for (title, date), r in sorted(dj_rows.items(), key=lambda kv: str(kv[0][1])):
-            lines.append(f"| {title} | {date} | {r['tickets']} | {r['orders']} |")
+            lines.append(f"| {title} | {date} | {r['tickets']} | {r['orders']} | ${r['revenue']:,.2f} |")
             total += r["tickets"]
         if not dj_rows:
-            lines.append("| none found | | | |")
+            lines.append("| none found | | | | |")
+        lines.append("\n*Ticket price only, before Dojour's buyer fees and sales tax. Holds count as tickets but carry no revenue.\n")
         dj_total = sum(r["tickets"] for r in dj_rows.values())
     except Exception as e:
         lines.append(f"\n**Dojour couldn't be read:** {e}")
@@ -147,7 +151,7 @@ def main():
         annotate(f"Website | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders, ${r['gross']:,.2f}")
     if dj_total is not None:
         for (title, date), r in dj_rows.items():
-            annotate(f"Dojour | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders")
+            annotate(f"Dojour | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders, ${r['revenue']:,.2f}")
 
 
 if __name__ == "__main__":
