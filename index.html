@@ -134,9 +134,15 @@
     }
 
     function render() {
-      renderGuests($('guestList'), guests, { query: $('search').value, showDoneOpen: doneOpen, toggleFn: 'toggleDone' });
+      var s = currentShow();
+      renderGuests($('guestList'), guests, { query: $('search').value, showDoneOpen: doneOpen, toggleFn: 'toggleDone',
+        otherShows: s && { show_date: s.show_date, show_title: s.show_title, openFn: 'openOtherShow',
+          canOpen: function (g) { return shows.some(function (x) { return showKey(x) === showKey(g); }); } } });
       updateCount();
     }
+
+    // "Go to show" on a match from another of tonight's shows; keeps the search.
+    function openOtherShow(date, title) { pickShow(showKey({ show_date: date, show_title: title })); }
 
     function toggleDone() { doneOpen = !doneOpen; render(); }
 

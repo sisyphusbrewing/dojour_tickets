@@ -146,3 +146,12 @@ input[type=date].input, input[type=time].input { color-scheme: dark; }
 .toast.bad { background: #f0b7ac; }
 
 .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 30px 16px 0; }
+
+/* Same comic, other shows (a "do I have tickets?" caller with the wrong date) */
+.other-note { text-align: center; margin-top: -32px; }
+.other-show { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.other-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.other-head b { color: var(--white); }
+.other-guest { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.other-guest small { color: var(--gray); display: block; }
+.other-count { color: var(--gray); white-space: nowrap; }
