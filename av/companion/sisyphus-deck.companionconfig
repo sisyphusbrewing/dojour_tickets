@@ -121,6 +121,51 @@
               }
             },
             "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "RESET\\nSOUND\\nshow mix",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 8010240,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0004",
+                      "connectionId": "xair",
+                      "definitionId": "load_snap",
+                      "options": {
+                        "snap": {
+                          "value": "1",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           }
         },
         "1": {
@@ -144,7 +189,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0005",
+                "id": "f0006",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -172,7 +217,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0004",
+                      "id": "a0005",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -221,7 +266,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0007",
+                "id": "f0008",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -249,7 +294,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0006",
+                      "id": "a0007",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -298,16 +343,12 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0009",
+                "id": "f0010",
                 "connectionId": "xair",
-                "definitionId": "ch",
+                "definitionId": "rtn_aux",
                 "options": {
                   "state": {
                     "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -326,20 +367,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0008",
+                      "id": "a0009",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -375,7 +408,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0011",
+                "id": "f0012",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -403,7 +436,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0010",
+                      "id": "a0011",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -454,7 +487,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0039",
+                "id": "f0040",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -482,7 +515,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0038",
+                      "id": "a0039",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -531,7 +564,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0044",
+                "id": "f0045",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -559,7 +592,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0043",
+                      "id": "a0044",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -595,7 +628,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_ch15_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -608,16 +641,12 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0049",
+                "id": "f0050",
                 "connectionId": "xair",
-                "definitionId": "ch",
+                "definitionId": "rtn_aux",
                 "options": {
                   "state": {
                     "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -636,20 +665,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0048",
+                      "id": "a0049",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -685,7 +706,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0054",
+                "id": "f0055",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -713,7 +734,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0053",
+                      "id": "a0054",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -768,7 +789,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0042",
+                      "id": "a0043",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -792,7 +813,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0041",
+                      "id": "a0042",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -823,7 +844,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0040",
+                      "id": "a0041",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -883,7 +904,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0047",
+                      "id": "a0048",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -907,7 +928,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0046",
+                      "id": "a0047",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -938,7 +959,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0045",
+                      "id": "a0046",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -998,20 +1019,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0052",
+                      "id": "a0053",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -1022,9 +1035,9 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0051",
+                      "id": "a0052",
                       "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "definitionId": "usbFad_a",
                       "options": {
                         "ticks": {
                           "value": "-2",
@@ -1037,14 +1050,6 @@
                         "faderLim": {
                           "value": true,
                           "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
-                          "isExpression": false
                         }
                       },
                       "upgradeIndex": 5
@@ -1053,9 +1058,9 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0050",
+                      "id": "a0051",
                       "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "definitionId": "usbFad_a",
                       "options": {
                         "ticks": {
                           "value": "2",
@@ -1067,14 +1072,6 @@
                         },
                         "faderLim": {
                           "value": true,
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -1113,7 +1110,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0057",
+                      "id": "a0058",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1137,7 +1134,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0056",
+                      "id": "a0057",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1168,7 +1165,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0055",
+                      "id": "a0056",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1241,7 +1238,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0012",
+                      "id": "a0013",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -1289,7 +1286,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0013",
+                      "id": "a0014",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1358,7 +1355,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0014",
+                      "id": "a0015",
                       "connectionId": "internal",
                       "definitionId": "exec",
                       "options": {
@@ -1414,29 +1411,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0015",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
-                      "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
-                          "isExpression": false
-                        },
-                        "id_end": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": -1
-                    },
-                    {
-                      "type": "action",
                       "id": "a0016",
                       "connectionId": "hall1",
                       "definitionId": "send",
                       "options": {
                         "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
+                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
                           "isExpression": false
                         },
                         "id_end": {
@@ -1449,11 +1429,11 @@
                     {
                       "type": "action",
                       "id": "a0017",
-                      "connectionId": "hall2",
+                      "connectionId": "hall1",
                       "definitionId": "send",
                       "options": {
                         "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
+                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
                           "isExpression": false
                         },
                         "id_end": {
@@ -1470,7 +1450,7 @@
                       "definitionId": "send",
                       "options": {
                         "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
+                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
                           "isExpression": false
                         },
                         "id_end": {
@@ -1483,6 +1463,23 @@
                     {
                       "type": "action",
                       "id": "a0019",
+                      "connectionId": "hall2",
+                      "definitionId": "send",
+                      "options": {
+                        "id_send": {
+                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
+                          "isExpression": false
+                        },
+                        "id_end": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": -1
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0020",
                       "connectionId": "hall3",
                       "definitionId": "send",
                       "options": {
@@ -1499,7 +1496,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0020",
+                      "id": "a0021",
                       "connectionId": "hall3",
                       "definitionId": "send",
                       "options": {
@@ -1550,29 +1547,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0021",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
-                      "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
-                          "isExpression": false
-                        },
-                        "id_end": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": -1
-                    },
-                    {
-                      "type": "action",
                       "id": "a0022",
                       "connectionId": "hall1",
                       "definitionId": "send",
                       "options": {
                         "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
+                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
                           "isExpression": false
                         },
                         "id_end": {
@@ -1585,11 +1565,11 @@
                     {
                       "type": "action",
                       "id": "a0023",
-                      "connectionId": "hall2",
+                      "connectionId": "hall1",
                       "definitionId": "send",
                       "options": {
                         "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
+                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
                           "isExpression": false
                         },
                         "id_end": {
@@ -1606,7 +1586,7 @@
                       "definitionId": "send",
                       "options": {
                         "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
+                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
                           "isExpression": false
                         },
                         "id_end": {
@@ -1619,6 +1599,23 @@
                     {
                       "type": "action",
                       "id": "a0025",
+                      "connectionId": "hall2",
+                      "definitionId": "send",
+                      "options": {
+                        "id_send": {
+                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
+                          "isExpression": false
+                        },
+                        "id_end": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": -1
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0026",
                       "connectionId": "hall3",
                       "definitionId": "send",
                       "options": {
@@ -1635,7 +1632,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0026",
+                      "id": "a0027",
                       "connectionId": "hall3",
                       "definitionId": "send",
                       "options": {
@@ -1684,7 +1681,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0027",
+                      "id": "a0028",
                       "connectionId": "hall1",
                       "definitionId": "send",
                       "options": {
@@ -1701,7 +1698,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0028",
+                      "id": "a0029",
                       "connectionId": "hall2",
                       "definitionId": "send",
                       "options": {
@@ -1718,7 +1715,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0029",
+                      "id": "a0030",
                       "connectionId": "hall3",
                       "definitionId": "send",
                       "options": {
@@ -1765,7 +1762,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0059",
+                "id": "f0060",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -1793,7 +1790,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0058",
+                      "id": "a0059",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1842,7 +1839,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0064",
+                "id": "f0065",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -1870,7 +1867,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0063",
+                      "id": "a0064",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1906,7 +1903,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_ch15_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -1919,16 +1916,12 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0069",
+                "id": "f0070",
                 "connectionId": "xair",
-                "definitionId": "ch",
+                "definitionId": "rtn_aux",
                 "options": {
                   "state": {
                     "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -1947,20 +1940,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0068",
+                      "id": "a0069",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -1996,7 +1981,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0074",
+                "id": "f0075",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2024,7 +2009,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0073",
+                      "id": "a0074",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2079,7 +2064,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0062",
+                      "id": "a0063",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2103,7 +2088,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0061",
+                      "id": "a0062",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2134,7 +2119,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0060",
+                      "id": "a0061",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2194,7 +2179,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0067",
+                      "id": "a0068",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2218,7 +2203,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0066",
+                      "id": "a0067",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2249,7 +2234,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0065",
+                      "id": "a0066",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2309,20 +2294,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0072",
+                      "id": "a0073",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -2333,9 +2310,9 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0071",
+                      "id": "a0072",
                       "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "definitionId": "usbFad_a",
                       "options": {
                         "ticks": {
                           "value": "-2",
@@ -2348,14 +2325,6 @@
                         "faderLim": {
                           "value": true,
                           "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
-                          "isExpression": false
                         }
                       },
                       "upgradeIndex": 5
@@ -2364,9 +2333,9 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0070",
+                      "id": "a0071",
                       "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "definitionId": "usbFad_a",
                       "options": {
                         "ticks": {
                           "value": "2",
@@ -2378,14 +2347,6 @@
                         },
                         "faderLim": {
                           "value": true,
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -2424,7 +2385,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0077",
+                      "id": "a0078",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2448,7 +2409,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0076",
+                      "id": "a0077",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2479,7 +2440,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0075",
+                      "id": "a0076",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2552,7 +2513,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0030",
+                      "id": "a0031",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -2600,7 +2561,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0031",
+                      "id": "a0032",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2669,7 +2630,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0032",
+                      "id": "a0033",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2738,7 +2699,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0033",
+                      "id": "a0034",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2809,7 +2770,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0034",
+                      "id": "a0035",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2878,7 +2839,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0035",
+                      "id": "a0036",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2947,7 +2908,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0036",
+                      "id": "a0037",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3016,7 +2977,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0037",
+                      "id": "a0038",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3083,7 +3044,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0079",
+                "id": "f0080",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3111,7 +3072,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0078",
+                      "id": "a0079",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3160,7 +3121,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0084",
+                "id": "f0085",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3188,7 +3149,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0083",
+                      "id": "a0084",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3224,7 +3185,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MUSIC\\n$(xair:f_ch15_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_rtn_aux_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -3237,16 +3198,12 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0089",
+                "id": "f0090",
                 "connectionId": "xair",
-                "definitionId": "ch",
+                "definitionId": "rtn_aux",
                 "options": {
                   "state": {
                     "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 15,
                     "isExpression": false
                   }
                 },
@@ -3265,20 +3222,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0088",
+                      "id": "a0089",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -3314,7 +3263,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0094",
+                "id": "f0095",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3342,7 +3291,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0093",
+                      "id": "a0094",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3397,7 +3346,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0082",
+                      "id": "a0083",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3421,7 +3370,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0081",
+                      "id": "a0082",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3452,7 +3401,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0080",
+                      "id": "a0081",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3512,7 +3461,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0087",
+                      "id": "a0088",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3536,7 +3485,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0086",
+                      "id": "a0087",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3567,7 +3516,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0085",
+                      "id": "a0086",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3627,20 +3576,12 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0092",
+                      "id": "a0093",
                       "connectionId": "xair",
-                      "definitionId": "mute",
+                      "definitionId": "usbMute",
                       "options": {
                         "mute": {
                           "value": "2",
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -3651,9 +3592,9 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0091",
+                      "id": "a0092",
                       "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "definitionId": "usbFad_a",
                       "options": {
                         "ticks": {
                           "value": "-2",
@@ -3666,14 +3607,6 @@
                         "faderLim": {
                           "value": true,
                           "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
-                          "isExpression": false
                         }
                       },
                       "upgradeIndex": 5
@@ -3682,9 +3615,9 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0090",
+                      "id": "a0091",
                       "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "definitionId": "usbFad_a",
                       "options": {
                         "ticks": {
                           "value": "2",
@@ -3696,14 +3629,6 @@
                         },
                         "faderLim": {
                           "value": true,
-                          "isExpression": false
-                        },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 15,
                           "isExpression": false
                         }
                       },
@@ -3742,7 +3667,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0097",
+                      "id": "a0098",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3766,7 +3691,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0096",
+                      "id": "a0097",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3797,7 +3722,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0095",
+                      "id": "a0096",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
