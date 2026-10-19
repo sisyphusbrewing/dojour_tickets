@@ -10,6 +10,10 @@ on:
         description: 'show_agents.token: email just this agent, now (blank = everyone)'
         required: false
         type: string
+      note:
+        description: 'Optional short note shown above the numbers'
+        required: false
+        type: string
 
 jobs:
   send-reports:
@@ -50,4 +54,9 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           AGENT_TOKEN: ${{ inputs.token }}
+          NOTE: ${{ inputs.note }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
         run: python send_weekly_agent_reports.py
