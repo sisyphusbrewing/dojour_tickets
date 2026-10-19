@@ -33,6 +33,9 @@ DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 AGENT_TOKEN = (os.environ.get("AGENT_TOKEN") or "").strip()
 REPORT_PAGE = "https://www.sisyphusbrewing.com/pages/report"
 
+# Optional NOTE: one short message from us, shown above the numbers (manual runs).
+NOTE = (os.environ.get("NOTE") or "").strip()
+
 # GitHub runners are on UTC; show times are Minneapolis time.
 CENTRAL_TZ = zoneinfo.ZoneInfo("America/Chicago")
 
@@ -116,6 +119,31 @@ def fetch_supabase(endpoint):
         offset += page_size
 
 
+def website_showtimes(titles):
+    """{title: [show_date, ...]} for every upcoming showtime on the website, so a
+    showtime with no sales yet still makes the report (ticket rows only exist once
+    someone buys). Only the shows in `titles` are kept. Empty if Shopify is unreachable."""
+    try:
+        from maintain_shows import Shopify, fetch_active_products, date_text, skip_reason
+        from fetch_tickets import clean_show_title, format_show_date
+        from show_dates import parse_show_datetime
+        products = fetch_active_products(Shopify())
+    except (Exception, SystemExit) as e:
+        print(f"Notice: could not read showtimes from Shopify ({e}); unsold showtimes may be missing.")
+        return {}
+    wanted = {t.lower(): t for t in titles}
+    found = defaultdict(list)
+    for p in products:
+        title = wanted.get(clean_show_title(p["title"]).lower())
+        if not title or skip_reason(p):
+            continue
+        for v in p["variants"]["nodes"]:
+            date_str = format_show_date(parse_show_datetime(date_text(v), require_time=True))
+            if date_str and date_str not in found[title]:
+                found[title].append(date_str)
+    return found
+
+
 def agent_links(token):
     """The two things an agent can do from the email, as (label, url)."""
     if not token:
@@ -175,6 +203,8 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
                          f'{buttons}'
                          f'<p style="margin: 12px 0 0; font-size: 12px; color: #918f90;">These links are yours alone. Please do not forward them.</p>')
 
+    note_html = (f'<p style="margin: 14px 0 0; padding: 12px 14px; border-left: 3px solid #4a6c86; background-color: #393636; '
+                 f'font-size: 15px; line-height: 1.5; color: #ffffff;">{html.escape(NOTE)}</p>' if NOTE else "")
     when = datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y at %-I:%M %p').replace(" AM", " am").replace(" PM", " pm")
     return f"""<!DOCTYPE html>
 <html>
@@ -192,6 +222,7 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
     </td></tr>
     <tr><td style="padding: 8px 24px 24px;">
       <p style="margin: 14px 0 0; font-size: 16px; line-height: 1.5; color: #ffffff;">Hi,<br><br>Here is where <strong>{comedian_name}</strong> stands as of {when}.</p>
+      {note_html}
       {band("The numbers")}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
         <thead><tr>
@@ -226,6 +257,8 @@ def build_email_html(agent_email, comedian_name, shows, total_sold, total_comps=
 def build_email_text(comedian_name, shows, total_sold, total_comps=0, token=""):
     lines = [f"Hi,", "", f"Here is where {comedian_name} at Sisyphus stands "
              f"as of {datetime.now(CENTRAL_TZ).strftime('%B %-d, %Y')}:", ""]
+    if NOTE:
+        lines[1:1] = ["", NOTE]
     for s in shows:
         comp = f", {s['comp_tickets']} comps" if s["comp_tickets"] else ""
         lines.append(f"- {s['show_date']}: {s['total']} sold (Website {s['website_tickets']}, Dojour {s['dojour_tickets']}{comp})")
@@ -295,7 +328,6 @@ def main():
     tickets = fetch_supabase("tickets?select=show_date,show_title,tickets,source")
     if not tickets:
         print("No ticket data found.")
-        return
 
     now_ts = datetime.now(CENTRAL_TZ).timestamp()
     GRACE_PERIOD = 12 * 60 * 60
@@ -333,6 +365,16 @@ def main():
             shows_map[key]["website_tickets"] += count
         else:
             shows_map[key]["dojour_tickets"] += count
+
+    # Showtimes nobody has bought yet have no ticket rows; add them at zero.
+    for title_str, dates in website_showtimes(agent_map.keys()).items():
+        for date_str in dates:
+            key = (title_str, date_str)
+            ts = parse_date_to_timestamp(date_str)
+            if key in shows_map or (ts and ts < (now_ts - GRACE_PERIOD)):
+                continue
+            shows_map[key] = {"show_title": title_str, "show_date": date_str, "timestamp": ts,
+                              "website_tickets": 0, "dojour_tickets": 0, "comp_tickets": 0, "total": 0}
 
     # 3. Consolidate by Agent -> Comedian -> Shows
     consolidated = defaultdict(lambda: defaultdict(list))
