@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import requests
 
-from fetch_tickets import get_dojour_token, extract_tickets_count, parse_show_datetime
+from fetch_tickets import get_dojour_token, extract_tickets_count, parse_show_datetime, dojour_ticket_type
 from maintain_shows import Shopify
 
 QUERY = (os.environ.get("SHOW_QUERY") or (sys.argv[1] if len(sys.argv) > 1 else "")).strip()
@@ -95,18 +95,21 @@ def dojour_sales():
         if r.status_code != 200:
             continue
         rep = r.json()
-        tickets = orders = 0
+        tickets = orders = vip = 0
         # Dojour report totals are in cents. Revenue is ticket price only; buyer fees sit on top.
         revenue = (rep.get("total_revenue") or 0) / 100 if isinstance(rep, dict) else 0
         for res in rep.get("reservation_set", []):
             if not isinstance(res, dict) or res.get("is_cancelled") or res.get("waitlist") \
                     or res.get("is_on_waitlist") or res.get("checkout_complete") is False:
                 continue
-            tickets += extract_tickets_count(res)
+            n = extract_tickets_count(res)
+            tickets += n
             orders += 1
+            if dojour_ticket_type(res):
+                vip += n
         dt = parse_show_datetime(start)
         rows[(title, dt.strftime("%a, %b %-d %Y • %-I:%M %p") if dt else start or "?")] = {"tickets": tickets, "orders": orders,
-                                                                                     "revenue": revenue}
+                                                                                     "vip": vip, "revenue": revenue}
     return rows
 
 
@@ -127,9 +130,9 @@ def main():
 
     try:
         dj_rows = dojour_sales()
-        lines += ["### Dojour", "| Show | Date | Tickets | Orders | Ticket revenue* |", "|---|---|---|---|---|"]
+        lines += ["### Dojour", "| Show | Date | Tickets | VIP | Orders | Ticket revenue* |", "|---|---|---|---|---|---|"]
         for (title, date), r in sorted(dj_rows.items(), key=lambda kv: str(kv[0][1])):
-            lines.append(f"| {title} | {date} | {r['tickets']} | {r['orders']} | ${r['revenue']:,.2f} |")
+            lines.append(f"| {title} | {date} | {r['tickets']} | {r['vip']} | {r['orders']} | ${r['revenue']:,.2f} |")
             total += r["tickets"]
         if not dj_rows:
             lines.append("| none found | | | | |")
@@ -151,7 +154,7 @@ def main():
         annotate(f"Website | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders, ${r['gross']:,.2f}")
     if dj_total is not None:
         for (title, date), r in dj_rows.items():
-            annotate(f"Dojour | {title} | {date} | {r['tickets']} tickets, {r['orders']} orders, ${r['revenue']:,.2f}")
+            annotate(f"Dojour | {title} | {date} | {r['tickets']} tickets ({r['vip']} VIP), {r['orders']} orders, ${r['revenue']:,.2f}")
 
 
 if __name__ == "__main__":
