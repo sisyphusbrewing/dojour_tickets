@@ -152,16 +152,19 @@ function guestCard(t, opts) {
 // opts: { query, showDoneOpen, showEmail, removeComps, toggleFn }
 function renderGuests(container, list, opts) {
   var query = (opts.query || '').toLowerCase().trim();
-  if (!list || !list.length) {
+  if ((!list || !list.length) && !query) {
     container.innerHTML = '<div class="empty"><b>Nobody on the list yet</b>Tap Sync if a sale just came in.</div>';
     return;
   }
-  var filtered = list.filter(function (t) {
+  var filtered = (list || []).filter(function (t) {
     return (t.guest_name || '').toLowerCase().indexOf(query) !== -1 ||
       (t.email || '').toLowerCase().indexOf(query) !== -1;
   });
   if (!filtered.length) {
-    container.innerHTML = '<div class="empty"><b>No one named “' + escapeHtml(query) + '”</b>Try a last name, or part of their email.</div>';
+    container.innerHTML = '<div class="empty"><b>No one named “' + escapeHtml(query) + '”</b>' +
+      (list && list.length ? 'Try a last name, or part of their email.' : 'Nobody on this show’s list yet.') + '</div>' +
+      (opts.otherShows ? '<div id="otherShows">' + (otherCache.key === otherKey(opts.otherShows, query) ? otherCache.html : '') + '</div>' : '');
+    if (opts.otherShows) findOnOtherShows(opts.otherShows, query);
     return;
   }
   var waiting = filtered.filter(function (t) { return (t.checked_in_count || 0) < (t.tickets || 1); });
@@ -182,6 +185,55 @@ function renderGuests(container, list, opts) {
       (open ? '<div class="guests">' + inside.map(function (t) { return guestCard(t, opts); }).join('') + '</div>' : '');
   }
   container.innerHTML = html;
+}
+
+// ---------- Same comic, other shows ----------
+// Callers mix up dates. When a search finds no one on this show, look on the
+// same comic's other shows (a renamed show counts too, see show_family()).
+// other: { show_date, show_title, canOpen(show) -> bool, openFn: 'name' }
+var otherTimer = null, otherSeq = 0;
+var otherCache = { key: null, html: '' };   // so the 20-second refresh doesn't flicker
+function otherKey(other, query) { return other.show_date + '|' + other.show_title + '|' + query; }
+function findOnOtherShows(other, query) {
+  clearTimeout(otherTimer);
+  var seq = ++otherSeq;
+  if (query.length < 2) return;
+  otherTimer = setTimeout(async function () {
+    var res = await sb.rpc('other_show_matches', { p_show_date: other.show_date, p_show_title: other.show_title, p_query: query });
+    if (seq !== otherSeq || !$('otherShows')) return;   // the search changed while loading
+    function show(html) { otherCache = { key: otherKey(other, query), html: html }; $('otherShows').innerHTML = html; }
+    if (res.error) { show('<p class="help other-note">Couldn’t check the other shows.</p>'); return; }
+    var rows = (res.data || []).slice().sort(function (a, b) {
+      return parseShowDateToMillis(a.show_date) - parseShowDateToMillis(b.show_date);
+    });
+    if (!rows.length) {
+      show('<p class="help other-note">Not on any other ' + escapeHtml(other.show_title) + ' show either.</p>');
+      return;
+    }
+    var groups = [];
+    rows.forEach(function (t) {
+      var g = groups[groups.length - 1];
+      if (!g || g.show_date !== t.show_date || g.show_title !== t.show_title) {
+        g = { show_date: t.show_date, show_title: t.show_title, rows: [] };
+        groups.push(g);
+      }
+      g.rows.push(t);
+    });
+    show('<div class="band-row"><span class="band">Other shows</span><span class="band-note">Wrong date, maybe</span></div>' +
+      groups.map(function (g) {
+        var title = g.show_title !== other.show_title ? ' · ' + escapeHtml(g.show_title) : '';
+        var open = other.canOpen && other.canOpen(g)
+          ? '<button class="btn btn-sm" onclick="' + other.openFn + '(' + jsArg(g.show_date) + ',' + jsArg(g.show_title) + ')">Go to show</button>' : '';
+        return '<div class="other-show"><div class="other-head"><b>' + escapeHtml(g.show_date) + title + '</b>' + open + '</div>' +
+          g.rows.map(function (t) {
+            var n = t.tickets || 1;
+            var inCount = t.checked_in_count || 0;
+            return '<div class="other-guest"><span>' + escapeHtml(t.guest_name || 'No name') +
+              (t.email && t.source !== 'Comp' ? ' <small>' + escapeHtml(t.email) + '</small>' : '') + '</span>' +
+              '<span class="other-count">' + n + ' ticket' + (n > 1 ? 's' : '') + (inCount ? ' · ' + inCount + ' in' : '') + '</span></div>';
+          }).join('') + '</div>';
+      }).join(''));
+  }, 300);
 }
 
 // ---------- Sign-in ----------

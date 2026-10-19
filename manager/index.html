@@ -279,10 +279,32 @@
     }
 
     function render() {
-      renderGuests($('guestList'), guests, { query: $('search').value, showDoneOpen: doneOpen, showEmail: true, removeComps: true, toggleFn: 'toggleDone' });
+      var s = selectedShow();
+      renderGuests($('guestList'), guests, { query: $('search').value, showDoneOpen: doneOpen, showEmail: true, removeComps: true, toggleFn: 'toggleDone',
+        otherShows: s && { show_date: s.show_date, show_title: s.show_title, openFn: 'openOtherShow',
+          canOpen: function (g) { return !!showOption(g.show_date, g.show_title); } } });
       var total = guests.reduce(function (a, t) { return a + t.tickets; }, 0);
       var inside = guests.reduce(function (a, t) { return a + t.checked_in_count; }, 0);
       $('countIn').textContent = total ? inside + ' / ' + total : '–';
+    }
+    function showOption(date, title) {
+      var sel = $('showSelect');
+      for (var i = 0; i < sel.options.length; i++) {
+        try {
+          var o = JSON.parse(sel.options[i].value);
+          if (o.show_date === date && o.show_title === title) return sel.options[i];
+        } catch (e) {}
+      }
+      return null;
+    }
+    // "Go to show" on a match from the same comic's other show; keeps the search.
+    function openOtherShow(date, title) {
+      var opt = showOption(date, title);
+      if (!opt) return;
+      $('showSelect').value = opt.value;
+      toggleComp(false);
+      doneOpen = false;
+      loadGuests();
     }
     function toggleDone() { doneOpen = !doneOpen; render(); }
 
