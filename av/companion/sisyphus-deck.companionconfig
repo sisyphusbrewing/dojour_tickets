@@ -487,7 +487,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0040",
+                "id": "f0043",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -515,7 +515,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0039",
+                      "id": "a0042",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -564,7 +564,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0045",
+                "id": "f0048",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -592,7 +592,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0044",
+                      "id": "a0047",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -641,7 +641,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0050",
+                "id": "f0053",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -665,7 +665,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0049",
+                      "id": "a0052",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -706,7 +706,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0055",
+                "id": "f0058",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -734,7 +734,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0054",
+                      "id": "a0057",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -789,7 +789,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0043",
+                      "id": "a0046",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -813,7 +813,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0042",
+                      "id": "a0045",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -844,7 +844,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0041",
+                      "id": "a0044",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -904,7 +904,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0048",
+                      "id": "a0051",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -928,7 +928,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0047",
+                      "id": "a0050",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -959,7 +959,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0046",
+                      "id": "a0049",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1019,7 +1019,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0053",
+                      "id": "a0056",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -1035,7 +1035,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0052",
+                      "id": "a0055",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -1058,7 +1058,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0051",
+                      "id": "a0054",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -1110,7 +1110,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0058",
+                      "id": "a0061",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1134,7 +1134,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0057",
+                      "id": "a0060",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1165,7 +1165,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0056",
+                      "id": "a0059",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1394,7 +1394,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "HALL LIGHTS\\nFULL",
+              "text": "HALL LIGHTS\\nPRE-SHOW\\nlook",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -1411,105 +1411,336 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0016",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
+                      "id": "a0017",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
-                      "id": "a0017",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
+                      "id": "a0016",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 255}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
                       "id": "a0018",
-                      "connectionId": "hall2",
-                      "definitionId": "send",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0019",
-                      "connectionId": "hall2",
-                      "definitionId": "send",
-                      "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
-                          "isExpression": false
-                        },
-                        "id_end": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
                       "id": "a0020",
-                      "connectionId": "hall3",
-                      "definitionId": "send",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0019",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorTemperatureK\", \"value\": 2700}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
                       "id": "a0021",
-                      "connectionId": "hall3",
-                      "definitionId": "send",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 100}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 11}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0023",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0022",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16744448}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0024",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 47}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -1530,7 +1761,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "HALL LIGHTS\\nDIM",
+              "text": "HALL LIGHTS\\nFULL",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -1547,105 +1778,225 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0022",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
-                      "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
-                          "isExpression": false
-                        },
-                        "id_end": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": -1
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0023",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
-                      "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
-                          "isExpression": false
-                        },
-                        "id_end": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": -1
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0024",
-                      "connectionId": "hall2",
-                      "definitionId": "send",
-                      "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
-                          "isExpression": false
-                        },
-                        "id_end": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": -1
-                    },
-                    {
-                      "type": "action",
                       "id": "a0025",
-                      "connectionId": "hall2",
-                      "definitionId": "send",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
                       "id": "a0026",
-                      "connectionId": "hall3",
-                      "definitionId": "send",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 1}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
                       "id": "a0027",
-                      "connectionId": "hall3",
-                      "definitionId": "send",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"brightness\", \"data\": {\"value\": 30}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0028",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0029",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0030",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -1681,54 +2032,114 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0028",
-                      "connectionId": "hall1",
-                      "definitionId": "send",
+                      "id": "a0031",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 0}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 0}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
-                      "id": "a0029",
-                      "connectionId": "hall2",
-                      "definitionId": "send",
+                      "id": "a0032",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 0}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 0}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     },
                     {
                       "type": "action",
-                      "id": "a0030",
-                      "connectionId": "hall3",
-                      "definitionId": "send",
+                      "id": "a0033",
+                      "connectionId": "http",
+                      "definitionId": "post",
                       "options": {
-                        "id_send": {
-                          "value": "{\"msg\": {\"cmd\": \"turn\", \"data\": {\"value\": 0}}}",
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
                           "isExpression": false
                         },
-                        "id_end": {
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 0}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
                           "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": -1
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -1762,7 +2173,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0060",
+                "id": "f0063",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -1790,7 +2201,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0059",
+                      "id": "a0062",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1839,7 +2250,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0065",
+                "id": "f0068",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -1867,7 +2278,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0064",
+                      "id": "a0067",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1916,7 +2327,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0070",
+                "id": "f0073",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -1940,7 +2351,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0069",
+                      "id": "a0072",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -1981,7 +2392,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0075",
+                "id": "f0078",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2009,7 +2420,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0074",
+                      "id": "a0077",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2064,7 +2475,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0063",
+                      "id": "a0066",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2088,7 +2499,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0062",
+                      "id": "a0065",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2119,7 +2530,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0061",
+                      "id": "a0064",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2179,7 +2590,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0068",
+                      "id": "a0071",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2203,7 +2614,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0067",
+                      "id": "a0070",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2234,7 +2645,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0066",
+                      "id": "a0069",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2294,7 +2705,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0073",
+                      "id": "a0076",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -2310,7 +2721,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0072",
+                      "id": "a0075",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -2333,7 +2744,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0071",
+                      "id": "a0074",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -2385,7 +2796,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0078",
+                      "id": "a0081",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2409,7 +2820,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0077",
+                      "id": "a0080",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2440,7 +2851,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0076",
+                      "id": "a0079",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2513,7 +2924,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0031",
+                      "id": "a0034",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -2561,7 +2972,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0032",
+                      "id": "a0035",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2630,7 +3041,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0033",
+                      "id": "a0036",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2699,7 +3110,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0034",
+                      "id": "a0037",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2770,7 +3181,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0035",
+                      "id": "a0038",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2839,7 +3250,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0036",
+                      "id": "a0039",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2908,7 +3319,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0037",
+                      "id": "a0040",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2977,7 +3388,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0038",
+                      "id": "a0041",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3044,7 +3455,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0080",
+                "id": "f0083",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3072,7 +3483,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0079",
+                      "id": "a0082",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3121,7 +3532,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0085",
+                "id": "f0088",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3149,7 +3560,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0084",
+                      "id": "a0087",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3198,7 +3609,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0090",
+                "id": "f0093",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -3222,7 +3633,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0089",
+                      "id": "a0092",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -3263,7 +3674,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0095",
+                "id": "f0098",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3291,7 +3702,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0094",
+                      "id": "a0097",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3346,7 +3757,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0083",
+                      "id": "a0086",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3370,7 +3781,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0082",
+                      "id": "a0085",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3401,7 +3812,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0081",
+                      "id": "a0084",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3461,7 +3872,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0088",
+                      "id": "a0091",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3485,7 +3896,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0087",
+                      "id": "a0090",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3516,7 +3927,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0086",
+                      "id": "a0089",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3576,7 +3987,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0093",
+                      "id": "a0096",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -3592,7 +4003,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0092",
+                      "id": "a0095",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -3615,7 +4026,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0091",
+                      "id": "a0094",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -3667,7 +4078,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0098",
+                      "id": "a0101",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3691,7 +4102,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0097",
+                      "id": "a0100",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3722,7 +4133,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0096",
+                      "id": "a0099",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3805,54 +4216,6 @@
       "isFirstInit": false,
       "enabled": true,
       "sortOrder": 2
-    },
-    "hall1": {
-      "label": "hall1",
-      "moduleId": "generic-tcp-udp",
-      "lastUpgradeIndex": -1,
-      "config": {
-        "host": "192.168.86.21",
-        "port": "4003",
-        "prot": "udp",
-        "broadcast": false,
-        "saveresponse": false,
-        "convertresponse": "none"
-      },
-      "isFirstInit": false,
-      "enabled": true,
-      "sortOrder": 3
-    },
-    "hall2": {
-      "label": "hall2",
-      "moduleId": "generic-tcp-udp",
-      "lastUpgradeIndex": -1,
-      "config": {
-        "host": "192.168.86.41",
-        "port": "4003",
-        "prot": "udp",
-        "broadcast": false,
-        "saveresponse": false,
-        "convertresponse": "none"
-      },
-      "isFirstInit": false,
-      "enabled": true,
-      "sortOrder": 4
-    },
-    "hall3": {
-      "label": "hall3",
-      "moduleId": "generic-tcp-udp",
-      "lastUpgradeIndex": -1,
-      "config": {
-        "host": "192.168.86.43",
-        "port": "4003",
-        "prot": "udp",
-        "broadcast": false,
-        "saveresponse": false,
-        "convertresponse": "none"
-      },
-      "isFirstInit": false,
-      "enabled": true,
-      "sortOrder": 5
     }
   },
   "triggers": {},
