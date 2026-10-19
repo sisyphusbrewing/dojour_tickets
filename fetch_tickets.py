@@ -444,6 +444,23 @@ def get_shopify_access_token() -> str:
     return resp.json().get("access_token")
 
 
+def fetch_current_product_titles(store: str, headers: dict, product_ids) -> dict:
+    """{product_id: current title}. Deleted products are simply missing."""
+    titles = {}
+    ids = sorted(product_ids)
+    for i in range(0, len(ids), 250):
+        batch = ",".join(str(x) for x in ids[i:i + 250])
+        try:
+            resp = requests.get(f"https://{store}/admin/api/2024-01/products.json"
+                                f"?ids={batch}&fields=id,title&limit=250", headers=headers, timeout=25)
+            resp.raise_for_status()
+            for prod in resp.json().get("products", []):
+                titles[prod["id"]] = prod.get("title") or ""
+        except Exception as e:
+            print(f"Notice: could not look up current product titles ({e}); using order titles.")
+    return titles
+
+
 def fetch_shopify_tickets() -> list:
     store = os.environ.get("SHOPIFY_STORE", "").strip()
     if not store:
@@ -469,6 +486,7 @@ def fetch_shopify_tickets() -> list:
     created_at_min = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     url = f"https://{store}/admin/api/2024-01/orders.json?status=any&limit=250&created_at_min={created_at_min}"
     shopify_tickets = []
+    product_ids = set()   # to look up each show's current title (see below)
     skipped = []          # (order name, created, item, reason) for the debug report
     orders_seen = 0
     recent_cutoff = datetime.now(CENTRAL_TZ) - timedelta(days=14)
@@ -526,6 +544,8 @@ def fetch_shopify_tickets() -> list:
                         continue
 
                     show_title = clean_show_title(item_title)
+                    if item.get("product_id"):
+                        product_ids.add(item["product_id"])
 
                     date_cands = [variant_title]
                     for prop in item.get("properties") or []:
@@ -565,6 +585,7 @@ def fetch_shopify_tickets() -> list:
                         "tickets": tickets_count,
                         "ticket_type": ticket_type or None,
                         "source": "Website",
+                        "_product_id": item.get("product_id"),
                         "_sort_dt": show_dt
                     })
 
@@ -580,6 +601,15 @@ def fetch_shopify_tickets() -> list:
 
     except Exception as e:
         print(f"Error fetching Shopify orders: {e}")
+
+    # An order keeps the product title from the moment it was bought, so renaming a
+    # show ("Advice Column" -> "Advice Column - Spooky Edition") split one night into
+    # two shows. Use each product's current title so every order lands on one show.
+    current_titles = fetch_current_product_titles(store, headers, product_ids)
+    for t in shopify_tickets:
+        current = clean_show_title(current_titles.get(t.pop("_product_id", None)) or "")
+        if current:
+            t["show_title"] = current
 
     print(f"Scanned {orders_seen} Shopify orders from the last {lookback_days} days.")
     print(f"Retrieved {len(shopify_tickets)} upcoming tickets from Shopify.")
