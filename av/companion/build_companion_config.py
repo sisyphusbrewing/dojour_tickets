@@ -28,15 +28,26 @@ OUT = pathlib.Path(__file__).with_name("sisyphus-deck.companionconfig")
 XAIR = "xair"
 HTTP = "http"
 OBS = "obs"
-# Hallway Govee lights, controlled over the LAN API (UDP port 4003; "LAN Control"
-# must be on for each light in the Govee Home app). IPs from Sam's arp scan, Oct 18 2026.
-HALL_LIGHTS = {"hall1": "192.168.86.21", "hall2": "192.168.86.41", "hall3": "192.168.86.43"}
+# Hallway Govee bulbs (R14C0 Smart Edison, no LAN Control), driven through Govee's cloud
+# API. The API key is not in this file: it lives in a Companion custom variable named
+# govee_key (Variables > Custom Variables), which the request header reads.
+GOVEE_URL = "https://openapi.api.govee.com/router/api/v1/device/control"
+HALL_BULBS = {
+    "Hallway 1": "20:48:B0:A6:04:30:E2:FC",
+    "Hallway 2": "E0:49:B0:A6:04:30:C2:68",
+    "Middle hallway": "02:AF:B0:A6:04:33:26:CC",
+}
+# Sam's pre-show look, read off the bulbs Oct 19 2026: (brightness %, RGB colour or white in K)
+HALL_PRESHOW = {
+    "Hallway 1": (100, {"rgb": 0x0000FF}),
+    "Hallway 2": (11, {"kelvin": 2700}),
+    "Middle hallway": (47, {"rgb": 0xFF8000}),
+}
 INTERNAL = "internal"  # Companion's own actions; not a connection, never exported
 CONNECTIONS = {
     XAIR: {"label": "xair", "moduleId": "behringer-xair", "lastUpgradeIndex": 5},
     HTTP: {"label": "http", "moduleId": "generic-http", "lastUpgradeIndex": 3},
     OBS: {"label": "obs", "moduleId": "obs-studio", "lastUpgradeIndex": 5},
-    **{h: {"label": h, "moduleId": "generic-tcp-udp", "lastUpgradeIndex": -1} for h in HALL_LIGHTS},
 }
 
 WHITE = 0xFFFFFF
@@ -274,24 +285,38 @@ def print_menu_key():
     return shell_key("PRINT\\nMENU\\n(paper)", PRINT_MENU_COMMAND)
 
 
-def govee_key(text, *commands, bgcolor=0x7A5A00):
-    """A key that sends Govee LAN API commands to every hallway light."""
-    return button(
-        text,
-        press=[action(light, "send", id_send=json.dumps({"msg": cmd}), id_end="")
-               for light in HALL_LIGHTS for cmd in commands],
-        bgcolor=bgcolor,
-        size="14",
+def govee(bulb, kind, instance, value):
+    """One Govee cloud command to one hallway bulb."""
+    return action(
+        HTTP, "post",
+        url=GOVEE_URL,
+        body=json.dumps({"requestId": "deck", "payload": {
+            "sku": "R14C0", "device": HALL_BULBS[bulb],
+            "capability": {"type": f"devices.capabilities.{kind}", "instance": instance, "value": value}}}),
+        header=json.dumps({"Govee-API-Key": "$(internal:custom_govee_key)"}),
+        contenttype="application/json",
+        jsonResultDataVariable="",
+        result_stringify=True,
+        statusCodeVariable="",
     )
 
 
+def hall_preshow(bulb):
+    level, colour = HALL_PRESHOW[bulb]
+    colour_cmd = (govee(bulb, "color_setting", "colorRgb", colour["rgb"]) if "rgb" in colour
+                  else govee(bulb, "color_setting", "colorTemperatureK", colour["kelvin"]))
+    return [govee(bulb, "on_off", "powerSwitch", 1), colour_cmd, govee(bulb, "range", "brightness", level)]
+
+
 def hall_keys():
-    on = {"cmd": "turn", "data": {"value": 1}}
-    level = lambda pct: {"cmd": "brightness", "data": {"value": pct}}  # noqa: E731
     return {
-        (0, 3): govee_key("HALL LIGHTS\\nFULL", on, level(100)),
-        (1, 0): govee_key("HALL LIGHTS\\nDIM", on, level(30), bgcolor=0x4A3600),
-        (1, 1): govee_key("HALL LIGHTS\\nOFF", {"cmd": "turn", "data": {"value": 0}}, bgcolor=DARK),
+        (0, 3): button("HALL LIGHTS\\nPRE-SHOW\\nlook", bgcolor=0x7A5A00, size="14",
+                       press=[a for bulb in HALL_BULBS for a in hall_preshow(bulb)]),
+        (1, 0): button("HALL LIGHTS\\nFULL", bgcolor=0x4A3600, size="14",
+                       press=[a for bulb in HALL_BULBS for a in (govee(bulb, "on_off", "powerSwitch", 1),
+                                                                 govee(bulb, "range", "brightness", 100))]),
+        (1, 1): button("HALL LIGHTS\\nOFF", bgcolor=DARK, size="14",
+                       press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]),
     }
 
 
@@ -376,9 +401,6 @@ def build():
         for i, (cid, info) in enumerate(CONNECTIONS.items())
     }
     instances[OBS]["config"] = {"host": "127.0.0.1", "port": 4455, "pass": ""}
-    for light, ip in HALL_LIGHTS.items():
-        instances[light]["config"] = {"host": ip, "port": "4003", "prot": "udp", "broadcast": False,
-                                      "saveresponse": False, "convertresponse": "none"}
     instances[HTTP]["config"] = {
         "prefix": "", "proxyAddress": "", "authType": "none",
         "rejectUnauthorized": True, "insecureHTTPParser": False,
