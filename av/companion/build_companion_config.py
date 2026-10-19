@@ -190,9 +190,10 @@ CHANNEL = lambda n: dict(  # noqa: E731
     strip={"type": "/ch/", "num": n}, mute_strip={"type": "/ch/", "num": n},
     feedback_strip={"theChannel": n},
 )
-# Pre-show music comes from the office PC over USB (Windows output OUT 1-2) into
-# channels 15/16, stereo-linked in X AIR Edit, so channel 15 moves both (Sam, Oct 18 2026).
-MUSIC = CHANNEL(15)
+# Pre-show music comes from the office PC's headphone jack into Aux in 17/18 (source set
+# to the analog jacks). USB playback into channels 15/16 never passed audio (Oct 19 2026).
+MUSIC = dict(fader_action="usbFad_a", mute_action="usbMute", mute_feedback="rtn_aux",
+             level_var="f_rtn_aux_d")
 SOURCES = [("MIC 1", CHANNEL(1)), ("MIC 2", CHANNEL(2)), ("MUSIC", MUSIC), ("GOD MIC", CHANNEL(5))]
 
 
@@ -305,6 +306,15 @@ def record_key():
     )
 
 
+def reset_sound_key():
+    """Loads XR18 snapshot 1 "SHOW", the known-good show mix saved Oct 19 2026."""
+    return button(
+        "RESET\\nSOUND\\nshow mix",
+        press=[action(XAIR, "load_snap", snap="1")],
+        bgcolor=0x7A3A00,
+    )
+
+
 # --------------------------------------------------------------------------
 # PAGES: edit here. Keys are (row, column). Every page also gets
 # sound_controls(): rows 2-3, the touch strip labels and the four knobs.
@@ -316,7 +326,8 @@ PAGES = {
         "controls": {
             (0, 0): page_key("SHOW", "BAR", 2, SHOW_COLOR),
             (0, 1): record_key(),
-            # (0, 2), (0, 3): free, for DOORS / SHOW / INTERMISSION scenes later
+            (0, 3): reset_sound_key(),
+            # (0, 2): free, for DOORS / INTERMISSION scenes later
             **show_mute_keys(),
         },
     },
