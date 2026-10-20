@@ -5,7 +5,7 @@ to the camera (or types the email on their ticket), the booth shoots four
 frames, shows the strip, asks how many strips (up to what's left on the
 order), and prints. Each 4x6 print is cut by the printer into two 2x6 strips.
 
-Page: https://sisyphusbrewing.github.io/dojour_tickets/booth/
+Page: https://staff.sisyphusbrewing.com/booth/
 
 ## How the pass works
 
@@ -58,7 +58,7 @@ The log of every use is `experience_uses` (managers only).
 2. Make a Chrome shortcut that starts on boot (shell:startup):
 
    ```
-   chrome.exe --kiosk --kiosk-printing --use-fake-ui-for-media-stream --autoplay-policy=no-user-gesture-required "https://sisyphusbrewing.github.io/dojour_tickets/booth/?key=<device key>"
+   chrome.exe --kiosk --kiosk-printing --use-fake-ui-for-media-stream --autoplay-policy=no-user-gesture-required "https://staff.sisyphusbrewing.com/booth/?key=<device key>"
    ```
 
    `--kiosk-printing` prints straight to the default printer with no dialog.

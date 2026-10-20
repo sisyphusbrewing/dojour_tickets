@@ -1360,7 +1360,7 @@
                       "definitionId": "exec",
                       "options": {
                         "path": {
-                          "value": "start \"\" /min powershell -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://sisyphusbrewing.github.io/dojour_tickets/menu/print-menu.ps1')))\"",
+                          "value": "start \"\" /min powershell -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://staff.sisyphusbrewing.com/menu/print-menu.ps1')))\"",
                           "isExpression": false
                         },
                         "cwd": {

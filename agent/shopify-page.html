@@ -7,9 +7,9 @@
 <script>
   (function () {
     var f = document.getElementById('sbAdvance');
-    f.src = 'https://sisyphusbrewing.github.io/dojour_tickets/agent/' + window.location.search;
+    f.src = 'https://staff.sisyphusbrewing.com/agent/' + window.location.search;
     window.addEventListener('message', function (e) {
-      if (e.origin !== 'https://sisyphusbrewing.github.io' || !e.data) return;
+      if ((e.origin !== 'https://staff.sisyphusbrewing.com' && e.origin !== 'https://sisyphusbrewing.github.io') || !e.data) return;
       if (e.data.advanceHeight) f.style.height = (e.data.advanceHeight + 16) + 'px';
     });
   })();
