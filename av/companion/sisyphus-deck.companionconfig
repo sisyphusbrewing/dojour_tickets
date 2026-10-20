@@ -487,7 +487,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0052",
+                "id": "f0055",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -515,7 +515,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0051",
+                      "id": "a0054",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -564,7 +564,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0057",
+                "id": "f0060",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -592,7 +592,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0056",
+                      "id": "a0059",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -641,7 +641,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0062",
+                "id": "f0065",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -665,7 +665,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0061",
+                      "id": "a0064",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -706,7 +706,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0067",
+                "id": "f0070",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -734,7 +734,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0066",
+                      "id": "a0069",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -789,7 +789,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0055",
+                      "id": "a0058",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -813,7 +813,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0054",
+                      "id": "a0057",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -844,7 +844,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0053",
+                      "id": "a0056",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -904,7 +904,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0060",
+                      "id": "a0063",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -928,7 +928,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0059",
+                      "id": "a0062",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -959,7 +959,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0058",
+                      "id": "a0061",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1019,7 +1019,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0065",
+                      "id": "a0068",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -1035,7 +1035,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0064",
+                      "id": "a0067",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -1058,7 +1058,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0063",
+                      "id": "a0066",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -1110,7 +1110,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0070",
+                      "id": "a0073",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1134,7 +1134,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0069",
+                      "id": "a0072",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1165,7 +1165,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0068",
+                      "id": "a0071",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2126,13 +2126,13 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "HALL LIGHTS\\nFULL",
+              "text": "HALL LIGHTS\\nSUNSET",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
-              "bgcolor": 4863488,
+              "bgcolor": 9054778,
               "show_topbar": "default",
               "png64": null
             },
@@ -2143,7 +2143,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0034",
+                      "id": "a0035",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2180,7 +2180,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0035",
+                      "id": "a0034",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2189,7 +2189,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16719872}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -2218,6 +2218,43 @@
                     {
                       "type": "action",
                       "id": "a0036",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 70}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0038",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2263,44 +2300,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
-                          "isExpression": false
-                        },
-                        "header": {
-                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
-                          "isExpression": false
-                        },
-                        "contenttype": {
-                          "value": "application/json",
-                          "isExpression": false
-                        },
-                        "jsonResultDataVariable": {
-                          "value": "",
-                          "isExpression": false
-                        },
-                        "result_stringify": {
-                          "value": true,
-                          "isExpression": false
-                        },
-                        "statusCodeVariable": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": 3
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0038",
-                      "connectionId": "http",
-                      "definitionId": "post",
-                      "options": {
-                        "url": {
-                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
-                          "isExpression": false
-                        },
-                        "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 9055202}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -2337,7 +2337,118 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 70}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0041",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.on_off\", \"instance\": \"powerSwitch\", \"value\": 1}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0040",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16738816}}}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"Govee-API-Key\": \"$(internal:custom_govee_key)\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0042",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://openapi.api.govee.com/router/api/v1/device/control",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 70}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -2397,7 +2508,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0040",
+                      "id": "a0043",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2434,7 +2545,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0041",
+                      "id": "a0044",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2471,7 +2582,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0042",
+                      "id": "a0045",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2538,7 +2649,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0072",
+                "id": "f0075",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2566,7 +2677,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0071",
+                      "id": "a0074",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2615,7 +2726,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0077",
+                "id": "f0080",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2643,7 +2754,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0076",
+                      "id": "a0079",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2692,7 +2803,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0082",
+                "id": "f0085",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -2716,7 +2827,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0081",
+                      "id": "a0084",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -2757,7 +2868,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0087",
+                "id": "f0090",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2785,7 +2896,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0086",
+                      "id": "a0089",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2840,7 +2951,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0075",
+                      "id": "a0078",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2864,7 +2975,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0074",
+                      "id": "a0077",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2895,7 +3006,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0073",
+                      "id": "a0076",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2955,7 +3066,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0080",
+                      "id": "a0083",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2979,7 +3090,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0079",
+                      "id": "a0082",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3010,7 +3121,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0078",
+                      "id": "a0081",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3070,7 +3181,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0085",
+                      "id": "a0088",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -3086,7 +3197,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0084",
+                      "id": "a0087",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -3109,7 +3220,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0083",
+                      "id": "a0086",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -3161,7 +3272,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0090",
+                      "id": "a0093",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3185,7 +3296,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0089",
+                      "id": "a0092",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3216,7 +3327,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0088",
+                      "id": "a0091",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3289,7 +3400,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0043",
+                      "id": "a0046",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -3337,7 +3448,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0044",
+                      "id": "a0047",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3406,7 +3517,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0045",
+                      "id": "a0048",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3475,7 +3586,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0046",
+                      "id": "a0049",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3546,7 +3657,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0047",
+                      "id": "a0050",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3615,7 +3726,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0048",
+                      "id": "a0051",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3684,7 +3795,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0049",
+                      "id": "a0052",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3753,7 +3864,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0050",
+                      "id": "a0053",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3820,7 +3931,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0092",
+                "id": "f0095",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3848,7 +3959,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0091",
+                      "id": "a0094",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3897,7 +4008,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0097",
+                "id": "f0100",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3925,7 +4036,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0096",
+                      "id": "a0099",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3974,7 +4085,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0102",
+                "id": "f0105",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -3998,7 +4109,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0101",
+                      "id": "a0104",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -4039,7 +4150,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0107",
+                "id": "f0110",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -4067,7 +4178,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0106",
+                      "id": "a0109",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4122,7 +4233,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0095",
+                      "id": "a0098",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4146,7 +4257,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0094",
+                      "id": "a0097",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4177,7 +4288,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0093",
+                      "id": "a0096",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4237,7 +4348,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0100",
+                      "id": "a0103",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4261,7 +4372,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0099",
+                      "id": "a0102",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4292,7 +4403,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0098",
+                      "id": "a0101",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4352,7 +4463,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0105",
+                      "id": "a0108",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -4368,7 +4479,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0104",
+                      "id": "a0107",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -4391,7 +4502,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0103",
+                      "id": "a0106",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -4443,7 +4554,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0110",
+                      "id": "a0113",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4467,7 +4578,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0109",
+                      "id": "a0112",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4498,7 +4609,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0108",
+                      "id": "a0111",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {

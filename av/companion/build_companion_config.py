@@ -303,6 +303,12 @@ def govee(bulb, kind, instance, value):
 
 # Daytime: all three soft warm white. Sam asked for 2600K; 2700K is the bulbs' warmest (Oct 20 2026).
 HALL_DAYTIME = {bulb: (60, {"kelvin": 2700}) for bulb in HALL_BULBS}
+# Sunset: red, orange, purple down the hallway (Sam, Oct 20 2026).
+HALL_SUNSET = {
+    "Hallway 1": (70, {"rgb": 0xFF2000}),
+    "Middle hallway": (70, {"rgb": 0xFF6A00}),
+    "Hallway 2": (70, {"rgb": 0x8A2BE2}),
+}
 
 
 def hall_look(look, bulb):
@@ -318,9 +324,8 @@ def hall_keys():
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]),
         (1, 0): button("HALL LIGHTS\\nDAYTIME", bgcolor=0x6A5A30, size="14",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]),
-        (1, 1): button("HALL LIGHTS\\nFULL", bgcolor=0x4A3600, size="14",
-                       press=[a for bulb in HALL_BULBS for a in (govee(bulb, "on_off", "powerSwitch", 1),
-                                                                 govee(bulb, "range", "brightness", 100))]),
+        (1, 1): button("HALL LIGHTS\\nSUNSET", bgcolor=0x8A2A3A, size="14",
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_SUNSET, bulb)]),
         (1, 2): button("HALL LIGHTS\\nOFF", bgcolor=DARK, size="14",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]),
     }
