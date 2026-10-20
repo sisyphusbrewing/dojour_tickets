@@ -12,6 +12,10 @@ on:
       body:
         description: 'Message (use \n for line breaks)'
         required: true
+      attach:
+        description: 'Optional repo file to attach (e.g. posters/one-off/last-call.pdf)'
+        required: false
+        default: ''
       dry_run:
         description: 'Preview only, do not send'
         type: boolean
@@ -35,5 +39,6 @@ jobs:
           EMAIL_TO: ${{ inputs.to }}
           EMAIL_SUBJECT: ${{ inputs.subject }}
           EMAIL_BODY: ${{ inputs.body }}
+          EMAIL_ATTACH: ${{ inputs.attach }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
         run: python send_customer_email.py
