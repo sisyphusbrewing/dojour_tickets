@@ -183,14 +183,14 @@ def strip_label(name, level_var, mute_action, mute_feedback, mute_strip=None, fe
 
 
 def mute_key(name, mute_action, mute_feedback, mute_strip=None, feedback_strip=None):
-    """A key that mutes/unmutes; green ON, red MUTED."""
+    """A key that mutes/unmutes; green ON, red MUTED. Two short lines so the
+    longest name (GOD MIC) still fits the key at a readable size."""
     return button(
-        f"{name}\\nON\\npress to mute",
+        f"{name}\\nON",
         press=[action(XAIR, mute_action, mute="2", **(mute_strip or {}))],
-        feedbacks=[feedback(XAIR, mute_feedback, muted(f"{name}\\nMUTED\\npress for on"),
+        feedbacks=[feedback(XAIR, mute_feedback, muted(f"{name}\\nMUTED"),
                             state="1", **(feedback_strip or {}))],
         bgcolor=LIVE_GREEN,
-        size="14",
     )
 
 
@@ -301,8 +301,12 @@ def govee(bulb, kind, instance, value):
     )
 
 
-def hall_preshow(bulb):
-    level, colour = HALL_PRESHOW[bulb]
+# Daytime: all three soft warm white. Sam asked for 2600K; 2700K is the bulbs' warmest (Oct 20 2026).
+HALL_DAYTIME = {bulb: (60, {"kelvin": 2700}) for bulb in HALL_BULBS}
+
+
+def hall_look(look, bulb):
+    level, colour = look[bulb]
     colour_cmd = (govee(bulb, "color_setting", "colorRgb", colour["rgb"]) if "rgb" in colour
                   else govee(bulb, "color_setting", "colorTemperatureK", colour["kelvin"]))
     return [govee(bulb, "on_off", "powerSwitch", 1), colour_cmd, govee(bulb, "range", "brightness", level)]
@@ -311,11 +315,13 @@ def hall_preshow(bulb):
 def hall_keys():
     return {
         (0, 3): button("HALL LIGHTS\\nPRE-SHOW\\nlook", bgcolor=0x7A5A00, size="14",
-                       press=[a for bulb in HALL_BULBS for a in hall_preshow(bulb)]),
-        (1, 0): button("HALL LIGHTS\\nFULL", bgcolor=0x4A3600, size="14",
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]),
+        (1, 0): button("HALL LIGHTS\\nDAYTIME", bgcolor=0x6A5A30, size="14",
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]),
+        (1, 1): button("HALL LIGHTS\\nFULL", bgcolor=0x4A3600, size="14",
                        press=[a for bulb in HALL_BULBS for a in (govee(bulb, "on_off", "powerSwitch", 1),
                                                                  govee(bulb, "range", "brightness", 100))]),
-        (1, 1): button("HALL LIGHTS\\nOFF", bgcolor=DARK, size="14",
+        (1, 2): button("HALL LIGHTS\\nOFF", bgcolor=DARK, size="14",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]),
     }
 
