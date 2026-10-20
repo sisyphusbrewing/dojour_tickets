@@ -5,12 +5,16 @@ Run from Actions > "Email a customer" (workflow_dispatch). Uses the same
 SMTP secrets as the agent reports. Sends from FROM_EMAIL (the
 ticketing@ box office address) with Reply-To set to it, so answers land there.
 
+EMAIL_ATTACH (optional) is a repo file path to attach, e.g. posters/one-off/last-call.pdf.
+
 DRY_RUN=1 prints the message and checks the sender without sending.
 """
 import os
 import smtplib
 import ssl
 import sys
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
 
@@ -25,6 +29,7 @@ DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 TO = (os.environ.get("EMAIL_TO") or "").strip()
 SUBJECT = (os.environ.get("EMAIL_SUBJECT") or "").strip()
 BODY = (os.environ.get("EMAIL_BODY") or "").replace("\\n", "\n").strip()
+ATTACH = (os.environ.get("EMAIL_ATTACH") or "").strip()
 
 
 def main():
@@ -34,12 +39,21 @@ def main():
         sys.exit(f"Sender mailbox is not {EXPECTED_FROM}; not sending.")
 
     msg = MIMEText(BODY + "\n", "plain", "utf-8")
+    if ATTACH:
+        if not os.path.isfile(ATTACH):
+            sys.exit(f"Attachment not found: {ATTACH}")
+        text, msg = msg, MIMEMultipart()
+        msg.attach(text)
+        with open(ATTACH, "rb") as f:
+            part = MIMEApplication(f.read(), Name=os.path.basename(ATTACH))
+        part["Content-Disposition"] = f'attachment; filename="{os.path.basename(ATTACH)}"'
+        msg.attach(part)
     msg["Subject"] = SUBJECT
     msg["From"] = formataddr((FROM_NAME, FROM_EMAIL))
     msg["To"] = TO
     msg["Reply-To"] = FROM_EMAIL
 
-    print(f"To: {TO}\nSubject: {SUBJECT}\n\n{BODY}\n")
+    print(f"To: {TO}\nSubject: {SUBJECT}\nAttachment: {ATTACH or 'none'}\n\n{BODY}\n")
     print(f"Sender is expected mailbox: {FROM_EMAIL.lower() == EXPECTED_FROM if EXPECTED_FROM else 'not checked'}")
     if DRY_RUN:
         print("DRY_RUN: not sent.")
