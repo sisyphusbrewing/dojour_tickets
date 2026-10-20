@@ -29,6 +29,7 @@ import requests
 
 from show_dates import parse_show_datetime, CENTRAL_TZ
 import recurring_events
+import show_links
 
 API_VERSION = "2025-07"
 COLLECTION_HANDLE = "comedy-and-events"
@@ -288,6 +289,19 @@ def sort_key(product, now):
     return (1, datetime.max.replace(tzinfo=CENTRAL_TZ), product["title"])
 
 
+def add_short_links(shop, products):
+    """Give every show its sisyphusbrewing.com/shows/<handle> link (see show_links.py)."""
+    try:
+        created, errors = show_links.ensure(shop.gql, [p["handle"] for p in products if is_show(p)], DRY_RUN)
+    except Exception as e:  # e.g. app missing the redirects permission; never block the rest
+        annotate("warning", f"Couldn't check /shows/ links: {str(e)[:300]}")
+        return
+    for handle in created:
+        print(f"  + short link /shows/{handle}")
+    for handle, msg in errors:
+        annotate("warning", f"/shows/{handle}: {msg}")
+
+
 def annotate(level, msg):
     """Print a GitHub Actions annotation (shows on the run summary page)."""
     print(f"::{level}::{msg}" if os.environ.get("GITHUB_ACTIONS") else f"[{level}] {msg}")
@@ -442,6 +456,7 @@ def main():
             recurring_events.apply_label_update(shop, p, add, remove)
 
     add_shows_to_collection(shop, current)
+    add_short_links(shop, current)
     sort_collection(shop, now)
     print("Done.")
 

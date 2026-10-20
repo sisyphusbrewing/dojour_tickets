@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 
 from show_dates import parse_show_datetime, CENTRAL_TZ
+import show_links
 
 # ---------------------------------------------------------------------------
 # CONFIGURATION & ENVIRONMENT VARIABLES
@@ -447,11 +448,18 @@ def main():
             errors = [str(e)[:300]]
     print(f"⚠️ Couldn't add to collection: {errors}" if errors else "✓ Added to Comedy and Events.")
 
+    # Short link for posters/ads: sisyphusbrewing.com/shows/<handle>
+    try:
+        _, link_errors = show_links.ensure(lambda q, v=None: run_graphql(token, q, v), [handle])
+        print(f"⚠️ Couldn't add short link: {link_errors}" if link_errors else f"✓ Short link: {show_links.url(handle)}")
+    except Exception as e:
+        print(f"⚠️ Couldn't add short link: {str(e)[:300]}")
+
     # Sort entire collection chronologically
     sort_collection_chronologically(token, COLLECTION_HANDLE)
 
     print("=" * 60)
-    print(f"🎉 SUCCESS! Live at: https://{SHOPIFY_STORE}/products/{handle}")
+    print(f"🎉 SUCCESS! Live at: {show_links.url(handle)}")
     print("=" * 60)
 
 if __name__ == "__main__":
