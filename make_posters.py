@@ -52,6 +52,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from show_dates import parse_show_datetime, CENTRAL_TZ
+import show_links
 from recurring_events import parse_rule
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -193,7 +194,7 @@ def build_show(product, now):
         "handle": product["handle"],
         "created_at": product.get("created_at"),
         "title": product["title"].strip(),
-        "url": f"{SITE}/products/{product['handle']}",
+        "url": show_links.url(product["handle"], SITE),
         "first_show": min(times),
         "dates": date_lines,
         "prices": price_lines,
