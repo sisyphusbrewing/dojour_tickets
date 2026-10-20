@@ -41,7 +41,9 @@ try {
     "--no-pdf-header-footer", "--virtual-time-budget=15000", "--print-to-pdf=`"$pdf`"", $url)
   if (-not (Test-Path $pdf) -or (Get-Item $pdf).Length -lt 20000) { throw "menu PDF was not made (no internet?)" }
 
-  $target = if ($Printer) { @("-print-to", "`"$Printer`"") } else { @("-print-to-default") }
+  # @(...) around the if keeps a one-item result an array; otherwise "+" below glues every argument
+  # into one string and SumatraPDF opens the PDF instead of printing it.
+  $target = @(if ($Printer) { "-print-to", "`"$Printer`"" } else { "-print-to-default" })
   Start-Process -FilePath $sumatra -Wait -WindowStyle Hidden -ArgumentList ($target + @("-print-settings", "`"noscale,${Copies}x`"", "-silent", "`"$pdf`""))
   Log "printed $Copies copy(ies) to $(if ($Printer) { $Printer } else { 'default printer' })"
 } catch {
