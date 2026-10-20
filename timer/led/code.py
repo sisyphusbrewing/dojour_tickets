@@ -1,5 +1,5 @@
 # Sisyphus stage clock: a 64x32 LED panel on an Adafruit Matrix Portal S3
-# that shows the same countdown as https://sisyphusbrewing.github.io/dojour_tickets/timer/
+# that shows the same countdown as https://staff.sisyphusbrewing.com/timer/
 # and follows the Stream Deck buttons (Supabase rpc timer_start/stop/add/light).
 #
 # CircuitPython 9. Copy this file, settings.toml and the libraries listed in

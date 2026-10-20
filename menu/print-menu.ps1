@@ -1,7 +1,7 @@
 # Prints today's taproom menu (menu/print.html, live from GoTab) on the office PC's printer.
 # The Stream Deck PRINT MENU key runs it through Companion's "System: Run shell path (local)", fetching the
 # latest copy from GitHub Pages each time, so nothing has to be copied onto the PC:
-#   powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://sisyphusbrewing.github.io/dojour_tickets/menu/print-menu.ps1')))"
+#   powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://staff.sisyphusbrewing.com/menu/print-menu.ps1')))"
 # Uses Microsoft Edge (built into Windows) and SumatraPDF for silent printing (installed with winget on first run).
 # A log of each press is in %TEMP%\sisyphus-menu\print-menu.log.
 # Options: -Copies 3 for more than one sheet, -Printer "Name" for a printer other than the Windows default.
@@ -35,7 +35,7 @@ try {
   # Render the page headless to a PDF. Its own profile folder keeps it apart from any open Edge window;
   # the virtual time budget lets the menu feed and fonts load before the page is printed.
   Remove-Item $pdf -ErrorAction SilentlyContinue
-  $url = "https://sisyphusbrewing.github.io/dojour_tickets/menu/print.html?t=$([DateTimeOffset]::Now.ToUnixTimeSeconds())"
+  $url = "https://staff.sisyphusbrewing.com/menu/print.html?t=$([DateTimeOffset]::Now.ToUnixTimeSeconds())"
   Start-Process -FilePath $browser -Wait -WindowStyle Hidden -ArgumentList @(
     "--headless=new", "--disable-gpu", "--no-first-run", "--user-data-dir=`"$work\profile`"",
     "--no-pdf-header-footer", "--virtual-time-budget=15000", "--print-to-pdf=`"$pdf`"", $url)

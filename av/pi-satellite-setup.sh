@@ -3,7 +3,7 @@
 # The Pi runs Companion Satellite, so the deck shows the same pages as the bar deck, driven by Companion on
 # the office PC over Wi-Fi. Flash "Raspberry Pi OS Lite (64-bit)" with Raspberry Pi Imager first, setting the
 # hostname (portable-deck), Wi-Fi and SSH in its settings, then on the Pi run:
-#   curl -sSL https://sisyphusbrewing.github.io/dojour_tickets/av/pi-satellite-setup.sh | sudo bash
+#   curl -sSL https://staff.sisyphusbrewing.com/av/pi-satellite-setup.sh | sudo bash
 # Safe to run again. What it does:
 #   - installs Companion Satellite as a service pointed at Companion on the office PC
 #   - turns off Wi-Fi power saving, so the deck doesn't lag or drop after sitting idle
@@ -14,7 +14,7 @@ set -e
 COMPANION_IP="${COMPANION_IP:-192.168.86.42}"
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Run it with sudo: curl -sSL https://sisyphusbrewing.github.io/dojour_tickets/av/pi-satellite-setup.sh | sudo bash"
+  echo "Run it with sudo: curl -sSL https://staff.sisyphusbrewing.com/av/pi-satellite-setup.sh | sudo bash"
   exit 1
 fi
 

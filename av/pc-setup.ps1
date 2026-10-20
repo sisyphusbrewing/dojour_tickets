@@ -1,7 +1,7 @@
 # One-time setup for the office show PC, so that after a restart or power cut anyone can press the power
 # button and the show rig (Companion for the Stream Deck, OBS, Spotify, X AIR Edit) comes back by itself.
 # Run once on that PC in PowerShell opened with "Run as administrator":
-#   powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://sisyphusbrewing.github.io/dojour_tickets/av/pc-setup.ps1')))"
+#   powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://staff.sisyphusbrewing.com/av/pc-setup.ps1')))"
 # Safe to run again; it only sets things to the same values. What it does:
 #   - never sleeps or hibernates on mains power, and keeps USB awake (Stream Deck, XR18 audio)
 #   - Windows Update may not restart while someone is signed in, and active hours cover noon to 2 am

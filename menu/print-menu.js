@@ -1,6 +1,6 @@
 /* Printable taproom menu (one US Letter page), live from the GoTab feed behind the Drink Menu page and TV board.
    The Shopify page /pages/print-menu is just:
-     <div id="pm-root"></div><script src="https://sisyphusbrewing.github.io/dojour_tickets/menu/print-menu.js"></script>
+     <div id="pm-root"></div><script src="https://staff.sisyphusbrewing.com/menu/print-menu.js"></script>
    so changes here go live when merged. Standalone copy for testing: menu/print.html. */
 (function () {
   var style = document.createElement('style');

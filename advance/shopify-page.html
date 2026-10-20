@@ -9,11 +9,11 @@
 <script>
   (function () {
     var f = document.getElementById('sbAdvance');
-    var base = 'https://sisyphusbrewing.github.io/dojour_tickets/advance/';
+    var base = 'https://staff.sisyphusbrewing.com/advance/';
     var hasLink = /[?&]s=[a-f0-9]+/.test(window.location.search);
     f.src = base + (hasLink ? 'trip.html' : '') + window.location.search;
     window.addEventListener('message', function (e) {
-      if (e.origin !== 'https://sisyphusbrewing.github.io' || !e.data) return;
+      if ((e.origin !== 'https://staff.sisyphusbrewing.com' && e.origin !== 'https://sisyphusbrewing.github.io') || !e.data) return;
       if (e.data.advanceHeight) f.style.height = (e.data.advanceHeight + 16) + 'px';
       if (e.data.advanceScrollTop) window.scrollTo({ top: f.getBoundingClientRect().top + window.pageYOffset - 90, behavior: 'smooth' });
     });

@@ -64,7 +64,7 @@ SUPABASE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 PRINT_MENU_COMMAND = (
     'powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create('
     "(New-Object Net.WebClient).DownloadString("
-    "'https://sisyphusbrewing.github.io/dojour_tickets/menu/print-menu.ps1')))\""
+    "'https://staff.sisyphusbrewing.com/menu/print-menu.ps1')))\""
 )
 
 # --------------------------------------------------------------------------
@@ -261,7 +261,7 @@ def menu_refresh_key():
 
 
 def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
-    """Stage timer (sisyphusbrewing.github.io/dojour_tickets/timer/, see timer/README.md)."""
+    """Stage timer (staff.sisyphusbrewing.com/timer/, see timer/README.md)."""
     return supabase_key(text, rpc, body, bgcolor)
 
 

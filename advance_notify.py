@@ -28,7 +28,7 @@ SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
 TO = [a.strip() for a in (os.environ.get("ADVANCE_EMAIL_TO") or "booking@sisyphusbrewing.com").split(",") if a.strip()]
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
-DESK_URL = "https://sisyphusbrewing.github.io/dojour_tickets/advance/booking.html"
+DESK_URL = "https://staff.sisyphusbrewing.com/advance/booking.html"
 
 
 def sections():

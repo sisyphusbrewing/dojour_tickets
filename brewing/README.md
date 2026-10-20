@@ -2,7 +2,7 @@
 
 A phone-friendly brew log for the brewhouse, served by GitHub Pages at
 
-    https://sisyphusbrewing.github.io/dojour_tickets/brewing/
+    https://staff.sisyphusbrewing.com/brewing/
 
 Sign in with the same staff account as the door check-in app. On a phone,
 "Add to Home Screen" gives it an icon and a full-screen window.

@@ -1,6 +1,6 @@
 # Stage timer
 
-Comic-facing countdown at https://sisyphusbrewing.github.io/dojour_tickets/timer/
+Comic-facing countdown at https://staff.sisyphusbrewing.com/timer/
 
 Open it full screen on whatever screen the comic can see (a TV on the back wall,
 or a tablet at the stage edge). Black screen, only the digits glow, so it

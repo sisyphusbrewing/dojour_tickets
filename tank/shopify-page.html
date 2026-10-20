@@ -9,9 +9,9 @@
 <script>
   (function () {
     var f = document.getElementById('sbTank');
-    f.src = 'https://sisyphusbrewing.github.io/dojour_tickets/tank/' + window.location.search;
+    f.src = 'https://staff.sisyphusbrewing.com/tank/' + window.location.search;
     window.addEventListener('message', function (e) {
-      if (e.origin !== 'https://sisyphusbrewing.github.io' || !e.data) return;
+      if ((e.origin !== 'https://staff.sisyphusbrewing.com' && e.origin !== 'https://sisyphusbrewing.github.io') || !e.data) return;
       if (e.data.tankHeight) f.style.height = (e.data.tankHeight + 16) + 'px';
       if (e.data.tankScrollTop) window.scrollTo({ top: f.getBoundingClientRect().top + window.pageYOffset - 90, behavior: 'smooth' });
     });
