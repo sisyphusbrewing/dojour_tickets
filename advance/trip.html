@@ -217,6 +217,16 @@
     }
     function sleeps(d) { if (!d) return null; var t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((parseDate(d) - t) / 864e5); }
     function list(v) { return v ? String(v).split(', ').filter(Boolean) : []; }
+    function crowd(n) { return n === 0 ? 'Just you. Respect.' : n < 5 ? 'Easy. Names below.' : n < 11 ? 'A crew. Names below.' : 'A busload. We\'ll call you.'; }
+    // The nights of a run, as YYYY-MM-DD ("Thu Oct 22" to show). One night: just show_date.
+    function nights() {
+      var a = advance || {}, out = [];
+      if (!a.show_date) return out;
+      var d = parseDate(a.show_date), end = a.show_end_date && a.show_end_date > a.show_date ? parseDate(a.show_end_date) : d;
+      for (; d <= end && out.length < 14; d.setDate(d.getDate() + 1)) out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+      return out;
+    }
+    function nightName(d) { return parseDate(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', ''); }
     function publicUrl(path) { return SUPABASE_URL + '/storage/v1/object/public/advance/' + path; }
 
     /* ---------- the hill ---------- */
@@ -237,6 +247,17 @@
       return v === want;
     }
     function question(q) {
+      if (q.k === 'guest_nights') {
+        var had = {};
+        (Array.isArray(answers.guest_nights) ? answers.guest_nights : []).forEach(function (g) { had[g.d] = g; });
+        return nights().map(function (d, i) {
+          var g = had[d] || {}, n = Number(g.n) || 0;
+          return '<div class="field q night" data-night="' + d + '"><label>' + esc(nightName(d)) + '</label>' +
+            '<div class="stepper"><button type="button" data-nstep="-1" data-i="' + i + '" aria-label="One fewer">−</button><div class="n" id="gn_' + i + '">' + n + '</div><button type="button" data-nstep="1" data-i="' + i + '" aria-label="One more">+</button></div>' +
+            '<div class="stepper-note" id="gnote_' + i + '">' + crowd(n) + '</div>' +
+            '<textarea class="input' + (n ? '' : ' hidden') + '" id="gnames_' + i + '" placeholder="First and last, one per line">' + esc(g.names || '') + '</textarea></div>';
+        }).join('');
+      }
       var f = FIELDS[q.k], id = 'f_' + q.k, lab = esc(q.label || f.label) + (f.req ? ' <span class="req">*</span>' : ''), v = answers[q.k];
       var inner;
       if (f.type === 'select' || f.type === 'checks') {
@@ -302,7 +323,7 @@
         ['Green room', [a.gr_snacks, a.gr_drinks].filter(Boolean).join(' · ')],
         ['Special requests', a.gr_wish],
         ['Security', [a.sec_style, a.sec_heckle].filter(Boolean).join(' · ')],
-        ['Guest list', a.guest_count ? a.guest_count + (a.guest_names ? ': ' + a.guest_names : '') : ''],
+        ['Guest list', Array.isArray(a.guest_nights) ? a.guest_names : a.guest_count ? a.guest_count + (a.guest_names ? ': ' + a.guest_names : '') : ''],
         ['Guest sets', a.gs_want === 'Yes' ? (a.gs_who || 'Yes') : ''],
         ['Getting paid', a.pay_method],
         ['Walk-on', a.walk_on],
@@ -318,6 +339,14 @@
     function readStop(s) {
       var out = {};
       s.q.map(qo).forEach(function (q) {
+        if (q.k === 'guest_nights') {   // per night, plus a total and a readable list for the desk and the email
+          var list = nights().map(function (d, i) { return { d: d, n: Number($('gn_' + i).textContent) || 0, names: $('gnames_' + i).value.trim() }; }), total = 0;
+          list.forEach(function (g) { if (!g.n) g.names = ''; total += g.n; });
+          out.guest_nights = list;
+          out.guest_count = total || '';
+          out.guest_names = list.filter(function (g) { return g.n; }).map(function (g) { return nightName(g.d) + ': ' + (g.names ? g.names.split(/\s*\n\s*/).join(', ') : g.n + ' guest' + (g.n > 1 ? 's' : '')); }).join('\n');
+          return;
+        }
         var f = FIELDS[q.k], box = document.querySelector('[data-q="' + q.k + '"]'), hidden = box && box.classList.contains('hidden');
         if (f.type === 'file') return;
         if (hidden) { out[q.k] = ''; return; }
@@ -356,12 +385,18 @@
       if (gN) {
         var set = function (d) {
           var n = Math.max(0, Math.min(30, (Number(gN.textContent) || 0) + d)); gN.textContent = n;
-          $('gNote').textContent = n === 0 ? 'Just you. Respect.' : n < 5 ? 'Easy. Names below.' : n < 11 ? 'A crew. Names below.' : 'A busload. Grace will call you.';
+          $('gNote').textContent = crowd(n);
           refreshWhen(s);
         };
         Array.prototype.forEach.call(document.querySelectorAll('[data-step]'), function (b) { b.addEventListener('click', function () { set(+b.getAttribute('data-step')); }); });
         set(0);
       }
+      Array.prototype.forEach.call(document.querySelectorAll('[data-nstep]'), function (b) {
+        b.addEventListener('click', function () {
+          var i = b.getAttribute('data-i'), el = $('gn_' + i), n = Math.max(0, Math.min(30, (Number(el.textContent) || 0) + Number(b.getAttribute('data-nstep'))));
+          el.textContent = n; $('gnote_' + i).textContent = crowd(n); $('gnames_' + i).classList.toggle('hidden', !n);
+        });
+      });
       var hs = $('f_headshot');
       if (hs) hs.addEventListener('change', function () {
         var file = hs.files && hs.files[0]; if (!file) return;
@@ -438,6 +473,11 @@
           return;
         }
         advance = res.data; headshotPath = advance.headshot_path || null;
+      }
+      if (nights().length > 1) {   // a run: a guest list for each night, so the comps land on the right show
+        var gs = STEPS.filter(function (x) { return x.land === 'Guests'; })[0];
+        gs.sub = 'The guest list walks right in. Tell me who is coming which night. Funny friend in town? Give them a guest set.';
+        gs.q = ['guest_nights', 'gs_want', { k: 'gs_who', when: ['gs_want', 'Yes'], ph: 'Name, which night, minutes, and a phone or Instagram' }];
       }
       answers = Object.assign({}, advance.data || {});
       var draft = loadDraft();
