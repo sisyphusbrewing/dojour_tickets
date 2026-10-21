@@ -141,7 +141,7 @@ def add_dates(shop, location_id, product, option_name, price, capacity, dates):
         "optionValues": [{"optionName": option_name, "name": variant_name(d)}],
         "price": price,
         "inventoryPolicy": "DENY",
-        "inventoryItem": {"tracked": True, "requiresShipping": False},
+        "inventoryItem": {"tracked": True, "requiresShipping": True},  # pickup = Minneapolis tax
         "inventoryQuantities": [{"availableQuantity": capacity, "locationId": location_id}],
         "metafields": [{"namespace": "custom", "key": "show_start",
                         "type": "single_line_text_field", "value": d.isoformat()}],

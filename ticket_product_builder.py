@@ -370,7 +370,9 @@ def main():
             "price": price_clean,
             "inventory_management": "shopify",
             "inventory_policy": "deny",
-            "requires_shipping": False
+            # Tickets check out as local pickup at the club, so Shopify taxes
+            # them at the Minneapolis rate (where the show is), not the buyer's.
+            "requires_shipping": True
         })
 
     body_html = format_description_html(BIO_RAW, is_free, fee_included=fee)
