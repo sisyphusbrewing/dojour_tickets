@@ -208,6 +208,14 @@
 
     function parseDate(d) { var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
     function fmtDate(d) { return d ? parseDate(d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : ''; }
+    // "Thursday, October 22" or, for a run, "Thu–Sat, October 22–24"
+    function fmtRange(d, e) {
+      if (!d) return '';
+      if (!e || e <= d) return fmtDate(d);
+      var a = parseDate(d), b = parseDate(e), wd = function (x) { return x.toLocaleDateString('en-US', { weekday: 'short' }); },
+          md = function (x, m) { return x.toLocaleDateString('en-US', { month: m, day: 'numeric' }); };
+      return wd(a) + '–' + wd(b) + ', ' + (a.getMonth() === b.getMonth() ? md(a, 'long') + '–' + b.getDate() : md(a, 'short') + ' – ' + md(b, 'short'));
+    }
     function sleeps(d) { if (!d) return null; var t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((parseDate(d) - t) / 864e5); }
     function list(v) { return v ? String(v).split(', ').filter(Boolean) : []; }
     function publicUrl(path) { return SUPABASE_URL + '/storage/v1/object/public/advance/' + path; }
@@ -282,8 +290,8 @@
       return '<div class="band-wrap"><span class="band">You\'re booked</span></div>' +
         '<h1>' + (who ? 'Hey ' + esc(who) + ', congrats.' : 'Hey there, congrats.') + '</h1>' +
         '<p class="sub">You\'re playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)</p>' +
-        '<div class="ticket"><div class="admit">Admit one comedian, plus guests</div><div class="t-name">' + esc(a.show_name || 'Your Name Here') + '</div>' +
-        '<div class="t-when">' + esc([fmtDate(a.show_date), a.show_time].filter(Boolean).join(' · ') || 'Date to come') + '</div>' +
+        '<div class="ticket"><div class="admit">Admit one comedian</div><div class="t-name">' + esc(a.show_name || 'Your Name Here') + '</div>' +
+        '<div class="t-when">' + esc(fmtRange(a.show_date, a.show_end_date) || 'Date to come') + '</div>' +
         '<div class="t-where">712 Ontario Ave W, Minneapolis</div>' + (count ? '<div class="t-perf">' + count + '</div>' : '') + '</div>' + back +
         '<p class="sub" style="margin-top:22px">Your agent and Grace handle the boring stuff. This is just so I can be ready for you. ' + STOPS.length + ' quick ones, mostly taps. -Sam</p>' +
         '<ul class="perks"><li>A green room stocked how you like it</li><li>Security handled your way</li><li>Guest sets for your funny friends</li><li>100% of the door. <span>Since day one.</span></li></ul>' +

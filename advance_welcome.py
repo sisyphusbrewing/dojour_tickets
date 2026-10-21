@@ -64,14 +64,34 @@ def show_day(d):
     return date.fromisoformat(d) if d else None
 
 
+def date_range(start, end):
+    """'Thursday, October 22' or, for a run, 'Thu–Sat, October 22–24'."""
+    if not start:
+        return ""
+    if not end or end <= start:
+        return start.strftime("%A, %B %-d")
+    days = f"{start:%a}–{end:%a}"
+    if start.month == end.month:
+        return f"{days}, {start:%B %-d}–{end:%-d}"
+    return f"{days}, {start:%b %-d} – {end:%b %-d}"
+
+
+def short_range(start, end):
+    """For the subject line: 'Oct 22' or 'Oct 22–24'."""
+    if not end or end <= start:
+        return start.strftime("%b %-d")
+    return f"{start:%b %-d}–{end:%-d}" if start.month == end.month else f"{start:%b %-d} – {end:%b %-d}"
+
+
 def build(a):
     """The email, in Sam's voice: short, first person, one dry joke."""
     esc = html.escape
     first = (a.get("contact_name") or "").split(" ")[0]
     day = show_day(a.get("show_date"))
+    last = show_day(a.get("show_end_date"))
     today = datetime.now(ZoneInfo("America/Chicago")).date()
     days = (day - today).days if day else None
-    when = " · ".join(x for x in (day.strftime("%A, %B %-d") if day else "", a.get("show_time") or "") if x) or "Date to come"
+    when = date_range(day, last) or "Date to come"
     url = TRIP_URL + a["token"]
     count = "" if days is None or days < 0 else "Tonight." if days == 0 else "Tomorrow." if days == 1 else f"{days} days out"
     hey = f"Hey {first}," if first else "Hey there,"
@@ -106,7 +126,7 @@ def build(a):
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER};border-radius:12px">
       <tr><td style="padding:18px 20px 16px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-family:{HEAD};font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:{SLATE}">Admit one comedian, plus guests</td></tr>
+          <tr><td style="font-family:{HEAD};font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:{SLATE}">Admit one comedian</td></tr>
           <tr><td style="padding:8px 0 2px;font-family:{HEAD};font-size:28px;line-height:1.1;font-weight:700;text-transform:uppercase;color:#2b2929">{esc(a['show_name'])}</td></tr>
           <tr><td style="font-family:{BODY};font-size:17px;font-weight:700;color:#2b2929">{esc(when)}</td></tr>
           <tr><td style="padding:2px 0 12px;font-family:{BODY};font-size:15px;color:#5d5959">712 Ontario Ave W, Minneapolis</td></tr>
@@ -157,7 +177,7 @@ def build(a):
         "See you at the show. Cheers!",
         "-Sam",
     ] if x is not None)
-    subject = f"You're booked at Sisyphus: {a['show_name']}" + (f", {day.strftime('%b %-d')}" if day else "")
+    subject = f"You're booked at Sisyphus: {a['show_name']}" + (f", {short_range(day, last)}" if day else "")
     return subject, body, text
 
 
