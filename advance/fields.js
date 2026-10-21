@@ -257,7 +257,6 @@ window.ADVANCE_SECTIONS = [
           "Fruit",
           "Veggies and dip",
           "Cheese and crackers",
-          "Real food",
           "Nothing, I eat after"
         ]
       },
@@ -269,6 +268,8 @@ window.ADVANCE_SECTIONS = [
         "options": [
           "Our beer",
           "NA beer",
+          "Wine",
+          "Liquor",
           "Sparkling water",
           "Still water",
           "Soda",

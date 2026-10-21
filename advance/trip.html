@@ -183,9 +183,8 @@
     // Copy is Sam's voice: short, first person, one dry joke at most.
     var STEPS = [
       { kind: 'hello' },
-      { land: 'Green room', title: 'Stock the green room.', sub: 'I go shopping before you get here. Pick whatever.', q: ['gr_snacks', 'gr_drinks'] },
-      { land: 'Requests', title: 'Anything special?', sub: 'The one thing that makes it a good night. Plus anything you can\'t eat.',
-        q: [{ k: 'gr_wish', ph: 'Peanut M&Ms. Within reason.' }, { k: 'dietary', label: 'Allergies or diet', ph: 'Allergies, diet, strong opinions' }] },
+      { land: 'Green room', title: 'Stock the green room.', sub: 'I go shopping before you get here. Tap what you like, then ask for anything specific.',
+        q: ['gr_snacks', 'gr_drinks', { k: 'gr_wish', label: 'Anything specific', ph: 'A brand, a bourbon, peanut M&Ms' }, { k: 'dietary', label: 'Allergies or diet', ph: 'Allergies, diet, strong opinions' }] },
       { land: 'Security', title: 'Security.', sub: 'Most nights are easy. Some aren\'t. Only Grace and I see this part.',
         q: ['sec_style', 'sec_heckle', { k: 'sec_concerns', ph: 'An ex, a superfan, a guy from Reddit. What they look like, what to do.' }] },
       { land: 'Guests', title: 'Bringing people?', sub: 'The guest list walks right in. Funny friend in town? Give them a guest set.',
@@ -301,7 +300,7 @@
     function renderFinale() {
       var a = answers, rows = [
         ['Green room', [a.gr_snacks, a.gr_drinks].filter(Boolean).join(' · ')],
-        ['The one thing', a.gr_wish],
+        ['Special requests', a.gr_wish],
         ['Security', [a.sec_style, a.sec_heckle].filter(Boolean).join(' · ')],
         ['Guest list', a.guest_count ? a.guest_count + (a.guest_names ? ': ' + a.guest_names : '') : ''],
         ['Guest sets', a.gs_want === 'Yes' ? (a.gs_who || 'Yes') : ''],
