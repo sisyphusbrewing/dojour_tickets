@@ -101,7 +101,7 @@ def build(a):
     <span style="display:inline-block;background:{SLATE};color:#ffffff;padding:8px 16px 5px;font-family:{HEAD};font-weight:700;font-size:13px;letter-spacing:3px;text-transform:uppercase">You're booked</span>
   </td></tr>
   {p(esc(hey), 20)}
-  {p("Congrats - you're playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)", 10)}
+  {p("Congrats, you're playing Sisyphus, “The Disney World of Comedy.” (Smaller. Way better beer.)", 10)}
   <tr><td style="padding:20px 30px 0">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER};border-radius:12px">
       <tr><td style="padding:18px 20px 16px">
@@ -115,7 +115,7 @@ def build(a):
       </td></tr>
     </table>
   </td></tr>
-  {p("Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room, security, your guests and how you want to get paid. Six quick ones, mostly taps.", 22)}
+  {p("Your agent handles the boring stuff. I just want to be ready for you: the green room, security, your guests and how you want to get paid. Just a few quick questions - mostly tapping, very little typing.", 22)}
   <tr><td style="padding:22px 30px 4px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="{SLATE}" style="border-radius:10px">
       <a href="{esc(url)}" style="display:inline-block;padding:16px 30px 13px;font-family:{HEAD};font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:10px">Plan your night</a>
@@ -123,7 +123,7 @@ def build(a):
   </td></tr>
   <tr><td style="padding:24px 30px 0;font-family:{HEAD};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:{SLATE_LIGHT}">What you get</td></tr>
   <tr><td style="padding:8px 30px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">{perk_rows}</table></td></tr>
-  {p("Questions? Just reply. It comes to Grace and me.", 20, 16, "#d9d6d6")}
+  {p("Questions? Just reply.", 20, 16, "#d9d6d6")}
   {p("See you at the show. Cheers!<br>-Sam", 16)}
   <tr><td align="center" style="padding:28px 24px 26px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:{SLATE_LIGHT}">Il faut imaginer Sisyphe heureux.</td></tr>
 </table>
@@ -138,21 +138,21 @@ def build(a):
     text = "\n".join(x for x in [
         hey,
         "",
-        "Congrats - you're playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)",
+        "Congrats, you're playing Sisyphus, “The Disney World of Comedy.” (Smaller. Way better beer.)",
         "",
         a["show_name"],
         when,
         "712 Ontario Ave W, Minneapolis",
         count,
         "",
-        "Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room,",
-        "security, your guests and how you want to get paid. Six quick ones, mostly taps:",
+        "Your agent handles the boring stuff. I just want to be ready for you: the green room, security,",
+        "your guests and how you want to get paid. Just a few quick questions - mostly tapping, very little typing:",
         url,
         "",
         "What you get: a green room stocked how you like it, security handled your way,",
         "guest sets for your funny friends, and 100% of the door. Since day one.",
         "",
-        "Questions? Just reply. It comes to Grace and me.",
+        "Questions? Just reply.",
         "",
         "See you at the show. Cheers!",
         "-Sam",
