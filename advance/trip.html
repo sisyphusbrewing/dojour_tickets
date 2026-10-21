@@ -293,7 +293,7 @@
         '<div class="ticket"><div class="admit">Admit one comedian</div><div class="t-name">' + esc(a.show_name || 'Your Name Here') + '</div>' +
         '<div class="t-when">' + esc(fmtRange(a.show_date, a.show_end_date) || 'Date to come') + '</div>' +
         '<div class="t-where">712 Ontario Ave W, Minneapolis</div>' + (count ? '<div class="t-perf">' + count + '</div>' : '') + '</div>' + back +
-        '<p class="sub" style="margin-top:22px">Your agent handles the boring stuff. This is just so I can be ready for you. Just a few quick questions - mostly tapping, very little typing. -Sam</p>' +
+        '<p class="sub" style="margin-top:22px">I just want to make sure your ' + (a.show_end_date && a.show_end_date > a.show_date ? 'weekend' : 'night') + ' goes according to plan. Just a few quick questions - mostly tapping, very little typing. -Sam</p>' +
         '<ul class="perks"><li>A green room stocked how you like it</li><li>Security handled your way</li><li>Guest sets for your funny friends</li><li>100% of the door. <span>Since day one.</span></li></ul>' +
         nav('Let\'s go');
     }

@@ -95,6 +95,7 @@ def build(a):
     url = TRIP_URL + a["token"]
     count = "" if days is None or days < 0 else "Tonight." if days == 0 else "Tomorrow." if days == 1 else f"{days} days out"
     hey = f"Hey {first}," if first else "Hey there,"
+    stretch = "weekend" if day and last and last > day else "night"
 
     def p(text, top=16, size=17, color="#ffffff"):
         return (f'<tr><td style="padding:{top}px 30px 0;font-family:{BODY};font-size:{size}px;line-height:1.5;color:{color}">{text}</td></tr>')
@@ -135,7 +136,7 @@ def build(a):
       </td></tr>
     </table>
   </td></tr>
-  {p("Your agent handles the boring stuff. I just want to be ready for you: the green room, security, your guests and how you want to get paid. Just a few quick questions - mostly tapping, very little typing.", 22)}
+  {p(f"I just want to make sure your {stretch} goes according to plan: the green room, security, your guests and how you want to get paid. Just a few quick questions - mostly tapping, very little typing.", 22)}
   <tr><td style="padding:22px 30px 4px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="{SLATE}" style="border-radius:10px">
       <a href="{esc(url)}" style="display:inline-block;padding:16px 30px 13px;font-family:{HEAD};font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:10px">Plan your night</a>
@@ -165,8 +166,8 @@ def build(a):
         "712 Ontario Ave W, Minneapolis",
         count,
         "",
-        "Your agent handles the boring stuff. I just want to be ready for you: the green room, security,",
-        "your guests and how you want to get paid. Just a few quick questions - mostly tapping, very little typing:",
+        f"I just want to make sure your {stretch} goes according to plan: the green room, security, your guests",
+        "and how you want to get paid. Just a few quick questions - mostly tapping, very little typing:",
         url,
         "",
         "What you get: a green room stocked how you like it, security handled your way,",
