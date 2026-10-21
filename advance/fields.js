@@ -301,7 +301,7 @@ window.ADVANCE_SECTIONS = [
           "Someone near the stage, just in case",
           "Walk me in and out",
           "Escort all night",
-          "Call me, it is a whole thing"
+          "Call me, it's a whole thing"
         ]
       },
       {
