@@ -335,9 +335,11 @@ def record_key():
     """Starts/stops OBS recording; red with the running time while recording."""
     return button(
         "RECORD\\nvideo\\n$(obs:recording_timecode)",
-        press=[action(OBS, "StartStopRecording")],
-        feedbacks=[feedback(OBS, "recording",
-                            fg=WHITE, bg=RED, fg_paused=WHITE, bg_paused=0xFF8800)],
+        # toggle_recording, which the OBS module's v4 upgrade turns into "Recording - Controls: Toggle";
+        # the old StartStopRecording id is no longer known and the key silently did nothing
+        press=[action(OBS, "toggle_recording")],
+        feedbacks=[feedback(OBS, "recording", style={"color": WHITE, "bgcolor": RED}),
+                   feedback(OBS, "recordingPaused", style={"color": WHITE, "bgcolor": 0xFF8800})],
         bgcolor=DARK,
     )
 
