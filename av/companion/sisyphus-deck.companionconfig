@@ -80,7 +80,7 @@
                 "definitionId": "recording",
                 "options": {},
                 "isInverted": false,
-                "upgradeIndex": 5,
+                "upgradeIndex": 10,
                 "style": {
                   "color": 16777215,
                   "bgcolor": 12582912
@@ -93,7 +93,7 @@
                 "definitionId": "recordingPaused",
                 "options": {},
                 "isInverted": false,
-                "upgradeIndex": 5,
+                "upgradeIndex": 10,
                 "style": {
                   "color": 16777215,
                   "bgcolor": 16746496
@@ -108,9 +108,14 @@
                       "type": "action",
                       "id": "a0002",
                       "connectionId": "obs",
-                      "definitionId": "toggle_recording",
-                      "options": {},
-                      "upgradeIndex": 5
+                      "definitionId": "recording",
+                      "options": {
+                        "action": {
+                          "value": "toggle",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 10
                     }
                   ],
                   "up": []
@@ -4683,7 +4688,7 @@
     "obs": {
       "label": "obs",
       "moduleId": "obs-studio",
-      "lastUpgradeIndex": 5,
+      "lastUpgradeIndex": 10,
       "config": {
         "host": "127.0.0.1",
         "port": 4455,
