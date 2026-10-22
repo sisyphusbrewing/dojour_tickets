@@ -1,0 +1,37 @@
+name: Low supplies
+
+# Emails booking@ when something on the supply sheet (supplies/index.html,
+# staff hub > Supplies) is down to its "low at" count (supply_notify.py).
+# The page starts this through the "run-workflow" Supabase function as soon
+# as a low count is saved; the morning run catches anything missed. Each item
+# is emailed once per dip. Set the SUPPLY_EMAIL_TO repo variable to send
+# these somewhere else.
+
+on:
+  schedule:
+    - cron: '0 14 * * *'   # 9 AM Central (CDT), 8 AM in winter
+  workflow_dispatch:
+
+concurrency:
+  group: supply-notify
+  cancel-in-progress: false
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email low supplies to booking
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SUPPLY_EMAIL_TO: ${{ vars.SUPPLY_EMAIL_TO }}
+        run: python supply_notify.py

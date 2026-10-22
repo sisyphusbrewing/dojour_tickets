@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Supplies</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Supplies">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* Supply sheet: count what's on the shelf; booking@ hears when it's low. */
+    .intro { color: var(--muted); margin: 18px 0 0; }
+    .rows > * + * { margin-top: 8px; }
+    .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+    .item.low { border-color: var(--danger); border-left: 4px solid var(--danger); }
+    .item.uncounted { background: transparent; }
+    .i-main { min-width: 0; flex: 1 1 auto; cursor: pointer; }
+    .i-name { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; line-height: 1.15; padding-top: 2px; word-break: break-word; }
+    .i-sub { color: var(--gray); font-size: 13px; margin-top: 3px; }
+    .i-sub a { font-weight: 600; }
+    .i-sub .lowtag { color: #f0b7ac; font-weight: 700; }
+    .qty { flex: 0 0 auto; display: flex; align-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); padding: 3px; }
+    .qty button { width: 40px; height: 40px; border: 0; border-radius: 9px; background: var(--card); color: #fff; font-size: 20px; font-weight: 700; cursor: pointer; }
+    .qty button.plus { background: var(--slate); }
+    .qty input { width: 52px; height: 40px; border: 0; background: transparent; color: #fff; text-align: center; font-family: var(--head); font-weight: 700; font-size: 17px;
+                 padding-top: 3px; outline: none; -moz-appearance: textfield; }
+    .qty input::-webkit-outer-spin-button, .qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .qty input::placeholder { color: var(--gray); }
+    .low .qty input { color: #f0b7ac; }
+    dialog { width: min(480px, calc(100% - 32px)); background: var(--card); color: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    dialog::backdrop { background: rgba(0,0,0,.6); }
+    dialog h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 14px; }
+    .d-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .d-actions .grow { flex: 1; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Supplies</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Supplies<small id="summary">The stock sheet</small></div>
+        </a>
+        <div class="hdr-right">
+          <button class="btn btn-sm btn-primary" type="button" onclick="editItem(null)">+ Item</button>
+          <button class="btn btn-sm" type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+      <div class="hdr-tools">
+        <div class="chips tabs" id="filters"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
+    <div id="sheet">
+      <p class="intro">Count it, type it in. When something hits its "low at" number, booking@ gets an email with where to buy it. Tap a name to change it.</p>
+      <div id="list"><div class="empty">Loading the shelf…</div></div>
+    </div>
+  </main>
+
+  <dialog id="editor">
+    <form id="editForm" method="dialog">
+      <h2 id="editTitle">Item</h2>
+      <div class="grid2">
+        <div class="field full"><label for="f_name">Name</label><input class="input" id="f_name" required maxlength="80"></div>
+        <div class="field"><label for="f_category">Section</label><input class="input" id="f_category" list="categories" maxlength="40" placeholder="Bar"></div>
+        <div class="field"><label for="f_unit">Counted in</label><input class="input" id="f_unit" maxlength="30" placeholder="sleeves, rolls, cases"></div>
+        <div class="field"><label for="f_low">Low at</label><input class="input" id="f_low" type="number" min="0" step="any" inputmode="decimal" required></div>
+        <div class="field"><label for="f_vendor">Where we buy it</label><input class="input" id="f_vendor" list="vendors" maxlength="60" placeholder="Costco"></div>
+        <div class="field full"><label for="f_url">Link to buy it</label><input class="input" id="f_url" type="url" maxlength="500" placeholder="https://"></div>
+        <div class="field full"><label for="f_notes">Notes</label><input class="input" id="f_notes" maxlength="200" placeholder="The blue ones, not the clear ones"></div>
+      </div>
+      <p class="help">"Low at" is the count that means order more. At or under it, booking@ gets one email until it's restocked.</p>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="saveItem" type="submit" value="save">Save</button>
+        <button class="btn" type="button" onclick="$('editor').close()">Cancel</button>
+        <button class="btn btn-danger" id="removeItem" type="button" onclick="removeItem()">Remove</button>
+      </div>
+    </form>
+  </dialog>
+  <datalist id="categories"></datalist>
+  <datalist id="vendors"></datalist>
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var items = [], filter = 'all', editing = null, me = '', alertTimer = null;
+
+    function num(v) { return v == null ? '' : String(Number(v)); }
+    function isLow(it) { return it.on_hand != null && Number(it.on_hand) <= Number(it.low_at); }
+    function categories() {
+      var seen = [];
+      items.forEach(function (it) { if (seen.indexOf(it.category) === -1) seen.push(it.category); });
+      return seen;
+    }
+
+    async function load() {
+      var res = await sb.from('supply_items').select('*').eq('active', true).order('sort').order('name');
+      if (res.error) { toast(res.error.message, true); return; }
+      items = res.data || [];
+      render();
+    }
+
+    function render() {
+      var low = items.filter(isLow).length;
+      var unc = items.filter(function (it) { return it.on_hand == null; }).length;
+      $('summary').textContent = low ? low + ' running low' : (unc ? unc + ' not counted yet' : 'All stocked');
+      var cats = categories();
+      if (filter !== 'all' && filter !== 'low' && cats.indexOf(filter) === -1) filter = 'all';
+      $('filters').innerHTML = [['all', 'Everything'], ['low', 'Low · ' + low]].concat(cats.map(function (c) { return [c, c]; }))
+        .map(function (f) { return '<button class="chip' + (filter === f[0] ? ' on' : '') + '" type="button" data-f="' + escapeHtml(f[0]) + '">' + escapeHtml(f[1]) + '</button>'; }).join('');
+      $('categories').innerHTML = cats.map(function (c) { return '<option value="' + escapeHtml(c) + '">'; }).join('');
+      var vendors = items.map(function (it) { return it.vendor; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+      $('vendors').innerHTML = vendors.map(function (v) { return '<option value="' + escapeHtml(v) + '">'; }).join('');
+
+      var shown = items.filter(function (it) { return filter === 'all' || (filter === 'low' ? isLow(it) : it.category === filter); });
+      if (!shown.length) {
+        $('list').innerHTML = '<div class="empty"><b>' + (filter === 'low' ? 'Nothing low' : 'Nothing here') + '</b>' +
+          (filter === 'low' ? 'The shelf is full. Enjoy it while it lasts.' : 'Add the first thing with + Item.') + '</div>';
+        return;
+      }
+      var html = '';
+      cats.forEach(function (c) {
+        var rows = shown.filter(function (it) { return it.category === c; });
+        if (!rows.length) return;
+        html += '<div class="band-row"><span class="band">' + escapeHtml(c) + '</span></div><div class="rows">' + rows.map(row).join('') + '</div>';
+      });
+      $('list').innerHTML = html;
+    }
+
+    function row(it) {
+      var bits = [];
+      if (isLow(it)) bits.push('<span class="lowtag">Low</span>');
+      bits.push('low at ' + escapeHtml(num(it.low_at)) + (it.unit ? ' ' + escapeHtml(it.unit) : ''));
+      if (it.vendor) bits.push(it.url ? '<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + escapeHtml(it.vendor) + '</a>' : escapeHtml(it.vendor));
+      if (it.on_hand == null) bits.push('not counted');
+      else if (it.counted_at) bits.push(new Date(it.counted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+        (it.counted_by ? ' · ' + escapeHtml(it.counted_by.replace('@' + LOGIN_DOMAIN, '')) : ''));
+      return '<div class="item' + (isLow(it) ? ' low' : '') + (it.on_hand == null ? ' uncounted' : '') + '" data-id="' + it.id + '">' +
+        '<div class="i-main" data-act="edit"><div class="i-name">' + escapeHtml(it.name) + '</div><div class="i-sub">' + bits.join(' · ') + '</div>' +
+        (it.notes ? '<div class="i-sub">' + escapeHtml(it.notes) + '</div>' : '') + '</div>' +
+        '<div class="qty"><button type="button" data-act="minus" aria-label="One less">−</button>' +
+        '<input type="number" min="0" step="any" inputmode="decimal" value="' + num(it.on_hand) + '" placeholder="?" aria-label="On hand">' +
+        '<button class="plus" type="button" data-act="plus" aria-label="One more">+</button></div></div>';
+    }
+
+    async function setCount(id, value) {
+      var it = items.find(function (x) { return x.id === id; });
+      if (!it) return;
+      var v = value === '' || value == null ? null : Math.max(0, Number(value));
+      if (v !== null && isNaN(v)) { render(); return; }
+      var res = await sb.from('supply_items').update({ on_hand: v, counted_by: me || null, counted_at: new Date().toISOString() })
+        .eq('id', id).select().single();
+      if (res.error) { toast('Save failed: ' + res.error.message, true); render(); return; }
+      Object.assign(it, res.data);
+      render();
+      if (isLow(it) && !it.low_alerted_at) { toast(it.name + ' is low. Booking will hear about it.'); queueAlert(); }
+    }
+
+    // One email for a burst of counts, a few seconds after the last low one.
+    function queueAlert() {
+      clearTimeout(alertTimer);
+      alertTimer = setTimeout(async function () {
+        var r = await runWorkflow('supply_notify.yml', {});
+        if (!r.ok) toast('Saved, but the email did not start: ' + r.error + '. The morning check will catch it.', true);
+      }, 4000);
+    }
+
+    function editItem(id) {
+      editing = id ? items.find(function (x) { return x.id === id; }) : null;
+      var it = editing || { category: filter !== 'all' && filter !== 'low' ? filter : '', low_at: 1 };
+      $('editTitle').textContent = editing ? 'Change item' : 'New item';
+      $('f_name').value = it.name || '';
+      $('f_category').value = it.category || '';
+      $('f_unit').value = it.unit || '';
+      $('f_low').value = num(it.low_at);
+      $('f_vendor').value = it.vendor || '';
+      $('f_url').value = it.url || '';
+      $('f_notes').value = it.notes || '';
+      $('removeItem').classList.toggle('hidden', !editing);
+      $('editor').showModal();
+    }
+
+    $('editForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var clean = function (id) { return $(id).value.trim() || null; };
+      var patch = { name: $('f_name').value.trim(), category: clean('f_category') || 'Other', unit: clean('f_unit'),
+                    low_at: Math.max(0, Number($('f_low').value) || 0), vendor: clean('f_vendor'), url: clean('f_url'), notes: clean('f_notes') };
+      if (!patch.name) return;
+      $('saveItem').disabled = true;
+      var res = editing
+        ? await sb.from('supply_items').update(patch).eq('id', editing.id).select().single()
+        : await sb.from('supply_items').insert(Object.assign({ sort: 100 + items.length }, patch)).select().single();
+      $('saveItem').disabled = false;
+      if (res.error) { toast('Save failed: ' + res.error.message, true); return; }
+      if (editing) Object.assign(editing, res.data); else items.push(res.data);
+      $('editor').close();
+      render();
+      toast('Saved');
+      if (isLow(res.data) && !res.data.low_alerted_at) queueAlert();
+    });
+
+    async function removeItem() {
+      if (!editing || !confirm('Take ' + editing.name + ' off the sheet?')) return;
+      var res = await sb.from('supply_items').update({ active: false }).eq('id', editing.id);
+      if (res.error) { toast(res.error.message, true); return; }
+      items = items.filter(function (x) { return x !== editing; });
+      $('editor').close();
+      render();
+    }
+
+    $('filters').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; render(); } });
+    $('list').addEventListener('click', function (e) {
+      var el = e.target.closest('.item'); if (!el) return;
+      var act = e.target.closest('[data-act]'); if (!act) return;
+      var it = items.find(function (x) { return x.id === el.dataset.id; });
+      if (act.dataset.act === 'edit') { editItem(it.id); return; }
+      var cur = it.on_hand == null ? 0 : Number(it.on_hand);
+      var next = act.dataset.act === 'plus' ? cur + 1 : Math.max(0, cur - 1);
+      el.querySelector('input').value = next;
+      setCount(it.id, next);
+    });
+    $('list').addEventListener('change', function (e) {
+      if (e.target.tagName !== 'INPUT') return;
+      setCount(e.target.closest('.item').dataset.id, e.target.value.trim());
+    });
+    $('list').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); });
+
+    setupSignIn(async function (role) {
+      var u = (await sb.auth.getUser()).data.user;
+      me = u ? u.email : '';
+      if (role !== 'manager') {
+        $('sheet').classList.add('hidden');
+        $('filters').classList.add('hidden');
+        $('notManager').classList.remove('hidden');
+        return;
+      }
+      load();
+    });
+  </script>
+</body>
+</html>
