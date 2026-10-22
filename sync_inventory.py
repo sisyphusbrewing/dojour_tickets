@@ -205,12 +205,14 @@ def set_stock(shop, loc, changes):
     if not changes:
         return
     quantities = [{"inventoryItemId": c["variant"]["inventoryItem"]["id"], "locationId": loc,
-                   "quantity": c["after"]} for c in changes]
+                   "quantity": c["after"], "changeFromQuantity": None} for c in changes]
+    # changeFromQuantity: null skips the compare check (replaces the deprecated
+    # ignoreCompareQuantity); it needs API 2026-01 or later.
     result = shop.gql("""
       mutation SetStock($input: InventorySetQuantitiesInput!) {
         inventorySetQuantities(input: $input) { userErrors { field message } }
-      }""", {"input": {"name": "available", "reason": "other",
-                       "ignoreCompareQuantity": True, "quantities": quantities}})
+      }""", {"input": {"name": "available", "reason": "other", "quantities": quantities}},
+        version="2026-01")
     errors = result["inventorySetQuantities"]["userErrors"]
     if errors:
         raise RuntimeError(f"inventorySetQuantities: {errors}")
