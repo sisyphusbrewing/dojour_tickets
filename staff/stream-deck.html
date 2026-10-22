@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Stream Deck Guide</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* Plain-language guide to the showroom Stream Deck +. Mirrors the PAGES in
+       av/companion/build_companion_config.py: change a key there, change it here. */
+    .intro { color: var(--muted); margin: 18px 0 4px; }
+    p, li { color: var(--muted); }
+    b, strong { color: var(--white); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+    .card p { margin: 0 0 8px; } .card p:last-child { margin: 0; }
+    ol.steps, ul.plain { margin: 0; padding-left: 1.3em; }
+    ol.steps li, ul.plain li { margin: 0 0 8px; }
+
+    /* The deck, drawn: 8 keys, the touch strip, 4 knobs */
+    .deck { background: #1b1a1a; border: 1px solid var(--line); border-radius: 18px; padding: 12px; max-width: 420px; margin: 0 auto 14px; }
+    .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .key { aspect-ratio: 1; border-radius: 10px; display: grid; place-items: center; text-align: center; padding: 4px;
+           font-family: var(--head); font-weight: 700; text-transform: uppercase; font-size: 11px; line-height: 1.15; letter-spacing: .04em; color: #fff; }
+    .key.empty { background: #262424; border: 1px dashed var(--line); color: var(--gray); font-weight: 600; }
+    .strip { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 10px; background: #202020; border-radius: 8px; overflow: hidden; }
+    .strip div { text-align: center; font-size: 11px; padding: 7px 2px; color: var(--muted); border-left: 1px solid #333; font-weight: 600; }
+    .strip div:first-child { border-left: 0; }
+    .knobs { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+    .knobs span { width: 40px; height: 40px; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #666, #2a2a2a); border: 2px solid #111; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; vertical-align: 2px; }
+    .tag.soon { background: #3c3a2a; color: #e9d98a; }
+
+    .keylist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .keylist li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; gap: 12px; align-items: flex-start; }
+    .keylist .sw { flex: 0 0 14px; height: 14px; border-radius: 4px; margin-top: 5px; }
+    .keylist b { font-family: var(--head); text-transform: uppercase; letter-spacing: .06em; font-size: 14px; }
+    .keylist p { margin: 2px 0 0; }
+
+    .tabs { margin: 4px 0 14px; }
+    .page { display: none; } .page.on { display: block; }
+    .foot { color: var(--gray); font-size: 14px; margin-top: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="./">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Stream Deck<small>How the showroom buttons work</small></div>
+        </a>
+        <a class="btn btn-sm btn-ghost" href="./">‹ Staff</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="intro">Eight buttons, four knobs, one show. You push buttons. The computer in the office does the rest.</p>
+
+    <div class="band-row"><span class="band">The basics</span></div>
+    <div class="card">
+      <p>The Stream Deck at the bar runs sound, the record button, the stage timer, the hallway lights and the menus. It's a remote control: the brains are on the <b>office PC</b> (a program called Companion), and the mixer is in the office too.</p>
+      <p>The deck has <b>three pages</b>: <b>SHOW</b>, <b>BAR</b> and <b>TIMER</b>. The purple, blue or green key in the top-left corner says which page you're on. Press it to go to the next one. Swiping sideways on the touch strip also changes page.</p>
+      <p><b>The four knobs never change.</b> Whatever page you're on, they're always MIC 1, MIC 2, MUSIC and GOD MIC. Turn for louder or quieter, push to mute. The strip above each knob shows its name and level, and turns red with <b>MUTED</b> when it's off. Tap the strip to unmute.</p>
+      <p>The overall room volume is set once on the mixer and never lives on a knob. If the whole room is too loud or too quiet, see <a href="#trouble">If something's wrong</a>.</p>
+    </div>
+
+    <div class="band-row"><span class="band">The three pages</span></div>
+    <div class="chips tabs" id="tabs">
+      <button class="chip on" data-page="show">Show</button>
+      <button class="chip" data-page="bar">Bar</button>
+      <button class="chip" data-page="timer">Timer</button>
+    </div>
+
+    <!-- SHOW page -->
+    <section class="page on" id="page-show">
+      <div class="deck" aria-label="SHOW page layout">
+        <div class="keys">
+          <div class="key" style="background:#5a2a82">Show page<br>next: bar</div>
+          <div class="key" style="background:#202020">Record<br>video</div>
+          <div class="key empty">Coming<br>soon</div>
+          <div class="key" style="background:#7a3a00">Reset<br>sound</div>
+          <div class="key" style="background:#1e5e2a">Mic 1<br>on</div>
+          <div class="key" style="background:#1e5e2a">Mic 2<br>on</div>
+          <div class="key" style="background:#1e5e2a">Music<br>on</div>
+          <div class="key" style="background:#1e5e2a">God mic<br>on</div>
+        </div>
+        <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>GOD MIC</div></div>
+        <div class="knobs"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <ul class="keylist">
+        <li><span class="sw" style="background:#5a2a82"></span><div><b>Show page</b><p>You're on SHOW. Press for the BAR page.</p></div></li>
+        <li><span class="sw" style="background:#202020;border:1px solid #555"></span><div><b>Record video</b><p>Starts recording the set on the office PC (cameras plus room sound). The key turns <b>red</b> and shows the running time. Press again to stop. Orange means paused.</p></div></li>
+        <li><span class="sw" style="background:#7a3a00"></span><div><b>Reset sound</b><p>Puts the mixer back to the saved show mix. Use it when sound is weird: a mic dead, music gone, everything too quiet. Safe to press any time; it just undoes whatever got bumped.</p></div></li>
+        <li><span class="sw" style="background:#1e5e2a"></span><div><b>Mic 1 · Mic 2 · Music · God mic</b><p>Green <b>ON</b> means live. Press to mute: the key goes red and says <b>MUTED</b>. Press again to bring it back. Same thing as pushing the knob below it.</p></div></li>
+        <li><span class="sw" style="background:#262424;border:1px dashed var(--line)"></span><div><b>Empty key</b> <span class="tag soon">Coming soon</span><p>Saved for one-press scene buttons (DOORS, START SHOW, END SHOW) that set sound, lights and recording all at once.</p></div></li>
+      </ul>
+    </section>
+
+    <!-- BAR page -->
+    <section class="page" id="page-bar">
+      <div class="deck" aria-label="BAR page layout">
+        <div class="keys">
+          <div class="key" style="background:#1e4c7a">Bar page<br>next: timer</div>
+          <div class="key" style="background:#1e4c7a">Refresh<br>TV menu</div>
+          <div class="key" style="background:#1e4c7a">Print<br>menu</div>
+          <div class="key" style="background:#7a5a00">Hall lights<br>pre-show</div>
+          <div class="key" style="background:#6a5a30">Hall lights<br>daytime</div>
+          <div class="key" style="background:#8a2a3a">Hall lights<br>sunset</div>
+          <div class="key" style="background:#202020">Hall lights<br>off</div>
+          <div class="key empty">Coming<br>soon</div>
+        </div>
+        <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>GOD MIC</div></div>
+        <div class="knobs"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <ul class="keylist">
+        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Bar page</b><p>You're on BAR. Press for the TIMER page.</p></div></li>
+        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Refresh TV menu</b><p>Makes the taproom TV reload the beer list. Press it after a keg change in GoTab. Takes a few seconds.</p></div></li>
+        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Print menu</b><p>Prints today's taps on one page on the office printer, straight from GoTab. Give it a moment.</p></div></li>
+        <li><span class="sw" style="background:#7a5a00"></span><div><b>Hall lights: pre-show</b><p>Blue, warm white and orange down the hallway. Use it when doors open.</p></div></li>
+        <li><span class="sw" style="background:#6a5a30"></span><div><b>Hall lights: daytime</b><p>All three bulbs soft warm white.</p></div></li>
+        <li><span class="sw" style="background:#8a2a3a"></span><div><b>Hall lights: sunset</b><p>Red, orange and purple. For late shows and showing off.</p></div></li>
+        <li><span class="sw" style="background:#202020;border:1px solid #555"></span><div><b>Hall lights: off</b><p>All three hallway bulbs off. These run over the internet, so if the Wi-Fi is down they may not answer. Press again in a minute.</p></div></li>
+      </ul>
+    </section>
+
+    <!-- TIMER page -->
+    <section class="page" id="page-timer">
+      <div class="deck" aria-label="TIMER page layout">
+        <div class="keys">
+          <div class="key" style="background:#1f5f2e">Timer page<br>next: show</div>
+          <div class="key" style="background:#1f5f2e">Start<br>5 min</div>
+          <div class="key" style="background:#1f5f2e">Start<br>7 min</div>
+          <div class="key" style="background:#1f5f2e">Start<br>10 min</div>
+          <div class="key" style="background:#1f5f2e">Start<br>15 min</div>
+          <div class="key" style="background:#202020">Add<br>1 min</div>
+          <div class="key" style="background:#c00000">Stop<br>timer</div>
+          <div class="key" style="background:#7a5a00">Flash<br>light</div>
+        </div>
+        <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>GOD MIC</div></div>
+        <div class="knobs"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <ul class="keylist">
+        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Timer page</b><p>You're on TIMER. Press to go back to SHOW.</p></div></li>
+        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Start 5 / 7 / 10 / 15 min</b><p>Starts the comic's countdown on the <a href="../timer/">stage timer</a> screen. Press it when the comic hits the stage. Pressing another one restarts at the new length.</p></div></li>
+        <li><span class="sw" style="background:#202020;border:1px solid #555"></span><div><b>Add 1 min</b><p>Gives the comic one more minute. Press it as many times as you're feeling generous.</p></div></li>
+        <li><span class="sw" style="background:#c00000"></span><div><b>Stop timer</b><p>Clears the timer. Press it when the comic is off.</p></div></li>
+        <li><span class="sw" style="background:#7a5a00"></span><div><b>Flash light</b><p>Gives the comic the light by hand. The timer already does this on its own at 1 minute left (the digits go red and say LIGHT), and blinks red once time's up.</p></div></li>
+      </ul>
+    </section>
+
+    <div class="band-row"><span class="band">A show night</span></div>
+    <div class="card">
+      <ol class="steps">
+        <li><b>Doors.</b> BAR page: <b>Hall lights pre-show</b>. Start the pre-show playlist in Spotify on the office PC and set it with the <b>MUSIC</b> knob.</li>
+        <li><b>Host walks up.</b> SHOW page: check <b>MIC 1</b> is green. Turn MUSIC down or push the knob to mute it. Press <b>Record video</b>.</li>
+        <li><b>Each comic.</b> TIMER page: start their time. <b>Stop timer</b> when they're off.</li>
+        <li><b>Announcements</b> from the office: <b>GOD MIC</b> on, talk, mute it again.</li>
+        <li><b>After the show.</b> SHOW page: press <b>Record video</b> to stop (the key goes back to dark). Music back up. BAR page: hall lights to whatever suits the rest of the night.</li>
+      </ol>
+    </div>
+
+    <div class="band-row" id="trouble"><span class="band">If something's wrong</span></div>
+    <div class="card">
+      <ul class="plain">
+        <li><b>Sound is weird</b> (a mic dead, music gone, too quiet): SHOW page, <b>Reset sound</b>. Fixes most things.</li>
+        <li><b>A key is red.</b> That thing is muted. Press it.</li>
+        <li><b>The deck is blank or frozen.</b> The office PC probably restarted. Follow <a href="../av/if-it-crashes.html">If the show computer restarts</a>. It takes about two minutes.</li>
+        <li><b>No music</b> even after Reset sound: the office PC's sound must stay on the headphone jack. Don't change it or unplug the USB cable to the mixer.</li>
+        <li><b>A hall light key does nothing.</b> Those go through the internet. Wait a minute and press again.</li>
+        <li><b>Still stuck.</b> Call Sam. Then improvise; you work at a comedy club.</li>
+      </ul>
+    </div>
+
+    <div class="band-row"><span class="band">Coming soon</span><span class="band-note">Parts ordered, not wired up yet</span></div>
+    <div class="card">
+      <ul class="plain">
+        <li><b>House lights</b> <span class="tag soon">Coming soon</span><br>Smart dimmers on the two showroom light switches: SHOW (dim), FULL and OFF keys.</li>
+        <li><b>Smart plugs</b> <span class="tag soon">Coming soon</span><br>Signs and accent lights on and off from the deck.</li>
+        <li><b>Candles</b> <span class="tag soon">Coming soon</span><br>The table candles on and off by infrared, all at once.</li>
+        <li><b>Air conditioning</b> <span class="tag soon">Coming soon</span><br>Cool the room before a sold-out show, from the bar.</li>
+        <li><b>Scene keys</b> <span class="tag soon">Coming soon</span><br>DOORS, START SHOW and END SHOW: one press sets sound, lights and recording together.</li>
+      </ul>
+      <p style="margin-top:8px">Until then, use the wall switches and the thermostat like it's 2014.</p>
+    </div>
+
+    <p class="foot">Keys on the deck are built from <code>av/companion/build_companion_config.py</code>. If this page and the deck disagree, the deck wins. Tell Sam.</p>
+  </main>
+
+  <script>
+    // Page tabs: show one deck page at a time.
+    (function () {
+      var chips = document.querySelectorAll('#tabs .chip');
+      chips.forEach(function (c) {
+        c.addEventListener('click', function () {
+          chips.forEach(function (x) { x.classList.toggle('on', x === c); });
+          document.querySelectorAll('.page').forEach(function (p) {
+            p.classList.toggle('on', p.id === 'page-' + c.dataset.page);
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
