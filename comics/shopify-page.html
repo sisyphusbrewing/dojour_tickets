@@ -1,7 +1,14 @@
 <!-- Sisyphus: body of the Shopify page "Comics" (handle: comics). Embeds the
      tap-through pitch for comics from GitHub Pages so comics only see
-     sisyphusbrewing.com. The festival NFC cards and their QR codes open
+     sisyphusbrewing.com. The NFC cards Sam hands comics and their QR codes open
      /pages/comics (?t=nfc or ?t=qr, so Shopify analytics can tell them apart). -->
+<style>
+  /* A tap on the card should land on the pitch, not the store: hide the
+     store header, announcement bar and page title on this page only. */
+  .section-header, .announcement-bar-section, .main-page-title { display: none !important; }
+  .main-page-title + .rte, .page-width--narrow { padding-top: 0 !important; }
+  main#MainContent > .shopify-section:first-child .page-width { padding-top: 12px !important; }
+</style>
 <div class="sb-comics" style="max-width:600px;margin:0 auto;">
   <iframe id="sbComics" title="Sisyphus for comics" src="about:blank"
           style="display:block;width:100%;height:100vh;border:0;border-radius:14px;background:#2b2929;"
@@ -14,7 +21,7 @@
     window.addEventListener('message', function (e) {
       if ((e.origin !== 'https://staff.sisyphusbrewing.com' && e.origin !== 'https://sisyphusbrewing.github.io') || !e.data) return;
       if (e.data.comicsHeight) f.style.height = (e.data.comicsHeight + 16) + 'px';
-      if (e.data.comicsScrollTop) window.scrollTo({ top: f.getBoundingClientRect().top + window.pageYOffset - 90, behavior: 'smooth' });
+      if (e.data.comicsScrollTop) window.scrollTo({ top: f.getBoundingClientRect().top + window.pageYOffset - 12, behavior: 'smooth' });
     });
   })();
 </script>
