@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Sisyphus for Comics</title>
-  <meta name="description" content="Sisyphus is a 90-seat comedy club inside a brewery in Minneapolis. Comics get 100% of the door. Here's the short version.">
+  <meta name="description" content="Sisyphus is a comedy club and brewery in Minneapolis. Comics get 100% of the door. Here's the short version.">
   <meta name="theme-color" content="#2b2929">
   <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,8 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="feedback.js"></script>
   <style>
-    /* The pitch for comics, one screen at a time: what you get when you tap a
-       Sisyphus card at a festival. Same brand as the site and the advance trip. */
+    /* The pitch for comics, one screen at a time: what a comic gets when Sam
+       hands them a Sisyphus card. Same brand as the site and the advance trip. */
     :root {
       --bg: #2b2929; --bg2: #232121; --card: #393636; --line: #4a4646; --slate: #4a6c86; --slate-dark: #3b586e; --slate-light: #a9c3d8;
       --gray: #918f90; --white: #fff; --muted: #d9d6d6; --paper: #f4f1ea;
@@ -56,6 +56,13 @@
     .photo img { display: block; width: 100%; height: auto; }
     @media (min-width: 560px) { .photo { margin: 6px 0 16px; } .photo img { border-radius: 12px; } }
 
+    /* the rooms: a swipeable strip of photos, dots underneath */
+    .strip { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 6px -18px 8px; padding: 0 18px; scrollbar-width: none; }
+    .strip::-webkit-scrollbar { display: none; }
+    .strip img { flex: 0 0 88%; width: 88%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 12px; scroll-snap-align: center; display: block; }
+    .dots { display: flex; justify-content: center; gap: 6px; margin: 0 0 16px; }
+    .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+    .dots i.on { background: var(--slate-light); }
     .quote { margin: 20px 0 6px; padding: 16px 18px 14px; border-left: 3px solid var(--slate); background: var(--card); border-radius: 0 12px 12px 0; }
     .quote em { display: block; font-size: 21px; color: var(--white); font-style: italic; line-height: 1.3; }
     .quote span { display: block; margin-top: 6px; color: var(--gray); font-size: 14px; }
@@ -127,68 +134,68 @@
   </div>
 
   <script>
-    var BOOK = 'mailto:booking@sisyphusbrewing.com?subject=' + encodeURIComponent('I tapped the card. I want a weekend.') +
-               '&body=' + encodeURIComponent('Name:\nAvails:\nClip:\nWhere we met:\n');
-
     // Copy is Sam's voice: short, dry, first person. One joke a screen, then move on.
     var STEPS = [
-      { band: 'For comics', title: 'You tapped a stranger\'s card at a festival.', html:
-        '<p>Bold. I respect it.</p>' +
-        '<p>This is <b>Sisyphus</b>, a comedy club inside a brewery in Minneapolis. Six short screens. Shorter than your tight five.</p>',
+      { band: 'For comics', title: 'I want to book you at my club.', html:
+        '<p>Or you found this on the ground... In which case, I want to book whoever dropped it.</p>' +
+        '<p>My name is Sam and I own <b>Sisyphus</b>, a comedy club and brewery in Minneapolis.</p>',
         go: 'Start' },
-      { band: 'The name', title: 'Named after a guy who pushes a rock up a hill forever.', html:
-        '<p>Camus said we have to imagine him happy. I read that in college and it honestly kept me alive.</p>' +
-        '<p>So I opened a brewery, which is also pushing a rock up a hill. Then I added comedy. Same rock. Better lighting.</p>' +
-        '<div class="quote"><em>Il faut imaginer Sisyphe heureux.</em><span>One must imagine Sisyphus happy. Albert Camus</span></div>' },
-      { band: 'The room', title: 'Ninety seats. Built for comedy.', html:
-        '<div class="photo"><img src="room.jpg" alt="A packed Sisyphus showroom watching Michael Che"></div>' +
-        '<p>Low ceiling, dark room, candles on every table, the crowd sits close. A comedy club that happens to make its own beer. Not a brewery with a mic in the corner.</p>' +
-        '<ul class="facts"><li>90 seats <span>Friday and Saturday headliners</span></li><li>Thursday open mic <span>free, with a headliner</span></li><li>Minneapolis <span>next to Loring Park</span></li></ul>' },
-      { band: 'The money', title: 'You get 100% of the door.', html:
+      { band: 'The rooms', title: 'One club. Two rooms.', html:
+        '<div class="strip" id="strip">' +
+          '<img src="room.jpg" alt="A packed Sisyphus showroom watching Michael Che">' +
+          '<img src="mic.jpg" alt="The Sisyphus mic, with the lit-up SISYPHUS sign behind it" loading="lazy">' +
+          '<img src="stage.jpg" alt="A comic on stage against the brick wall, candles on the tables" loading="lazy">' +
+        '</div><div class="dots" id="dots"><i class="on"></i><i></i><i></i></div>' +
+        '<p>The 90-seater: low ceiling, candles, the crowd sits close.</p>' +
+        '<p>And I\'m adding a 200-seater. Same idea, more chairs.</p>' },
+      { band: 'The deal', title: 'You get 100% of the door.', html:
         '<div class="money">' +
           '<div><b>100%</b><span>of the door</span><small>to the comics</small></div>' +
-          '<div><b>$3</b><span>ticket fee</span><small>all of it to host + feature pay</small></div>' +
+          '<div><b>$3</b><span>ticket fee</span><small>to your host and feature</small></div>' +
         '</div>' +
-        '<p>All of it. I make my money selling beer to people who are laughing. That\'s the business plan. My accountant has notes.</p>' +
-        '<p>We settle up the night of the show.</p>' },
-      { band: 'Recent company', title: 'Who\'s been up lately.', html:
+        '<p>I make my money selling beer to people who are laughing.</p>' +
+        '<p>The $3 ticket fee goes to your host and feature. I keep none of that either. Everyone\'s paid the night of the show.</p>' },
+      { band: 'Your weekend', title: 'You\'d be in good company.', html:
         '<ul class="names">' +
           ['Michael Che', 'Sam Jay', 'Sam Tallent', 'Geoff Asmus'].map(function (n) { return '<li class="big">' + n + '</li>'; }).join('') +
-          ['Punkie Johnson', 'Sabrina Wu', 'Michael Longfellow', 'Liz Miele', 'Ian Fidance', 'Tyler Horvath', 'Nathan Lund'].map(function (n) { return '<li>' + n + '</li>'; }).join('') +
         '</ul>' +
-        '<p>Nathan Lund once ate dog food on stage because the show sold out. Not required. But it\'s on the table.</p>' },
-      { band: 'Your night', title: 'The Disney World of comedy.', html:
-        '<p>That\'s the goal. Fewer lawyers. Before the show you get a short trip on your phone, and then:</p>' +
-        '<ul class="facts">' +
-          '<li>A green room stocked with what you picked</li>' +
-          '<li>Your walk-on song <span>not the sound guy\'s</span></li>' +
-          '<li>A guest list, and a guest set for your funny friend</li>' +
-          '<li>Security that reads your notes</li>' +
-          '<li>Paid that night</li>' +
-        '</ul>' },
-      { band: 'Your turn', title: 'Want a weekend?', html:
-        '<p>Send me your avails and a clip. I read every one, usually from behind the bar.</p>' +
-        '<div class="stack">' +
-          '<a class="btn btn-go" href="' + BOOK + '" target="_top">Email for a date</a>' +
-          '<a class="btn btn-line" href="https://www.sisyphusbrewing.com/collections/comedy-and-events" target="_top">See who\'s coming up</a>' +
-          '<a class="btn btn-line" href="https://www.instagram.com/sisyphusbrewing/" target="_blank" rel="noopener">Instagram</a>' +
-        '</div>' +
-        '<p class="sign" style="margin-top:22px">-Sam</p>', last: true },
+        '<p>Before you come, a short trip on your phone sets up your green room, your walk-on song and your guest list.</p>' +
+        '<p>Nathan Lund promised to eat dog food on stage if the show sold out. It didn\'t. I still have the dog food.</p>' },
+      { band: 'Your turn', title: 'Want a weekend?', book: true, html:
+        '<p>I truly love the art of stand-up comedy, and I want to make performing here as easy and hassle-free as possible.</p>' +
+        '<p>We would love to have you come perform in Minneapolis. Just let us know the best way to make that happen.</p>',
+        go: 'How should we get in touch?' },
+      { band: 'Thank you', title: 'Got it.', thanks: true, last: true, html:
+        '<p>Best wishes and safe travels.</p>' +
+        '<p class="sign">-Sam</p>' },
     ];
+
+    // "How should we get in touch?" on the last screen: pick a way, fill in
+    // only what that way needs. Sent through comic_feedback_submit (data.kind
+    // "booking") and emailed to booking@ by comic_notify.py.
+    var WAYS = {
+      me:    { label: 'Directly with me', fields: [['name', 'Your name', 'input'], ['contact', 'Email or phone', 'input']] },
+      agent: { label: 'My agent', fields: [['name', 'Your name', 'input'], ['agent', 'Your agent\'s name', 'input'], ['agent_email', 'Their email', 'input']] },
+      other: { label: 'Some other way', fields: [['name', 'Your name', 'input'], ['other', 'Tell us how', 'textarea']] },
+    };
+    var params = new URLSearchParams(location.search);
+    var via = (params.get('t') || '').trim().slice(0, 20);
+    var booking = { kind: 'booking', how: '', via: via }, asking = false;
 
     // ?c=<name>: a link Sam texted a comic for notes. They get a hello, the
     // same pitch, then a screen to roast it. Views and answers go to Supabase.
-    var tag = (new URLSearchParams(location.search).get('c') || '').trim().slice(0, 80);
+    var tag = (params.get('c') || '').trim().slice(0, 80);
     var who = tag.replace(/[-_.]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-    var sb = null, answers = { name: who }, sent = false;
+    var sb = window.supabase.createClient('https://idsdwkubqnavkazlteis.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ',
+      { auth: { persistSession: false } });
+    var answers = { name: who }, sent = false;
     if (tag) {
-      sb = window.supabase.createClient('https://idsdwkubqnavkazlteis.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ',
-        { auth: { persistSession: false } });
       STEPS[0] = { band: 'For ' + esc(who), title: 'Sam wants your notes.', html:
-        '<p>This is what comics get when they tap our card at a festival. Go through it like a stranger would.</p>' +
+        '<p>This is what I hand comics I want to book. Go through it like you just got one.</p>' +
         '<p>At the end you get to roast it. Be honest. I run a comedy club, I\'ve heard worse.</p>', go: 'Start' };
-      STEPS[STEPS.length - 1].last = false;
+      STEPS.pop();
+      STEPS[STEPS.length - 1].book = false;
       STEPS[STEPS.length - 1].go = 'Now roast it';
       STEPS.push({ band: 'Your notes', title: 'Now roast it.', roast: true, html:
         '<p>Six quick ones. Tap, type, done.</p>' });
@@ -212,6 +219,47 @@
         return '<div class="q"><label for="f_' + q.k + '">' + esc(q.label) + '</label><' + tagName + ' class="input" id="f_' + q.k + '" data-k="' + q.k + '" placeholder="' + esc(q.ph || '') + '">' +
                (tagName === 'textarea' ? esc(v || '') + '</textarea>' : '') + '</div>';
       }).join('') + '<p class="err hidden" id="err"></p>';
+    }
+    function bookHtml() {
+      if (!asking) return '';
+      var h = '<div class="q"><span class="ql">How should we get in touch?</span><div class="tiles">' +
+        Object.keys(WAYS).map(function (k) {
+          return '<button type="button" class="tile way" data-way="' + k + '" aria-pressed="' + (booking.how === k) + '">' + WAYS[k].label + '</button>';
+        }).join('') + '</div></div>';
+      if (booking.how) h += WAYS[booking.how].fields.map(function (f) {
+        var t = f[2];
+        return '<div class="q"><label for="b_' + f[0] + '">' + f[1] + '</label><' + t + ' class="input" id="b_' + f[0] + '" data-b="' + f[0] + '">' +
+               (t === 'textarea' ? esc(booking[f[0]] || '') + '</textarea>' : '') + '</div>';
+      }).join('');
+      return h + '<p class="err hidden" id="err"></p>';
+    }
+    function wireBook() {
+      Array.prototype.forEach.call(document.querySelectorAll('.way'), function (b) {
+        b.onclick = function () { booking.how = b.dataset.way; render(); };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-b]'), function (el) {
+        if (el.tagName === 'INPUT') el.value = booking[el.dataset.b] || '';
+        el.oninput = function () { booking[el.dataset.b] = el.value; };
+      });
+    }
+    function sendBooking() {
+      var btn = $('next'), err = $('err');
+      if (!asking) { asking = true; render(); return; }
+      var miss = !booking.how ? 'Pick one first.' :
+        WAYS[booking.how].fields.filter(function (f) { return !String(booking[f[0]] || '').trim(); }).length ? 'Fill those in first.' : '';
+      if (miss) { err.textContent = miss; err.classList.remove('hidden'); return; }
+      var data = { kind: 'booking', how: WAYS[booking.how].label, via: via };
+      WAYS[booking.how].fields.forEach(function (f) { data[f[0]] = String(booking[f[0]]).trim(); });
+      btn.disabled = true; btn.textContent = 'Sending…';
+      sb.rpc('comic_feedback_submit', { p_tag: 'booking' + (via ? ':' + via : ''), p_data: data, p_max_screen: i + 1 }).then(function (res) {
+        if (res.error) throw res.error;
+        sent = true;
+        sb.functions.invoke('job-applied', { body: { id: res.data, kind: 'comic' } }).catch(function () {});
+        go(i + 1);
+      }).catch(function (e) {
+        btn.disabled = false; btn.textContent = 'Send →';
+        err.textContent = 'That didn\'t send. Try again, or email booking@sisyphusbrewing.com.'; err.classList.remove('hidden');
+      });
     }
     function wireRoast() {
       Array.prototype.forEach.call(document.querySelectorAll('.tile'), function (b) {
@@ -272,20 +320,26 @@
       $('stage').innerHTML =
         '<section class="step">' +
           '<div class="band-wrap"><span class="band">' + s.band + '</span></div>' +
-          '<h1>' + s.title + '</h1>' + s.html + (s.roast ? roastHtml() : '') +
+          '<h1>' + s.title + '</h1>' + s.html + (s.roast ? roastHtml() : '') + (s.book ? bookHtml() : '') +
           '<div class="nav">' +
             (i && !s.thanks ? '<button class="btn btn-back" id="back" aria-label="Back">&larr;</button>' : '') +
             (s.last ? '<button class="btn btn-line" id="again" style="flex:1">Start over</button>'
-                    : '<button class="btn btn-go" id="next">' + (s.roast ? 'Send the notes' : s.go || 'Next') + ' &rarr;</button>') +
+                    : '<button class="btn btn-go" id="next">' + (s.roast ? 'Send the notes' : s.book && asking ? 'Send' : s.go || 'Next') + ' &rarr;</button>') +
           '</div>' +
           (i === 0 ? '<p class="hint">Or swipe.</p>' : '') +
         '</section>';
-      $('count').textContent = (i + 1) + ' / ' + STEPS.length;
-      var path = $('hillPath'), len = path.getTotalLength(), pt = path.getPointAtLength(len * i / (STEPS.length - 1));
+      var shown = STEPS.filter(function (x) { return !x.thanks; }).length;
+      $('count').textContent = s.thanks ? '' : (i + 1) + ' / ' + shown;
+      var path = $('hillPath'), len = path.getTotalLength(), pt = path.getPointAtLength(len * Math.min(1, i / (shown - 1)));
       $('boulder').setAttribute('transform', 'translate(' + pt.x + ',' + (pt.y - 9) + ')');
       if (s.roast) wireRoast();
-      if ($('next')) $('next').onclick = s.roast ? send : next;
-      if (sb) sb.rpc('comic_view', { p_tag: tag, p_screen: i + 1 }).then(function () {}, function () {});
+      if (s.book) wireBook();
+      if ($('strip')) $('strip').onscroll = function () {
+        var st = $('strip'), n = Math.round(st.scrollLeft / (st.scrollWidth / st.children.length));
+        Array.prototype.forEach.call($('dots').children, function (d, k) { d.className = k === n ? 'on' : ''; });
+      };
+      if ($('next')) $('next').onclick = s.roast ? send : s.book ? sendBooking : next;
+      if (tag) sb.rpc('comic_view', { p_tag: tag, p_screen: i + 1 }).then(function () {}, function () {});
       if ($('back')) $('back').onclick = back;
       if ($('again')) $('again').onclick = function () { go(0); };
       try { history.replaceState(null, '', i ? '#' + (i + 1) : location.pathname + location.search); } catch (e) {}
@@ -305,7 +359,7 @@
     document.addEventListener('touchend', function (e) {
       if (sx == null) return;
       var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
-      if (e.target.closest && e.target.closest('.input')) return;
+      if (e.target.closest && e.target.closest('.input, .tiles, .strip')) return;
       if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { dx < 0 ? next() : back(); }
     }, { passive: true });
     document.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') next(); if (e.key === 'ArrowLeft') back(); });

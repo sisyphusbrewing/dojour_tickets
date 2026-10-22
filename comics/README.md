@@ -1,16 +1,19 @@
 # Comics
 
-A seven-screen, tap-through pitch for comics: the name, the room, the money,
-who's been up, what the night is like, and how to book. Phones first.
+A five-screen, tap-through pitch Sam hands to comics he wants to book (NFC
+card): hi, the two rooms, the deal, your weekend, and "How should we get in
+touch?". Written in Sam's voice (/mnt/project-files/voice/). Phones first.
 
     https://www.sisyphusbrewing.com/pages/comics
 
 The Shopify page "Comics" (handle `comics`) iframes `comics/index.html`; its
-body is in `comics/shopify-page.html`. The festival NFC cards hold
+body is in `comics/shopify-page.html`. The NFC cards hold
 `/pages/comics?t=nfc` and their QR codes `/pages/comics?t=qr`.
 
-Copy lives in the `STEPS` list in `index.html`. Booking is a mailto to
-booking@sisyphusbrewing.com with a short template. `#3` opens screen 3.
+Copy lives in the `STEPS` list in `index.html`. The last screen asks how to
+get in touch (directly, their agent, some other way), saves it with
+`comic_feedback_submit()` as `data.kind = "booking"` (`tag` = `booking:nfc`
+etc.), and `comic_notify.py` emails it to booking@. `#3` opens screen 3.
 
 ## Notes from comics
 
