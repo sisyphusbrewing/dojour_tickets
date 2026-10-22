@@ -16,6 +16,7 @@ const ALLOWED_WORKFLOWS = new Set([
   "create_shopify_show.yml",
   "daily_sync.yml",
   "advance_welcome.yml",
+  "supply_notify.yml",
 ]);
 const DOOR_WORKFLOWS = new Set(["daily_sync.yml"]);
 
