@@ -2,7 +2,8 @@
 Sisyphus - email a comic's notes on the comics pitch to booking.
 
 Run by the "Comic feedback" action after a comic fills in the last screen of
-comics/index.html (sisyphusbrewing.com/pages/comics?c=<name>). Reads the row
+comics/index.html: either "How should we get in touch?" from a card Sam handed
+out (data.kind "booking"), or the roast on a ?c=<name> link. Reads the row
 from Supabase with the service key, lays the answers out in the order of
 comics/feedback.js and sends it with the Gmail SMTP settings the other emails
 use. Also lists how far every named link has got (comic_views).
@@ -29,7 +30,7 @@ SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
 TO = [a.strip() for a in (os.environ.get("COMIC_EMAIL_TO") or "booking@sisyphusbrewing.com").split(",") if a.strip()]
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
-SCREENS = 9
+SCREENS = 7
 AUTH = {"apikey": SERVICE_KEY, "Authorization": f"Bearer {SERVICE_KEY}"}
 
 
@@ -56,6 +57,9 @@ def main():
     data = fb.get("data") or {}
     who = fb.get("name") or fb.get("tag") or "A comic"
 
+    if data.get("kind") == "booking":
+        return send(*booking(data, who))
+
     lines = [f"{who} roasted the comics pitch.", ""]
     for q in questions():
         if q["k"] == "name":
@@ -75,9 +79,24 @@ def main():
             lines.append(f"  {v['tag']}: screen {v['max_screen']}, opened {v['opens']}x, last {v['last_seen'][:16].replace('T', ' ')} UTC")
         lines.append("")
     lines += ["Sisyphus · 712 Ontario Ave W, Minneapolis"]
+    send(f"Comic notes on the pitch: {who}", lines)
 
+
+def booking(data, who):
+    """A comic wants a weekend: who to get in touch with, and how."""
+    via = {"nfc": "tapped the card", "qr": "scanned the card"}.get(data.get("via") or "", "opened the comics page")
+    how = data.get("how") or "-"
+    lines = [f"{who} {via} and wants a weekend.", "", "GET IN TOUCH: " + how]
+    for k, label in (("contact", "Email or phone"), ("agent", "Agent"), ("agent_email", "Agent's email"), ("other", "How")):
+        if data.get(k):
+            lines.append(f"{label}: " + str(data[k]).replace("\n", "\n  "))
+    lines += ["", "Sisyphus · 712 Ontario Ave W, Minneapolis"]
+    return f"Booking: {who} wants a weekend ({how.lower()})", lines
+
+
+def send(subject, lines):
     msg = EmailMessage()
-    msg["Subject"] = f"Comic notes on the pitch: {who}"
+    msg["Subject"] = subject
     msg["From"] = f"Sisyphus <{FROM_EMAIL}>"
     msg["To"] = ", ".join(TO)
     msg.set_content("\n".join(lines))
