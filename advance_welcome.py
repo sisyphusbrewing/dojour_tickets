@@ -64,17 +64,38 @@ def show_day(d):
     return date.fromisoformat(d) if d else None
 
 
+def date_range(start, end):
+    """'Thursday, October 22' or, for a run, 'Thu–Sat, October 22–24'."""
+    if not start:
+        return ""
+    if not end or end <= start:
+        return start.strftime("%A, %B %-d")
+    days = f"{start:%a}–{end:%a}"
+    if start.month == end.month:
+        return f"{days}, {start:%B %-d}–{end:%-d}"
+    return f"{days}, {start:%b %-d} – {end:%b %-d}"
+
+
+def short_range(start, end):
+    """For the subject line: 'Oct 22' or 'Oct 22–24'."""
+    if not end or end <= start:
+        return start.strftime("%b %-d")
+    return f"{start:%b %-d}–{end:%-d}" if start.month == end.month else f"{start:%b %-d} – {end:%b %-d}"
+
+
 def build(a):
     """The email, in Sam's voice: short, first person, one dry joke."""
     esc = html.escape
     first = (a.get("contact_name") or "").split(" ")[0]
     day = show_day(a.get("show_date"))
+    last = show_day(a.get("show_end_date"))
     today = datetime.now(ZoneInfo("America/Chicago")).date()
     days = (day - today).days if day else None
-    when = " · ".join(x for x in (day.strftime("%A, %B %-d") if day else "", a.get("show_time") or "") if x) or "Date to come"
+    when = date_range(day, last) or "Date to come"
     url = TRIP_URL + a["token"]
     count = "" if days is None or days < 0 else "Tonight." if days == 0 else "Tomorrow." if days == 1 else f"{days} days out"
     hey = f"Hey {first}," if first else "Hey there,"
+    stretch = "weekend" if day and last and last > day else "night"
 
     def p(text, top=16, size=17, color="#ffffff"):
         return (f'<tr><td style="padding:{top}px 30px 0;font-family:{BODY};font-size:{size}px;line-height:1.5;color:{color}">{text}</td></tr>')
@@ -101,12 +122,12 @@ def build(a):
     <span style="display:inline-block;background:{SLATE};color:#ffffff;padding:8px 16px 5px;font-family:{HEAD};font-weight:700;font-size:13px;letter-spacing:3px;text-transform:uppercase">You're booked</span>
   </td></tr>
   {p(esc(hey), 20)}
-  {p("Congrats - you're playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)", 10)}
+  {p("Congrats, you're playing Sisyphus, “The Disney World of Comedy.” (Smaller. Way better beer.)", 10)}
   <tr><td style="padding:20px 30px 0">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER};border-radius:12px">
       <tr><td style="padding:18px 20px 16px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-family:{HEAD};font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:{SLATE}">Admit one comedian, plus guests</td></tr>
+          <tr><td style="font-family:{HEAD};font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:{SLATE}">Admit one comedian</td></tr>
           <tr><td style="padding:8px 0 2px;font-family:{HEAD};font-size:28px;line-height:1.1;font-weight:700;text-transform:uppercase;color:#2b2929">{esc(a['show_name'])}</td></tr>
           <tr><td style="font-family:{BODY};font-size:17px;font-weight:700;color:#2b2929">{esc(when)}</td></tr>
           <tr><td style="padding:2px 0 12px;font-family:{BODY};font-size:15px;color:#5d5959">712 Ontario Ave W, Minneapolis</td></tr>
@@ -115,7 +136,7 @@ def build(a):
       </td></tr>
     </table>
   </td></tr>
-  {p("Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room, security, your guests and how you want to get paid. Six quick ones, mostly taps.", 22)}
+  {p(f"I just want to make sure your {stretch} goes according to plan: the green room, security, your guests and how you want to get paid. Just a few quick questions - mostly tapping, very little typing.", 22)}
   <tr><td style="padding:22px 30px 4px">
     <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="{SLATE}" style="border-radius:10px">
       <a href="{esc(url)}" style="display:inline-block;padding:16px 30px 13px;font-family:{HEAD};font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:10px">Plan your night</a>
@@ -123,7 +144,7 @@ def build(a):
   </td></tr>
   <tr><td style="padding:24px 30px 0;font-family:{HEAD};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:{SLATE_LIGHT}">What you get</td></tr>
   <tr><td style="padding:8px 30px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">{perk_rows}</table></td></tr>
-  {p("Questions? Just reply. It comes to Grace and me.", 20, 16, "#d9d6d6")}
+  {p("Questions? Just reply.", 20, 16, "#d9d6d6")}
   {p("See you at the show. Cheers!<br>-Sam", 16)}
   <tr><td align="center" style="padding:28px 24px 26px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:{SLATE_LIGHT}">Il faut imaginer Sisyphe heureux.</td></tr>
 </table>
@@ -138,26 +159,26 @@ def build(a):
     text = "\n".join(x for x in [
         hey,
         "",
-        "Congrats - you're playing Sisyphus, the Disney World of Comedy. (Smaller. No mouse. Way better beer.)",
+        "Congrats, you're playing Sisyphus, “The Disney World of Comedy.” (Smaller. Way better beer.)",
         "",
         a["show_name"],
         when,
         "712 Ontario Ave W, Minneapolis",
         count,
         "",
-        "Your agent and Grace handle the boring stuff. I just want to be ready for you: the green room,",
-        "security, your guests and how you want to get paid. Six quick ones, mostly taps:",
+        f"I just want to make sure your {stretch} goes according to plan: the green room, security, your guests",
+        "and how you want to get paid. Just a few quick questions - mostly tapping, very little typing:",
         url,
         "",
         "What you get: a green room stocked how you like it, security handled your way,",
         "guest sets for your funny friends, and 100% of the door. Since day one.",
         "",
-        "Questions? Just reply. It comes to Grace and me.",
+        "Questions? Just reply.",
         "",
         "See you at the show. Cheers!",
         "-Sam",
     ] if x is not None)
-    subject = f"You're booked at Sisyphus: {a['show_name']}" + (f", {day.strftime('%b %-d')}" if day else "")
+    subject = f"You're booked at Sisyphus: {a['show_name']}" + (f", {short_range(day, last)}" if day else "")
     return subject, body, text
 
 

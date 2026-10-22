@@ -257,7 +257,6 @@ window.ADVANCE_SECTIONS = [
           "Fruit",
           "Veggies and dip",
           "Cheese and crackers",
-          "Real food",
           "Nothing, I eat after"
         ]
       },
@@ -269,6 +268,8 @@ window.ADVANCE_SECTIONS = [
         "options": [
           "Our beer",
           "NA beer",
+          "Wine",
+          "Liquor",
           "Sparkling water",
           "Still water",
           "Soda",
@@ -300,7 +301,7 @@ window.ADVANCE_SECTIONS = [
           "Someone near the stage, just in case",
           "Walk me in and out",
           "Escort all night",
-          "Call me, it is a whole thing"
+          "Call me, it's a whole thing"
         ]
       },
       {

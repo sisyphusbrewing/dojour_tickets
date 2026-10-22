@@ -103,6 +103,7 @@
         <div class="grid">
           <div class="field full"><label>Show or headliner name <span class="req">*</span></label><input class="input" name="show_name" required placeholder="Liz Miele"></div>
           <div class="field"><label>Show date</label><input class="input" name="show_date" type="date"></div>
+          <div class="field"><label>Last night (if a run)</label><input class="input" name="show_end_date" type="date"></div>
           <div class="field"><label>Time</label><input class="input" name="show_time" placeholder="7pm"></div>
           <div class="field"><label>Send to (name)</label><input class="input" name="contact_name" placeholder="Liz, or her agent"></div>
           <div class="field"><label>Their email</label><input class="input" name="contact_email" type="email" placeholder="only used to draft the email"></div>
@@ -139,6 +140,7 @@
         <div class="grid">
           <div class="field full"><label>Show or headliner name</label><input class="input" name="show_name" required></div>
           <div class="field"><label>Show date</label><input class="input" name="show_date" type="date"></div>
+          <div class="field"><label>Last night (if a run)</label><input class="input" name="show_end_date" type="date"></div>
           <div class="field"><label>Time</label><input class="input" name="show_time" placeholder="7pm"></div>
           <div class="field"><label>Sent to (name)</label><input class="input" name="contact_name"></div>
           <div class="field"><label>Their email</label><input class="input" name="contact_email" type="email"></div>
@@ -188,7 +190,7 @@
     function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
     function parseDate(d) { var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
     function fmtDate(d, long) { if (!d) return ''; return parseDate(d).toLocaleDateString('en-US', long ? { weekday: 'long', month: 'long', day: 'numeric' } : { weekday: 'short', month: 'short', day: 'numeric' }); }
-    function when(a) { return [fmtDate(a.show_date), a.show_time].filter(Boolean).join(' · ') || 'No date yet'; }
+    function when(a) { return [fmtDate(a.show_date) + (a.show_end_date && a.show_end_date > a.show_date ? ' – ' + fmtDate(a.show_end_date) : ''), a.show_time].filter(Boolean).join(' · ') || 'No date yet'; }
     function linkFor(a) { return FORM_URL + '?s=' + a.token; }
     function publicUrl(path) { return SUPABASE_URL + '/storage/v1/object/public/advance/' + path; }
     function allFields() { return ADVANCE_SECTIONS.reduce(function (x, s) { return x.concat(s.fields); }, []); }
@@ -273,7 +275,7 @@
     $('newForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var f = $('newForm'), row = {};
-      ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email'].forEach(function (k) { var v = f.elements[k].value.trim(); if (v) row[k] = v; });
+      ['show_name', 'show_date', 'show_end_date', 'show_time', 'contact_name', 'contact_email'].forEach(function (k) { var v = f.elements[k].value.trim(); if (v) row[k] = v; });
       var res = await sb.from('advances').insert(row).select().single();
       if (res.error) { toast(res.error.message); return; }
       advances.push(res.data);
@@ -300,7 +302,7 @@
       $('dLinkNote').textContent = a.status === 'submitted' ? 'They sent it in ' + new Date(a.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. The same link lets them update it.' : 'Send the welcome: a short note from Sam with this link inside. It only opens their show.';
       if (a.welcome_sent_at) $('dLinkNote').textContent += ' Welcome sent ' + new Date(a.welcome_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '.';
       var f = $('showForm');
-      ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { f.elements[k].value = a[k] || ''; });
+      ['show_name', 'show_date', 'show_end_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { f.elements[k].value = a[k] || ''; });
 
       if (a.status !== 'submitted') { $('dAnswers').innerHTML = '<div class="band-wrap"><span class="band">Answers</span></div><div class="empty">Nothing back yet.</div>'; }
       else {
@@ -343,7 +345,7 @@
       clearTimeout(saveTimer);
       saveTimer = setTimeout(async function () {
         var f = $('showForm'), patch = {};
-        ['show_name', 'show_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { patch[k] = f.elements[k].value.trim() || null; });
+        ['show_name', 'show_date', 'show_end_date', 'show_time', 'contact_name', 'contact_email', 'staff_notes'].forEach(function (k) { patch[k] = f.elements[k].value.trim() || null; });
         if (!patch.show_name) return;
         var row = await save(current.id, patch);
         if (row) { $('dTitle').textContent = row.show_name; $('dSub').textContent = when(row); $('emailLink').href = mailto(row); }
