@@ -405,7 +405,7 @@ window.ADVANCE_SECTIONS = [
           "Zelle",
           "PayPal",
           "Cash",
-          "Direct deposit (we will send a form)"
+          "Direct deposit (we'll send a form)"
         ]
       },
       {

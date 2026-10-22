@@ -475,6 +475,7 @@
         advance = res.data; headshotPath = advance.headshot_path || null;
       }
       if (nights().length > 1) {   // a run: a guest list for each night, so the comps land on the right show
+        STEPS.filter(function (x) { return x.land === 'Pay'; })[0].sub = '100% of the door goes to you. We settle up after your last show.';
         var gs = STEPS.filter(function (x) { return x.land === 'Guests'; })[0];
         gs.sub = 'The guest list walks right in. Tell me who is coming which night. Funny friend in town? Give them a guest set.';
         gs.q = ['guest_nights', 'gs_want', { k: 'gs_who', when: ['gs_want', 'Yes'], ph: 'Name, which night, minutes, and a phone or Instagram' }];
