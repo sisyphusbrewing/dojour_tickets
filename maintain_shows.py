@@ -75,8 +75,8 @@ class Shopify:
         self.headers = {"X-Shopify-Access-Token": access_token(self.store),
                         "Content-Type": "application/json"}
 
-    def gql(self, query, variables=None):
-        resp = requests.post(f"https://{self.store}/admin/api/{API_VERSION}/graphql.json",
+    def gql(self, query, variables=None, version=API_VERSION):
+        resp = requests.post(f"https://{self.store}/admin/api/{version}/graphql.json",
                              headers=self.headers, json={"query": query, "variables": variables or {}},
                              timeout=30)
         resp.raise_for_status()
