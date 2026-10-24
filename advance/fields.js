@@ -6,6 +6,7 @@
 // type: text (default) | email | tel | url | number | select | textarea | file
 //       | checks (pick any; saved as "A, B")
 // req: required   full: full width   help: small print under the field
+// nope: {option: line} tiles the trip shows but will not let anyone pick
 // trip: the section is also asked by the welcome trip planner (trip.html)
 window.ADVANCE_SECTIONS = [
   {
@@ -401,16 +402,16 @@ window.ADVANCE_SECTIONS = [
         "req": true,
         "options": [
           "Check",
-          "Venmo",
-          "Zelle",
-          "PayPal",
-          "Cash",
-          "Direct deposit (we will send a form)"
-        ]
+          "Wire",
+          "Venmo (up to $2,000)"
+        ],
+        "nope": {
+          "Cash": "Ah ah ah. You didn't say the magic word."
+        }
       },
       {
         "k": "pay_handle",
-        "label": "Handle, email or phone for that"
+        "label": "Venmo handle, or email for the wire form"
       },
       {
         "k": "payee",

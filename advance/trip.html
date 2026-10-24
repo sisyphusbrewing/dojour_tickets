@@ -47,6 +47,9 @@
 
     /* a stop */
     .step { animation: rise .3s ease-out; }
+    .tile.nope.shake { animation: nope .4s; border-color: #e9a79a; }
+    @keyframes nope { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+    .nope-msg { color: #f0b7ac; margin-top: 10px; font-weight: 600; min-height: 0; }
     @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
     .band-wrap { margin: 22px 0 6px; padding: 8px 0; }
     .band { display: inline-block; background: var(--slate); color: #fff; padding: 8px 16px 5px; font-family: var(--head); font-weight: 700; text-transform: uppercase;
@@ -190,7 +193,7 @@
       { land: 'Guests', title: 'Bringing people?', sub: 'The guest list walks right in. Funny friend in town? Give them a guest set.',
         q: ['guest_count', { k: 'guest_names', when: ['guest_count', '+'] }, 'gs_want', { k: 'gs_who', when: ['gs_want', 'Yes'] }] },
       { land: 'Pay', title: 'Getting paid.', sub: '100% of the door goes to you. We settle up the night of the show.',
-        q: ['pay_method', { k: 'pay_handle', ph: 'Handle, email or phone', when: ['pay_method', '!Cash'] }] },
+        q: ['pay_method', { k: 'pay_handle', ph: '@yourname, or you@email.com', when: ['pay_method', '!Check'] }] },
       { land: 'Last thing', title: 'Walk-on song?', sub: 'Pick it, or the sound guy will. He likes Creed.',
         q: [{ k: 'walk_on', ph: 'Song and artist' }, { k: 'anything', label: 'Anything else', ph: 'Questions, requests, confessions. I read all of it.' }] },
       { kind: 'finale' },
@@ -264,7 +267,9 @@
         var cur = f.type === 'checks' ? list(v) : [v], longest = Math.max.apply(null, f.options.map(function (o) { return o.length; }));
         inner = '<div class="tiles' + (longest > 22 ? ' wide' : '') + '" data-k="' + q.k + '" data-multi="' + (f.type === 'checks') + '">' + f.options.map(function (o) {
           return '<button type="button" class="tile" data-v="' + esc(o) + '" aria-pressed="' + (cur.indexOf(o) >= 0) + '">' + esc(o) + '</button>';
-        }).join('') + '</div>';
+        }).join('') + Object.keys(f.nope || {}).map(function (o) {
+          return '<button type="button" class="tile nope" data-nope="' + esc(f.nope[o]) + '">' + esc(o) + '</button>';
+        }).join('') + '</div>' + (f.nope ? '<div class="nope-msg hidden" id="nope_' + q.k + '" role="status"></div>' : '');
       } else if (q.k === 'guest_count') {
         inner = '<div class="stepper"><button type="button" data-step="-1" aria-label="One fewer">−</button><div class="n" id="' + id + '">' + (Number(v) || 0) + '</div><button type="button" data-step="1" aria-label="One more">+</button></div><div class="stepper-note" id="gNote"></div>';
         lab = 'How many guests';
@@ -330,7 +335,7 @@
       ].filter(function (r) { return r[1]; });
       return '<div class="band-wrap"><span class="band">The top</span></div>' +
         '<h1>That\'s it. You made it up the hill.</h1>' +
-        '<p class="sub">' + (demo ? 'This is a preview, so nothing went anywhere.' : 'Grace has it.') + ' The boulder rolls back down tomorrow... that\'s the job. See you at the show. Cheers! -Sam</p>' +
+        '<p class="sub">' + (demo ? 'This is a preview, so nothing went anywhere.' : 'Got it.') + ' The boulder rolls back down tomorrow... that\'s the job. See you at the show. Cheers! -Sam</p>' +
         (rows.length ? '<div class="pass">' + rows.map(function (r) { return '<div><span>' + esc(r[0]) + '</span><em>' + esc(r[1]) + '</em></div>'; }).join('') + '</div>' : '') +
         '<button class="skip" id="again" type="button">Change an answer</button>';
     }
@@ -371,6 +376,11 @@
         var multi = tiles.getAttribute('data-multi') === 'true';
         tiles.addEventListener('click', function (e) {
           var t = e.target.closest('.tile'); if (!t) return;
+          if (t.hasAttribute('data-nope')) {   // tapping it gets you Dennis Nedry, not a selection
+            var m = $('nope_' + tiles.getAttribute('data-k')); m.textContent = t.getAttribute('data-nope'); m.classList.remove('hidden');
+            t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake');
+            return;
+          }
           var on = t.getAttribute('aria-pressed') !== 'true';
           if (!multi) Array.prototype.forEach.call(tiles.querySelectorAll('.tile'), function (x) { x.setAttribute('aria-pressed', 'false'); });
           else if (on) {   // "Nothing" and the rest do not mix
@@ -475,6 +485,7 @@
         advance = res.data; headshotPath = advance.headshot_path || null;
       }
       if (nights().length > 1) {   // a run: a guest list for each night, so the comps land on the right show
+        STEPS.filter(function (x) { return x.land === 'Pay'; })[0].sub = '100% of the door goes to you. We settle up after your last show.';
         var gs = STEPS.filter(function (x) { return x.land === 'Guests'; })[0];
         gs.sub = 'The guest list walks right in. Tell me who is coming which night. Funny friend in town? Give them a guest set.';
         gs.q = ['guest_nights', 'gs_want', { k: 'gs_who', when: ['gs_want', 'Yes'], ph: 'Name, which night, minutes, and a phone or Instagram' }];
