@@ -1,0 +1,27 @@
+name: Dojour sales history
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 9am Central: keeps show_history current as shows finish.
+    - cron: '0 14 * * 1'
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Pull every Dojour show into show_history
+        env:
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python dojour_history.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dojour_history
+          path: dojour_history.csv
