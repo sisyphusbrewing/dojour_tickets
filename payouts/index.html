@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Pay Sheet</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pay comics">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* Pay sheet: who we owe, a Pay button that opens Venmo/PayPal/Cash App
+       with the amount filled in, and a Paid button that logs it and emails
+       the comic a receipt. */
+    .intro { color: var(--muted); margin: 18px 0 0; }
+    .rows > * + * { margin-top: 8px; }
+    .line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+    .line.paid { background: transparent; }
+    .l-main { min-width: 0; flex: 1 1 auto; }
+    .l-name { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; line-height: 1.15; padding-top: 2px; cursor: pointer; }
+    .l-name .amt { color: var(--slate-light); margin-left: 6px; }
+    .l-sub { color: var(--gray); font-size: 13px; margin-top: 3px; word-break: break-word; }
+    .l-sub .warn { color: #f0b7ac; font-weight: 700; }
+    .l-sub .okay { color: var(--ok); font-weight: 700; }
+    .l-act { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 108px; }
+    .group-total { color: var(--gray); font-size: 14px; font-weight: 600; }
+    .years { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .years td, .years th { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+    .years td.n, .years th.n { text-align: right; white-space: nowrap; }
+    dialog { width: min(480px, calc(100% - 32px)); background: var(--card); color: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    dialog::backdrop { background: rgba(0,0,0,.6); }
+    dialog h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 14px; }
+    .d-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    .d-actions .grow { flex: 1; }
+    .linkbox { display: flex; gap: 6px; margin-top: 6px; }
+    .linkbox input { flex: 1; min-width: 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Pay comics</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Pay comics<small id="summary">The pay sheet</small></div>
+        </a>
+        <div class="hdr-right">
+          <button class="btn btn-sm btn-primary" type="button" onclick="editLine(null)">+ Line</button>
+          <button class="btn btn-sm" type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+      <div class="hdr-tools">
+        <div class="chips tabs" id="tabs">
+          <button class="chip on" type="button" data-t="owed">Owed</button>
+          <button class="chip" type="button" data-t="paid">Paid</button>
+          <button class="chip" type="button" data-t="year">This year</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
+    <div id="sheet">
+      <p class="intro" id="intro">Tap Pay and your Venmo, PayPal or Cash App opens with the amount filled in. Send it, come back, tap Paid. They get a receipt.</p>
+      <div id="list"><div class="empty">Counting what we owe…</div></div>
+    </div>
+  </main>
+
+  <dialog id="lineDlg">
+    <form id="lineForm" method="dialog">
+      <h2 id="lineTitle">Line</h2>
+      <div class="grid2">
+        <div class="field full"><label for="l_name">Who</label><input class="input" id="l_name" list="names" required maxlength="80" placeholder="Grant Winkels"></div>
+        <div class="field"><label for="l_show">Show</label><input class="input" id="l_show" list="shows" required maxlength="120" placeholder="Sam Jay"></div>
+        <div class="field"><label for="l_end">Last night</label><input class="input" id="l_end" type="date"></div>
+        <div class="field"><label for="l_role">Role</label>
+          <select class="input" id="l_role"><option>Headliner</option><option>Host</option><option>Feature</option><option>Host + feature</option><option>Other</option></select></div>
+        <div class="field"><label for="l_amount">Amount</label><input class="input" id="l_amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
+        <div class="field full"><label for="l_memo">Note they see</label><input class="input" id="l_memo" maxlength="200" placeholder="Host Thu–Fri"></div>
+      </div>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="saveLine" type="submit" value="save">Save</button>
+        <button class="btn" type="button" onclick="$('lineDlg').close()">Cancel</button>
+        <button class="btn btn-danger" id="removeLine" type="button" onclick="removeLine()">Remove</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="payeeDlg">
+    <form id="payeeForm" method="dialog">
+      <h2 id="payeeTitle">Comic</h2>
+      <div class="grid2">
+        <div class="field full"><label for="p_name">Name</label><input class="input" id="p_name" required maxlength="80"></div>
+        <div class="field"><label for="p_method">Pay by</label>
+          <select class="input" id="p_method"><option value="">Don't know yet</option><option>Venmo</option><option>Zelle</option><option>PayPal</option><option>Cash App</option><option>Check</option><option>Cash</option><option>Wire / ACH</option></select></div>
+        <div class="field"><label for="p_handle">Handle</label><input class="input" id="p_handle" maxlength="120" autocapitalize="none" placeholder="@name, phone, $tag"></div>
+        <div class="field full"><label for="p_legal">Legal name or company</label><input class="input" id="p_legal" maxlength="160"></div>
+        <div class="field"><label for="p_email">Email</label><input class="input" id="p_email" type="email" maxlength="200"></div>
+        <div class="field"><label for="p_phone">Phone</label><input class="input" id="p_phone" type="tel" maxlength="40"></div>
+        <div class="field full"><label for="p_notes">Notes</label><input class="input" id="p_notes" maxlength="200"></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label>Their get-paid link</label>
+        <div class="linkbox"><input class="input" id="p_link" readonly><button class="btn btn-sm" type="button" onclick="copyText($('p_link').value, 'Link copied')">Copy</button></div>
+        <p class="help" id="p_status"></p></div>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="savePayee" type="submit" value="save">Save</button>
+        <button class="btn" id="inviteBtn" type="button" onclick="invite()">Email them the link</button>
+        <button class="btn" id="w9Btn" type="button" onclick="openW9()">W-9</button>
+        <button class="btn" type="button" onclick="$('payeeDlg').close()">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="names"></datalist>
+  <datalist id="shows"></datalist>
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var payees = [], lines = [], tab = 'owed', editing = null, editingPayee = null, me = '', mailTimer = null;
+    var GETPAID = 'https://staff.sisyphusbrewing.com/getpaid/?t=';
+
+    function money(v) { var n = Number(v); return '$' + (n % 1 ? n.toFixed(2) : n.toLocaleString('en-US')); }
+    function payeeOf(l) { return payees.find(function (p) { return p.id === l.payee_id; }) || {}; }
+    function fmtDay(d) { if (!d) return ''; var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+
+    // Where the Pay button goes. Venmo, PayPal and Cash App take the amount in
+    // the link; Zelle has no link, so the button copies the handle and amount.
+    function payLink(p, l) {
+      var h = String(p.handle || '').trim(), amt = Number(l.amount).toFixed(2);
+      var note = 'Sisyphus · ' + l.show_name + (l.role ? ' · ' + l.role : '');
+      if (!h) return null;
+      if (p.method === 'Venmo') return 'https://venmo.com/' + encodeURIComponent(h.replace(/^@/, '')) + '?txn=pay&amount=' + amt + '&note=' + encodeURIComponent(note);
+      if (p.method === 'Cash App') return 'https://cash.app/$' + encodeURIComponent(h.replace(/^\$/, '')) + '/' + amt;
+      if (p.method === 'PayPal' && h.indexOf('@') === -1) return 'https://www.paypal.com/paypalme/' + encodeURIComponent(h.replace(/^.*paypal\.me\//i, '')) + '/' + amt + 'USD';
+      return null;
+    }
+
+    async function load() {
+      var r1 = await sb.from('payees').select('*').order('name');
+      var r2 = await sb.from('payouts').select('*').order('show_end', { ascending: false, nullsFirst: true }).order('created_at');
+      if (r1.error || r2.error) { toast((r1.error || r2.error).message, true); return; }
+      payees = r1.data || []; lines = r2.data || [];
+      render();
+    }
+
+    function render() {
+      var owed = lines.filter(function (l) { return l.status === 'owed'; });
+      var total = owed.reduce(function (s, l) { return s + Number(l.amount); }, 0);
+      var people = owed.map(function (l) { return l.payee_id; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).length;
+      $('summary').textContent = owed.length ? money(total) + ' owed to ' + people + (people === 1 ? ' comic' : ' comics') : 'Everybody is paid';
+      document.querySelectorAll('#tabs .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.t === tab); });
+      $('names').innerHTML = payees.map(function (p) { return '<option value="' + escapeHtml(p.name) + '">'; }).join('');
+      $('shows').innerHTML = lines.map(function (l) { return l.show_name; }).filter(function (v, i, a) { return a.indexOf(v) === i; })
+        .map(function (s) { return '<option value="' + escapeHtml(s) + '">'; }).join('');
+      $('intro').classList.toggle('hidden', tab !== 'owed');
+      if (tab === 'year') { renderYear(); return; }
+
+      var shown = lines.filter(function (l) { return l.status === tab; });
+      if (!shown.length) {
+        $('list').innerHTML = '<div class="empty"><b>' + (tab === 'owed' ? 'Nobody is owed anything' : 'Nothing paid yet') + '</b>' +
+          (tab === 'owed' ? 'A rare and beautiful moment. Add a line with + Line.' : 'Pay someone on the Owed tab.') + '</div>';
+        return;
+      }
+      var groups = [];
+      shown.forEach(function (l) {
+        var key = l.show_name + '|' + (l.show_end || '');
+        var g = groups.find(function (x) { return x.key === key; });
+        if (!g) groups.push(g = { key: key, show: l.show_name, end: l.show_end, rows: [] });
+        g.rows.push(l);
+      });
+      $('list').innerHTML = groups.map(function (g) {
+        var sum = g.rows.reduce(function (s, l) { return s + Number(l.amount); }, 0);
+        return '<div class="band-row"><span class="band">' + escapeHtml(g.show) + (g.end ? ' · ' + fmtDay(g.end) : '') + '</span>' +
+          '<span class="group-total">' + money(sum) + '</span></div><div class="rows">' + g.rows.map(row).join('') + '</div>';
+      }).join('');
+    }
+
+    function row(l) {
+      var p = payeeOf(l), bits = [escapeHtml(l.memo || l.role)];
+      var how;
+      if (l.status === 'paid') {
+        how = '<span class="okay">Paid</span> ' + new Date(l.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+          (l.paid_via ? ' by ' + escapeHtml(l.paid_via) : '') + (l.receipt_sent_at ? ' · receipt sent' : (l.receipt_wanted && p.email ? ' · receipt on its way' : ''));
+      } else if (!p.method) {
+        how = '<span class="warn">No pay info yet</span>' + (p.invited_at ? ' · link sent ' + new Date(p.invited_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
+      } else {
+        how = escapeHtml(p.method) + (p.handle ? ' · ' + escapeHtml(p.handle) : '') + (p.method === 'Check' && p.legal_name ? ' · to ' + escapeHtml(p.legal_name) : '');
+      }
+      var act;
+      if (l.status === 'paid') {
+        act = '<button class="btn btn-sm" type="button" data-act="unpay">Undo</button>';
+      } else {
+        var link = payLink(p, l), payBtn;
+        if (link) payBtn = '<a class="btn btn-sm btn-primary" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">Pay ' + money(l.amount) + '</a>';
+        else if (p.method === 'Zelle' || (p.method === 'PayPal' && p.handle)) payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="copy">Copy for ' + escapeHtml(p.method) + '</button>';
+        else if (!p.method) payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="payee">Get pay info</button>';
+        else payBtn = '';
+        act = payBtn + '<button class="btn btn-sm" type="button" data-act="paid">Paid ✓</button>';
+      }
+      return '<div class="line' + (l.status === 'paid' ? ' paid' : '') + '" data-id="' + l.id + '">' +
+        '<div class="l-main"><div class="l-name" data-act="payee">' + escapeHtml(p.name || '?') + '<span class="amt">' + money(l.amount) + '</span></div>' +
+        '<div class="l-sub">' + bits.join(' · ') + ' · <a href="#" data-act="edit">change</a></div><div class="l-sub">' + how + '</div></div>' +
+        '<div class="l-act">' + act + '</div></div>';
+    }
+
+    // The 1099 view: what each person got this calendar year, and W-9 status.
+    function renderYear() {
+      var year = new Date().getFullYear(), by = {};
+      lines.forEach(function (l) {
+        if (l.status !== 'paid' || new Date(l.paid_at).getFullYear() !== year) return;
+        by[l.payee_id] = (by[l.payee_id] || 0) + Number(l.amount);
+      });
+      var ids = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; });
+      if (!ids.length) { $('list').innerHTML = '<div class="empty"><b>Nothing paid through here in ' + year + ' yet</b>Paid lines add up here for the 1099s.</div>'; return; }
+      $('list').innerHTML = '<div class="band-row"><span class="band">Paid in ' + year + '</span></div>' +
+        '<table class="years"><tr><th>Who</th><th>W-9</th><th class="n">Total</th></tr>' + ids.map(function (id) {
+          var p = payees.find(function (x) { return x.id === id; }) || {};
+          return '<tr><td>' + escapeHtml(p.name) + (p.legal_name && p.legal_name !== p.name ? '<br><small style="color:var(--gray)">' + escapeHtml(p.legal_name) + '</small>' : '') + '</td>' +
+            '<td>' + (p.w9_path ? '<span style="color:var(--ok)">On file</span>' : '<span style="color:#f0b7ac">Missing</span>') + '</td><td class="n">' + money(by[id]) + '</td></tr>';
+        }).join('') + '</table><p class="help">Everything paid on this sheet, by calendar year. Hand it to whoever files the 1099s.</p>';
+    }
+
+    function copyText(text, msg) {
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast(msg || 'Copied'); },
+        function () { prompt('Copy this:', text); });
+    }
+
+    async function markPaid(l, paid) {
+      var p = payeeOf(l);
+      if (paid && !confirm('Mark ' + money(l.amount) + ' to ' + p.name + ' paid' + (p.method ? ' by ' + p.method : '') + '?' +
+          (p.email && l.receipt_wanted ? '\nThey get an emailed receipt.' : ''))) return;
+      var patch = paid ? { status: 'paid', paid_at: new Date().toISOString(), paid_via: p.method || null, paid_by: me || null }
+                       : { status: 'owed', paid_at: null, paid_via: null, paid_by: null };
+      var res = await sb.from('payouts').update(patch).eq('id', l.id).select().single();
+      if (res.error) { toast(res.error.message, true); return; }
+      Object.assign(l, res.data);
+      render();
+      if (paid) { toast(p.name + ' is paid. The boulder moves.'); if (p.email && l.receipt_wanted) queueMail(); }
+    }
+
+    // One run of the mailer for a burst of taps.
+    function queueMail() {
+      clearTimeout(mailTimer);
+      mailTimer = setTimeout(async function () {
+        var r = await runWorkflow('payout_mail.yml', {});
+        if (!r.ok) toast('Saved, but the email did not start: ' + r.error + '. The morning run will send it.', true);
+      }, 4000);
+    }
+
+    // ---------- lines ----------
+    function editLine(id) {
+      editing = id ? lines.find(function (x) { return x.id === id; }) : null;
+      var l = editing || { role: 'Host' };
+      $('lineTitle').textContent = editing ? 'Change line' : 'New line';
+      $('l_name').value = editing ? payeeOf(l).name : '';
+      $('l_show').value = l.show_name || '';
+      $('l_end').value = l.show_end || '';
+      $('l_role').value = l.role || 'Host';
+      $('l_amount').value = l.amount != null ? Number(l.amount) : '';
+      $('l_memo').value = l.memo || '';
+      $('removeLine').classList.toggle('hidden', !editing);
+      $('lineDlg').showModal();
+    }
+
+    async function payeeByName(name) {
+      var p = payees.find(function (x) { return x.name.toLowerCase() === name.toLowerCase(); });
+      if (p) return p;
+      var res = await sb.from('payees').insert({ name: name }).select().single();
+      if (res.error) throw res.error;
+      payees.push(res.data);
+      return res.data;
+    }
+
+    $('lineForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var name = $('l_name').value.trim(), amount = Number($('l_amount').value);
+      if (!name || !(amount > 0)) return;
+      $('saveLine').disabled = true;
+      try {
+        var p = await payeeByName(name);
+        var patch = { payee_id: p.id, show_name: $('l_show').value.trim(), show_end: $('l_end').value || null,
+                      role: $('l_role').value, amount: amount, memo: $('l_memo').value.trim() || null };
+        var res = editing ? await sb.from('payouts').update(patch).eq('id', editing.id).select().single()
+                          : await sb.from('payouts').insert(patch).select().single();
+        if (res.error) throw res.error;
+        if (editing) Object.assign(editing, res.data); else lines.push(res.data);
+        $('lineDlg').close();
+        tab = res.data.status; render();
+        toast('Saved');
+      } catch (ex) { toast('Save failed: ' + ex.message, true); }
+      finally { $('saveLine').disabled = false; }
+    });
+
+    async function removeLine() {
+      if (!editing || !confirm('Delete this line? Nothing is paid or unpaid by deleting it.')) return;
+      var res = await sb.from('payouts').delete().eq('id', editing.id);
+      if (res.error) { toast(res.error.message, true); return; }
+      lines = lines.filter(function (x) { return x !== editing; });
+      $('lineDlg').close(); render();
+    }
+
+    // ---------- people ----------
+    function editPayee(p) {
+      editingPayee = p;
+      $('payeeTitle').textContent = p.name;
+      $('p_name').value = p.name || '';
+      $('p_method').value = p.method || '';
+      $('p_handle').value = p.handle || '';
+      $('p_legal').value = p.legal_name || '';
+      $('p_email').value = p.email || '';
+      $('p_phone').value = p.phone || '';
+      $('p_notes').value = p.notes || '';
+      $('p_link').value = GETPAID + p.token;
+      var st = [];
+      st.push(p.info_at ? 'They filled it in ' + new Date(p.info_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '.' : 'They have not filled it in yet.');
+      if (p.invited_at) st.push('Link emailed ' + new Date(p.invited_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '.');
+      else if (p.invite_wanted_at) st.push('Link email on its way.');
+      st.push(p.w9_path ? 'W-9 on file.' : 'No W-9 yet.');
+      $('p_status').textContent = st.join(' ');
+      $('w9Btn').classList.toggle('hidden', !p.w9_path);
+      $('payeeDlg').showModal();
+    }
+
+    function payeePatch() {
+      var v = function (id) { return $(id).value.trim() || null; };
+      return { name: $('p_name').value.trim(), method: v('p_method'), handle: v('p_handle'), legal_name: v('p_legal'),
+               email: v('p_email'), phone: v('p_phone'), notes: v('p_notes') };
+    }
+
+    async function savePayee() {
+      var res = await sb.from('payees').update(payeePatch()).eq('id', editingPayee.id).select().single();
+      if (res.error) { toast('Save failed: ' + res.error.message, true); return false; }
+      Object.assign(editingPayee, res.data);
+      render();
+      return true;
+    }
+
+    $('payeeForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (await savePayee()) { $('payeeDlg').close(); toast('Saved'); }
+    });
+
+    async function invite() {
+      if (!$('p_email').value.trim()) { toast('Add their email first', true); $('p_email').focus(); return; }
+      if (!confirm('Email ' + $('p_name').value.trim() + ' a short note with their get-paid link?')) return;
+      if (!(await savePayee())) return;
+      var res = await sb.from('payees').update({ invite_wanted_at: new Date().toISOString(), invited_at: null }).eq('id', editingPayee.id).select().single();
+      if (res.error) { toast(res.error.message, true); return; }
+      Object.assign(editingPayee, res.data);
+      $('payeeDlg').close(); render();
+      toast('Sending the link');
+      queueMail();
+    }
+
+    async function openW9() {
+      var res = await sb.storage.from('w9').createSignedUrl(editingPayee.w9_path, 300);
+      if (res.error) { toast(res.error.message, true); return; }
+      window.open(res.data.signedUrl, '_blank', 'noopener');
+    }
+
+    $('tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (b) { tab = b.dataset.t; render(); } });
+    $('list').addEventListener('click', function (e) {
+      var act = e.target.closest('[data-act]'); if (!act) return;
+      var el = e.target.closest('.line'); if (!el) return;
+      var l = lines.find(function (x) { return x.id === el.dataset.id; });
+      var a = act.dataset.act;
+      if (a === 'edit') { e.preventDefault(); editLine(l.id); }
+      else if (a === 'payee') editPayee(payeeOf(l));
+      else if (a === 'paid') markPaid(l, true);
+      else if (a === 'unpay') markPaid(l, false);
+      else if (a === 'copy') { var p = payeeOf(l); copyText(p.handle + '  ' + Number(l.amount).toFixed(2), 'Copied ' + p.handle + ' and ' + money(l.amount) + '. Open your bank app.'); }
+    });
+
+    setupSignIn(async function (role) {
+      var u = (await sb.auth.getUser()).data.user;
+      me = u ? u.email : '';
+      if (role !== 'manager') {
+        $('sheet').classList.add('hidden');
+        $('tabs').classList.add('hidden');
+        $('notManager').classList.remove('hidden');
+        return;
+      }
+      load();
+    });
+  </script>
+</body>
+</html>

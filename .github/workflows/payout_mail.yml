@@ -1,0 +1,35 @@
+name: Pay sheet emails
+
+# Emails for the pay sheet (payouts/index.html, staff hub > Pay comics):
+# get-paid links and payment receipts to comics (payout_mail.py). The page
+# starts this through the "run-workflow" Supabase function right after a
+# manager taps Paid or "Email them the link"; the morning run catches
+# anything missed. Each email goes once.
+
+on:
+  schedule:
+    - cron: '15 14 * * *'   # 9:15 AM Central (CDT), 8:15 AM in winter
+  workflow_dispatch:
+
+concurrency:
+  group: payout-mail
+  cancel-in-progress: false
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Send get-paid links and receipts
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: python payout_mail.py
