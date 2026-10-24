@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="Poke Nathan">
+<meta property="og:description" content="Comedian Nathan Lund is busy. Poke him anyway.">
+<title>Poke Nathan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+/* Layout: one phone-height stage, the photo is the board; HUD floats on top, cards drop over it. Single dark "men's room tile" look. */
+:root {
+  --tile: #0f2620;
+  --grout: #1c3a32;
+  --porcelain: #f3f1ea;
+  --water: #7cc8ff;
+  --water-deep: #2f86c9;
+  --kibble: #a0612b;
+  --ink: #0b1714;
+  --warn: #ffd23f;
+  --mad: #e5484d;
+  --ok: #6fe39a;
+  --display: "Bagel Fat One", "Arial Black", Impact, system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--tile);
+  background-image: repeating-linear-gradient(0deg, transparent 0 22px, var(--grout) 22px 24px);
+  color: var(--porcelain);
+  font-family: var(--body);
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The photo always fills the screen height; on narrow phones its edges (stall walls) crop off. */
+.wrap { position: relative; height: 100%; overflow: hidden; }
+.stage {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  height: 100%; aspect-ratio: 900 / 1460;
+  overflow: hidden; background: var(--ink);
+  container-type: size;
+}
+.ui { position: absolute; inset: 0; pointer-events: none; container-type: size; }
+.ui > * { pointer-events: auto; }
+.ui > .hud, .ui > .patience, .ui > .patience-label, .ui > .chip, .ui > #toasts { pointer-events: none; }
+.photo, .body-layer { position: absolute; inset: 0; background: url("nathan.jpg") center / 100% 100% no-repeat; }
+.body-layer {
+  clip-path: polygon(36% 10%, 47% 10%, 47% 17%, 56% 18%, 57% 30%, 58% 40%, 58% 56%, 64% 62%, 66% 82%, 67% 90%, 53% 91%, 48% 72%, 42% 72%, 30% 82%, 25% 90%, 19% 89%, 22% 70%, 25% 55%, 26% 35%, 28% 28%, 32% 23%, 37% 19%);
+  transform-origin: 44% 90%;
+}
+.body-layer.jiggle { animation: jiggle .45s cubic-bezier(.3,1.6,.5,1); }
+.body-layer.jolt { animation: jolt .55s cubic-bezier(.3,1.8,.5,1); }
+@keyframes jiggle { 0%{transform:none} 20%{transform:scale(1.035,.97) rotate(-1.2deg)} 45%{transform:scale(.98,1.025) rotate(1deg)} 70%{transform:scale(1.01,.995) rotate(-.4deg)} 100%{transform:none} }
+@keyframes jolt { 0%{transform:none} 15%{transform:translateY(-3%) scale(.97,1.05) rotate(2deg)} 40%{transform:translateY(0) scale(1.04,.96) rotate(-1.5deg)} 65%{transform:scale(.99,1.01) rotate(.6deg)} 100%{transform:none} }
+
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hit { position: absolute; inset: 0; cursor: pointer; }
+
+.hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 12px 0;
+  pointer-events: none;
+}
+.chip {
+  background: rgba(11,23,20,.78); border: 1px solid rgba(243,241,234,.18);
+  border-radius: 10px; padding: 6px 10px; min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.chip b { display: block; font-family: var(--display); font-weight: 400; font-size: clamp(18px, 6cqw, 30px); line-height: 1; }
+.chip span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }
+.chip.time b { color: var(--warn); }
+.chip.fuel { position: absolute; left: 50%; top: max(64px, calc(env(safe-area-inset-top, 0px) + 56px)); transform: translateX(-50%); color: var(--ink); background: var(--warn); font-weight: 700; font-size: 13px; white-space: nowrap; }
+
+.bubble {
+  position: absolute; left: 57%; top: 13%;
+  background: var(--porcelain); color: var(--ink);
+  font-family: var(--display); font-size: clamp(16px, 5.6cqw, 30px); line-height: 1.05;
+  padding: .35em .6em; border-radius: 16px 16px 16px 4px;
+  max-width: 40%; text-wrap: balance;
+  transform-origin: 0 100%;
+  animation: pop .25s cubic-bezier(.3,1.8,.5,1);
+  pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.35);
+}
+.bubble.big { font-size: clamp(22px, 8cqw, 42px); }
+@keyframes pop { from { transform: scale(.3) rotate(-8deg); opacity: 0 } to { transform: none; opacity: 1 } }
+
+.toast {
+  position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%); width: calc(100% - 24px); max-width: 420px;
+  background: rgba(11,23,20,.86); border: 1px solid rgba(243,241,234,.2);
+  border-radius: 12px; padding: 10px 12px; font-size: clamp(13px, 3.8cqw, 16px); text-align: center;
+  pointer-events: none; animation: rise .25s ease-out;
+}
+@keyframes rise { from { transform: translate(-50%, 12px); opacity: 0 } }
+
+.float { position: absolute; font-family: var(--display); color: var(--water); font-size: clamp(16px, 5cqw, 26px); pointer-events: none; animation: up .9s ease-out forwards; text-shadow: 0 2px 0 var(--ink); }
+@keyframes up { to { transform: translateY(-60px); opacity: 0 } }
+
+.bowl {
+  position: absolute; width: 17%; aspect-ratio: 2 / 1; bottom: 6%;
+  border: 0; padding: 0; background: none; cursor: pointer;
+  animation: slide .5s cubic-bezier(.2,1.4,.5,1);
+}
+.bowl::before { content: ""; position: absolute; inset: 30% 0 0; background: linear-gradient(#c43d3d, #8e2323); border-radius: 8% 8% 50% 50% / 10% 10% 90% 90%; box-shadow: 0 4px 0 rgba(0,0,0,.35); }
+.bowl::after { content: ""; position: absolute; left: 12%; right: 12%; top: 8%; height: 40%; border-radius: 50%; background: radial-gradient(circle at 20% 60%, var(--kibble) 0 9%, transparent 10%), radial-gradient(circle at 45% 40%, #8a4f22 0 10%, transparent 11%), radial-gradient(circle at 70% 60%, var(--kibble) 0 9%, transparent 10%), radial-gradient(circle at 35% 75%, #8a4f22 0 9%, transparent 10%), radial-gradient(circle at 60% 25%, var(--kibble) 0 9%, transparent 10%), radial-gradient(circle at 85% 40%, #8a4f22 0 8%, transparent 9%), radial-gradient(ellipse at 50% 70%, #6b3c19 0 60%, transparent 62%); }
+.bowl i { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); font: 700 clamp(7px, 2.2cqw, 11px)/1 var(--body); letter-spacing: .14em; color: var(--porcelain); font-style: normal; z-index: 1; }
+@keyframes slide { from { transform: translateX(120%) rotate(12deg); opacity: 0 } }
+.bowl:focus-visible { outline: 3px solid var(--warn); outline-offset: 3px; border-radius: 8px; }
+
+.sign { position: absolute; right: 16%; bottom: 5%; width: 14%; aspect-ratio: 3/4; pointer-events: none; animation: slide .4s ease-out; }
+.sign::before { content: ""; position: absolute; inset: 0; background: var(--warn); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.sign span { position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; font: 700 clamp(6px, 1.9cqw, 10px)/1.05 var(--body); color: var(--ink); letter-spacing: .04em; }
+
+.card {
+  position: absolute; inset: 0; display: grid; place-items: end center;
+  background: linear-gradient(to top, rgba(11,23,20,.96) 0 46%, rgba(11,23,20,.55) 70%, rgba(11,23,20,.1));
+  padding: 0 18px max(22px, env(safe-area-inset-bottom, 0px));
+}
+.card-in { width: 100%; max-width: 440px; display: grid; gap: 12px; text-align: left; }
+.eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--water); font-weight: 700; }
+h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(40px, 15cqw, 76px); line-height: .9; text-wrap: balance; }
+h1 .wet { color: var(--water); }
+.card p { margin: 0; font-size: clamp(14px, 4cqw, 17px); line-height: 1.4; max-width: 34ch; opacity: .92; }
+.rules { display: grid; gap: 4px; font-size: clamp(12px, 3.5cqw, 14px); opacity: .85; margin: 0; padding: 0; list-style: none; }
+.rules li::before { content: "› "; color: var(--water); }
+.btn {
+  font: 400 clamp(20px, 6.5cqw, 28px)/1 var(--display); color: var(--ink); background: var(--water);
+  border: 0; border-radius: 14px; padding: 16px 18px; cursor: pointer;
+  box-shadow: 0 5px 0 var(--water-deep); transition: transform .08s;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--water-deep); }
+.btn:focus-visible { outline: 3px solid var(--warn); outline-offset: 3px; }
+.score { font-family: var(--display); font-size: clamp(54px, 20cqw, 96px); line-height: .9; color: var(--water); font-variant-numeric: tabular-nums; }
+.score small { font-size: .35em; color: var(--porcelain); }
+.rank { font-family: var(--display); font-size: clamp(22px, 7cqw, 34px); line-height: 1; }
+.fine { font-size: 12px; opacity: .65; }
+.camus { font-style: italic; }
+
+.patience { position: absolute; left: 12px; right: 12px; top: max(62px, calc(env(safe-area-inset-top, 0px) + 54px)); height: 8px; border-radius: 4px; background: rgba(11,23,20,.7); border: 1px solid rgba(243,241,234,.2); overflow: hidden; pointer-events: none; }
+.patience i { position: absolute; inset: 0 auto 0 0; width: 100%; background: var(--water); transition: width .15s, background .2s; }
+.patience.low i { background: var(--mad); }
+.patience-label { position: absolute; left: 12px; top: max(74px, calc(env(safe-area-inset-top, 0px) + 66px)); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .8; pointer-events: none; text-shadow: 0 1px 2px var(--ink); }
+.chip.fuel { top: max(92px, calc(env(safe-area-inset-top, 0px) + 84px)); }
+.body-layer.mad { filter: sepia(.6) saturate(3) hue-rotate(-30deg) brightness(.95); animation: fume .12s linear infinite; }
+@keyframes fume { 0%{transform:translateX(0)} 25%{transform:translateX(-.6%)} 75%{transform:translateX(.6%)} }
+.bubble.angry { background: var(--mad); color: var(--porcelain); }
+
+.land { position: absolute; inset: 0; background: var(--ink); display: grid; grid-template-rows: auto 1fr auto; touch-action: none; }
+.land-top, .land-bot { padding: max(12px, env(safe-area-inset-top, 0px)) 14px 10px; display: grid; gap: 4px; }
+.land-bot { padding: 10px 14px max(14px, env(safe-area-inset-bottom, 0px)); gap: 8px; }
+.land-title { font-family: var(--display); font-size: clamp(22px, 7.5cqw, 36px); line-height: 1; }
+.land-title em { font-style: normal; color: var(--warn); }
+.land-sub { font-size: clamp(12px, 3.5cqw, 14px); opacity: .85; }
+.scope { position: relative; overflow: hidden; border-block: 2px solid var(--grout); }
+.scope canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gauges { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-variant-numeric: tabular-nums; }
+.gauge { background: rgba(243,241,234,.06); border: 1px solid rgba(243,241,234,.16); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; min-width: 0; }
+.gauge span { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.gauge b { font-family: var(--display); font-weight: 400; font-size: clamp(15px, 4.6cqw, 22px); line-height: 1; }
+.gauge b.ok { color: var(--ok); } .gauge b.bad { color: var(--mad); }
+.tries { font-size: 12px; opacity: .8; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .body-layer.jiggle, .body-layer.jolt, .bubble, .toast, .float, .bowl, .sign { animation-duration: .01s; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="stage" id="stage">
+    <div class="photo" role="img" aria-label="Nathan Lund at a urinal, looking back over his shoulder with a grin, one hand on the tile wall"></div>
+    <div class="body-layer" id="bodyLayer"></div>
+    <canvas id="fx"></canvas>
+    <div class="hit" id="hit"></div>
+
+    <div id="layer"></div>
+  </div>
+  <div class="ui">
+    <div id="toasts"></div>
+    <div class="hud" id="hud" hidden>
+      <div class="chip"><span>Pokes</span><b id="pokes">0</b></div>
+      <div class="chip"><span>Splash</span><b id="oz">0 oz</b></div>
+      <div class="chip time"><span>Left</span><b id="time">20</b></div>
+    </div>
+    <div class="patience" id="patience" hidden><i id="patienceBar"></i></div>
+    <div class="patience-label" id="patienceLabel" hidden>Nathan's patience</div>
+    <div class="chip fuel" id="fuel" hidden>LAZY FUEL · double splash</div>
+
+    <div class="card" id="start">
+      <div class="card-in">
+        <div class="eyebrow">A game for the Sisyphus men's room</div>
+        <h1>Poke <span class="wet">Nathan</span></h1>
+        <p>Comedian Nathan Lund is busy. You have 25 seconds. He is ticklish and his aim is not a priority.</p>
+        <ul class="rules">
+          <li>Tap Nathan. He laughs. Physics does the rest.</li>
+          <li>Fast pokes stack up. So does the puddle.</li>
+          <li>Laugh him too hard and he gets mad. Feed him a spoonful of dog food to fix it.</li>
+          <li>A dog bowl may appear. Nathan will not walk to the fridge. Tap it.</li>
+        </ul>
+        <button class="btn" id="go" type="button">Start poking</button>
+        <div class="fine" id="best"></div>
+      </div>
+    </div>
+
+    <div class="land" id="land" hidden>
+      <div class="land-top">
+        <div class="eyebrow">Cheer-up protocol</div>
+        <div class="land-title">Land the spoon in <em>Lund's mouth</em></div>
+        <div class="land-sub">Hold anywhere to brake. Drag to steer. Come in slow.</div>
+      </div>
+      <div class="scope" id="scope"><canvas id="landCv"></canvas></div>
+      <div class="land-bot">
+        <div class="gauges">
+          <div class="gauge"><span>Alt</span><b id="gAlt">0</b></div>
+          <div class="gauge"><span>Speed · max 160</span><b id="gSpd">0</b></div>
+          <div class="gauge"><span>Align</span><b id="gAlign">0</b></div>
+        </div>
+        <div class="tries" id="tries"></div>
+      </div>
+    </div>
+
+    <div class="card" id="end" hidden>
+      <div class="card-in">
+        <div class="eyebrow">Final splash report</div>
+        <div class="score" id="final">0 <small>oz</small></div>
+        <div class="rank" id="rank"></div>
+        <p id="verdict"></p>
+        <button class="btn" id="again" type="button">Mop up and poke again</button>
+        <div class="fine camus">One must imagine Nathan happy.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), bodyLayer = $("bodyLayer"), cv = $("fx"), ctx = cv.getContext("2d"), layer = $("layer");
+  const ROUND = 25;
+  const FACE = "face.jpg";
+  const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
+
+  // Zones in fractions of the photo (x, y).
+  const ZONES = [
+    { id: "hand", test: (x,y) => Math.hypot(x-.42, (y-.13)*.62) < .07 },
+    { id: "head", test: (x,y) => Math.hypot(x-.458, (y-.248)*.62) < .1 },
+    { id: "urinal", test: (x,y) => Math.hypot(x-.42, (y-.69)*.62) < .03 },
+    { id: "back", test: (x,y) => x > .25 && x < .59 && y > .26 && y < .56 },
+    { id: "legs", test: (x,y) => x > .19 && x < .66 && y > .55 && y < .91 },
+  ];
+  const LINES = {
+    back: ["heh", "hah", "HEY", "not now", "ha. ha. stop.", "I'm working", "rude", "eh heh heh"],
+    legs: ["HAHA", "WHOA", "AIM IS GONE", "my shoes", "NOT THE LEGS", "BWAHAH"],
+    head: ["the hat stays on", "hah", "I can see you", "this is a closed set", "heh. no."],
+    combo: ["HAHAHAHA", "I CAN'T STOP", "SAM WHY", "MAYDAY", "HAAAAA", "THE TILE"],
+  };
+  const SNARK = {
+    hand: "That hand is holding up the building. Leave it.",
+    urinal: "No.",
+    miss: ["That's a wall.", "Wall. Very still. No reaction.", "You poked tile. The tile does not care.", "That's the stall. It has seen enough."],
+    kibble: ["Nathan eats it. The fridge was eleven feet away.", "Kibble. Not a choice. A distance.", "He doesn't love it. It was closer.", "Lazy fuel. Splash doubled."],
+  };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  let patience = 100, paused = 0, pauseStart = 0;
+  let state = "idle", pokes = 0, oz = 0, left = ROUND, combo = 0, lastPoke = 0, fuelUntil = 0, timerId = 0, bowlTimer = 0, signShown = false;
+  let drops = [], puddle = 0, puddleShown = 0, raf = 0, lastT = 0;
+  const best = +(store.get("pokeNathanBest") || 0);
+  if (best) $("best").textContent = `Your best: ${best} oz`;
+
+  // ---------- Sound (made on the fly, nothing to download) ----------
+  let ac = null;
+  function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (ac && ac.state === "suspended") ac.resume(); return ac; }
+  function splashSound(power) {
+    const a = audio(); if (!a) return;
+    const len = .25 + power * .25, buf = a.createBuffer(1, a.sampleRate * len, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 2);
+    const src = a.createBufferSource(); src.buffer = buf;
+    const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 900 + Math.random()*900; f.Q.value = .8;
+    const g = a.createGain(); g.gain.value = .25 + power * .25;
+    src.connect(f).connect(g).connect(a.destination); src.start();
+  }
+  function laughSound(n) {
+    const a = audio(); if (!a) return;
+    const base = 150 + Math.random() * 40, t0 = a.currentTime;
+    for (let i = 0; i < n; i++) {
+      const t = t0 + i * .13, o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+      o.type = "sawtooth"; o.frequency.setValueAtTime(base * (1.25 - i*.04), t); o.frequency.exponentialRampToValueAtTime(base * .85, t + .1);
+      f.type = "bandpass"; f.frequency.value = 800; f.Q.value = 3;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.22, t + .015); g.gain.exponentialRampToValueAtTime(.001, t + .11);
+      o.connect(f).connect(g).connect(a.destination); o.start(t); o.stop(t + .12);
+    }
+  }
+  function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
+
+  // ---------- Effects canvas ----------
+  function size() { const r = stage.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  addEventListener("resize", size); size();
+
+  function splash(power) {
+    const r = stage.getBoundingClientRect(), W = r.width, H = r.height;
+    const ox = .44 * W, oy = .66 * H, n = Math.round(14 + power * 34);
+    for (let i = 0; i < n; i++) {
+      const ang = -Math.PI/2 + (Math.random()-.5) * Math.PI * 1.5;
+      const sp = (2 + Math.random() * 6) * (0.7 + power) * W / 400;
+      drops.push({ x: ox + (Math.random()-.5) * W*.08, y: oy, vx: Math.cos(ang)*sp*1.3, vy: Math.sin(ang)*sp - 2, r: (1.5 + Math.random()*3.5) * W/400, life: 1 });
+    }
+    puddle = Math.min(1, puddle + .012 + power * .03);
+    if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(tick); }
+  }
+  function tick(t) {
+    const dt = Math.min(2, (t - lastT) / 16.7); lastT = t;
+    const r = stage.getBoundingClientRect(), W = r.width, H = r.height;
+    ctx.clearRect(0, 0, W, H);
+    puddleShown += (puddle - puddleShown) * .05 * dt;
+    if (puddleShown > .002) {
+      // Puddle spreads across the floor from the urinal.
+      const cx = .44 * W, cy = .9 * H, rx = W * (.08 + puddleShown * .62), ry = H * (.02 + puddleShown * .09);
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+      g.addColorStop(0, "rgba(124,200,255,.55)"); g.addColorStop(.8, "rgba(124,200,255,.35)"); g.addColorStop(1, "rgba(124,200,255,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "rgba(243,241,234,.35)"; ctx.lineWidth = 1.5;
+      const ph = (t / 900) % 1;
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx * (.3 + ph*.6), ry * (.3 + ph*.6), 0, 0, Math.PI*2); ctx.globalAlpha = 1 - ph; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    for (const d of drops) {
+      d.vy += .35 * dt * W/400; d.x += d.vx * dt; d.y += d.vy * dt; d.life -= .012 * dt;
+      if (d.y > .93 * H) { d.y = .93 * H; d.vy *= -.25; d.vx *= .6; d.life -= .08; }
+      ctx.fillStyle = `rgba(124,200,255,${Math.max(0, d.life) * .9})`;
+      ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * (1 + Math.min(1.5, Math.abs(d.vy) * .08)), Math.atan2(d.vy, d.vx) + Math.PI/2, 0, Math.PI*2); ctx.fill();
+    }
+    drops = drops.filter(d => d.life > 0 && d.x > -20 && d.x < W + 20);
+    if (drops.length || Math.abs(puddle - puddleShown) > .002 || puddleShown > .002) raf = requestAnimationFrame(tick); else { raf = 0; ctx.clearRect(0,0,W,H); }
+  }
+
+  // ---------- UI bits ----------
+  let bubbleEl = null, bubbleT = 0;
+  function bubble(text, big) {
+    if (bubbleEl) bubbleEl.remove();
+    bubbleEl = document.createElement("div"); bubbleEl.className = "bubble" + (big ? " big" : ""); bubbleEl.textContent = text;
+    layer.appendChild(bubbleEl); clearTimeout(bubbleT);
+    const el = bubbleEl; bubbleT = setTimeout(() => el.remove(), 1100);
+  }
+  let toastEl = null, toastT = 0;
+  function toast(text) {
+    if (toastEl) toastEl.remove();
+    toastEl = document.createElement("div"); toastEl.className = "toast"; toastEl.textContent = text; $("toasts").appendChild(toastEl);
+    clearTimeout(toastT); const el = toastEl; toastT = setTimeout(() => el.remove(), 1800);
+  }
+  function floatText(text, x, y) {
+    const el = document.createElement("div"); el.className = "float"; el.textContent = text;
+    el.style.left = `calc(${x*100}% - 1em)`; el.style.top = `${y*100}%`; layer.appendChild(el); setTimeout(() => el.remove(), 900);
+  }
+  function wobble(kind) { bodyLayer.classList.remove("jiggle", "jolt"); void bodyLayer.offsetWidth; bodyLayer.classList.add(kind); }
+  function hud() { patience = Math.max(0, Math.min(100, patience)); $("patienceBar").style.width = patience + "%"; $("patience").classList.toggle("low", patience < 35); hud2(); }
+  function hud2() { $("pokes").textContent = pokes; $("oz").textContent = `${oz} oz`; $("time").textContent = Math.max(0, Math.ceil(left)); }
+
+  // ---------- Poking ----------
+  $("hit").addEventListener("pointerdown", e => {
+    if (state !== "play") return;
+    const r = stage.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    const zone = (ZONES.find(z => z.test(x, y)) || { id: "miss" }).id;
+    if (zone === "miss") { toast(pick(SNARK.miss)); return; }
+    if (zone === "hand") { toast(SNARK.hand); return; }
+    if (zone === "urinal") { toast(SNARK.urinal); return; }
+    const now = performance.now();
+    combo = now - lastPoke < 450 ? combo + 1 : 0; lastPoke = now;
+    const power = Math.min(1, ({ head: .15, back: .35, legs: .6 })[zone] + combo * .06);
+    const fuel = now < fuelUntil ? 2 : 1;
+    const gain = Math.round((1 + power * 4) * fuel);
+    pokes++; oz += gain;
+    patience -= ({ head: 4, back: 5, legs: 7 })[zone] + Math.min(3, combo);
+    hud();
+    if (patience <= 0) { getMad(); return; }
+    wobble(zone === "legs" ? "jolt" : "jiggle");
+    bubble(combo >= 5 ? pick(LINES.combo) : pick(LINES[zone]), combo >= 5 || zone === "legs");
+    splash(power * fuel > 1 ? 1 : power * (fuel === 2 ? 1.6 : 1));
+    floatText(`+${gain}`, x, y);
+    splashSound(power); laughSound(2 + Math.min(4, combo >> 1)); buzz(zone === "legs" ? 40 : 18);
+    if (!signShown && oz >= 60) { signShown = true; const s = document.createElement("div"); s.className = "sign"; s.innerHTML = "<span>CAUTION<br>WET<br>FLOOR</span>"; layer.appendChild(s); toast("Someone put out a wet floor sign. That someone is you."); }
+  });
+
+  function spawnBowl() {
+    if (state !== "play") { bowlTimer = setTimeout(spawnBowl, 3000); return; }
+    const b = document.createElement("button"); b.type = "button"; b.className = "bowl"; b.innerHTML = "<i>NATHAN</i>";
+    b.setAttribute("aria-label", "Dog bowl of kibble");
+    const side = Math.random() < .5; b.style.left = side ? "14%" : "62%";
+    b.addEventListener("pointerdown", ev => {
+      ev.stopPropagation(); if (state !== "play") return;
+      b.remove(); fuelUntil = performance.now() + 3500; $("fuel").hidden = false;
+      setTimeout(() => { if (performance.now() >= fuelUntil) $("fuel").hidden = true; }, 3600);
+      oz += 5; hud(); toast(pick(SNARK.kibble)); bubble("crunch.", false); buzz(25);
+    });
+    layer.appendChild(b);
+    setTimeout(() => b.remove(), 2600);
+    bowlTimer = setTimeout(spawnBowl, 4500 + Math.random() * 3500);
+  }
+
+  // ---------- Rounds ----------
+  const RANKS = [
+    [0, "Bone dry", "You were too polite. Nathan finished in peace. Nobody learned anything."],
+    [25, "Mild dampness", "A light mist. The kind you can blame on the sink."],
+    [70, "Janitor sighs", "The floor is now a floor plus. Someone is getting the yellow bucket."],
+    [130, "Wet floor sign deployed", "Nathan is laughing. Nathan's shoes are not."],
+    [200, "Small municipal flood", "Minneapolis has been notified. The Mississippi has filed a complaint."],
+  ];
+  function start() {
+    audio();
+    layer.innerHTML = ""; $("toasts").innerHTML = ""; drops = []; puddle = 0; puddleShown = 0; signShown = false;
+    pokes = 0; oz = 0; left = ROUND; combo = 0; fuelUntil = 0; patience = 100; paused = 0; hud();
+    $("start").hidden = true; $("end").hidden = true; $("hud").hidden = false; $("fuel").hidden = true;
+    $("patience").hidden = false; $("patienceLabel").hidden = false; bodyLayer.classList.remove("mad");
+    state = "play";
+    const t0 = performance.now();
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+      if (state !== "play") return;
+      left = ROUND - (performance.now() - t0 - paused) / 1000;
+      patience += .25; hud();
+      if (left <= 0) finish();
+    }, 100);
+    clearTimeout(bowlTimer); bowlTimer = setTimeout(spawnBowl, 3000 + Math.random() * 2000);
+    toast("Go. He's distracted.");
+  }
+  function finish() {
+    state = "over"; clearInterval(timerId); clearTimeout(bowlTimer);
+    $("patience").hidden = true; $("patienceLabel").hidden = true;
+    layer.querySelectorAll(".bowl").forEach(b => b.remove());
+    $("fuel").hidden = true;
+    const rank = RANKS.filter(r => oz >= r[0]).pop();
+    $("final").innerHTML = `${oz} <small>oz</small>`; $("rank").textContent = rank[1];
+    $("verdict").textContent = `${pokes} pokes. ${rank[2]}`;
+    const b = +(store.get("pokeNathanBest") || 0);
+    if (oz > b) { store.set("pokeNathanBest", oz); $("best").textContent = `Your best: ${oz} oz`; }
+    setTimeout(() => { $("hud").hidden = true; $("end").hidden = false; $("again").focus({ preventScroll: true }); }, 600);
+  }
+  // ---------- Mad, then the spoon landing ----------
+  function getMad() {
+    state = "mad"; pauseStart = performance.now();
+    layer.querySelectorAll(".bowl").forEach(b => b.remove());
+    bodyLayer.classList.remove("jiggle", "jolt"); bodyLayer.classList.add("mad");
+    bubble(pick(["OK. Now I'm mad.", "That's enough.", "I'm telling Sam.", "Not funny anymore."]), true);
+    bubbleEl.classList.add("angry");
+    toast("You laughed him into a rage. Only kibble can help now.");
+    buzz([60, 40, 60]);
+    setTimeout(startLanding, 1700);
+  }
+
+  const face = new Image(); face.src = FACE;
+  const MOUTH = { x: .617, y: .493 }, SAFE = .16, LANES = .065;
+  const L = { on: false, tries: 0, x: .2, y: .04, vx: 0, vy: .04, aimX: .2, hold: false, t: 0, msg: "", msgT: 0, done: false };
+  const lcv = $("landCv"), lctx = lcv.getContext("2d"), scope = $("scope");
+  function lsize() { const r = scope.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); lcv.width = r.width * dpr; lcv.height = r.height * dpr; lctx.setTransform(dpr,0,0,dpr,0,0); }
+  addEventListener("resize", () => { if (L.on) lsize(); });
+
+  function startLanding() {
+    $("land").hidden = false; $("hud").hidden = true; $("patience").hidden = true; $("patienceLabel").hidden = true;
+    lsize(); L.on = true; L.tries = 0; L.done = false; newApproach();
+    requestAnimationFrame(t => { L.last = t; requestAnimationFrame(landTick); });
+  }
+  function newApproach() {
+    L.x = L.aimX = Math.random() < .5 ? .12 : .88; L.y = .03; L.vx = 0; L.vy = .05; L.hold = false; L.done = false;
+    $("tries").textContent = `Approach ${L.tries + 1} of 3`;
+  }
+  function geom() {
+    // Face photo is drawn "cover" inside the scope; returns its box.
+    const r = scope.getBoundingClientRect(), W = r.width, H = r.height, k = Math.max(W / 600, H / 800);
+    const fw = 600 * k, fh = 800 * k;
+    return { W, H, fw, fh, fx: (W - fw) / 2, fy: (H - fh) / 2 };
+  }
+  function landTick(t) {
+    if (!L.on) return;
+    const dt = Math.min(.05, (t - L.last) / 1000); L.last = t; L.t += dt;
+    const g = geom(), sway = Math.sin(L.t * 1.3) * .05 + Math.sin(L.t * 3.1) * .015;
+    const mx = (g.fx + (MOUTH.x + sway) * g.fw) / g.W, my = (g.fy + MOUTH.y * g.fh) / g.H;
+    if (!L.done) {
+      L.vy += (L.hold ? -.55 : .32) * dt; L.vy = Math.max(-.08, L.vy);
+      L.vx += ((L.aimX - L.x) * 4 - L.vx * 2.5) * dt + Math.sin(L.t * 2.3) * .02 * dt;
+      L.x += L.vx * dt; L.y += L.vy * dt; L.y = Math.max(0, L.y);
+      if (L.y >= my) { L.y = my; touchdown(L.x - mx, L.vy); }
+    }
+    // Draw
+    const c = lctx; c.clearRect(0, 0, g.W, g.H);
+    if (face.complete) c.drawImage(face, g.fx + sway * g.fw, g.fy, g.fw, g.fh);
+    c.fillStyle = "rgba(11,23,20,.18)"; c.fillRect(0, 0, g.W, g.H);
+    // Deck markings around the mouth
+    const px = mx * g.W, py = my * g.H, half = LANES * g.W, blink = (L.t * 3 % 1) < .6;
+    c.strokeStyle = blink ? "#6fe39a" : "rgba(111,227,154,.4)"; c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(px - half, py - 14); c.lineTo(px - half, py + 8); c.lineTo(px - half + 12, py + 8);
+    c.moveTo(px + half, py - 14); c.lineTo(px + half, py + 8); c.lineTo(px + half - 12, py + 8);
+    c.stroke();
+    c.setLineDash([6, 8]); c.strokeStyle = "rgba(255,210,63,.55)"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(px, 0); c.lineTo(px, py - 18); c.stroke(); c.setLineDash([]);
+    // Spoon: bowl at the tip, handle trailing up and back
+    const sx = L.x * g.W, sy = L.y * g.H, s = g.W / 400;
+    c.save(); c.translate(sx, sy); c.rotate(-.5 + L.vx * 1.5);
+    c.fillStyle = "#cfd6dc"; c.strokeStyle = "#7d8a94"; c.lineWidth = 1.5 * s;
+    c.beginPath(); c.roundRect ? c.roundRect(-3 * s, -78 * s, 6 * s, 62 * s, 3 * s) : c.rect(-3 * s, -78 * s, 6 * s, 62 * s); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(0, -6 * s, 13 * s, 17 * s, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = "#a0612b";
+    for (const [kx, ky] of [[-5,-10],[4,-12],[-1,-4],[6,-3],[-6,0]]) { c.beginPath(); c.arc(kx * s, ky * s, 3.6 * s, 0, Math.PI * 2); c.fill(); }
+    if (L.hold && !L.done) { c.fillStyle = "rgba(124,200,255,.8)"; c.beginPath(); c.moveTo(-8 * s, 14 * s); c.lineTo(0, (26 + Math.random() * 10) * s); c.lineTo(8 * s, 14 * s); c.fill(); }
+    c.restore();
+    if (L.msg && L.t < L.msgT) {
+      c.font = `400 ${Math.round(26 * s)}px "Bagel Fat One", Impact, sans-serif`; c.textAlign = "center";
+      c.lineWidth = 6 * s; c.strokeStyle = "#0b1714"; c.strokeText(L.msg, g.W / 2, g.H * .86);
+      c.fillStyle = L.ok ? "#6fe39a" : "#ffd23f"; c.fillText(L.msg, g.W / 2, g.H * .86);
+    }
+    // Gauges
+    const alt = Math.max(0, Math.round((my - L.y) * 1000)), spd = Math.round(Math.max(0, L.vy) * 1000), al = Math.round((L.x - mx) * 1000);
+    $("gAlt").textContent = alt; $("gSpd").textContent = spd; $("gAlign").textContent = (al > 0 ? "R " : al < 0 ? "L " : "") + Math.abs(al);
+    $("gSpd").className = L.vy <= SAFE ? "ok" : "bad"; $("gAlign").className = Math.abs(L.x - mx) <= LANES ? "ok" : "bad";
+    requestAnimationFrame(landTick);
+  }
+  function touchdown(dx, vy) {
+    L.done = true; L.hold = false; L.tries++;
+    let ok = false;
+    if (Math.abs(dx) > LANES) { L.msg = Math.abs(dx) > .2 ? "Missed. That was the wall." : dx > 0 ? "Missed. Kibble in the beard." : "Missed. That was his ear."; splashSound(.2); }
+    else if (vy > SAFE) { L.msg = "Too fast. He's chipped a tooth."; splashSound(.5); buzz(80); }
+    else { ok = true; L.msg = "Touchdown. Crunch."; laughSound(5); buzz([20, 30, 20]); }
+    L.ok = ok; L.msgT = L.t + 1.6;
+    setTimeout(() => {
+      if (ok) return endLanding(true);
+      if (L.tries >= 3) return endLanding(false);
+      newApproach();
+    }, 1600);
+  }
+  function endLanding(ok) {
+    L.on = false; $("land").hidden = true;
+    bodyLayer.classList.remove("mad");
+    $("hud").hidden = false; $("patience").hidden = false; $("patienceLabel").hidden = false;
+    patience = 100; paused += performance.now() - pauseStart;
+    if (ok) { oz += 15; fuelUntil = performance.now() + 5000; $("fuel").hidden = false; setTimeout(() => { if (performance.now() >= fuelUntil) $("fuel").hidden = true; }, 5100); toast("Nathan is happy again. Kibble does that. +15 oz and lazy fuel."); bubble("ok fine. heh.", false); }
+    else { toast("Three misses. He ate it off the floor. Less effort anyway."); bubble("mm. floor.", false); }
+    hud(); state = "play";
+  }
+  scope.addEventListener("pointerdown", e => { if (!L.on) return; scope.setPointerCapture && scope.setPointerCapture(e.pointerId); L.hold = true; aim(e); });
+  scope.addEventListener("pointermove", e => { if (L.on && L.hold) aim(e); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => scope.addEventListener(ev, () => { L.hold = false; }));
+  $("land").addEventListener("pointerdown", e => { if (L.on && !scope.contains(e.target)) { L.hold = true; aim(e); } });
+  $("land").addEventListener("pointerup", () => { L.hold = false; });
+  function aim(e) { const r = scope.getBoundingClientRect(); L.aimX = Math.max(.03, Math.min(.97, (e.clientX - r.left) / r.width)); }
+  addEventListener("keydown", e => {
+    if (!L.on) return;
+    if (e.key === " " || e.key === "ArrowUp") { L.hold = true; e.preventDefault(); }
+    if (e.key === "ArrowLeft") L.aimX = Math.max(.03, L.x - .12);
+    if (e.key === "ArrowRight") L.aimX = Math.min(.97, L.x + .12);
+  });
+  addEventListener("keyup", e => { if (e.key === " " || e.key === "ArrowUp") L.hold = false; });
+
+  $("go").addEventListener("click", start);
+  $("again").addEventListener("click", start);
+})();
+</script>
+
+</body>
+</html>
