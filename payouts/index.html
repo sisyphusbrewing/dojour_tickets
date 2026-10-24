@@ -16,8 +16,8 @@
   <link rel="stylesheet" href="../staff.css">
   <style>
     /* Pay sheet: who we owe, a Pay button that opens Venmo/PayPal/Cash App
-       with the amount filled in, and a Paid button that logs it and emails
-       the comic a receipt. */
+       with the amount filled in, and a Paid button that logs it. (Receipt emails are off by
+       default; Sam doesn't want them.) */
     .intro { color: var(--muted); margin: 18px 0 0; }
     .rows > * + * { margin-top: 8px; }
     .line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
@@ -85,7 +85,7 @@
   <main class="wrap">
     <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
     <div id="sheet">
-      <p class="intro" id="intro">Tap Pay and your Venmo, PayPal or Cash App opens with the amount filled in. Send it, come back, tap Paid. They get a receipt.</p>
+      <p class="intro" id="intro">Tap Pay and your Venmo, PayPal or Cash App opens with the amount filled in. Send it, come back, tap Paid so it’s logged.</p>
       <div id="list"><div class="empty">Counting what we owe…</div></div>
     </div>
   </main>
