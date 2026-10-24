@@ -196,6 +196,7 @@
         q: ['pay_method', { k: 'pay_handle', ph: '@yourname, or you@email.com', when: ['pay_method', '!Check'] }] },
       { land: 'Last thing', title: 'Walk-on song?', sub: 'Pick it, or the sound guy will. He likes Creed.',
         q: [{ k: 'walk_on', ph: 'Song and artist' }, { k: 'anything', label: 'Anything else', ph: 'Questions, requests, confessions. I read all of it.' }] },
+      { kind: 'thanks' },
       { kind: 'finale' },
     ];
     var STOPS = STEPS.filter(function (s) { return s.land; });
@@ -234,11 +235,11 @@
 
     /* ---------- the hill ---------- */
     function moveBoulder() {
-      var stop = STEPS[at], i = stop.kind === 'finale' ? STOPS.length : STOPS.indexOf(stop);
+      var stop = STEPS[at], i = stop.kind === 'finale' || stop.kind === 'thanks' ? STOPS.length : STOPS.indexOf(stop);
       $('hill').classList.toggle('hidden', stop.kind === 'hello');
       var path = $('hillPath'), frac = Math.max(0, i) / STOPS.length, pt = path.getPointAtLength(path.getTotalLength() * frac);
       $('boulder').setAttribute('transform', 'translate(' + pt.x + ',' + (pt.y - 10) + ') rotate(' + Math.round(frac * 1080) + ')');
-      $('hillCount').textContent = stop.kind === 'finale' ? 'Made it!' : 'Stop ' + (i + 1) + ' of ' + STOPS.length;
+      $('hillCount').textContent = stop.kind === 'finale' ? 'Made it!' : stop.kind === 'thanks' ? 'Almost there' : 'Stop ' + (i + 1) + ' of ' + STOPS.length;
     }
 
     /* ---------- render ---------- */
@@ -295,6 +296,8 @@
       moveBoulder();
       if (s.kind === 'hello') html = renderHello();
       else if (s.kind === 'finale') html = renderFinale();
+      else if (s.kind === 'thanks') html = '<div class="band-wrap"><span class="band">Thank you</span></div>' +
+        '<h1>Thank you so much for being at Sisyphus.</h1><p class="sub">If at any time you need anything, please let us know. -Sam</p>' + nav('Send it');
       else {
         var last = STEPS[at + 1].kind === 'finale';
         html = '<div class="band-wrap"><span class="band">' + String(STOPS.indexOf(s) + 1).padStart(2, '0') + ' · ' + esc(s.land) + '</span></div><h1>' + s.title + '</h1><p class="sub">' + esc(s.sub) + '</p>' +
@@ -428,6 +431,7 @@
       if ($('skipLast')) $('skipLast').addEventListener('click', function () { finish({}); });
       if ($('next')) $('next').addEventListener('click', async function () {
         if (s.kind === 'hello') { go(1); return; }
+        if (s.kind === 'thanks') { finish({}); return; }
         var patch = readStop(s);
         Object.keys(patch).forEach(function (k) { answers[k] = patch[k]; });
         visited[s.land] = true; saveDraft();
@@ -474,8 +478,10 @@
     async function boot() {
       if (demo) {
         $('demoPill').classList.remove('hidden');
-        var d = new Date(); d.setDate(d.getDate() + 23);
-        advance = { show_name: 'Your Name Here', show_time: '7pm & 9:30pm', contact_name: '', show_date: d.toISOString().slice(0, 10), data: {} };
+        // A sample Fri–Sat run about three weeks out, so the preview shows what a headliner sees
+        var ymd = function (x) { return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+        var d = new Date(); d.setDate(d.getDate() + 21 + (12 - d.getDay()) % 7); var e = new Date(d); e.setDate(e.getDate() + 1);
+        advance = { show_name: 'Your Name Here', contact_name: '', show_date: ymd(d), show_end_date: ymd(e), data: {} };
       } else {
         var res = await sb.rpc('advance_get', { p_token: token });
         if (res.error || !res.data) {
