@@ -147,7 +147,7 @@
     }
     $('f_method').addEventListener('change', syncHandle);
 
-    function money(v) { var n = Math.round(Number(v) * 100) / 100; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+    function money(v) { var n = Math.round(Number(v) * 100) / 100; return (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
     // ---------- ticket fee split ----------
     function pool() { return payee && payee.statement ? Number(payee.statement.pool) || 0 : 0; }
     function feeRowHtml(r) {

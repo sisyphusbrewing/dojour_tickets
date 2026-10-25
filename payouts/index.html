@@ -143,7 +143,7 @@
     var payees = [], lines = [], tab = 'owed', editing = null, editingPayee = null, me = '', mailTimer = null;
     var GETPAID = 'https://staff.sisyphusbrewing.com/getpaid/?t=';
 
-    function money(v) { var n = Number(v); return '$' + (n % 1 ? n.toFixed(2) : n.toLocaleString('en-US')); }
+    function money(v) { var n = Number(v), a = Math.abs(n); return (n < 0 ? '−$' : '$') + (a % 1 ? a.toFixed(2) : a.toLocaleString('en-US')); }
     function payeeOf(l) { return payees.find(function (p) { return p.id === l.payee_id; }) || {}; }
     function fmtDay(d) { if (!d) return ''; var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
 
