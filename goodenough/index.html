@@ -126,6 +126,28 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 .tea { font-size: 13px; line-height: 1.4; opacity: .75; }
 .envelope { font-size: clamp(64px, 20cqw, 90px); line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); animation: in .6s cubic-bezier(.3,1.6,.5,1), wobble 2.6s ease-in-out infinite .6s; }
 
+/* Screen 4: the letter + score; screen 5: good enough all along + tips */
+.letter { position: relative; width: 100%; max-width: 420px; background: var(--cream); color: var(--ink); border-radius: 6px; padding: 20px 18px 18px; box-shadow: 0 18px 40px rgba(0,0,0,.45); text-align: center; animation: unfold .8s cubic-bezier(.3,1.3,.5,1); transform-origin: top center; }
+@keyframes unfold { from { transform: scaleY(.05); opacity: 0; } }
+.letter .dear { font: 400 clamp(24px, 7.5cqw, 32px)/1.1 var(--seuss); color: var(--plum); text-align: left; }
+.letter p { margin: 8px 0 0; font: italic 400 clamp(15px, 4.3cqw, 17px)/1.35 var(--body); }
+.score { margin: 10px 0 0; font: 400 clamp(76px, 26cqw, 120px)/.9 var(--seuss); color: var(--cherry); }
+.score small { font-size: .28em; color: var(--ink); opacity: .7; }
+.scorerow { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.stamp { position: relative; flex: none; width: clamp(74px, 22cqw, 96px); aspect-ratio: 1; border-radius: 50%; border: 5px double var(--teal); color: var(--teal); display: grid; place-items: center; transform: rotate(14deg) scale(3); opacity: 0; transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .2s; background: rgba(255,247,226,.7); }
+.stamp.on { transform: rotate(14deg) scale(1); opacity: 1; }
+.stamp b { font: 400 clamp(40px, 12cqw, 54px)/1 var(--seuss); }
+.gradeword { margin-top: 6px; font: 400 clamp(20px, 6cqw, 26px)/1.1 var(--seuss); color: var(--plum); min-height: 1.2em; opacity: 0; transition: opacity .5s; }
+.gradeword.on { opacity: 1; }
+.allalong { font: 400 clamp(30px, 9.5cqw, 44px)/1.02 var(--seuss); color: var(--gold); text-wrap: balance; margin: 0; }
+.tips { width: 100%; max-width: 420px; display: grid; gap: 8px; text-align: left; }
+.tips h3 { margin: 4px 0 0; font: 400 clamp(19px, 5.6cqw, 23px)/1.1 var(--seuss); color: var(--teal); text-align: center; }
+.tip { background: rgba(36,17,47,.85); border: 2px solid rgba(242,193,78,.4); border-radius: 12px; padding: 9px 12px; font-size: clamp(13.5px, 3.9cqw, 15px); line-height: 1.35; }
+.tip b { color: var(--gold); }
+#s5 { max-height: 100%; overflow-y: auto; gap: 10px; }
+#s5 .readout { min-height: 0; }
+.sign { font: 400 clamp(17px, 5cqw, 21px)/1.2 var(--seuss); color: var(--cream); opacity: .9; }
+
 @media (prefers-reduced-motion: reduce) { .btn, .ticket, .screen, .gear, .envelope, .machine.shake, .readout.fresh > * { animation: none; } }
 </style>
 </head>
@@ -228,12 +250,23 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
     </div>
   </section>
 
-  <!-- Placeholder until Sam signs off on screen 4. -->
+  <!-- Screen 4: the letter. Their real CSS score counts up, then the grade stamp lands. -->
   <section class="screen" id="s4" hidden>
-    <div class="next">
-      <h2>The envelope is stuck shut…</h2>
-      <p>(The reveal is still being built. Check back soon, <span id="who2">friend</span>.)</p>
+    <div class="letter">
+      <div class="dear">Dear <span id="who2">friend</span>,</div>
+      <p>The machine measured. The machine weighed.<br>It added it all up. Here's the number it made:</p>
+      <div class="scorerow"><div class="score" id="score">0<small>/100</small></div><div class="stamp" id="stamp"><b id="grade">?</b></div></div>
+      <div class="gradeword" id="gradeword"></div>
     </div>
+    <button class="btn" id="sowhat" type="button" hidden>Wait. Is that good?</button>
+  </section>
+
+  <!-- Screen 5: the twist. Good enough all along, plus how to make the needle say "ooh!" -->
+  <section class="screen" id="s5" hidden>
+    <h2 class="allalong">You were good enough all along.</h2>
+    <div class="readout"><p><span>The machine has a secret.</span><span>It's a little bit shy:</span><span>it can measure a joke,</span><span>but it can't measure why.</span><span>The number's for planning.</span><span>The funny is yours.</span></p></div>
+    <div class="tips" id="tips"><h3>Want the needle to say "ooh!"?</h3></div>
+    <div class="sign">Now go be funny.<br><small style="font-size:.7em;opacity:.8">The Good-Enough-o-Matic</small></div>
   </section>
 </div>
 
@@ -362,7 +395,52 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
     $("status").textContent = "THUNK. That did it.";
     setTimeout(() => { chime(); show("s3b"); }, 1100);
   });
-  $("open").addEventListener("click", () => { chime(); show("s4"); });
+  $("open").addEventListener("click", () => { chime(); show("s4"); letter(); });
+
+
+  // Screens 4–5: the real score, a whimsical grade name, then tips from `room` (biggest gains first).
+  const GRADES = { S: "Scrumdiddlyumptious!", A: "Absolutely Astonishing", B: "Bodaciously Bouncy", C: "Cookin' with Gas", D: "Delightfully Developing", F: "Fresh Out of the Oven" };
+  const MAXP = { draw_here: 30, instagram: 12, local: 10, reddit: 6, tiktok: 6, youtube: 6, momentum: 5 };
+  const TIPS = {
+    draw_here: r => r.played_here ? "<b>Bring your people.</b> Tickets sold here are the biggest piece of the score. Tell everyone you know you're coming." : "<b>Come fill some seats here.</b> Tickets sold here are the biggest piece, and you haven't been weighed in our room yet.",
+    instagram: () => "<b>Post clips on Instagram.</b> Of everything we measure, it's the one that sells the most tickets.",
+    local: () => "<b>Get up all over the Twin Cities.</b> Local fans who know your name show up.",
+    reddit: () => "<b>Get some love on Reddit.</b> Minneapolis comedy fans talk there.",
+    tiktok: () => "<b>Put clips on TikTok.</b> Short, funny, often.",
+    youtube: () => "<b>Put a set on YouTube.</b> Bookers and fans both look there.",
+    momentum: () => "<b>Keep it growing.</b> The machine loves numbers that go up month to month.",
+  };
+  function letter() {
+    const r = reveal, target = Math.max(0, Math.min(100, Math.round(Number(r.score) || 0))), g = String(r.grade || "").toUpperCase();
+    let n = 0;
+    $("score").innerHTML = "0<small>/100</small>";
+    const iv = setInterval(() => {
+      n = Math.min(target, n + Math.max(1, Math.ceil(target / 40)));
+      $("score").innerHTML = `${n}<small>/100</small>`; blip(400 + n * 8, .05, "triangle", .04);
+      if (n >= target) {
+        clearInterval(iv);
+        setTimeout(() => {
+          $("grade").textContent = g || "?"; $("stamp").classList.add("on"); blip(80, .3, "sawtooth", .12);
+          setTimeout(() => { $("gradeword").textContent = GRADES[g] || ""; $("gradeword").classList.add("on"); $("sowhat").hidden = false; }, 500);
+        }, 400);
+      }
+    }, 45);
+  }
+  function tips() {
+    const r = reveal, room = r.room || {};
+    const top = Object.keys(room).filter(k => TIPS[k] && MAXP[k])
+      .map(k => ({ k, gain: Number(room[k]) * MAXP[k] })).filter(t => t.gain > .5)
+      .sort((a, b) => b.gain - a.gain).slice(0, 2);
+    const box = $("tips"); box.querySelectorAll(".tip").forEach(t => t.remove());
+    const list = top.length ? top.map(t => TIPS[t.k](r)) : ["<b>Honestly? Keep doing exactly what you're doing.</b> The machine has no notes."];
+    list.push("<b>Have great sets here.</b> Part of the score is how your shows go in our room.");
+    list.forEach(h => { const d = document.createElement("div"); d.className = "tip"; d.innerHTML = h; box.appendChild(d); });
+  }
+  function confetti() {
+    const r = stage.getBoundingClientRect();
+    for (let i = 0; i < 90; i++) parts.push({ x: r.width / 2 + (Math.random() - .5) * 80, y: r.height * .35, vy: -2 - Math.random() * 3, s: 1.5 + Math.random() * 3, life: 1.2, c: ["#f2c14e", "#ffe08a", "#e0414b", "#3fb8a8", "#fff7e2"][i % 5], ph: Math.random() * 6 });
+  }
+  $("sowhat").addEventListener("click", () => { chime(); tips(); show("s5"); confetti(); });
 
   async function wake() {
     if (!/^[0-9a-f]{16,64}$/i.test(token)) { show("noticket"); return; }
