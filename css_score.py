@@ -276,20 +276,38 @@ def measure(page, row, history):
             "draw_estimated": estimated, "scored_at": datetime.utcnow().isoformat() + "Z"}
 
 
+def queue(done):
+    """Comics still waiting, page-added first: anyone typed in with + Comic
+    (requested_by is set) jumps ahead of a big batch, oldest request first."""
+    rows = requests.get(f"{SB_URL}/rest/v1/comic_scores?select=*&status=eq.requested"
+                        f"&order=requested_by.nullslast,created_at", headers=SB, timeout=30).json()
+    rows = [r for r in rows if r["comedian"] not in done]
+    return sorted(rows, key=lambda r: r.get("requested_by") is None)
+
+
 def main():
     if not SB_URL or not SB_KEY:
         sys.exit("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are needed.")
-    filt = "" if os.environ.get("SCORE_ALL") == "1" else "&status=eq.requested"
-    rows = requests.get(f"{SB_URL}/rest/v1/comic_scores?select=*{filt}", headers=SB, timeout=30).json()
-    print(f"{len(rows)} comic(s) to score.")
-    if not rows:
+    rest = []
+    if os.environ.get("SCORE_ALL") == "1":
+        rest = requests.get(f"{SB_URL}/rest/v1/comic_scores?select=*&status=neq.requested", headers=SB, timeout=30).json()
+    done = set()
+    first = queue(done)
+    print(f"{len(first) + len(rest)} comic(s) to score.")
+    if not first and not rest:
         return
     history = show_history()
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(user_agent=UA)
-        for row in rows:
+        while True:
+            # Ask again before every comic, so a name added mid-run is next.
+            waiting = queue(done)
+            row = waiting[0] if waiting else next((r for r in rest if r["comedian"] not in done), None)
+            if not row:
+                break
+            done.add(row["comedian"])
             try:
                 patch = measure(page, row, history)
             except Exception as e:
