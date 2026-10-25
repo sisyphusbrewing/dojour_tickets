@@ -316,7 +316,16 @@
 
 <script>
   // Tell the Shopify page how tall we are so the iframe fits without a scrollbar.
-  function sbH() { try { parent.postMessage({ sellHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {} }
+  // Measure the body, not the document: the document is never shorter than the
+  // iframe, so measuring it would make the iframe grow on every resize.
+  var lastH = 0;
+  function sbH() {
+    var b = document.body, cs = getComputedStyle(b);
+    var h = Math.ceil(b.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom));
+    if (Math.abs(h - lastH) < 4) return;
+    lastH = h;
+    try { parent.postMessage({ sellHeight: h }, '*'); } catch (e) {}
+  }
   window.addEventListener('load', sbH); window.addEventListener('resize', sbH);
   if (document.fonts) document.fonts.ready.then(sbH);
 </script>
