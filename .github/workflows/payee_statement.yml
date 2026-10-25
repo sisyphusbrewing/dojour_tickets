@@ -1,0 +1,31 @@
+name: Payee statement
+
+# Puts a settlement on a comic's get-paid page (payee_statement.py): the
+# JSON is merged into payees.statement for the named payee.
+
+on:
+  workflow_dispatch:
+    inputs:
+      payee:
+        description: "Payee name, as on the pay sheet (e.g. Ali Sultan)"
+        required: true
+      statement:
+        description: "JSON object to merge into their statement"
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Update the statement
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PAYEE: ${{ inputs.payee }}
+          STATEMENT: ${{ inputs.statement }}
+        run: python payee_statement.py
