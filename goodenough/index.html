@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="The Good-Enough-o-Matic">
+<meta property="og:description" content="A machine at Sisyphus has been waiting for you.">
+<title>The Good-Enough-o-Matic</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Henny+Penny&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+/* One phone-height stage. Wonka by way of Seuss: candy stripes, a golden ticket, rhyming copy.
+   ?n=Name personalizes it; with no name, a manager types one in and gets the link. Screens are built one at a time with Sam. */
+:root {
+  --plum: #3b1f4f;
+  --plum-deep: #24112f;
+  --gold: #f2c14e;
+  --gold-deep: #b98a1c;
+  --cream: #fff7e2;
+  --cherry: #e0414b;
+  --teal: #3fb8a8;
+  --ink: #2b1636;
+  --slate: #4a6c86;
+  --seuss: "Henny Penny", "Comic Sans MS", cursive;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background:
+    radial-gradient(120% 60% at 50% 30%, rgba(242,193,78,.18), transparent 60%),
+    repeating-linear-gradient(115deg, var(--plum) 0 34px, var(--plum-deep) 34px 68px);
+  color: var(--cream); font-family: var(--body);
+  overflow: hidden; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.stage { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; container-type: size; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.screen { position: relative; width: 100%; display: grid; justify-items: center; gap: 14px; text-align: center; animation: in .6s cubic-bezier(.3,1.4,.5,1); }
+@keyframes in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+
+/* Golden ticket */
+.ticket {
+  position: relative; width: 100%; max-width: 420px;
+  background: linear-gradient(135deg, #ffe08a, var(--gold) 45%, #e0a92e 70%, #ffe7a3);
+  color: var(--ink); border-radius: 10px; padding: 22px 20px 20px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 0 0 3px rgba(255,255,255,.35);
+  -webkit-mask: radial-gradient(circle 12px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 12px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  animation: shimmer 5s ease-in-out infinite, in .7s cubic-bezier(.3,1.4,.5,1);
+}
+.ticket::before { content: ""; position: absolute; inset: 8px; border: 2px dashed rgba(43,22,54,.45); border-radius: 6px; pointer-events: none; }
+@keyframes shimmer { 50% { filter: brightness(1.08) saturate(1.1); } }
+.admit { font: 700 11px/1 var(--body); letter-spacing: .28em; text-transform: uppercase; opacity: .75; }
+.ticket h1 { margin: 18px 0 4px; font: 400 clamp(30px, 10.5cqw, 48px)/1.02 var(--seuss); color: var(--plum); text-wrap: balance; }
+.ticket h1 .name { color: var(--cherry); display: inline-block; transform: rotate(-3deg); }
+.verse { margin: 10px auto 0; font: italic 400 clamp(15px, 4.4cqw, 18px)/1.35 var(--body); max-width: 32ch; }
+.verse span { display: block; }
+.verse span.gap { margin-bottom: .45em; }
+.fine { margin-top: 10px; font-size: 11px; letter-spacing: .06em; opacity: .7; }
+
+.btn {
+  font: 400 clamp(22px, 7cqw, 30px)/1 var(--seuss); color: var(--ink);
+  background: var(--teal); border: 0; border-radius: 999px; padding: 14px 28px; cursor: pointer;
+  box-shadow: 0 6px 0 #22796e, 0 14px 24px rgba(0,0,0,.35);
+  animation: wobble 2.6s ease-in-out infinite;
+}
+.btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #22796e; animation: none; }
+.btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+@keyframes wobble { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg) scale(1.03); } }
+.from { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+.from b { background: var(--slate); color: var(--cream); padding: .15em .45em; display: inline-block; transform: rotate(-3deg); letter-spacing: .1em; }
+
+/* Name entry (for Sam) */
+.entry { width: 100%; max-width: 420px; background: rgba(36,17,47,.85); border: 2px solid rgba(242,193,78,.5); border-radius: 18px; padding: 20px; display: grid; gap: 12px; text-align: left; }
+.entry h2 { margin: 0; font: 400 clamp(26px, 8cqw, 36px)/1.05 var(--seuss); color: var(--gold); }
+.entry p { margin: 0; font-size: 14px; line-height: 1.4; opacity: .9; }
+.entry input { font: 400 18px/1.2 var(--body); padding: 12px 14px; border-radius: 10px; border: 2px solid var(--gold); background: var(--cream); color: var(--ink); width: 100%; }
+.entry .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.entry .small { font: 700 15px/1 var(--body); padding: 12px 14px; border-radius: 10px; border: 0; background: var(--gold); color: var(--ink); cursor: pointer; }
+.entry .small.alt { background: transparent; color: var(--cream); box-shadow: inset 0 0 0 2px rgba(255,247,226,.4); }
+.link { font: 400 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; background: rgba(255,247,226,.08); padding: 8px 10px; border-radius: 8px; }
+
+.next { max-width: 420px; display: grid; gap: 10px; }
+.next h2 { margin: 0; font: 400 clamp(28px, 9cqw, 40px)/1.05 var(--seuss); color: var(--gold); }
+.next p { margin: 0; font-size: 15px; line-height: 1.45; opacity: .9; }
+
+@media (prefers-reduced-motion: reduce) { .btn, .ticket, .screen { animation: none; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <canvas id="fx"></canvas>
+
+  <!-- For Sam: type a comic's name, get their link. -->
+  <section class="screen" id="entry" hidden>
+    <div class="entry">
+      <h2>Who's walking in?</h2>
+      <p>Type the comic's first name. You'll get a link to text them. Their name shows up all over the machine.</p>
+      <input id="nameIn" type="text" autocomplete="off" placeholder="Dayton" maxlength="40" aria-label="Comic's name">
+      <div class="row">
+        <button class="small" id="make" type="button">Make the link</button>
+        <button class="small alt" id="try" type="button">Try it</button>
+      </div>
+      <div class="link" id="link" hidden></div>
+    </div>
+  </section>
+
+  <!-- Screen 1: the golden ticket. -->
+  <section class="screen" id="s1" hidden>
+    <div class="ticket">
+      <div class="admit">Admit one · Admit only one</div>
+      <h1>Well, hello there,<br><span class="name" id="who1">Friend</span>!</h1>
+      <p class="verse">
+        <span>The machine has been humming.</span>
+        <span class="gap">It knew you were coming.</span>
+        <span>It whistles and whirs,</span>
+        <span class="gap">and goes BLOOP, and goes BRRR.</span>
+        <span>It will weigh every joke</span>
+        <span class="gap">with a spoon and a scale,</span>
+        <span>to see if you're good enough.</span>
+        <span>Good enough for… well…</span>
+        <span class="gap">that's the part it decides.</span>
+        <span>So keep hands, feet, and punchlines</span>
+        <span>politely inside.</span>
+      </p>
+      <div class="fine">This ticket is non-transferable, non-refundable, and slightly sticky.</div>
+    </div>
+    <button class="btn" id="enter" type="button">Step inside</button>
+    <div class="from">A machine at <b>Sisyphus</b> · Minneapolis</div>
+  </section>
+
+  <!-- Placeholder until Sam signs off on screen 2. -->
+  <section class="screen" id="s2" hidden>
+    <div class="next">
+      <h2>The machine is warming up…</h2>
+      <p>(The next room is still being built. Check back soon, <span id="who2">friend</span>.)</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const clean = s => (s || "").replace(/[<>]/g, "").trim().slice(0, 40);
+  const name = clean(params.get("n"));
+
+  function show(id) { document.querySelectorAll(".screen").forEach(s => s.hidden = s.id !== id); }
+
+  // Sparkles drifting up, gold and cherry.
+  const stage = $("stage"), cv = $("fx"), ctx = cv.getContext("2d");
+  let parts = [], lastT = performance.now();
+  function size() { const r = stage.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  addEventListener("resize", size); size();
+  function tick(t) {
+    const dt = Math.min(2, (t - lastT) / 16.7); lastT = t;
+    const r = stage.getBoundingClientRect();
+    ctx.clearRect(0, 0, r.width, r.height);
+    if (Math.random() < .12 * dt) parts.push({ x: Math.random() * r.width, y: r.height + 6, vy: -.4 - Math.random() * .8, s: 1 + Math.random() * 2.5, life: 1, c: ["#f2c14e", "#ffe08a", "#e0414b", "#3fb8a8"][Math.floor(Math.random() * 4)], ph: Math.random() * 6 });
+    parts = parts.filter(p => p.life > 0 && p.y > -10);
+    for (const p of parts) {
+      p.y += p.vy * dt; p.x += Math.sin(t / 600 + p.ph) * .3; p.life -= .002 * dt;
+      ctx.globalAlpha = Math.min(1, p.life) * (.6 + .4 * Math.sin(t / 200 + p.ph));
+      ctx.fillStyle = p.c; ctx.beginPath();
+      for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; ctx.lineTo(p.x + Math.cos(a) * p.s * 2, p.y + Math.sin(a) * p.s * 2); ctx.lineTo(p.x + Math.cos(a + Math.PI / 4) * p.s * .6, p.y + Math.sin(a + Math.PI / 4) * p.s * .6); }
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  let ac;
+  function chime() {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return; }
+    [784, 988, 1175, 1568].forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + i * .08; o.type = "triangle"; o.frequency.value = f; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.12, t0 + .01); g.gain.exponentialRampToValueAtTime(.001, t0 + .9); o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + 1); });
+  }
+
+  function linkFor(n) { return location.origin + location.pathname + "?n=" + encodeURIComponent(n); }
+
+  if (name) {
+    $("who1").textContent = name; $("who2").textContent = name;
+    document.title = `${name}, the Good-Enough-o-Matic awaits`;
+    show("s1");
+  } else {
+    show("entry");
+    $("make").addEventListener("click", async () => {
+      const n = clean($("nameIn").value); if (!n) { $("nameIn").focus(); return; }
+      const url = linkFor(n), box = $("link");
+      box.hidden = false; box.textContent = url;
+      try { await navigator.clipboard.writeText(url); box.textContent = url + "  (copied)"; } catch(e) {}
+    });
+    $("try").addEventListener("click", () => { const n = clean($("nameIn").value); if (n) location.href = linkFor(n); else $("nameIn").focus(); });
+    $("nameIn").addEventListener("keydown", e => { if (e.key === "Enter") $("make").click(); });
+  }
+  $("enter").addEventListener("click", () => { chime(); show("s2"); });
+})();
+</script>
+</body>
+</html>
