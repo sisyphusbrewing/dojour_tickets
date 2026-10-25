@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus CSS</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="CSS">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* CSS, the Comic Scoring System: measured points + house stars + a likeability face + notes. */
+    .intro { color: var(--muted); margin: 18px 0 0; }
+    .rows > * + * { margin-top: 8px; }
+    .comic { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); cursor: pointer; }
+    .comic.waiting { background: transparent; cursor: default; }
+    .grade { flex: 0 0 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; font-family: var(--head); font-weight: 700; font-size: 26px; padding-top: 3px; color: #fff; }
+    .g-A { background: #3d7a52; } .g-B { background: var(--slate); } .g-C { background: #8a6d2f; } .g-D { background: var(--danger); } .g-x { background: var(--line); font-size: 18px; }
+    .c-main { min-width: 0; flex: 1 1 auto; }
+    .c-name { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; line-height: 1.15; padding-top: 2px; word-break: break-word; }
+    .c-sub { color: var(--gray); font-size: 13px; margin-top: 3px; }
+    .c-sub .shift { color: var(--slate-light); font-weight: 700; }
+    .faces { flex: 0 0 auto; display: flex; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); padding: 3px; gap: 2px; }
+    .faces button { width: 38px; height: 38px; border: 0; border-radius: 9px; background: transparent; font-size: 20px; cursor: pointer; opacity: .35; filter: grayscale(1); }
+    .faces button.on { opacity: 1; filter: none; background: var(--card); }
+    .search { margin-top: 10px; }
+    dialog { width: min(520px, calc(100% - 32px)); max-height: calc(100% - 40px); background: var(--card); color: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    dialog::backdrop { background: rgba(0,0,0,.6); }
+    dialog h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 4px; }
+    .d-total { color: var(--muted); margin: 0 0 14px; }
+    .bars > div { display: grid; grid-template-columns: 110px 1fr 44px; align-items: center; gap: 8px; font-size: 14px; margin-top: 6px; }
+    .bar { height: 8px; border-radius: 4px; background: var(--bg); overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--slate-light); }
+    .bars b { text-align: right; font-weight: 600; }
+    .stars { display: flex; gap: 4px; margin-top: 6px; }
+    .stars button { width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--gray); font-size: 20px; cursor: pointer; }
+    .stars button.on { color: #f2c14e; border-color: #f2c14e; }
+    .sec { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 13px; color: var(--muted); margin: 18px 0 4px; }
+    .facts { color: var(--gray); font-size: 13px; line-height: 1.5; }
+    .note { border-top: 1px solid var(--line); padding: 8px 0; font-size: 15px; white-space: pre-wrap; word-break: break-word; }
+    .note small { display: block; color: var(--gray); font-size: 12px; margin-top: 2px; }
+    textarea.input { min-height: 70px; resize: vertical; }
+    .d-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    .d-actions .grow { flex: 1; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 15px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">CSS</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">CSS<small id="summary">Comic Scoring System</small></div>
+        </a>
+        <div class="hdr-right">
+          <button class="btn btn-sm btn-primary" type="button" onclick="$('adder').showModal(); $('a_name').focus()">+ Comic</button>
+          <button class="btn btn-sm" type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+      <div class="hdr-tools">
+        <div class="chips tabs" id="filters"></div>
+        <input class="input search" id="search" type="search" placeholder="Find a comic" autocomplete="off">
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
+    <div id="sheet">
+      <p class="intro">Out of 100: draw here 30, Reddit buzz 15, Instagram 9, TikTok 3, YouTube 3, local pull 10, momentum 5, and your house stars 25.
+        Under 35 is a D, about where a show stops paying for itself. 🙂 moves a comic up a grade, 🙁 down one. Tap a comic for the breakdown and notes.</p>
+      <div id="list"><div class="empty">Loading comics…</div></div>
+    </div>
+  </main>
+
+  <dialog id="adder">
+    <form id="addForm" method="dialog">
+      <h2>Score a comic</h2>
+      <div class="field" style="margin-top:12px"><label for="a_name">Name</label><input class="input" id="a_name" required maxlength="80" placeholder="Full name, as they bill it"></div>
+      <label class="check"><input type="checkbox" id="a_tc"> Twin Cities comic</label>
+      <p class="help">We look them up on Instagram, TikTok, YouTube and Reddit, and check every show they've done here. It takes a few minutes.</p>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="addBtn" type="submit">Score them</button>
+        <button class="btn" type="button" onclick="$('adder').close()">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detail">
+    <h2 id="d_name"></h2>
+    <p class="d-total" id="d_total"></p>
+    <div class="bars" id="d_bars"></div>
+    <div class="sec">House stars</div>
+    <div class="stars" id="d_stars"></div>
+    <p class="help">Stage chops, how hard they promote, would we want them back. 5 points a star; until you pick, it counts as the middle.</p>
+    <label class="check"><input type="checkbox" id="d_tc"> Twin Cities comic (full local pull)</label>
+    <div class="sec">What we found</div>
+    <div class="facts" id="d_facts"></div>
+    <div class="sec">Notes</div>
+    <div id="d_notes"></div>
+    <form id="noteForm">
+      <textarea class="input" id="n_body" maxlength="2000" placeholder="Killed on the late show. Brought 20 friends. Wants a Saturday."></textarea>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="noteBtn" type="submit">Add note</button>
+        <button class="btn" type="button" onclick="$('detail').close()">Close</button>
+        <button class="btn btn-danger" type="button" onclick="removeComic()">Remove</button>
+      </div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var comics = [], notes = {}, filter = 'all', open = null, me = '', pollTimer = null;
+    var LABELS = [['draw_here', 'Draw here', 30], ['reddit', 'Reddit', 15], ['instagram', 'Instagram', 9], ['tiktok', 'TikTok', 3],
+                  ['youtube', 'YouTube', 3], ['local', 'Local pull', 10], ['momentum', 'Momentum', 5], ['house', 'House stars', 25]];
+    var FACES = [[-1, '🙁', 'Down a grade'], [0, '😐', 'No change'], [1, '🙂', 'Up a grade']];
+
+    function k(n) { return n == null ? '—' : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n); }
+    function pts(c) {
+      var p = Object.assign({}, c.points || {});
+      var inp = c.inputs || {};
+      p.local = c.twin_cities ? 10 : Math.min(5, inp.reddit_local_posts || 0);
+      p.house = c.house_stars ? 5 * c.house_stars : 12.5;
+      return p;
+    }
+    function total(c) { var p = pts(c); return Math.round(LABELS.reduce(function (s, l) { return s + (Number(p[l[0]]) || 0); }, 0)); }
+    function baseGrade(t) { return t >= 60 ? 'A' : t >= 45 ? 'B' : t >= 35 ? 'C' : 'D'; }
+    function grade(c) { var i = 'ABCD'.indexOf(baseGrade(total(c))) - (c.likeability || 0); return 'ABCD'[Math.max(0, Math.min(3, i))]; }
+    function scored(c) { return c.status === 'scored'; }
+
+    async function load() {
+      var res = await sb.from('comic_scores').select('*');
+      if (res.error) { toast(res.error.message, true); return; }
+      comics = res.data || [];
+      render();
+      clearTimeout(pollTimer);
+      if (comics.some(function (c) { return c.status === 'requested'; })) pollTimer = setTimeout(load, 30000);
+    }
+
+    function render() {
+      var counts = { A: 0, B: 0, C: 0, D: 0 };
+      comics.filter(scored).forEach(function (c) { counts[grade(c)]++; });
+      var waiting = comics.filter(function (c) { return !scored(c); }).length;
+      $('summary').textContent = comics.length + ' comics · ' + counts.A + ' A · ' + counts.D + ' D';
+      var fl = [['all', 'Everyone'], ['A', 'A · ' + counts.A], ['B', 'B · ' + counts.B], ['C', 'C · ' + counts.C], ['D', 'D · ' + counts.D]];
+      if (waiting) fl.push(['wait', 'Waiting · ' + waiting]);
+      $('filters').innerHTML = fl.map(function (f) { return '<button class="chip' + (filter === f[0] ? ' on' : '') + '" type="button" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('');
+      var q = $('search').value.trim().toLowerCase();
+      var shown = comics.filter(function (c) {
+        if (q && c.comedian.toLowerCase().indexOf(q) === -1) return false;
+        if (filter === 'all') return true;
+        if (filter === 'wait') return !scored(c);
+        return scored(c) && grade(c) === filter;
+      }).sort(function (a, b) { return (scored(b) - scored(a)) || (scored(a) ? total(b) - total(a) : 0) || a.comedian.localeCompare(b.comedian); });
+      if (!shown.length) { $('list').innerHTML = '<div class="empty"><b>Nobody here</b>Add a comic with + Comic.</div>'; return; }
+      $('list').innerHTML = '<div class="rows">' + shown.map(row).join('') + '</div>';
+    }
+
+    function row(c) {
+      if (!scored(c)) {
+        return '<div class="comic waiting" data-name="' + escapeHtml(c.comedian) + '"><div class="grade g-x">' + (c.status === 'not_found' ? '?' : '…') + '</div>' +
+          '<div class="c-main"><div class="c-name">' + escapeHtml(c.comedian) + '</div><div class="c-sub">' +
+          (c.status === 'not_found' ? 'Couldn’t find any accounts under that name. Check the spelling.' : 'Looking them up. A few minutes.') + '</div></div>' +
+          '<button class="btn btn-sm" type="button" data-act="remove">Remove</button></div>';
+      }
+      var t = total(c), g = grade(c), base = baseGrade(t), inp = c.inputs || {};
+      var bits = [t + ' pts'];
+      if (g !== base) bits.push('<span class="shift">' + base + ' → ' + g + '</span>');
+      bits.push(c.draw_estimated ? '~' + c.per_show + '/show est.' : c.per_show + '/show here');
+      bits.push('IG ' + k(inp.ig) + ' · Reddit ' + k(inp.reddit_votes));
+      if (c.house_stars) bits.push('★'.repeat(c.house_stars));
+      return '<div class="comic" data-name="' + escapeHtml(c.comedian) + '"><div class="grade g-' + g + '">' + g + '</div>' +
+        '<div class="c-main" data-act="open"><div class="c-name">' + escapeHtml(c.comedian) + '</div><div class="c-sub">' + bits.join(' · ') + '</div></div>' +
+        '<div class="faces">' + FACES.map(function (f) {
+          return '<button type="button" data-act="face" data-v="' + f[0] + '" title="' + f[2] + '" class="' + ((c.likeability || 0) === f[0] ? 'on' : '') + '">' + f[1] + '</button>';
+        }).join('') + '</div></div>';
+    }
+
+    async function save(c, patch) {
+      var res = await sb.from('comic_scores').update(patch).eq('comedian', c.comedian).select().single();
+      if (res.error) { toast('Save failed: ' + res.error.message, true); return false; }
+      Object.assign(c, res.data);
+      render();
+      if (open === c) showDetail(c);
+      return true;
+    }
+
+    async function showDetail(c) {
+      open = c;
+      var p = pts(c), t = total(c), g = grade(c), base = baseGrade(t), inp = c.inputs || {};
+      $('d_name').textContent = c.comedian;
+      $('d_total').innerHTML = '<b>' + t + ' points, grade ' + g + '</b>' + (g !== base ? ' (' + base + ' on points, moved by the face)' : '') +
+        '. ' + (c.draw_estimated ? 'Never played here; draw is estimated at about ' + c.per_show + ' tickets a show.' : 'Sells about ' + c.per_show + ' tickets a show here.');
+      $('d_bars').innerHTML = LABELS.map(function (l) {
+        var v = Number(p[l[0]]) || 0;
+        return '<div><span>' + l[1] + '</span><span class="bar"><i style="width:' + Math.round(100 * v / l[2]) + '%"></i></span><b>' + (Math.round(v * 10) / 10) + '/' + l[2] + '</b></div>';
+      }).join('');
+      $('d_stars').innerHTML = [1, 2, 3, 4, 5].map(function (s) {
+        return '<button type="button" data-s="' + s + '" class="' + (c.house_stars >= s ? 'on' : '') + '" aria-label="' + s + ' stars">★</button>';
+      }).join('');
+      $('d_tc').checked = !!c.twin_cities;
+      var runs = (inp.runs || []).map(function (r) { return r[0] + ': ' + r[1] + ' tickets / ' + r[2] + (r[2] === 1 ? ' show' : ' shows'); });
+      $('d_facts').innerHTML = [
+        'Instagram ' + k(inp.ig) + (inp.instagram_handle ? ' (@' + escapeHtml(inp.instagram_handle) + ')' : ''),
+        'TikTok ' + k(inp.tiktok) + (inp.tiktok_handle ? ' (@' + escapeHtml(inp.tiktok_handle) + ')' : ''),
+        'YouTube ' + k(inp.youtube) + (inp.youtube_handle ? ' (@' + escapeHtml(inp.youtube_handle) + ')' : ''),
+        'Reddit: ' + k(inp.reddit_votes) + ' votes on ' + (inp.reddit_posts || 0) + ' posts this year, ' + (inp.reddit_local_posts || 0) + ' in r/Minneapolis + r/TwinCities',
+        runs.length ? 'Here: ' + runs.join(', ') : 'Never played here',
+        c.scored_at ? 'Measured ' + new Date(c.scored_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+      ].filter(Boolean).join('<br>');
+      $('d_notes').innerHTML = '<div class="help">Loading notes…</div>';
+      if (!$('detail').open) $('detail').showModal();
+      var res = await sb.from('comic_notes').select('*').eq('comedian', c.comedian).order('created_at', { ascending: false });
+      notes[c.comedian] = res.data || [];
+      renderNotes(c);
+    }
+
+    function renderNotes(c) {
+      var list = notes[c.comedian] || [];
+      $('d_notes').innerHTML = list.length ? list.map(function (n) {
+        return '<div class="note">' + escapeHtml(n.body) + '<small>' + (n.author ? escapeHtml(n.author.replace('@' + LOGIN_DOMAIN, '')) + ' · ' : '') +
+          new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</small></div>';
+      }).join('') : '<div class="help">No notes yet.</div>';
+    }
+
+    $('noteForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var body = $('n_body').value.trim();
+      if (!body || !open) return;
+      $('noteBtn').disabled = true;
+      var res = await sb.from('comic_notes').insert({ comedian: open.comedian, body: body, author: me || null }).select().single();
+      $('noteBtn').disabled = false;
+      if (res.error) { toast('Save failed: ' + res.error.message, true); return; }
+      $('n_body').value = '';
+      (notes[open.comedian] = notes[open.comedian] || []).unshift(res.data);
+      renderNotes(open);
+      toast('Note saved');
+    });
+
+    $('d_stars').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-s]'); if (!b || !open) return;
+      var s = Number(b.dataset.s);
+      save(open, { house_stars: open.house_stars === s ? null : s });
+    });
+    $('d_tc').addEventListener('change', function () { if (open) save(open, { twin_cities: $('d_tc').checked }); });
+    $('detail').addEventListener('close', function () { open = null; });
+
+    async function removeComic(name) {
+      var c = name ? comics.find(function (x) { return x.comedian === name; }) : open;
+      if (!c || !confirm('Take ' + c.comedian + ' off CSS? Their notes go too.')) return;
+      var res = await sb.from('comic_scores').delete().eq('comedian', c.comedian);
+      if (res.error) { toast(res.error.message, true); return; }
+      comics = comics.filter(function (x) { return x !== c; });
+      if ($('detail').open) $('detail').close();
+      render();
+    }
+
+    $('addForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var name = $('a_name').value.trim().replace(/\s+/g, ' ');
+      if (!name) return;
+      var have = comics.find(function (x) { return x.comedian.toLowerCase() === name.toLowerCase(); });
+      if (have) { $('adder').close(); if (scored(have)) showDetail(have); toast(have.comedian + ' is already on here'); return; }
+      $('addBtn').disabled = true;
+      var res = await sb.from('comic_scores').insert({ comedian: name, twin_cities: $('a_tc').checked, requested_by: me || null }).select().single();
+      $('addBtn').disabled = false;
+      if (res.error) { toast('Save failed: ' + res.error.message, true); return; }
+      comics.push(res.data);
+      $('adder').close(); $('a_name').value = ''; $('a_tc').checked = false;
+      filter = 'all'; render();
+      var r = await runWorkflow('css_score.yml', {});
+      toast(r.ok ? 'Looking up ' + name + '. A few minutes.' : 'Saved, but the lookup did not start: ' + r.error, !r.ok);
+      clearTimeout(pollTimer); pollTimer = setTimeout(load, 30000);
+    });
+
+    $('filters').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; render(); } });
+    $('search').addEventListener('input', render);
+    $('list').addEventListener('click', function (e) {
+      var el = e.target.closest('.comic'); if (!el) return;
+      var c = comics.find(function (x) { return x.comedian === el.dataset.name; }); if (!c) return;
+      var act = e.target.closest('[data-act]');
+      if (act && act.dataset.act === 'face') { save(c, { likeability: Number(act.dataset.v) }); return; }
+      if (act && act.dataset.act === 'remove') { removeComic(c.comedian); return; }
+      if (scored(c)) showDetail(c);
+    });
+
+    setupSignIn(async function (role) {
+      var u = (await sb.auth.getUser()).data.user;
+      me = u ? u.email : '';
+      if (role !== 'manager') {
+        $('sheet').classList.add('hidden');
+        $('filters').classList.add('hidden');
+        $('search').classList.add('hidden');
+        $('notManager').classList.remove('hidden');
+        return;
+      }
+      load();
+    });
+  </script>
+</body>
+</html>
