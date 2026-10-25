@@ -143,7 +143,7 @@
     function pts(c) {
       var p = Object.assign({}, c.points || {});
       var inp = c.inputs || {};
-      p.local = c.twin_cities ? 10 : Math.min(5, inp.reddit_local_posts || 0);
+      p.local = c.twin_cities ? 10 : 0;
       p.house = c.house_stars ? 5 * c.house_stars : 12.5;
       return p;
     }
@@ -228,7 +228,7 @@
         'Instagram ' + k(inp.ig) + (inp.instagram_handle ? ' (@' + escapeHtml(inp.instagram_handle) + ')' : ''),
         'TikTok ' + k(inp.tiktok) + (inp.tiktok_handle ? ' (@' + escapeHtml(inp.tiktok_handle) + ')' : ''),
         'YouTube ' + k(inp.youtube) + (inp.youtube_handle ? ' (@' + escapeHtml(inp.youtube_handle) + ')' : ''),
-        inp.reddit_votes == null ? 'Reddit: not checked yet' : 'Reddit: ' + k(inp.reddit_votes) + ' votes on ' + (inp.reddit_posts || 0) + ' posts this year, ' + (inp.reddit_local_posts || 0) + ' in r/Minneapolis + r/TwinCities',
+        inp.reddit_votes == null ? 'Reddit: not checked yet' : 'Reddit: ' + k(inp.reddit_votes) + ' votes on ' + (inp.reddit_posts || 0) + ' posts this year',
         runs.length ? 'Here: ' + runs.join(', ') : 'Never played here',
         c.scored_at ? 'Measured ' + new Date(c.scored_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
       ].filter(Boolean).join('<br>');

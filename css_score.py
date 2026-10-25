@@ -234,7 +234,9 @@ def points(c):
         "reddit": 6 * clamp((L(c["reddit_votes"]) - 1) / 4),
         "tiktok": 6 * clamp((L(c["tiktok"]) - 3) / 3.3),
         "youtube": 6 * clamp((L(c["youtube"]) - 3) / 3),
-        "local": 10.0 if c["twin_cities"] else float(min(5, c["reddit_local_posts"] or 0)),
+        # r/Minneapolis + r/TwinCities searches also return posts that don't name the
+        # comic, so they aren't scored; only Twin Cities comics get local pull.
+        "local": 10.0 if c["twin_cities"] else 0.0,
         "momentum": momentum,
     }
     return {k: round(v, 1) for k, v in pts.items()}, round(per), not runs
