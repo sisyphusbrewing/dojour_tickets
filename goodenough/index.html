@@ -109,7 +109,24 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 .count { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
 .btn[disabled] { opacity: .5; animation: none; }
 
-@media (prefers-reduced-motion: reduce) { .btn, .ticket, .screen, .machine.shake, .readout.fresh > * { animation: none; } }
+/* Screen 3: the wait */
+.porthole { width: min(62%, 30cqh); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #5a3a6a, var(--plum-deep)); border: 10px solid var(--gold-deep); box-shadow: inset 0 0 0 4px var(--ink), 0 12px 30px rgba(0,0,0,.4); display: grid; place-items: center; overflow: hidden; }
+.porthole svg { width: 100%; height: 100%; }
+.gear { transform-box: fill-box; transform-origin: center; animation: spin 3s linear infinite; }
+.gear.rev { animation-direction: reverse; animation-duration: 2s; }
+.gear.slow { animation-duration: 5s; }
+.porthole.stuck .gear { animation-play-state: paused; }
+.porthole.kicked { animation: shake .5s linear; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.bar { width: 100%; height: 26px; border-radius: 999px; background: rgba(36,17,47,.85); border: 3px solid var(--gold); overflow: hidden; position: relative; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: repeating-linear-gradient(115deg, var(--cherry) 0 14px, #ff7a82 14px 28px); transition: width .6s ease; }
+.bar b { position: absolute; inset: 0; display: grid; place-items: center; font: 700 13px/1 var(--body); letter-spacing: .1em; color: var(--cream); text-shadow: 0 1px 2px #000; }
+.status { min-height: 2.8em; font: italic 400 clamp(16px, 4.6cqw, 19px)/1.35 var(--body); display: grid; place-items: center; }
+.status.fresh { animation: in .4s cubic-bezier(.3,1.4,.5,1); }
+.tea { font-size: 13px; line-height: 1.4; opacity: .75; }
+.envelope { font-size: clamp(64px, 20cqw, 90px); line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); animation: in .6s cubic-bezier(.3,1.6,.5,1), wobble 2.6s ease-in-out infinite .6s; }
+
+@media (prefers-reduced-motion: reduce) { .btn, .ticket, .screen, .gear, .envelope, .machine.shake, .readout.fresh > * { animation: none; } }
 </style>
 </head>
 <body>
@@ -189,11 +206,33 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
     </div>
   </section>
 
-  <!-- Placeholder until Sam signs off on screen 3. -->
+  <!-- Screen 3: the wait. A silly progress bar that sticks at 99% until they kick the machine. -->
   <section class="screen" id="s3" hidden>
+    <div class="room">
+      <h2>The Waiting Room</h2>
+      <div class="porthole" id="porthole"><svg viewBox="0 0 180 180" aria-hidden="true"><g class="gear "><circle cx="70" cy="78" r="38" fill="#f2c14e" stroke="#24112f" stroke-width="3" stroke-dasharray="8.53 8.53"/><circle cx="70" cy="78" r="32" fill="#f2c14e"/><circle cx="70" cy="78" r="9" fill="#24112f"/></g><g class="gear rev"><circle cx="128" cy="120" r="30" fill="#3fb8a8" stroke="#24112f" stroke-width="3" stroke-dasharray="7.85 7.85"/><circle cx="128" cy="120" r="24" fill="#3fb8a8"/><circle cx="128" cy="120" r="7" fill="#24112f"/></g><g class="gear slow"><circle cx="122" cy="50" r="22" fill="#e0414b" stroke="#24112f" stroke-width="3" stroke-dasharray="6.91 6.91"/><circle cx="122" cy="50" r="16" fill="#e0414b"/><circle cx="122" cy="50" r="5" fill="#24112f"/></g><g class="gear rev"><circle cx="58" cy="142" r="20" fill="#fff7e2" stroke="#24112f" stroke-width="3" stroke-dasharray="6.28 6.28"/><circle cx="58" cy="142" r="14" fill="#fff7e2"/><circle cx="58" cy="142" r="5" fill="#24112f"/></g></svg></div>
+      <div class="bar"><i id="barFill"></i><b id="barPct">0%</b></div>
+      <div class="status" id="status">Adding up the giggles…</div>
+      <button class="btn" id="kick" type="button" hidden>Give it a little kick</button>
+      <div class="tea" id="tea">The wait is the worst,<br>so the machine made some tea.<br>It's not for you, though.<br>It's for the machine.</div>
+    </div>
+  </section>
+
+  <!-- The envelope arrives (end of screen 3). -->
+  <section class="screen" id="s3b" hidden>
+    <div class="room">
+      <h2>DING!</h2>
+      <div class="envelope" aria-hidden="true">✉️</div>
+      <div class="readout"><p><span>The machine has decided.</span><span>It wrote it down neatly.</span><span>It licked the envelope too,</span><span>which was not very neat-ly.</span></p></div>
+      <button class="btn" id="open" type="button">Open it, <span id="who3">friend</span></button>
+    </div>
+  </section>
+
+  <!-- Placeholder until Sam signs off on screen 4. -->
+  <section class="screen" id="s4" hidden>
     <div class="next">
-      <h2>The machine is thinking…</h2>
-      <p>(The waiting room is still being built. Check back soon, <span id="who2">friend</span>.)</p>
+      <h2>The envelope is stuck shut…</h2>
+      <p>(The reveal is still being built. Check back soon, <span id="who2">friend</span>.)</p>
     </div>
   </section>
 </div>
@@ -271,7 +310,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
   function needle(frac) { $("needle").style.transform = `rotate(${-80 + 160 * Math.max(0, Math.min(1, frac))}deg)`; }
   function pull() {
     if (busy) return;
-    if (at >= st.length) { chime(); show("s3"); return; }
+    if (at >= st.length) { chime(); show("s3"); waitRoom(); return; }
     busy = true; $("pull").disabled = true;
     const m = $("machine"), s = st[at];
     m.classList.add("pull"); blip(220, .15, "triangle", .1);
@@ -292,6 +331,39 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
   }
   $("pull").addEventListener("click", pull);
 
+
+  // Screen 3: the wait. Climbs to 99%, sticks, they kick it, DING.
+  const waits = ["Adding up the giggles…", "Carrying the one…", "Asking the spoon. The spoon is thinking.", "Dividing by Tuesday…",
+    "Comparing you to a goose. You won.", "Checking under the couch for more followers…", "Asking the Stone Arch Bridge for advice…",
+    "Re-measuring. The spoon sneezed.", "Almost… almost…"];
+  function waitRoom() {
+    let pct = 0, i = 0;
+    const set = n => { $("barFill").style.width = n + "%"; $("barPct").textContent = n + "%"; };
+    const say = t => { const el = $("status"); el.textContent = t; el.classList.remove("fresh"); void el.offsetWidth; el.classList.add("fresh"); };
+    set(0); say(waits[0]);
+    const iv = setInterval(() => {
+      i++;
+      pct = Math.min(99, pct + 9 + Math.floor(Math.random() * 6));
+      if (i === 6) pct = Math.max(20, pct - 25);   // it goes backwards once, for drama
+      set(pct); blip(300 + pct * 6, .12, "triangle", .05);
+      if (pct >= 99) {
+        clearInterval(iv); set(99);
+        say("Stuck at 99%. It does this. It's very dramatic.");
+        $("porthole").classList.add("stuck"); $("kick").hidden = false;
+        return;
+      }
+      say(i === 6 ? "Oops. It went backwards. It got nervous." : waits[Math.min(i, waits.length - 1)]);
+    }, 1300);
+  }
+  $("kick").addEventListener("click", () => {
+    const p = $("porthole"); p.classList.remove("kicked", "stuck"); void p.offsetWidth; p.classList.add("kicked");
+    blip(90, .4, "sawtooth", .12); $("kick").hidden = true;
+    $("barFill").style.width = "100%"; $("barPct").textContent = "100%";
+    $("status").textContent = "THUNK. That did it.";
+    setTimeout(() => { chime(); show("s3b"); }, 1100);
+  });
+  $("open").addEventListener("click", () => { chime(); show("s4"); });
+
   async function wake() {
     if (!/^[0-9a-f]{16,64}$/i.test(token)) { show("noticket"); return; }
     let res;
@@ -300,7 +372,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
     if (!res.data) { show("noticket"); return; }
     reveal = res.data;
     const first = String(reveal.comedian || "Friend").trim().split(/\s+/)[0];
-    $("who1").textContent = first; $("who2").textContent = first;
+    $("who1").textContent = first; $("who2").textContent = first; $("who3").textContent = first;
     document.title = `${first}, the Good-Enough-o-Matic awaits`;
     show("s1");
   }
