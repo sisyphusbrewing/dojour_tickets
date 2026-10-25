@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>How Shows Actually Sell</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap">
+<style>
+  @page { size: letter; margin: 0; }
+  :root {
+    --slate: #4a6c86; --slate-dark: #3b586e; --slate-pale: #e4edf4;
+    --char: #393636; --gray: #918f90; --line: #d6d3d3; --paper: #ffffff; --tint: #f4f2ef;
+    --head: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+    --body: 'Assistant', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #ccc; }
+  body { font-family: var(--body); color: var(--char); font-size: 11.5pt; line-height: 1.42; }
+  .page { width: 8.5in; height: 11in; background: var(--paper); margin: 0 auto 20px; padding: 0.55in 0.65in 0.5in; position: relative; overflow: hidden; page-break-after: always; display: flex; flex-direction: column; }
+  @media print { html, body { background: #fff; } .page { margin: 0; } }
+
+  header { display: flex; align-items: center; gap: 16px; border-bottom: 3px solid var(--slate); padding-bottom: 12px; margin-bottom: 14px; }
+  header img { width: 74px; }
+  header .kick { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .16em; font-size: 9.5pt; color: var(--slate); }
+  h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; font-size: 31pt; line-height: 1; margin: 4px 0 0; }
+  .intro { font-size: 12.5pt; margin: 0 0 6px; }
+
+  .band-wrap { margin: 16px 0 8px; padding: 6px 0; }
+  .band { display: inline-block; background: var(--slate); color: #fff; padding: 6px 14px 3px; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .14em; font-size: 11pt; transform: rotate(-1.5deg);
+          box-shadow: 0 -3px 0 -1px var(--paper), 0 -5px 0 -1px var(--slate), 0 3px 0 -1px var(--paper), 0 5px 0 -1px var(--slate); }
+  p { margin: 0 0 7px; }
+  b { color: #000; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 9px; }
+  .stats div { background: var(--slate-pale); border-radius: 10px; padding: 9px 12px 7px; }
+  .stats strong { display: block; font-family: var(--head); font-weight: 700; font-size: 25pt; line-height: 1; color: var(--slate); }
+  .stats span { font-size: 9.5pt; color: var(--char); }
+
+  .so { margin-top: 14px; border-left: 4px solid var(--slate); padding: 4px 0 4px 14px; font-size: 13pt; }
+  .so b { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 10pt; color: var(--slate); display: block; }
+
+  ul.tips { margin: 2px 0 0; padding: 0; list-style: none; }
+  ul.tips li { padding: 0 0 6px 20px; position: relative; }
+  ul.tips li::before { content: ''; position: absolute; left: 3px; top: .52em; width: 8px; height: 8px; border-radius: 50%; background: var(--slate); }
+
+  .box { background: var(--char); color: #fff; border-radius: 12px; padding: 12px 18px 10px; margin-top: 14px; }
+  .box h3 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 11pt; margin: 0 0 6px; color: #a9c3d8; }
+  .box ul.tips li::before { background: #a9c3d8; }
+  .box b { color: #fff; }
+  .box .last { font-family: var(--head); font-weight: 700; letter-spacing: .04em; margin: 4px 0 2px; }
+
+  .story { background: var(--tint); border-radius: 12px; padding: 12px 18px 8px; margin-top: 12px; }
+  .story h3 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 11pt; margin: 0 0 6px; color: var(--slate); }
+  .story p { margin: 0 0 5px; }
+  .story .punch { font-size: 12.5pt; }
+
+  .closer p { margin: 0 0 6px; }
+  .closer .big { font-family: var(--head); font-weight: 700; font-size: 13pt; letter-spacing: .02em; }
+  .sign { font-family: var(--head); font-weight: 700; letter-spacing: .08em; margin-top: 4px; }
+
+  footer { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px; display: flex; justify-content: space-between; font-size: 9pt; color: var(--gray); }
+  footer em { font-family: var(--head); font-style: normal; letter-spacing: .06em; color: var(--slate); font-weight: 700; }
+  .p2 { font-size: 10.8pt; line-height: 1.36; }
+  .p2 header { padding-bottom: 8px; margin-bottom: 4px; }
+  .p2 header img { width: 54px; }
+  .p2 h1 { font-size: 22pt; }
+  .p2 .band-wrap { margin: 10px 0 6px; }
+  .p2 ul.tips li { padding-bottom: 4px; }
+  .p2 .box, .p2 .story { margin-top: 10px; padding: 10px 16px 7px; }
+  .p2 .closer p { margin-bottom: 4px; }
+  .p1 { font-size: 9.7pt; line-height: 1.3; padding-top: .45in; padding-bottom: .4in; }
+  .p1 header { padding-bottom: 8px; margin-bottom: 8px; }
+  .p1 header img { width: 60px; }
+  .p1 h1 { font-size: 27pt; }
+  .p1 .intro { font-size: 11pt; margin-bottom: 0; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .p1 .band-wrap { margin: 10px 0 6px; }
+  .p1 .band { font-size: 9.5pt; }
+  .stats.s4 { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .stats.s3 { gap: 6px; }
+  .p1 .stats div { padding: 6px 8px 5px; border-radius: 8px; }
+  .p1 .stats strong { font-size: 17pt; }
+  .p1 .stats span { font-size: 8pt; line-height: 1.15; display: block; }
+  .chart-title { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 8.5pt; color: var(--slate); margin: 6px 0 4px; }
+  .funnel .row { display: grid; grid-template-columns: 78px 1fr 42px; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 9pt; }
+  .funnel .bar { display: block; height: 12px; background: #a9c3d8; border-radius: 3px; }
+  .funnel .bar.hot { background: var(--slate); }
+  .funnel b { text-align: right; font-family: var(--head); }
+  .note { font-size: 7.5pt; color: var(--gray); margin: 0 0 4px; }
+  .p1 ul.tips { margin-top: 6px; }
+  .p1 ul.tips li { padding-bottom: 4px; padding-left: 16px; }
+  .p1 ul.tips li::before { width: 6px; height: 6px; }
+  .wl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .wl > div { border-radius: 10px; padding: 8px 14px 4px; }
+  .wl .w { background: var(--slate-pale); }
+  .wl .l { background: var(--tint); }
+  .wl h4 { margin: 0 0 4px; font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 9.5pt; }
+  .wl .w h4 { color: var(--slate); } .wl .l h4 { color: #8a3b2e; }
+  .wl ul { margin: 0; padding-left: 16px; } .wl li { margin-bottom: 3px; }
+  .pix { margin-top: 10px; background: var(--char); color: #fff; border-radius: 10px; padding: 9px 14px; }
+  .pix b { color: #a9c3d8; font-family: var(--head); letter-spacing: .04em; }
+  .book { margin-top: 10px; border: 2px solid var(--slate); border-radius: 10px; padding: 8px 14px 4px; }
+  .book h4 { margin: 0 0 4px; font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 9.5pt; color: var(--slate); }
+  .book ol { margin: 0; padding-left: 18px; columns: 2; column-gap: 22px; }
+  .book li { margin-bottom: 3px; break-inside: avoid; }
+  .p2b .box { margin-top: 10px; padding: 10px 14px 6px; }
+  .p2b .box h3 { font-size: 9.5pt; }
+  .story2 p { margin: 0 0 5px; }
+  .story2 .punch { font-size: 10.5pt; margin-top: 4px; }
+  .yr .row { display: grid; grid-template-columns: 34px 1fr 92px; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 9pt; }
+  .yr .track { display: block; position: relative; height: 13px; }
+  .yr .bar { position: absolute; left: 0; top: 0; height: 13px; background: #a9c3d8; border-radius: 3px; }
+  .yr .bar.hot { background: var(--slate); }
+  .yr b { text-align: right; font-family: var(--head); font-size: 8.5pt; }
+  .key { display: inline-block; width: 9px; height: 9px; background: #a9c3d8; border-radius: 2px; vertical-align: -1px; }
+  .key.hot { background: var(--slate); }
+  .p2b .closer { background: var(--slate-pale); border-radius: 12px; padding: 10px 20px 4px; font-size: 11.2pt; line-height: 1.4; }
+  .p2b .closer p { margin: 0 0 5px; }
+  .p2b .closer .big { font-size: 14.5pt; color: var(--slate); margin-top: 8px; }
+  /* Web version (phones and the Shopify embed): pages become one fluid column. */
+  .dl { display: none; }
+  @media screen {
+    html, body { background: #2b2929; }
+    .dl { display: block; max-width: 8.5in; margin: 0 auto 14px; text-align: center; }
+    .dl a { display: inline-block; background: #4a6c86; color: #fff; text-decoration: none; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 13px; padding: 13px 22px 10px; border-radius: 12px; }
+    .page { box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  }
+  @media screen and (max-width: 840px) {
+    body { padding: 10px 0; }
+    .page, .p1, .p2b { width: auto; height: auto; overflow: visible; margin: 0 10px 14px; padding: 20px 18px 16px; border-radius: 14px; font-size: 15px; line-height: 1.42; }
+    .p1 h1, .p2b h1 { font-size: 28px; }
+    header img, .p1 header img { width: 54px; }
+    .cols, .wl { grid-template-columns: 1fr; gap: 0; }
+    .wl > div { margin-bottom: 10px; }
+    .book ol { columns: 1; }
+    .stats.s4 { grid-template-columns: repeat(2, 1fr); }
+    .p1 .stats strong { font-size: 24px; }
+    .p1 .stats span { font-size: 12px; }
+    .funnel .row { grid-template-columns: 96px 1fr 50px; font-size: 13px; }
+    .yr .row { grid-template-columns: 38px 1fr 104px; font-size: 13px; }
+    .yr b { font-size: 12px; }
+    .p2b .closer { font-size: 15px; }
+    .p2b .closer .big { font-size: 20px; }
+    footer { flex-direction: column; gap: 4px; margin-top: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="dl"><a href="how-shows-actually-sell.pdf" download>Download the PDF</a></div>
+
+<section class="page p1">
+  <header>
+    <img src="badge.png" alt="Sisyphus">
+    <div>
+      <div class="kick">For comics · Page 1 of 2</div>
+      <h1>How Shows Actually Sell.</h1>
+    </div>
+  </header>
+
+  <p class="intro">Hey, Sam here. I own Sisyphus in Minneapolis. Here's what two recent headliner weekends taught us, with the real numbers.</p>
+
+  <div class="cols">
+    <div>
+      <div class="band-wrap"><span class="band">Headliner #1: tracked ads</span></div>
+      <div class="stats s4">
+        <div><strong>$159</strong><span>ad spend</span></div>
+        <div><strong>$738</strong><span>tickets sold by ads</span></div>
+        <div><strong>4.6x</strong><span>return</span></div>
+        <div><strong>$13</strong><span>per order</span></div>
+      </div>
+      <div class="chart-title">From scroll to seat</div>
+      <div class="funnel">
+        <div class="row"><span class="lab">Saw the ad</span><span class="bar" style="width:100%"></span><b>16,745</b></div>
+        <div class="row"><span class="lab">Clicked</span><span class="bar" style="width:70%"></span><b>958</b></div>
+        <div class="row"><span class="lab">Ticket page</span><span class="bar" style="width:52%"></span><b>162</b></div>
+        <div class="row"><span class="lab">Added to cart</span><span class="bar" style="width:33%"></span><b>24</b></div>
+        <div class="row"><span class="lab">Bought</span><span class="bar hot" style="width:25%"></span><b>12</b></div>
+      </div>
+      <div class="note">Bars on a log scale so the small numbers show.</div>
+      <ul class="tips">
+        <li><b>Show week paid best.</b> 3.3x the week before, 5.5x show week. Start 2 to 3 weeks out so the good stretch is longer.</li>
+        <li><b>One ad for the whole run</b> returned 5.1x. A single-night ad: 3.1x.</li>
+        <li><b>Most people saw it once.</b> Room to spend more before anyone got sick of it.</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="band-wrap"><span class="band">Headliner #2: the fan list</span></div>
+      <div class="stats s3">
+        <div><strong>52</strong><span>sold after email #1</span></div>
+        <div><strong>88</strong><span>sold after email #2</span></div>
+        <div><strong>3+1</strong><span>sold out, added a show</span></div>
+      </div>
+      <div class="chart-title">Where 189 tickets came from</div>
+      <div class="funnel src">
+        <div class="row"><span class="lab">Their fan link</span><span class="bar hot" style="width:100%"></span><b>70</b></div>
+        <div class="row"><span class="lab">Google search</span><span class="bar" style="width:76%"></span><b>53</b></div>
+        <div class="row"><span class="lab">Typed it in</span><span class="bar" style="width:54%"></span><b>38</b></div>
+        <div class="row"><span class="lab">Our website</span><span class="bar" style="width:19%"></span><b>13</b></div>
+        <div class="row"><span class="lab">Our Meta ads</span><span class="bar" style="width:16%"></span><b>11</b></div>
+        <div class="row"><span class="lab">Other</span><span class="bar" style="width:6%"></span><b>4</b></div>
+      </div>
+      <ul class="tips">
+        <li><b>The rush started the day each email went out.</b> Most of the fan-link sales came from their list.</li>
+        <li><b>$301 on Punchup ads.</b> 337 clicks, no sales count, and a reported frequency of 0.7. Fewer than one view per person who saw it. Nobody can tell you what it sold.</li>
+        <li><b>Our ads did less here.</b> Their fans did the heavy lifting. That's why you want both.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="wl">
+    <div class="w"><h4>What sells</h4>
+      <ul><li>Ads set to "Sales," tracked to a purchase</li><li>A second ad to people who looked and didn't buy</li><li>Your email list, timed with the venue's ads</li><li>Video clips over still photos</li></ul></div>
+    <div class="l"><h4>What burns money</h4>
+      <ul><li>"Traffic" and "awareness" ads. Ours spent and sold zero</li><li>Ads that report clicks, not sales</li><li>Posting the ticket link once</li><li>Starting the week of the show</li></ul></div>
+  </div>
+
+  <div class="pix"><b>The pixel, in one breath:</b> a tiny bit of code on the ticket page that remembers who looked and who bought. It's how we know an ad paid back 4.6x, and how we find the 12 people who left tickets in a cart. One more ad to them costs pennies. Cheapest sale there is.</div>
+
+  <div class="book">
+    <h4>From the booking side</h4>
+    <ol>
+      <li><b>Cold emails are about pointless,</b> unless you're already famous.</li>
+      <li><b>The best way in</b> is a comic I already trust saying "book them."</li>
+      <li><b>Chasing so-and-so's feature spot</b> is a 1:1 job, and it might suck. Build your own audience and work anywhere.</li>
+      <li><b>Bring a draw before you ask for a weekend.</b> Sell 30 tickets somewhere and tell me about it.</li>
+      <li><b>Answer the advance fast.</b> A clip, a short bio and a good photo make you easy to sell.</li>
+      <li><b>Hang with fans. Sell smart merch. ENGAGE.</b> Get emails at the table. That list sells out shows.</li>
+      <li><b>Hosts and features: promote too.</b> The $3 fee means a fuller room pays you more.</li>
+      <li><b>It's called show business for a reason.</b> The show is half of it.</li>
+    </ol>
+  </div>
+
+  <footer><em>Il faut imaginer Sisyphe heureux.</em><span>Sisyphus · 712 Ontario Ave W, Minneapolis</span></footer>
+</section>
+
+<section class="page p1 p2b">
+  <header>
+    <img src="badge.png" alt="Sisyphus">
+    <div>
+      <div class="kick">For comics · Page 2 of 2</div>
+      <h1>Sell the Room.</h1>
+    </div>
+  </header>
+
+  <div class="cols">
+    <div>
+      <div class="band-wrap"><span class="band">Wherever you're playing</span></div>
+      <ul class="tips">
+        <li><b>Run ads from both sides.</b> The venue's ads find local comedy fans who don't know you yet. Yours reach the people who already do. You need both.</li>
+        <li><b>Ask the venue what they spend on ads,</b> and ask for the results after. Sales, not clicks.</li>
+        <li><b>Time your email blasts with their ads.</b> Tell them the dates.</li>
+        <li><b>Give them a 15-second clip.</b> Video beats a photo every time.</li>
+        <li><b>Post two weeks out, show week, and day of.</b> Use a tracked link so you know what your posts sold.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="box">
+        <h3>What we do at Sisyphus, for every headliner and feature</h3>
+        <ul class="tips">
+          <li>Run ads for your show, tracked by the pixel.</li>
+          <li><b>Match your ad spend dollar for dollar.</b> Up to $200 in the big room, up to $100 in the small room.</li>
+          <li>Send you a real report after: tickets, ad spend, what sold.</li>
+          <li><b>100% of the door to you.</b> The $3 ticket fee goes 100% to host and feature pay.</li>
+        </ul>
+        <p class="last">We want you to do well. Every venue should.</p>
+      </div>
+      <div class="chart-title" style="margin-top:10px">What Headliner #1's weekend paid</div>
+      <div class="stats s3">
+        <div><strong>$7,033</strong><span>to the headliner, 100% of the door</span></div>
+        <div><strong>$783</strong><span>to host and feature, from the $3 fee</span></div>
+        <div><strong>271</strong><span>people in the room, 5 shows</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="band-wrap"><span class="band">How I made the numbers work</span></div>
+  <div class="cols story2">
+    <div>
+      <p>Opened in 2014 on $170k. Budget was $120k. Paid for with my 401k, a family loan, a home equity loan and every credit card that said yes.</p>
+      <p>Comedy was the plan from day one. Paid comics $10k in 2015. Paid them $157k in 2025.</p>
+      <p>Beer sales peaked in 2019, then plummeted immediately following a Sam Tallent headlining visit in March of 2020. I'm told there were other factors. The comedy kept growing.</p>
+      <p>The business kept $40k last year. I'm still here.</p>
+      <p class="punch"><b>I've worked 60+ hour weeks for 13 years to make $1,000,000. Sounds great, until you do the per hour math = $24.65.</b></p>
+    </div>
+    <div>
+      <div class="stats s3">
+        <div><strong>1 in 4</strong><span>dollars we take in goes to comics. In 2015 it was 1 in 50.</span></div>
+        <div><strong>&gt; rent</strong><span>Comics made $157k in 2025. The landlord got $121k.</span></div>
+        <div><strong>4x</strong><span>Comics took home 4x what the business kept.</span></div>
+      </div>
+      <div class="chart-title">Sales vs what the business kept</div>
+      <div class="yr">
+        <div class="row"><span class="lab">2015</span><span class="track"><span class="bar" style="width:59%"></span><span class="bar hot" style="width:14.4%"></span></span><b>$463k / $113k</b></div>
+        <div class="row"><span class="lab">2019</span><span class="track"><span class="bar" style="width:100%"></span><span class="bar hot" style="width:14.3%"></span></span><b>$785k / $112k</b></div>
+        <div class="row"><span class="lab">2023</span><span class="track"><span class="bar" style="width:79.5%"></span><span class="bar hot" style="width:4.6%"></span></span><b>$624k / $36k</b></div>
+        <div class="row"><span class="lab">2024</span><span class="track"><span class="bar" style="width:77.8%"></span><span class="bar hot" style="width:3.7%"></span></span><b>$611k / $29k</b></div>
+        <div class="row"><span class="lab">2025</span><span class="track"><span class="bar" style="width:81.3%"></span><span class="bar hot" style="width:5.1%"></span></span><b>$638k / $40k</b></div>
+      </div>
+      <div class="note"><span class="key"></span> sales &nbsp; <span class="key hot"></span> kept (profit + depreciation). From the P&amp;Ls I've posted publicly.</div>
+    </div>
+  </div>
+
+  <div class="band-wrap"><span class="band">Why bother</span></div>
+  <div class="closer">
+    <p>Pick a peak. "Hit that and I've made it." And you will feel like you made it, for a little bit. Then you're right back at it. In days, in weeks, in months.</p>
+    <p>So the question isn't how to get to the top. It's what makes you forget everything around you and focus on the here and now. What makes you want to greet the cold indifference of the universe head on, every day, through the triumph and the rejection.</p>
+    <p>For me, it's running what I try to make the best comedy club on the planet.</p>
+    <p class="big">It's an impossible goal. But it's kind of fun to do the impossible.</p>
+    <p class="sign">-Sam</p>
+  </div>
+
+  <footer><em>Il faut imaginer Sisyphe heureux.</em><span>booking@sisyphusbrewing.com · sisyphusbrewing.com</span></footer>
+</section>
+
+<script>
+  // Tell the Shopify page how tall we are so the iframe fits without a scrollbar.
+  function sbH() { try { parent.postMessage({ sellHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {} }
+  window.addEventListener('load', sbH); window.addEventListener('resize', sbH);
+  if (document.fonts) document.fonts.ready.then(sbH);
+</script>
+</body>
+</html>
