@@ -246,7 +246,8 @@
       $('d_tc').checked = !!c.twin_cities;
       var runs = (inp.runs || []).map(function (r) { return r[0] + ': ' + r[1] + ' tickets / ' + r[2] + (r[2] === 1 ? ' show' : ' shows'); });
       $('d_facts').innerHTML = [
-        'Instagram ' + k(inp.ig) + (inp.instagram_handle ? ' (@' + escapeHtml(inp.instagram_handle) + ')' : ''),
+        'Instagram ' + k(inp.ig) + (inp.instagram_handle ? ' (@' + escapeHtml(inp.instagram_handle) + ')' : '') +
+          ' <a href="#" onclick="fixInstagram(); return false">' + (inp.instagram_handle ? 'wrong account?' : 'add it') + '</a>',
         'TikTok ' + k(inp.tiktok) + (inp.tiktok_handle ? ' (@' + escapeHtml(inp.tiktok_handle) + ')' : ''),
         'YouTube ' + k(inp.youtube) + (inp.youtube_handle ? ' (@' + escapeHtml(inp.youtube_handle) + ')' : ''),
         inp.reddit_votes == null ? 'Reddit: not checked yet' : 'Reddit: ' + k(inp.reddit_votes) + ' votes on ' + (inp.reddit_posts || 0) + ' posts this year',
@@ -289,6 +290,30 @@
     });
     $('d_tc').addEventListener('change', function () { if (open) save(open, { twin_cities: $('d_tc').checked }); });
     $('detail').addEventListener('close', function () { open = null; });
+
+    // Lots of comics don't use their name on Instagram (@idiotryankahl). A handle
+    // typed here sticks: css_score.py measures that account from now on.
+    async function fixInstagram() {
+      var c = open; if (!c) return;
+      var inp = c.inputs || {};
+      var h = prompt('Instagram handle for ' + c.comedian + ':', inp.instagram_handle || '');
+      if (h === null) return;
+      h = h.trim().replace(/^.*instagram\.com\//i, '').replace(/^@/, '').replace(/[/?].*$/, '').toLowerCase();
+      if (!/^[a-z0-9_.]{1,30}$/.test(h)) { toast('That does not look like an Instagram handle', true); return; }
+      var f = prompt('Followers, if you know them (leave blank and we\'ll look it up):', '');
+      if (f === null) return;
+      var n = f.trim() ? Math.round(parseFloat(f.replace(/,/g, '')) * ({ k: 1e3, m: 1e6 }[(f.trim().slice(-1) || '').toLowerCase()] || 1)) : null;
+      var upd = Object.assign({}, inp, { instagram_handle: h, instagram_manual: true });
+      var p = Object.assign({}, c.points || {});
+      if (n) { upd.ig = n; p.instagram = Math.round(120 * Math.max(0, Math.min(1, (Math.log10(1 + n) - 3) / 3.3))) / 10; }
+      if (!(await save(c, { inputs: upd, points: p }))) return;
+      if (!n) {
+        await save(c, { status: 'requested' });
+        var r = await runWorkflow('css_score.yml', {});
+        toast(r.ok ? 'Measuring @' + h + '. A few minutes.' : 'Saved, but the lookup did not start: ' + r.error, !r.ok);
+        clearTimeout(pollTimer); pollTimer = setTimeout(load, 30000);
+      } else toast('Instagram set to @' + h);
+    }
 
     // The comic's own Good-Enough-o-Matic reveal (goodenough/), keyed by their private share_token.
     async function copyComicLink() {
