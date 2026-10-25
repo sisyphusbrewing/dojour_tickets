@@ -91,7 +91,7 @@
   <main class="wrap">
     <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
     <div id="sheet">
-      <p class="intro">Out of 100: draw here 30, Reddit buzz 15, Instagram 9, TikTok 3, YouTube 3, local pull 10, momentum 5, and your house stars 25.
+      <p class="intro">Out of 100: draw here 30, Instagram 12, Reddit 6, TikTok 6, YouTube 6, local pull 10, momentum 5, and your house stars 25.
         Under 35 is a D, about where a show stops paying for itself. 🙂 moves a comic up a grade, 🙁 down one. Tap a comic for the breakdown and notes.</p>
       <div id="list"><div class="empty">Loading comics…</div></div>
     </div>
@@ -135,8 +135,8 @@
 
   <script>
     var comics = [], notes = {}, filter = 'all', open = null, me = '', pollTimer = null;
-    var LABELS = [['draw_here', 'Draw here', 30], ['reddit', 'Reddit', 15], ['instagram', 'Instagram', 9], ['tiktok', 'TikTok', 3],
-                  ['youtube', 'YouTube', 3], ['local', 'Local pull', 10], ['momentum', 'Momentum', 5], ['house', 'House stars', 25]];
+    var LABELS = [['draw_here', 'Draw here', 30], ['instagram', 'Instagram', 12], ['reddit', 'Reddit', 6], ['tiktok', 'TikTok', 6],
+                  ['youtube', 'YouTube', 6], ['local', 'Local pull', 10], ['momentum', 'Momentum', 5], ['house', 'House stars', 25]];
     var FACES = [[-1, '🙁', 'Down a grade'], [0, '😐', 'No change'], [1, '🙂', 'Up a grade']];
 
     function k(n) { return n == null ? '—' : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n); }
