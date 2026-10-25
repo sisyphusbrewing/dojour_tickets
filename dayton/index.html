@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
-/* Layout: one phone-height stage. Dayton sits in the middle, worries float up off him, the chill meter fills, then the BOOKED stamp. No timer, no score. */
+/* Layout: one phone-height stage. Calm from the first second: a breath first, then thoughts drift up off Dayton, the chill meter fills, then the BOOKED stamp. No timer, no score. */
 :root {
   --slate: #4a6c86;
   --slate-light: #a9c3d8;
@@ -28,13 +28,14 @@
 html, body { height: 100%; margin: 0; }
 [hidden] { display: none !important; }
 body {
-  background: radial-gradient(120% 70% at 50% 42%, #2f4658 0%, var(--charcoal) 55%, var(--night) 100%);
+  background: radial-gradient(120% 70% at 50% 42%, #3d6a7f 0%, #24343b 55%, var(--night) 100%);
   color: var(--white); font-family: var(--body);
   overflow: hidden; touch-action: manipulation;
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
 .stage { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; container-type: size; }
-body.chill { background: radial-gradient(120% 70% at 50% 42%, #3d6a7f 0%, #24343b 55%, var(--night) 100%); transition: background 2s; }
+.glow { position: absolute; left: 50%; top: 50%; width: 140cqw; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(169,195,216,.22), transparent 60%); animation: glow 8s ease-in-out infinite; pointer-events: none; }
+@keyframes glow { 50% { transform: translate(-50%, -50%) scale(1.15); opacity: .6; } }
 canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
 /* Chill meter */
@@ -42,35 +43,30 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 .meter-row { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
 .meter-row b { color: var(--calm); font-weight: 700; }
 .bar { height: 10px; border-radius: 6px; background: rgba(246,245,242,.12); overflow: hidden; }
-.bar i { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--worry), var(--calm)); transition: width .5s cubic-bezier(.3,1.4,.5,1); }
+.bar i { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--slate-light), var(--calm)); transition: width .5s cubic-bezier(.3,1.4,.5,1); }
 
 /* Dayton */
 .dayton { position: absolute; left: 50%; top: 50%; width: min(62cqw, 38cqh); aspect-ratio: 1; transform: translate(-50%, -50%); cursor: pointer; border: 0; padding: 0; background: none; }
-.dayton .shake { position: absolute; inset: 0; animation: nerves var(--speed, .14s) linear infinite; }
-@keyframes nerves { 0%{transform:translate(0,0) rotate(0)} 25%{transform:translate(calc(var(--amp,3px) * -1), 1px) rotate(-1deg)} 50%{transform:translate(1px, calc(var(--amp,3px) * -.6))} 75%{transform:translate(var(--amp,3px), 0) rotate(1deg)} 100%{transform:translate(0,0)} }
-.dayton.calm .shake { animation: float 3.6s ease-in-out infinite; }
-@keyframes float { 50% { transform: translateY(-6px); } }
+.dayton .shake { position: absolute; inset: 0; animation: float 6s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-8px) rotate(1deg); } }
 .face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; border: 5px solid var(--white); box-shadow: 0 0 0 6px var(--slate), 0 18px 40px rgba(0,0,0,.45); background: var(--slate-light); }
 .face img, .face svg { width: 100%; height: 100%; object-fit: cover; display: block; }
-.sweat { position: absolute; right: 2%; top: 14%; width: 13%; aspect-ratio: 3/4; background: #9fd8ff; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; clip-path: polygon(50% 0, 100% 62%, 92% 85%, 70% 100%, 30% 100%, 8% 85%, 0 62%); animation: drip 1.6s ease-in infinite; transition: opacity .6s; }
-@keyframes drip { 0%{transform:translateY(0);opacity:0} 15%{opacity:1} 100%{transform:translateY(160%);opacity:0} }
-.dayton.calm .sweat { opacity: 0; animation: none; }
 .shades { position: absolute; left: 14%; right: 14%; top: 30%; opacity: 0; transform: translateY(-260%); transition: transform .7s cubic-bezier(.3,1.5,.5,1), opacity .2s; pointer-events: none; }
 .booked .shades { opacity: 1; transform: none; }
 
 /* Worries */
 .worry {
   position: absolute; max-width: 62%; padding: .5em .8em; border: 0; border-radius: 18px;
-  background: var(--worry); color: var(--charcoal);
+  background: rgba(246,245,242,.9); color: var(--charcoal);
   font: 700 clamp(14px, 4.2cqw, 18px)/1.15 var(--body); text-align: center; text-wrap: balance;
   box-shadow: 0 6px 18px rgba(0,0,0,.35); cursor: pointer;
-  animation: drift var(--dur, 9s) linear forwards, sway 2.2s ease-in-out infinite alternate;
+  animation: drift var(--dur, 14s) linear forwards, sway 4s ease-in-out infinite alternate;
 }
 .worry::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 3px; z-index: -1; }
 @keyframes drift { from { translate: 0 0; opacity: 0 } 8% { opacity: 1 } 85% { opacity: 1 } to { translate: 0 calc(var(--rise, -40) * 1cqh); opacity: 0 } }
 @keyframes sway { from { rotate: -3deg } to { rotate: 3deg } }
 .worry:focus-visible { outline: 3px solid var(--white); outline-offset: 3px; }
-.poof { position: absolute; transform: translate(-50%, -50%); padding: .45em .8em; border-radius: 16px; background: var(--calm); color: var(--charcoal); font: 700 clamp(14px, 4.2cqw, 18px)/1.15 var(--body); max-width: 64%; text-align: center; text-wrap: balance; pointer-events: none; animation: poof 2.4s ease-out forwards; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.poof { position: absolute; transform: translate(-50%, -50%); padding: .45em .8em; border-radius: 16px; background: var(--calm); color: var(--charcoal); font: 700 clamp(14px, 4.2cqw, 18px)/1.15 var(--body); max-width: 64%; text-align: center; text-wrap: balance; pointer-events: none; animation: poof 3.2s ease-out forwards; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
 @keyframes poof { 0%{transform:translate(-50%,-50%) scale(.4);opacity:0} 12%{transform:translate(-50%,-50%) scale(1.08);opacity:1} 20%{transform:translate(-50%,-50%) scale(1)} 80%{opacity:1} 100%{transform:translate(-50%,-90%);opacity:0} }
 
 .snack { position: absolute; bottom: 9%; font-size: clamp(40px, 13cqw, 60px); line-height: 1; border: 0; background: none; padding: 6px; cursor: pointer; animation: roll-in .6s cubic-bezier(.2,1.4,.5,1); filter: drop-shadow(0 6px 8px rgba(0,0,0,.4)); }
@@ -99,19 +95,46 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
 .fine { font-size: 12px; opacity: .65; }
 .camus { font-style: italic; }
 
+/* The Booking Wheel: rigged. Spin 1 is a funny bad gig, spin 2 (after a breath) is zen nonsense. */
+.wheel { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(26,28,29,.82); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.wheel-in { display: grid; justify-items: center; gap: 14px; padding: 0 18px; text-align: center; width: 100%; max-width: 440px; }
+.dial { position: relative; width: min(76cqw, 44cqh); aspect-ratio: 1; }
+.dial svg { width: 100%; height: 100%; display: block; transition: transform 4s cubic-bezier(.15,.85,.25,1); filter: drop-shadow(0 12px 24px rgba(0,0,0,.45)); }
+.dial text { font: 700 10px var(--body); fill: var(--white); letter-spacing: .02em; }
+.pointer { position: absolute; left: 50%; top: -5%; transform: translateX(-50%); border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 28px solid var(--white); filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); z-index: 1; }
+.result { margin: 0; font: 400 clamp(22px, 7cqw, 32px)/1.05 var(--display); text-wrap: balance; }
+.result-sub { margin: 0; font-size: clamp(14px, 4cqw, 17px); line-height: 1.35; opacity: .9; max-width: 34ch; text-wrap: balance; }
+.dumb { font: 400 clamp(26px, 8cqw, 40px)/1 var(--display); color: var(--worry); transform: rotate(-4deg); animation: pop .35s cubic-bezier(.3,1.8,.5,1); }
+@keyframes pop { from { transform: scale(.3) rotate(-10deg); opacity: 0 } }
+
+/* Five seconds of panic. */
+.panic { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, #7a2420, #2a0f0d 70%); overflow: hidden; }
+.panic-in { position: relative; display: grid; justify-items: center; gap: 14px; text-align: center; padding: 0 18px; width: 100%; max-width: 440px; animation: rattle .09s linear infinite; }
+@keyframes rattle { 0%{transform:translate(0,0)} 25%{transform:translate(-3px,2px) rotate(-.5deg)} 50%{transform:translate(2px,-2px)} 75%{transform:translate(3px,1px) rotate(.5deg)} }
+.panic h2 { margin: 0; font: 400 clamp(30px, 10cqw, 52px)/.95 var(--display); }
+.count { font: 400 clamp(44px, 15cqw, 76px)/1 var(--display); color: var(--worry); font-variant-numeric: tabular-nums; }
+.mash { width: min(60cqw, 34cqh); aspect-ratio: 1; border-radius: 50%; border: 6px solid var(--white); background: var(--stamp); color: var(--white); font: 400 clamp(30px, 10cqw, 48px)/.95 var(--display); box-shadow: 0 10px 0 #8e2620; cursor: pointer; touch-action: manipulation; }
+.mash:active { transform: translateY(8px); box-shadow: 0 2px 0 #8e2620; }
+.mash:focus-visible { outline: 3px solid var(--worry); outline-offset: 4px; }
+.panic .bar { width: 100%; height: 14px; }
+.panic .bar i { background: linear-gradient(90deg, var(--worry), var(--stamp)); transition: width .08s; }
+.yikes { position: absolute; font: 400 clamp(16px, 5cqw, 24px)/1 var(--display); color: var(--worry); pointer-events: none; animation: yikes .7s ease-out forwards; white-space: nowrap; }
+@keyframes yikes { from { transform: scale(.4); opacity: 0 } 20% { transform: scale(1.1); opacity: 1 } to { transform: translateY(-30px); opacity: 0 } }
+
 /* The moment */
-.stamp { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%) rotate(-12deg); padding: .1em .35em; border: 6px solid var(--stamp); border-radius: 12px; color: var(--stamp); font: 400 clamp(54px, 21cqw, 104px)/1 var(--display); letter-spacing: .02em; background: rgba(246,245,242,.92); pointer-events: none; animation: slam .45s cubic-bezier(.2,1.6,.4,1) both; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.stamp { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%) rotate(-12deg); padding: .1em .35em; border: 6px solid var(--stamp); border-radius: 12px; color: var(--stamp); font: 400 clamp(54px, 21cqw, 104px)/1 var(--display); letter-spacing: .02em; background: rgba(246,245,242,.92); pointer-events: none; animation: slam 1.2s cubic-bezier(.2,1,.3,1) both; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
 .stamp small { display: block; font: 700 clamp(11px, 3.4cqw, 15px)/1.2 var(--body); letter-spacing: .2em; text-align: center; color: var(--charcoal); }
-@keyframes slam { from { transform: translate(-50%, -50%) rotate(-12deg) scale(3); opacity: 0 } }
+@keyframes slam { from { transform: translate(-50%, -40%) rotate(-12deg) scale(1.3); opacity: 0 } }
 
 @media (prefers-reduced-motion: reduce) {
-  .dayton .shake, .worry, .sweat, .poof, .stamp, .snack { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+  .dayton .shake, .glow, .worry, .poof, .stamp, .snack, .panic-in, .yikes, .dumb { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
 }
 </style>
 </head>
 <body>
 
 <div class="stage" id="stage">
+  <div class="glow" aria-hidden="true"></div>
   <canvas id="fx"></canvas>
 
   <div class="meter" id="meter" hidden>
@@ -119,7 +142,7 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
     <div class="bar"><i id="bar"></i></div>
   </div>
 
-  <button class="dayton" id="dayton" type="button" aria-label="Dayton Bissett, looking nervous">
+  <button class="dayton" id="dayton" type="button" aria-label="Dayton Bissett, relaxed">
     <div class="shake" id="shake">
       <div class="face" id="face">
         <!-- Drawn stand-in. Drop a dayton.jpg next to this file and the photo takes over. -->
@@ -130,34 +153,54 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
           <path d="M44 96 Q36 40 92 30 Q150 22 160 80 Q162 98 154 108 Q150 70 128 62 Q112 78 76 66 Q58 78 48 112Z" fill="#c8913f"/>
           <g id="eyes"><ellipse cx="80" cy="98" rx="9" ry="11" fill="#fff"/><ellipse cx="120" cy="98" rx="9" ry="11" fill="#fff"/>
           <circle id="pupL" cx="80" cy="100" r="5" fill="#262829"/><circle id="pupR" cx="120" cy="100" r="5" fill="#262829"/></g>
-          <path id="brows" d="M68 80 Q80 72 90 82 M110 82 Q120 72 132 80" stroke="#8a5f22" stroke-width="5" fill="none" stroke-linecap="round"/>
-          <path id="mouth" d="M80 132 Q86 126 92 132 Q98 138 104 132 Q110 126 120 132" stroke="#7a3b2e" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path id="brows" d="M68 80 Q80 76 90 80 M110 80 Q120 76 132 80" stroke="#8a5f22" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path id="mouth" d="M82 130 Q100 144 118 130" stroke="#7a3b2e" stroke-width="5" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
-      <div class="sweat" aria-hidden="true"></div>
       <svg class="shades" viewBox="0 0 140 36" aria-hidden="true"><path d="M2 6 H138 V10 H134 Q132 32 106 32 Q80 32 78 12 H62 Q60 32 34 32 Q8 32 6 10 H2Z" fill="#111"/><path d="M14 12 L30 12 L20 26Z M86 12 L102 12 L92 26Z" fill="rgba(255,255,255,.25)"/></svg>
     </div>
   </button>
 
   <div id="layer"></div>
 
-  <div class="hint" id="hint" hidden>Tap the worries. They pop.</div>
+  <div class="hint" id="hint" hidden>Thoughts drift by. Tap one to let it go. No rush.</div>
 
   <div class="breathe" id="breathe" hidden>
     <div class="breathe-in">
-      <div class="eyebrow">Mandatory chill break</div>
+      <div class="eyebrow" id="breathEyebrow">First, a breath</div>
       <button class="orb" id="orb" type="button">Hold</button>
       <p id="breathText">Press and hold the circle. Breathe in while it grows.</p>
+    </div>
+  </div>
+
+  <div class="wheel" id="wheel" hidden>
+    <div class="wheel-in">
+      <div class="eyebrow" id="wheelEyebrow">The Booking Wheel</div>
+      <div class="dial"><div class="pointer"></div><svg id="dial" viewBox="-100 -100 200 200" aria-hidden="true"></svg></div>
+      <p class="result" id="result">You're chill. Now spin to see where you're booked.</p>
+      <p class="result-sub" id="resultSub"></p>
+      <div class="dumb" id="dumb" hidden>Dayton: "That's so dumb."</div>
+      <button class="btn" id="spin" type="button">Spin</button>
+    </div>
+  </div>
+
+  <div class="panic" id="panic" hidden>
+    <div class="panic-in">
+      <div class="count" id="count">5</div>
+      <h2>GET NERVOUS!!!</h2>
+      <button class="mash" id="mash" type="button">BOOK<br>ME</button>
+      <div class="bar"><i id="panicBar"></i></div>
+      <p class="result-sub">Mash it. Sweat. Forget your closer.</p>
     </div>
   </div>
 
   <div class="card" id="start">
     <div class="card-in">
       <div class="eyebrow">A game from Sisyphus, Minneapolis</div>
-      <h1>Calm down,<br><span class="band">Dayton</span></h1>
-      <p>Comedian Dayton Bissett has some news coming and his brain is doing a lot right now. Help him out.</p>
-      <p>Tap his worries to pop them. Take a breath. Eat a snack. No timer. No score. Nobody is watching. (Sam is watching.)</p>
-      <button class="btn" id="go" type="button">Help Dayton</button>
+      <h1>Chill out,<br><span class="band">Dayton</span></h1>
+      <p>Hey Dayton. Good news is on the way. Nothing to do right now except breathe and let a few thoughts float off.</p>
+      <p>No score. No rush. Nobody is watching. (Sam is watching, but in a chill way.)</p>
+      <button class="btn" id="go" type="button">Chill with Dayton</button>
     </div>
   </div>
 
@@ -166,8 +209,8 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
       <div class="eyebrow">Official news</div>
       <h1>You're booked<br>at <span class="band">Sisyphus</span></h1>
       <p>Dayton, Sam wants you in Minneapolis. The room is good, the beer is ours, and the crowd came to laugh. Comics get 100% of the door.</p>
-      <p>You were always going to be fine. The worries just wanted attention. Classic openers.</p>
-      <button class="btn ghost" id="again" type="button">Pop a few more worries</button>
+      <p>Calm got you close. Panic got you booked. That's show business.</p>
+      <button class="btn ghost" id="again" type="button">Chill some more</button>
       <div class="fine camus">One must imagine Dayton happy.</div>
     </div>
   </div>
@@ -199,9 +242,9 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
     ["Do I look nervous?", "You look like a guy who got booked."],
   ];
   const SNACKS = [["🍕", "Pizza secured. Chill up."], ["🥨", "Pretzel. A twisted snack for a twisted mind."], ["🌮", "Taco. Nerves can't hold a taco."], ["🍩", "Donut. Round, like a booking."], ["🍟", "Fries. Salty, like a heckler."]];
-  const MOODS = [[0, "Vibrating"], [15, "Pacing"], [30, "Sweating less"], [50, "Breathing"], [70, "Kinda chill"], [88, "Basically a monk"], [100, "Booked"]];
+  const MOODS = [[0, "Chill"], [20, "Chiller"], [40, "Very chill"], [60, "Lake at dawn"], [80, "Basically a monk"], [100, "Booked"]];
 
-  let side = false, chill = 0, running = false, breathed = false, snackOut = false, deck = [], spawnT, snackT, booked = false;
+  let side = false, stage1 = true, spins = 0, rot = 0, chill = 0, running = false, snackOut = false, deck = [], spawnT, snackT, booked = false;
 
   let ac;
   function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (ac && ac.state === "suspended") ac.resume(); return ac; }
@@ -212,10 +255,10 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
     g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol || .18, t0 + .01); g.gain.exponentialRampToValueAtTime(.001, t0 + len);
     o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + len + .05);
   }
-  function popSound() { const a = audio(); if (!a) return; const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime; o.frequency.setValueAtTime(700, t0); o.frequency.exponentialRampToValueAtTime(220, t0 + .12); g.gain.setValueAtTime(.25, t0); g.gain.exponentialRampToValueAtTime(.001, t0 + .15); o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + .2); }
+  function popSound() { const f = pick([523, 587, 659, 784, 880]); tone(f, 0, 1.4, "sine", .12); tone(f * 1.5, .06, 1.2, "sine", .05); }
   function munch() { for (let i = 0; i < 3; i++) tone(120 + Math.random() * 60, i * .11, .07, "square", .08); }
   function chord() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, 1.2, "triangle", .12)); }
-  function thud() { tone(70, 0, .35, "sine", .5); tone(140, 0, .2, "square", .08); }
+  function thud() { tone(196, 0, 1.6, "sine", .2); tone(262, .05, 1.6, "sine", .12); }
   function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
 
   // Use Dayton's photo if dayton.jpg is there; otherwise keep the drawn face.
@@ -227,22 +270,16 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
     chill = Math.max(0, Math.min(100, v));
     $("bar").style.width = chill + "%";
     $("mood").textContent = MOODS.filter(m => chill >= m[0]).pop()[1];
-    const amp = (1 - chill / 100) * 4 + .3;
-    shake.style.setProperty("--amp", amp.toFixed(1) + "px");
-    shake.style.setProperty("--speed", (.12 + chill / 100 * .25).toFixed(2) + "s");
-    if (chill >= 70) dayton.classList.add("calm");
-    const m = $("mouth"); if (m) m.setAttribute("d", chill >= 70 ? "M78 128 Q100 152 122 128" : chill >= 35 ? "M82 134 Q100 140 118 134" : "M80 132 Q86 126 92 132 Q98 138 104 132 Q110 126 120 132");
-    const b = $("brows"); if (b) b.setAttribute("d", chill >= 50 ? "M68 80 Q80 76 90 80 M110 80 Q120 76 132 80" : "M68 80 Q80 72 90 82 M110 82 Q120 72 132 80");
-    if (chill >= 100 && !booked) bookIt();
-    else if (chill >= 45 && !breathed) { breathed = true; setTimeout(breathe, 700); }
+    const m = $("mouth"); if (m) m.setAttribute("d", chill >= 60 ? "M78 128 Q100 152 122 128" : "M82 130 Q100 144 118 130");
+    if (chill >= 100 && stage1) { stage1 = false; setTimeout(toWheel, 900); }
   }
 
-  // Nervous eyes dart around until he calms down.
+  // Slow, sleepy blinks.
   setInterval(() => {
-    const L = $("pupL"), R = $("pupR"); if (!L) return;
-    const nerv = 1 - chill / 100, dx = (Math.random() - .5) * 8 * nerv, dy = (Math.random() - .5) * 6 * nerv;
-    L.setAttribute("cx", 80 + dx); L.setAttribute("cy", 100 + dy); R.setAttribute("cx", 120 + dx); R.setAttribute("cy", 100 + dy);
-  }, 420);
+    const e = $("eyes"); if (!e) return;
+    e.style.transformOrigin = "100px 98px"; e.style.transition = "transform .18s"; e.style.transform = "scaleY(.1)";
+    setTimeout(() => { e.style.transform = ""; }, 260);
+  }, 4200);
 
   function nextWorry() { if (!deck.length) deck = WORRIES.slice().sort(() => Math.random() - .5); return deck.pop(); }
   function spawn() {
@@ -251,23 +288,23 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
       const [w, a] = nextWorry();
       const el = document.createElement("button"); el.type = "button"; el.className = "worry"; el.textContent = w;
       side = !side; el.style.left = (side ? 4 + Math.random() * 12 : 30 + Math.random() * 10) + "%"; el.style.top = (76 + Math.random() * 8) + "%";
-      el.style.setProperty("--dur", (9 + Math.random() * 3) + "s"); el.style.setProperty("--rise", -(58 + Math.random() * 8));
+      el.style.setProperty("--dur", (13 + Math.random() * 4) + "s"); el.style.setProperty("--rise", -(58 + Math.random() * 8));
       el.addEventListener("animationend", e => { if (e.animationName === "drift") el.remove(); });
       el.addEventListener("pointerdown", e => { e.preventDefault(); popWorry(el, a); });
       el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); popWorry(el, a); } });
       layer.appendChild(el);
     }
-    spawnT = setTimeout(spawn, 1300 + Math.random() * 900);
+    spawnT = setTimeout(spawn, 2600 + Math.random() * 1400);
   }
   function popWorry(el, answer) {
     const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
     const x = r.left + r.width / 2 - s.left, y = r.top + r.height / 2 - s.top;
-    el.remove(); popSound(); buzz(15); burst(x, y, ["#ffd9a0", "#8fe0b4", "#a9c3d8"], 14);
+    el.remove(); popSound(); buzz(8); burst(x, y, ["#f6f5f2", "#8fe0b4", "#a9c3d8"], 10);
     const p = document.createElement("div"); p.className = "poof"; p.textContent = answer;
     p.style.left = Math.min(Math.max(x, s.width * .3), s.width * .7) + "px"; p.style.top = y + "px";
-    layer.appendChild(p); setTimeout(() => p.remove(), 2400);
+    layer.appendChild(p); setTimeout(() => p.remove(), 3200);
     $("hint").hidden = true;
-    setChill(chill + 9);
+    setChill(chill + 10);
   }
 
   function snack() {
@@ -278,7 +315,7 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
     b.style[left ? "left" : "right"] = "8%"; b.style.setProperty("--from", left ? "-140%" : "140%");
     b.addEventListener("pointerdown", ev => {
       ev.preventDefault(); const r = b.getBoundingClientRect(), s = stage.getBoundingClientRect();
-      b.remove(); snackOut = false; munch(); buzz([10, 40, 10]);
+      b.remove(); snackOut = false; munch(); buzz(10);
       const p = document.createElement("div"); p.className = "poof"; p.textContent = line;
       p.style.left = "50%"; p.style.top = (r.top - s.top - 20) + "px"; layer.appendChild(p); setTimeout(() => p.remove(), 2400);
       setChill(chill + 12);
@@ -289,11 +326,11 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
   }
 
   // Two slow breaths. Hold to breathe in, let go to breathe out. Can't fail.
-  function breathe() {
+  function breathe(n, then) {
     if (booked) return;
     running = false; clearTimeout(spawnT);
-    layer.querySelectorAll(".worry").forEach(w => w.remove());
     const box = $("breathe"), orb = $("orb"), text = $("breathText");
+    text.textContent = "Press and hold the circle. Breathe in while it grows.";
     box.hidden = false;
     let s = .55, holding = false, done = 0, phase = "in", raf;
     const setS = v => { s = v; orb.style.setProperty("--s", s.toFixed(3)); };
@@ -315,7 +352,7 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
         orb.textContent = holding ? "Let go" : "Out…";
         if (s <= .55) {
           done++; tone(523, 0, .6, "sine", .1); setChill(chill + 12);
-          if (done >= 2) { finish(); return; }
+          if (done >= n) { finish(); return; }
           phase = "in"; text.textContent = "One more. Hold and breathe in.";
         }
       }
@@ -325,23 +362,90 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
     function finish() {
       cancelAnimationFrame(raf);
       orb.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
-      text.textContent = "Lungs: also booked.";
-      setTimeout(() => { box.hidden = true; if (!booked) { running = true; spawn(); } }, 1100);
+      text.textContent = "Nice.";
+      setTimeout(() => { box.hidden = true; if (!booked) then(); }, 1100);
     }
+  }
+
+  // The wheel. Labels are for show; the result is rigged by spin number.
+  const SEGS = [["BOOKED", "#4a6c86"], ["Kid party", "#3a3d40"], ["Zen", "#5f8a74"], ["2 a.m.", "#6b7f92"], ["BOOKED", "#4a6c86"], ["Denny's", "#3a3d40"], ["Zen", "#5f8a74"], ["Mime gig", "#6b7f92"]];
+  (function drawDial() {
+    const R = 96, n = SEGS.length, svg = $("dial"); let h = "";
+    SEGS.forEach(([label, col], i) => {
+      const a0 = (i - .5) * 360 / n - 90, a1 = (i + .5) * 360 / n - 90, rad = d => d * Math.PI / 180;
+      h += `<path d="M0 0 L${R * Math.cos(rad(a0))} ${R * Math.sin(rad(a0))} A${R} ${R} 0 0 1 ${R * Math.cos(rad(a1))} ${R * Math.sin(rad(a1))}Z" fill="${col}" stroke="#f6f5f2" stroke-width="1.5"/>`;
+      h += `<text transform="rotate(${i * 360 / n - 90}) translate(58 0)" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
+    });
+    svg.innerHTML = h + `<circle r="14" fill="#f6f5f2"/><circle r="6" fill="#4a6c86"/>`;
+  })();
+  function toWheel() {
+    running = false; clearTimeout(spawnT); clearTimeout(snackT);
+    layer.querySelectorAll(".worry, .snack").forEach(w => w.remove());
+    $("hint").hidden = true;
+    $("result").textContent = "You're chill. Now spin to see where you're booked.";
+    $("resultSub").textContent = ""; $("dumb").hidden = true;
+    $("spin").textContent = "Spin"; $("spin").onclick = spin; $("spin").hidden = false;
+    $("wheel").hidden = false;
+  }
+  function spin() {
+    spins++;
+    const target = spins === 1 ? 1 : 2, n = SEGS.length;
+    const want = -target * 360 / n + (Math.random() - .5) * 20;
+    rot += 360 * 5 + (((want - rot) % 360) + 360) % 360;
+    $("dial").style.transform = `rotate(${rot}deg)`;
+    $("spin").hidden = true; $("result").textContent = "Spinning…"; $("resultSub").textContent = "";
+    for (let k = 1; k <= 34; k++) setTimeout(() => tone(1400, 0, .03, "square", .04), 4000 * (1 - Math.cbrt(1 - k / 35)));
+    setTimeout(spins === 1 ? badGig : zen, 4100);
+  }
+  function badGig() {
+    tone(220, 0, .5, "sawtooth", .08); tone(185, .25, .7, "sawtooth", .08);
+    $("result").textContent = "Booked: a 9-year-old's birthday. You're opening for the bounce house.";
+    $("resultSub").textContent = "Pay is one juice box. Hmm. The wheel only listens to people who breathe. Breathe and spin again.";
+    $("spin").textContent = "Breathe, then spin"; $("spin").hidden = false;
+    $("spin").onclick = () => { $("wheel").hidden = true; $("breathEyebrow").textContent = "The wheel is watching"; breathe(1, () => { $("wheel").hidden = false; $("result").textContent = "Very centered. Spin again."; $("resultSub").textContent = ""; $("spin").textContent = "Spin"; $("spin").onclick = spin; }); };
+  }
+  function zen() {
+    tone(392, 0, 2.5, "sine", .14); tone(588, .1, 2.5, "sine", .07);
+    $("result").textContent = "The booking you seek was inside you all along.";
+    setTimeout(() => { $("dumb").hidden = false; tone(150, 0, .2, "square", .08); }, 1600);
+    setTimeout(() => {
+      $("result").textContent = "Fine. The real secret:";
+      $("resultSub").textContent = "To get booked, you gotta get REAL nervous again!!!";
+      $("spin").textContent = "Get nervous"; $("spin").hidden = false; $("spin").onclick = panic;
+    }, 3200);
+  }
+  const YIKES = ["CLOSER?!", "IS MY FLY DOWN", "WHO AM I", "SAM IS LOOKING", "HANDS!!", "WAS THAT A LAUGH", "OPENER??", "AM I ON"];
+  function panic() {
+    $("wheel").hidden = true; $("panic").hidden = false;
+    let taps = 0, left = 5, over = false;
+    const box = $("panic"), bar = $("panicBar"), mash = $("mash");
+    bar.style.width = "0";
+    $("count").textContent = left;
+    const hit = e => {
+      e.preventDefault(); if (over) return;
+      taps++; bar.style.width = Math.min(100, taps * 4) + "%";
+      tone(300 + Math.min(taps, 40) * 18, 0, .06, "square", .06); buzz(12);
+      if (taps % 3 === 0) { const y = document.createElement("div"); y.className = "yikes"; y.textContent = pick(YIKES); y.style.left = (5 + Math.random() * 55) + "%"; y.style.top = (8 + Math.random() * 80) + "%"; box.appendChild(y); setTimeout(() => y.remove(), 700); }
+      if (taps >= 25) done();
+    };
+    mash.onpointerdown = hit;
+    mash.onkeydown = e => { if (e.key === " " || e.key === "Enter") hit(e); };
+    mash.focus({ preventScroll: true });
+    const iv = setInterval(() => { left--; $("count").textContent = Math.max(0, left); tone(880, 0, .08, "square", .05); if (left <= 0) done(); }, 1000);
+    function done() { if (over) return; over = true; clearInterval(iv); mash.onpointerdown = null; setTimeout(() => { box.hidden = true; bookIt(); }, 300); }
   }
 
   function bookIt() {
     booked = true; running = false; clearTimeout(spawnT); clearTimeout(snackT);
     layer.querySelectorAll(".worry, .snack").forEach(w => w.remove());
-    $("breathe").hidden = true;
-    dayton.classList.add("calm", "booked"); dayton.setAttribute("aria-label", "Dayton Bissett, calm, wearing sunglasses");
-    document.body.classList.add("chill");
+    $("breathe").hidden = true; $("wheel").hidden = true; $("panic").hidden = true;
+    dayton.classList.add("booked"); dayton.setAttribute("aria-label", "Dayton Bissett, relaxed, wearing sunglasses");
     setTimeout(() => {
       const st = document.createElement("div"); st.className = "stamp"; st.innerHTML = "BOOKED<small>SISYPHUS · MINNEAPOLIS</small>";
-      layer.appendChild(st); thud(); buzz([30, 60, 120]);
+      layer.appendChild(st); thud(); buzz(40);
       setTimeout(() => { chord(); confetti(); }, 250);
     }, 800);
-    setTimeout(() => { $("end").hidden = false; $("again").focus({ preventScroll: true }); }, 3200);
+    setTimeout(() => { $("end").hidden = false; $("again").focus({ preventScroll: true }); }, 3800);
   }
 
   // Particles: pop bursts and the big confetti.
@@ -369,22 +473,21 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
   requestAnimationFrame(tick);
 
   // Tapping Dayton himself: small reassurance, no chill (pop the worries instead).
-  const PATS = ["You're doing great.", "Hi Dayton.", "Still booked. Well, almost.", "He appreciates the pat.", "That's his face. Pop the worries."];
+  const PATS = ["You're doing great.", "Hi Dayton.", "Deep breath. Nice.", "He appreciates the pat.", "Good news is close."];
   dayton.addEventListener("pointerdown", () => {
     if (!running) return; buzz(8); tone(330, 0, .15, "sine", .08);
     const p = document.createElement("div"); p.className = "poof"; p.textContent = pick(PATS); p.style.left = "50%"; p.style.top = "28%";
-    layer.appendChild(p); setTimeout(() => p.remove(), 2400);
+    layer.appendChild(p); setTimeout(() => p.remove(), 3200);
   });
 
   function start() {
     audio();
-    $("start").hidden = true; $("end").hidden = true; $("meter").hidden = false; $("hint").hidden = false;
-    layer.innerHTML = ""; booked = false; breathed = false; snackOut = false;
-    dayton.classList.remove("calm", "booked"); dayton.setAttribute("aria-label", "Dayton Bissett, looking nervous");
-    document.body.classList.remove("chill");
-    setChill(0);
-    running = true; spawn();
-    snackT = setTimeout(snack, 6000);
+    $("start").hidden = true; $("end").hidden = true; $("meter").hidden = false;
+    layer.innerHTML = ""; booked = false; snackOut = false;
+    dayton.classList.remove("booked"); dayton.setAttribute("aria-label", "Dayton Bissett, relaxed");
+    stage1 = true; spins = 0; setChill(0);
+    $("breathEyebrow").textContent = "First, a breath";
+    breathe(2, () => { running = true; $("hint").hidden = false; spawn(); snackT = setTimeout(snack, 9000); });
   }
   $("go").addEventListener("click", start);
   $("again").addEventListener("click", start);
