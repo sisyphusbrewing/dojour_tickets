@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="Colin's Deal">
+<meta property="og:description" content="Colin Armstrong wants to be a famous comic. There's a contract. Just a few small clauses.">
+<title>Colin's Deal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Atkinson+Hyperlegible:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+/* Layout: one phone-height stage. Colin up top (accessories pile onto his photo with each clause), the contract on parchment below, a monkey paw that grants a twisted wish every two clauses, then DEAL. */
+:root {
+  --slate: #4a6c86;
+  --slate-light: #a9c3d8;
+  --charcoal: #262829;
+  --night: #140c0c;
+  --white: #f6f5f2;
+  --ember: #e0563b;
+  --gold: #e8b04a;
+  --parch: #f1e6cb;
+  --parch-dark: #d9c79c;
+  --ink: #2a1a12;
+  --blood: #a3201b;
+  --display: "Bagel Fat One", "Arial Black", Impact, system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --legal: "IM Fell English", Georgia, "Times New Roman", serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: radial-gradient(120% 60% at 50% 28%, #4a1a14 0%, #241010 50%, var(--night) 100%);
+  color: var(--white); font-family: var(--body);
+  overflow: hidden; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.stage { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; container-type: size; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* Soul meter */
+.meter { position: absolute; left: 16px; right: 16px; top: max(12px, env(safe-area-inset-top, 0px)); display: grid; gap: 6px; pointer-events: none; z-index: 2; }
+.meter-row { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .9; }
+.meter-row b { color: var(--gold); font-weight: 700; }
+.bar { height: 10px; border-radius: 6px; background: rgba(246,245,242,.12); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--blood), var(--ember), var(--gold)); transition: width .7s cubic-bezier(.3,1.3,.5,1); }
+
+/* Colin */
+.colin { position: absolute; left: 50%; top: max(56px, calc(env(safe-area-inset-top, 0px) + 50px)); width: min(52cqw, 34cqh); aspect-ratio: 1; transform: translateX(-50%); }
+.colin .bob { position: absolute; inset: 0; animation: bob 5s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-5px); } }
+.face { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; border: 5px solid var(--parch); box-shadow: 0 0 0 5px var(--blood), 0 0 50px rgba(224,86,59,.45), 0 16px 34px rgba(0,0,0,.5); background: #7d8a55; }
+.face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gear { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.gear > g { opacity: 0; transition: opacity .5s, transform .7s cubic-bezier(.3,1.5,.5,1); transform-box: view-box; }
+.gear > g.on, .gear > g.clip { opacity: 1; }
+#gGlasses { transform: translateY(-30px); } #gGlasses.on { transform: none; }
+#gBow { transform: scale(.2); transform-origin: 45px 54px; } #gBow.on { transform: none; }
+#gPants { transform: translateY(40px); opacity: 1 !important; } #gPants.on { transform: none; }
+#gPocket { transform: translateY(20px); } #gPocket.on { transform: none; }
+.say { position: absolute; left: 62%; top: 4%; background: var(--white); color: var(--ink); font: 400 clamp(15px, 4.6cqw, 22px)/1.05 var(--display); padding: .35em .6em; border-radius: 14px 14px 14px 4px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.4); animation: say 2.2s ease-out forwards; pointer-events: none; z-index: 3; }
+@keyframes say { 0% { transform: scale(.3); opacity: 0 } 10% { transform: scale(1.08); opacity: 1 } 18% { transform: none } 85% { opacity: 1 } 100% { opacity: 0; transform: translateY(-10px) } }
+
+/* The contract */
+.contract {
+  position: absolute; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(170deg, var(--parch), var(--parch-dark));
+  color: var(--ink); border-radius: 6px; padding: 16px 16px 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(120,80,30,.25);
+  display: grid; gap: 10px; min-height: 44cqh;
+  grid-template-rows: auto 1fr auto auto;
+}
+.contract::before { content: ""; position: absolute; inset: 6px; border: 1.5px solid rgba(42,26,18,.35); border-radius: 3px; pointer-events: none; }
+.clause-no { font: italic 400 clamp(13px, 3.8cqw, 16px)/1 var(--legal); letter-spacing: .04em; display: flex; justify-content: space-between; opacity: .8; }
+.clause { font: 400 clamp(19px, 5.6cqw, 25px)/1.25 var(--legal); text-wrap: pretty; animation: clause-in .45s ease-out; }
+.clause em { color: var(--blood); font-style: italic; }
+@keyframes clause-in { from { opacity: 0; transform: translateY(8px); } }
+.sigline { position: relative; height: 40px; border-bottom: 1.5px solid var(--ink); display: flex; align-items: flex-end; font: italic 400 12px/1 var(--legal); opacity: .9; }
+.sigline span { position: absolute; left: 0; bottom: -16px; }
+.sigline svg { position: absolute; left: 6%; bottom: 2px; width: 70%; height: 46px; overflow: visible; }
+.sigline path { fill: none; stroke: var(--blood); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 600; stroke-dashoffset: 600; }
+.sigline path.draw { animation: sign .8s ease-out forwards; }
+@keyframes sign { to { stroke-dashoffset: 0; } }
+.actions { position: relative; display: flex; gap: 10px; align-items: center; margin-top: 12px; min-height: 58px; }
+.agree { flex: 1; font: 400 clamp(20px, 6.2cqw, 27px)/1 var(--display); color: var(--parch); background: var(--blood); border: 0; border-radius: 12px; padding: 15px 14px; cursor: pointer; box-shadow: 0 5px 0 #5e1210; }
+.agree:active { transform: translateY(4px); box-shadow: 0 1px 0 #5e1210; }
+.agree:focus-visible, .nope:focus-visible, .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.nope { font: 700 15px/1 var(--body); color: var(--ink); background: transparent; border: 1.5px solid rgba(42,26,18,.5); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: transform .25s cubic-bezier(.3,1.6,.5,1), left .25s, top .25s; }
+.nope.flee { position: absolute; }
+
+/* Monkey paw */
+.paw-wrap { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(20,12,12,.86); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); z-index: 4; }
+.paw-in { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 0 20px; max-width: 440px; }
+.eyebrow { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.paw { width: min(48cqw, 30cqh); aspect-ratio: 1; filter: drop-shadow(0 0 24px rgba(224,86,59,.4)); }
+.paw .f { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 1s cubic-bezier(.5,0,.3,1.4); }
+.paw .f.curl { transform: scaleY(.32); }
+.wish { margin: 0; font: italic 400 clamp(18px, 5.4cqw, 24px)/1.2 var(--legal); color: var(--parch); }
+.granted { margin: 0; font: 400 clamp(22px, 7cqw, 32px)/1.05 var(--display); text-wrap: balance; }
+.twist { margin: 0; font-size: clamp(15px, 4.2cqw, 18px); line-height: 1.35; opacity: .92; max-width: 32ch; text-wrap: balance; }
+.btn { font: 400 clamp(19px, 6cqw, 26px)/1 var(--display); color: var(--ink); background: var(--gold); border: 0; border-radius: 14px; padding: 14px 20px; cursor: pointer; box-shadow: 0 5px 0 #9a6f22; }
+.btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #9a6f22; }
+.btn.ghost { background: transparent; color: var(--white); box-shadow: inset 0 0 0 2px rgba(246,245,242,.35); font-size: clamp(16px, 5cqw, 20px); padding: 12px; }
+
+/* Cards */
+.card { position: absolute; inset: 0; display: grid; place-items: end center; padding: 0 18px max(22px, env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, rgba(20,12,12,.97) 0 55%, rgba(20,12,12,.6) 78%, rgba(20,12,12,.15)); z-index: 5; }
+.card-in { width: 100%; max-width: 440px; display: grid; gap: 12px; }
+.band { display: inline-block; line-height: 1.05; background: var(--slate); padding: .02em .3em .1em; transform: rotate(-3deg); margin: 6px 0 4px -2px; }
+.band.red { background: var(--blood); }
+h1 { margin: 0; font: 400 clamp(38px, 13cqw, 66px)/.95 var(--display); }
+.card p { margin: 0; font-size: clamp(14px, 4cqw, 17px); line-height: 1.4; max-width: 36ch; opacity: .93; }
+.card .btn { justify-self: stretch; }
+.fine { font-size: 12px; opacity: .65; }
+.camus { font-style: italic; }
+
+.stamp { position: absolute; left: 50%; top: 24%; transform: translate(-50%, -50%) rotate(-10deg); padding: .08em .35em; border: 6px solid var(--blood); border-radius: 12px; color: var(--blood); font: 400 clamp(60px, 24cqw, 116px)/1 var(--display); background: rgba(241,230,203,.94); pointer-events: none; animation: slam .5s cubic-bezier(.2,1.6,.4,1) both; box-shadow: 0 10px 30px rgba(0,0,0,.5); z-index: 4; }
+.stamp small { display: block; font: 700 clamp(11px, 3.4cqw, 15px)/1.2 var(--body); letter-spacing: .18em; text-align: center; color: var(--ink); }
+@keyframes slam { from { transform: translate(-50%, -50%) rotate(-10deg) scale(2.6); opacity: 0 } }
+
+@media (prefers-reduced-motion: reduce) {
+  .colin .bob, .say, .clause, .stamp, .sigline path.draw { animation-duration: .01s !important; animation-iteration-count: 1 !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <canvas id="fx"></canvas>
+
+  <div class="meter" id="meter" hidden>
+    <div class="meter-row"><span>Colin's soul</span><b id="soul">100%</b></div>
+    <div class="bar"><i id="bar"></i></div>
+  </div>
+
+  <div class="colin" id="colin">
+    <div class="bob">
+      <div class="face"><img src="colin.jpg" alt="Comedian Colin Armstrong, smiling, with a mustache and a green cardigan"></div>
+      <!-- Accessories in the photo's own coordinates (100 x 100). -->
+      <svg class="gear" viewBox="0 0 100 100" aria-hidden="true">
+        <defs><clipPath id="round"><circle cx="50" cy="50" r="47"/></clipPath></defs>
+        <g class="clip" clip-path="url(#round)">
+          <g id="gPants"><rect x="0" y="72" width="100" height="40" fill="#8a6a3c"/><rect x="0" y="72" width="100" height="5" fill="#3b2a18"/><rect x="40" y="71.5" width="10" height="6" rx="1" fill="none" stroke="#e8b04a" stroke-width="1.6"/></g>
+        </g>
+        <g id="gSus1"><path d="M37 57 L34 100" stroke="#c22d24" stroke-width="4.5" stroke-linecap="round"/><circle cx="36.6" cy="61" r="1.6" fill="#e8b04a"/></g>
+        <g id="gSus2"><path d="M55 57 L58 100" stroke="#c22d24" stroke-width="4.5" stroke-linecap="round"/><circle cx="55.4" cy="61" r="1.6" fill="#e8b04a"/></g>
+        <g id="gPocket"><rect x="76" y="73" width="10" height="11" rx="1.2" fill="#f6f5f2" stroke="#aaa" stroke-width=".5"/><rect x="77.5" y="68" width="1.8" height="8" fill="#1f5fbf"/><rect x="80.3" y="67" width="1.8" height="9" fill="#c22d24"/><rect x="83.1" y="69" width="1.8" height="7" fill="#222"/></g>
+        <g id="gBow"><path d="M45 54 L36 49 L36 59Z M45 54 L54 49 L54 59Z" fill="#c22d24" stroke="#7a1712" stroke-width=".8" stroke-linejoin="round"/><circle cx="45" cy="54" r="2.4" fill="#7a1712"/></g>
+        <g id="gGlasses"><circle cx="35.4" cy="28.6" r="6.6" fill="rgba(255,255,255,.18)" stroke="#111" stroke-width="2.4"/><circle cx="50.2" cy="28.6" r="6.6" fill="rgba(255,255,255,.18)" stroke="#111" stroke-width="2.4"/><path d="M42 28 Q42.8 26.4 43.6 28 M28.8 28 L25 26.5 M56.8 28 L60.5 26.5" stroke="#111" stroke-width="2" fill="none"/><path d="M32 25.5 L34 24.5 M46.8 25.5 L48.8 24.5" stroke="#fff" stroke-width="1" opacity=".8"/></g>
+        <g id="gShine"><text x="40" y="44" font-size="7" text-anchor="middle">✨</text><text x="49" y="41" font-size="5" text-anchor="middle">✨</text></g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="contract" id="contract" hidden>
+    <div class="clause-no"><span id="clauseNo">Clause 1 of 11</span><span>Fame Agreement</span></div>
+    <div class="clause" id="clause"></div>
+    <div class="sigline"><span>Colin Armstrong (the Comic)</span><svg viewBox="0 0 300 46" preserveAspectRatio="none"><path id="sig" d=""/></svg></div>
+    <div class="actions" id="actions">
+      <button class="agree" id="agree" type="button">I agree</button>
+      <button class="nope" id="nope" type="button">No</button>
+    </div>
+  </div>
+
+  <div class="paw-wrap" id="pawBox" hidden>
+    <div class="paw-in">
+      <div class="eyebrow" id="pawEyebrow">The paw has 5 fingers left</div>
+      <svg class="paw" viewBox="0 0 100 100" aria-hidden="true">
+        <g fill="#6e4f33" stroke="#3a2614" stroke-width="1.6">
+          <g transform="rotate(-38 50 64)"><rect class="f" x="45" y="22" width="10" height="42" rx="5"/></g>
+          <g transform="rotate(-15 50 64)"><rect class="f" x="45" y="12" width="10" height="52" rx="5"/></g>
+          <g transform="rotate(0 50 64)"><rect class="f" x="45" y="8" width="10" height="56" rx="5"/></g>
+          <g transform="rotate(15 50 64)"><rect class="f" x="45" y="12" width="10" height="52" rx="5"/></g>
+          <g transform="rotate(38 50 64)"><rect class="f" x="45" y="22" width="10" height="42" rx="5"/></g>
+          <path d="M26 58 Q24 90 50 94 Q76 90 74 58 Q62 50 50 50 Q38 50 26 58Z"/>
+        </g>
+        <path d="M34 70 l3 -4 M44 78 l2 -5 M58 74 l3 -4 M64 84 l2 -4 M38 86 l3 -3" stroke="#3a2614" stroke-width="1.2" fill="none"/>
+      </svg>
+      <p class="wish" id="wish"></p>
+      <p class="granted" id="granted" hidden>Granted.</p>
+      <p class="twist" id="twist" hidden></p>
+      <button class="btn" id="keep" type="button" hidden>Keep signing</button>
+    </div>
+  </div>
+
+  <div class="card" id="start">
+    <div class="card-in">
+      <div class="eyebrow">A game from Sisyphus, Minneapolis</div>
+      <h1>Colin's<br><span class="band red">Deal</span></h1>
+      <p>Comedian Colin Armstrong wants to be famous. Good news: fame is available. The only open role is the Urkel of a new generation. Somewhat larger. Considerably whiter.</p>
+      <p>A man in a very nice suit has a contract. Just a few small clauses.</p>
+      <button class="btn" id="go" type="button">Read the contract</button>
+    </div>
+  </div>
+
+  <div class="card" id="end" hidden>
+    <div class="card-in">
+      <div class="eyebrow">Contract executed</div>
+      <h1>A weekend at<br><span class="band">Sisyphus</span></h1>
+      <p>Colin, you sold 99% of your soul and got exactly what you wanted: a weekend of shows in Minneapolis. Comics get 100% of the door. The suspenders are non-negotiable.</p>
+      <p>Fame: pending. The paw is out of fingers.</p>
+      <button class="btn ghost" id="again" type="button">Read the fine print again</button>
+      <div class="fine camus">One must imagine Colin happy.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), colin = $("colin"), cv = $("fx"), ctx = cv.getContext("2d");
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  // Each clause can switch on a piece of gear or make Colin say something.
+  const CLAUSES = [
+    { t: "The Comic will wear one (1) suspender. Just one. As a treat.", gear: "gSus1" },
+    { t: "Actually, two suspenders. The first one was <em>lonely</em>.", gear: "gSus2" },
+    { t: "Glasses. Thick ones. Your eyes are fine. That is not the point.", gear: "gGlasses" },
+    { t: "A bow tie. Clip-on. You will never learn to tie one, and that is <em>part of the character</em>.", gear: "gBow" },
+    { t: "A pocket protector. Three pens. None of them work.", gear: "gPocket" },
+    { t: "The pants go up. Higher. That's your belly button. <em>Keep going.</em>", gear: "gPants" },
+    { t: "Whenever you knock something over, you will say the line. You will knock <em>everything</em> over.", say: "Did I do that?" },
+    { t: "You will snort when you laugh. On live network television. Every single time.", say: "*SNORT*" },
+    { t: "You will have a crush on the girl next door for nine seasons. She moves. You follow. She moves again.", say: "Laura?" },
+    { t: "The mustache stays. It is the only thing the network likes.", gear: "gShine" },
+    { t: "The Comic will play <em>a full weekend at Sisyphus</em> in Minneapolis. Free beer. 100% of the door. Suspenders mandatory.", last: true },
+  ];
+  // The paw curls a finger after every second clause.
+  const WISHES = [
+    ["“I wish to be famous.”", "You're famous. For the suspenders."],
+    ["“I wish for my own sitcom.”", "It airs at 3 a.m., between two knife infomercials."],
+    ["“I wish for money.”", "You're paid in a breakfast cereal with your face on it. It tastes like a basement."],
+    ["“I wish other comics respected me.”", "They respect you deeply. They all call you Steve."],
+    ["“I wish for a great weekend of shows.”", "No twist. Sisyphus is just like that."],
+  ];
+  const NOPES = ["No", "No?", "nah", "n", "…"];
+
+  let step = 0, soul = 100, nopeN = 0, busy = false;
+
+  let ac;
+  function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (ac && ac.state === "suspended") ac.resume(); return ac; }
+  function tone(freq, t, len, type, vol, slideTo) {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + (t || 0);
+    o.type = type || "sine"; o.frequency.setValueAtTime(freq, t0); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + len);
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol || .15, t0 + .01); g.gain.exponentialRampToValueAtTime(.001, t0 + len);
+    o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + len + .05);
+  }
+  function scratch() {
+    const a = audio(); if (!a) return;
+    const len = .7, buf = a.createBuffer(1, a.sampleRate * len, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (0.5 + 0.5 * Math.sin(i / 900)) * (1 - i / d.length);
+    const src = a.createBufferSource(); src.buffer = buf;
+    const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 3200; f.Q.value = 1.4;
+    const g = a.createGain(); g.gain.value = .25;
+    src.connect(f).connect(g).connect(a.destination); src.start();
+  }
+  function sinister() { [110, 130.8, 155.6].forEach((f, i) => tone(f, i * .05, 1.4, "sawtooth", .05)); }
+  function creak() { tone(320, 0, .9, "sawtooth", .06, 90); }
+  function chord() { [392, 494, 587, 784].forEach((f, i) => tone(f, i * .09, 1.3, "triangle", .12)); }
+  function thud() { tone(60, 0, .4, "sine", .5); tone(120, 0, .2, "square", .08); }
+  function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch(e){} }
+
+  function scribble() {
+    let d = "M8 34", x = 8;
+    while (x < 280) { const nx = x + 14 + Math.random() * 22; d += ` Q${(x + nx) / 2} ${4 + Math.random() * 14} ${nx} ${24 + Math.random() * 16}`; x = nx; }
+    return d + " M20 40 L260 36";
+  }
+
+  function showClause() {
+    const c = CLAUSES[step];
+    $("clauseNo").textContent = c.last ? "Final clause" : `Clause ${step + 1} of ${CLAUSES.length}`;
+    const el = $("clause"); el.innerHTML = c.t; el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
+    const sig = $("sig"); sig.classList.remove("draw"); sig.setAttribute("d", "");
+    $("agree").textContent = c.last ? "Sign it" : "I agree";
+    resetNope();
+    busy = false;
+  }
+  function resetNope() {
+    const n = $("nope"); nopeN = 0; n.classList.remove("flee"); n.style.left = n.style.top = n.style.transform = ""; n.textContent = "No"; n.hidden = false;
+  }
+  function flee(e) {
+    e.preventDefault(); if (busy) return;
+    nopeN++;
+    const n = $("nope"), box = $("actions");
+    if (nopeN >= NOPES.length) { n.hidden = true; return; }
+    n.classList.add("flee"); n.textContent = NOPES[nopeN];
+    const w = box.clientWidth, h = box.clientHeight;
+    n.style.left = (Math.random() * Math.max(0, w - 70)) + "px";
+    n.style.top = (Math.random() * Math.max(0, h - 30) - 50) + "px";
+    n.style.transform = `scale(${1 - nopeN * .17}) rotate(${(Math.random() - .5) * 30}deg)`;
+    tone(700, 0, .12, "square", .05, 1200);
+  }
+
+  function setSoul(v) {
+    soul = v; $("bar").style.width = soul + "%";
+    $("soul").textContent = soul + "%" + (soul <= 1 ? " (enough for a weekend)" : "");
+  }
+
+  function agree() {
+    if (busy) return; busy = true;
+    audio(); const c = CLAUSES[step];
+    const sig = $("sig"); sig.setAttribute("d", scribble()); sig.classList.remove("draw"); void sig.getBoundingClientRect(); sig.classList.add("draw");
+    scratch(); buzz(15);
+    $("nope").hidden = true;
+    setTimeout(() => {
+      if (c.gear) { $(c.gear).classList.add("on"); tone(520, 0, .25, "triangle", .1); }
+      if (c.say) say(c.say);
+      setSoul(c.last ? 1 : Math.max(1, soul - 9));
+      embers(14);
+      if (c.last) { setTimeout(deal, 500); return; }
+      step++;
+      if (step % 2 === 0) setTimeout(() => wish(step / 2 - 1), 900);
+      else setTimeout(showClause, 700);
+    }, 800);
+  }
+
+  function say(text) {
+    const b = document.createElement("div"); b.className = "say"; b.textContent = text;
+    colin.appendChild(b); setTimeout(() => b.remove(), 2200);
+    if (text === "*SNORT*") tone(90, 0, .25, "sawtooth", .2, 60);
+    else tone(330, 0, .3, "square", .06, 500);
+  }
+
+  function wish(i) {
+    const [w, twist] = WISHES[i], fingers = document.querySelectorAll(".paw .f");
+    fingers.forEach((f, k) => f.classList.toggle("curl", k < i));
+    $("pawEyebrow").textContent = `The paw has ${5 - i} finger${5 - i === 1 ? "" : "s"} left`;
+    $("wish").textContent = w; $("granted").hidden = true; $("twist").hidden = true; $("keep").hidden = true;
+    $("keep").textContent = i === 4 ? "Read the last clause" : "Keep signing";
+    $("pawBox").hidden = false; sinister();
+    setTimeout(() => { fingers[i].classList.add("curl"); creak(); buzz(30); $("pawEyebrow").textContent = `The paw has ${4 - i} finger${4 - i === 1 ? "" : "s"} left`; }, 900);
+    setTimeout(() => { $("granted").hidden = false; tone(196, 0, .8, "triangle", .12); }, 1800);
+    setTimeout(() => { $("twist").textContent = twist; $("twist").hidden = false; }, 2500);
+    setTimeout(() => { $("keep").hidden = false; $("keep").focus({ preventScroll: true }); }, 3100);
+  }
+  $("keep").addEventListener("click", () => { $("pawBox").hidden = true; showClause(); });
+
+  function deal() {
+    const st = document.createElement("div"); st.className = "stamp"; st.innerHTML = "DEAL<small>A WEEKEND AT SISYPHUS</small>";
+    stage.appendChild(st); thud(); buzz([30, 60, 120]);
+    setTimeout(() => { chord(); confetti(); }, 250);
+    setTimeout(() => { $("end").hidden = false; $("again").focus({ preventScroll: true }); }, 3000);
+  }
+
+  // Embers and confetti.
+  let parts = [], lastT = performance.now();
+  function size() { const r = stage.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  addEventListener("resize", size); size();
+  function embers(n) {
+    const r = colin.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    for (let i = 0; i < n; i++) parts.push({ x: r.left - s.left + Math.random() * r.width, y: r.bottom - s.top - Math.random() * 20, vx: (Math.random() - .5) * .8, vy: -1 - Math.random() * 2, life: 1, c: pick(["#e0563b", "#e8b04a", "#ff8a4a"]), r: 1.5 + Math.random() * 2.5, round: true });
+  }
+  function confetti() {
+    const W = stage.getBoundingClientRect().width, cols = ["#a3201b", "#e8b04a", "#f1e6cb", "#4a6c86", "#e0563b"];
+    for (let i = 0; i < 160; i++) parts.push({ x: Math.random() * W, y: -20 - Math.random() * 300, vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3, life: 3, c: pick(cols), r: 4 + Math.random() * 4, spin: Math.random() * 6, round: false });
+  }
+  function tick(t) {
+    const dt = Math.min(2, (t - lastT) / 16.7); lastT = t;
+    const r = stage.getBoundingClientRect();
+    ctx.clearRect(0, 0, r.width, r.height);
+    if (Math.random() < .08 * dt) parts.push({ x: Math.random() * r.width, y: r.height + 5, vx: (Math.random() - .5) * .4, vy: -.6 - Math.random(), life: 1.6, c: pick(["#e0563b", "#e8b04a"]), r: 1 + Math.random() * 1.6, round: true, slow: true });
+    parts = parts.filter(p => p.life > 0 && p.y < r.height + 30 && p.y > -320);
+    for (const p of parts) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.round) { p.x += Math.sin(t / 400 + p.y / 30) * .3; p.life -= (p.slow ? .004 : .015) * dt; ctx.globalAlpha = Math.max(0, Math.min(1, p.life)); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); }
+      else { p.vy = Math.min(p.vy + .02 * dt, 4); p.vx += Math.sin(t / 300 + p.spin) * .05; p.life -= .004 * dt; ctx.globalAlpha = Math.min(1, p.life); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(t / 200 + p.spin); ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); ctx.restore(); }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function start() {
+    audio(); sinister();
+    $("start").hidden = true; $("end").hidden = true;
+    document.querySelectorAll(".stamp").forEach(s => s.remove());
+    document.querySelectorAll(".gear > g").forEach(g => g.classList.remove("on"));
+    document.querySelectorAll(".paw .f").forEach(f => f.classList.remove("curl"));
+    step = 0; setSoul(100);
+    $("meter").hidden = false; $("contract").hidden = false;
+    showClause();
+  }
+  $("agree").addEventListener("click", agree);
+  $("nope").addEventListener("pointerdown", flee);
+  $("nope").addEventListener("click", e => e.preventDefault());
+  $("go").addEventListener("click", start);
+  $("again").addEventListener("click", start);
+})();
+</script>
+</body>
+</html>
