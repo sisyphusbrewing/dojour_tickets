@@ -17,6 +17,9 @@
     .stmt th { text-align: right; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--gray, #918f90); font-weight: 600; padding: 0 4px 6px; }
     .stmt td { text-align: right; padding: 7px 4px; border-top: 1px solid var(--line, #4a4646); }
     .stmt th:first-child, .stmt td:first-child { text-align: left; }
+    .fee-row { display: grid; grid-template-columns: 1fr 110px 36px; gap: 8px; align-items: center; margin-top: 8px; }
+    .fee-row .x { background: none; border: 0; color: var(--gray, #918f90); font-size: 22px; cursor: pointer; }
+    .fee-left-bad { color: #f0b7ac !important; font-weight: 700; }
     .stmt tr.tot td { font-weight: 700; font-size: 17px; border-top: 2px solid currentColor; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -78,6 +81,17 @@
           <div class="field"><label for="f_phone">Phone</label><input class="input" id="f_phone" type="tel" autocomplete="tel" inputmode="tel"></div>
         </div></div>
 
+        <!-- Headliner splits the run's $3 ticket fee among the comics who worked it. -->
+        <div id="feeBox" class="hidden">
+          <div class="band-wrap"><span class="band">The ticket fee</span></div>
+          <p class="intro" id="feeIntro"></p>
+          <div class="card">
+            <div id="feeRows"></div>
+            <button class="btn btn-sm" type="button" id="feeAdd" style="margin-top:10px">+ Add a comic</button>
+            <p class="help" id="feeLeft" style="margin-top:10px"></p>
+          </div>
+        </div>
+
         <div class="band-wrap"><span class="band">W-9</span></div>
         <p class="intro">The IRS wants one from anyone we pay much of anything. Fill out the <a href="https://www.irs.gov/pub/irs-pdf/fw9.pdf" target="_blank" rel="noopener">blank form</a>, then add it here. A phone photo is fine. Only the owner can see it.</p>
         <div class="card">
@@ -134,6 +148,29 @@
     $('f_method').addEventListener('change', syncHandle);
 
     function money(v) { var n = Math.round(Number(v) * 100) / 100; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+    // ---------- ticket fee split ----------
+    function pool() { return payee && payee.statement ? Number(payee.statement.pool) || 0 : 0; }
+    function feeRowHtml(r) {
+      var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+      return '<div class="fee-row"><input class="input fee-name" placeholder="Comic" value="' + esc(r.name) + '">' +
+        '<input class="input fee-amt" type="number" min="0" step="1" inputmode="decimal" value="' + esc(r.amount) + '">' +
+        '<button class="x" type="button" aria-label="Remove">×</button></div>';
+    }
+    function feeSplit() {
+      return Array.prototype.map.call(document.querySelectorAll('#feeRows .fee-row'), function (el) {
+        return { name: el.querySelector('.fee-name').value.trim(), amount: Math.round((Number(el.querySelector('.fee-amt').value) || 0) * 100) / 100 };
+      }).filter(function (r) { return r.name || r.amount; });
+    }
+    function feeLeft() { return Math.round((pool() - feeSplit().reduce(function (t, r) { return t + r.amount; }, 0)) * 100) / 100; }
+    function syncFee() {
+      var left = feeLeft();
+      $('feeLeft').textContent = left === 0 ? 'All ' + money(pool()) + ' is split.' : left > 0 ? money(left) + ' left to split.' : 'That is ' + money(-left) + ' more than the ' + money(pool()) + ' there is.';
+      $('feeLeft').classList.toggle('fee-left-bad', left !== 0);
+    }
+    $('feeRows').addEventListener('input', syncFee);
+    $('feeRows').addEventListener('click', function (e) { if (e.target.classList.contains('x')) { e.target.closest('.fee-row').remove(); syncFee(); } });
+    $('feeAdd').addEventListener('click', function () { $('feeRows').insertAdjacentHTML('beforeend', feeRowHtml({ name: '', amount: '' })); syncFee(); });
+
     function total() { return payee && payee.statement ? Number(payee.statement.total) || 0 : 0; }
 
     function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
@@ -157,6 +194,13 @@
         }).join('') + '<tr class="tot"><td>Total</td><td>' + esc(st.total_tickets || '') + '</td><td>' + money(st.total) + '</td></tr>';
         $('stmtNote').textContent = st.note || '';
       }
+      $('feeBox').classList.toggle('hidden', !pool());
+      if (pool()) {
+        $('feeIntro').textContent = st.pool_intro || ('Every ticket carried a $3 fee, ' + money(pool()) + ' this run. It all goes to the comics who worked with you. Tell us who gets what.');
+        var saved = payee.request && payee.request.fee_split;
+        $('feeRows').innerHTML = (saved && saved.length ? saved : (st.pool_suggested || [])).map(feeRowHtml).join('');
+        syncFee();
+      }
       syncHandle();
     }
 
@@ -165,7 +209,7 @@
         var to = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
                : payee.method === 'Wire / ACH' ? 'wire. Sam will email for the bank details'
                : payee.method + (payee.handle ? ' to ' + payee.handle : '');
-        return 'Got it: ' + money(total()) + ' by ' + to + '.' + (payee.w9_on_file ? '' : ' Still need that W-9 when you get a minute.');
+        return 'Got it: ' + money(total()) + ' by ' + to + '.' + (pool() ? ' Ticket fee split saved.' : '') + (payee.w9_on_file ? '' : ' Still need that W-9 when you get a minute.');
       }
       var how = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
               : payee.method === 'Wire / ACH' ? 'a wire. Sam will email for the bank details'
@@ -188,6 +232,10 @@
       var method = $('f_method').value, handle = $('f_handle').value.trim();
       if (!method) { err.textContent = 'Pick how you want it.'; err.classList.remove('hidden'); return; }
       if (HANDLES[method] && !handle) { err.textContent = 'We need your ' + HANDLES[method][0] + '.'; err.classList.remove('hidden'); return; }
+      if (pool()) {
+        if (feeSplit().some(function (r) { return !r.name || !(r.amount > 0); })) { err.textContent = 'Each comic in the fee split needs a name and an amount.'; err.classList.remove('hidden'); return; }
+        if (feeLeft() !== 0) { err.textContent = 'The ticket fee split has to add up to ' + money(pool()) + '. ' + $('feeLeft').textContent; err.classList.remove('hidden'); return; }
+      }
       if ((method === 'Check' || method === 'Wire / ACH') && !$('f_legal').value.trim()) { err.textContent = 'Who do we make it out to?'; err.classList.remove('hidden'); return; }
       btn.disabled = true; btn.textContent = 'Saving…';
       try {
@@ -200,7 +248,8 @@
         }
         var res = await sb.rpc('payee_save', { p_token: token, p_w9_path: w9Path, p_data: {
           method: method, handle: HANDLES[method] ? handle : '', legal_name: $('f_legal').value.trim(),
-          email: $('f_email').value.trim(), phone: $('f_phone').value.trim() } });
+          email: $('f_email').value.trim(), phone: $('f_phone').value.trim(),
+          request: pool() ? { fee_split: feeSplit() } : null } });
         if (res.error) throw new Error(res.error.message);
         payee = res.data;
         $('doneLine').textContent = doneLine();
