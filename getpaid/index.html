@@ -71,9 +71,6 @@
           <div class="field full" id="handleField"><label for="f_handle" id="handleLabel">Handle</label>
             <input class="input" id="f_handle" autocapitalize="none" autocorrect="off">
             <div class="help" id="handleHelp"></div></div>
-          <div class="field full hidden" id="nowField"><label for="f_now" id="nowLabel">How much that way</label>
-            <input class="input" id="f_now" type="number" min="0" step="0.01" inputmode="decimal">
-            <div class="help" id="nowHelp"></div></div>
           <div class="field full"><label for="f_legal">Legal name or company</label>
             <input class="input" id="f_legal" autocomplete="name">
             <div class="help">Exactly as the bank and the IRS know you. Checks get made out to this.</div></div>
@@ -136,26 +133,8 @@
     }
     $('f_method').addEventListener('change', syncHandle);
 
-    // With a settlement attached, the comic can take part of it now by an app
-    // and the rest comes as a check from Grace.
     function money(v) { var n = Math.round(Number(v) * 100) / 100; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
     function total() { return payee && payee.statement ? Number(payee.statement.total) || 0 : 0; }
-    function split() {
-      var m = $('f_method').value, t = total();
-      var now = (!t || !HANDLES[m]) ? 0 : Math.min(t, Math.max(0, Number($('f_now').value) || 0));
-      return { now: now, check: m === 'Check' ? t : Math.round((t - now) * 100) / 100 };
-    }
-    function syncNow() {
-      var m = $('f_method').value, show = !!total() && !!HANDLES[m];
-      $('nowField').classList.toggle('hidden', !show);
-      if (!show) return;
-      $('nowLabel').innerHTML = 'How much by ' + m + ' <span class="req">*</span>';
-      $('f_now').max = total();
-      var sp = split();
-      $('nowHelp').textContent = sp.check > 0 ? 'The rest, ' + money(sp.check) + ', comes as a check from Grace.' : 'All of it by ' + m + '. No check.';
-    }
-    $('f_method').addEventListener('change', syncNow);
-    $('f_now').addEventListener('input', syncNow);
 
     function view(id) { ['viewLoading', 'viewLost', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
 
@@ -169,30 +148,24 @@
       $('w9OnFile').classList.toggle('hidden', !payee.w9_on_file);
       var st = payee.statement;
       $('stmt').classList.toggle('hidden', !st);
-      var wire = $('f_method').querySelector('option[value="Wire / ACH"], option:last-child');
-      if (wire && wire.textContent === 'Wire / ACH') wire.hidden = wire.disabled = !!st;
       if (st) {
         $('whoSub').textContent = st.title || 'Settling up';
-        $('lede').textContent = 'Thanks for a great run. Here is the door. Tell us how you want it: some or all by Venmo, Zelle, PayPal or Cash App, and Grace writes a check for the rest.';
+        $('lede').textContent = 'Thanks for a great run. Here is the door. Pick one way to get it and it all goes that way.';
         var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
         $('stmtRows').innerHTML = (st.rows || []).map(function (r) {
           return '<tr><td>' + esc(r.label) + '</td><td>' + esc(r.tickets) + '</td><td>' + money(r.amount) + '</td></tr>';
         }).join('') + '<tr class="tot"><td>Total</td><td>' + esc(st.total_tickets || '') + '</td><td>' + money(st.total) + '</td></tr>';
         $('stmtNote').textContent = st.note || '';
-        var rq = payee.request || {};
-        $('f_now').value = rq.now_amount ? rq.now_amount : '';
       }
       syncHandle();
-      syncNow();
     }
 
     function doneLine() {
-      var rq = payee.request;
-      if (payee.statement && rq) {
-        var bits = [];
-        if (rq.now_amount > 0) bits.push(money(rq.now_amount) + ' by ' + payee.method + (payee.handle ? ' to ' + payee.handle : ''));
-        if (rq.check_amount > 0) bits.push((bits.length ? 'and ' : '') + 'a check for ' + money(rq.check_amount) + ' to ' + (payee.legal_name || payee.name) + ' from Grace');
-        return 'Got it: ' + bits.join(' ') + '. Sam will send it.' + (payee.w9_on_file ? '' : ' Still need that W-9 when you get a minute.');
+      if (total()) {
+        var to = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
+               : payee.method === 'Wire / ACH' ? 'wire. Sam will email for the bank details'
+               : payee.method + (payee.handle ? ' to ' + payee.handle : '');
+        return 'Got it: ' + money(total()) + ' by ' + to + '.' + (payee.w9_on_file ? '' : ' Still need that W-9 when you get a minute.');
       }
       var how = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
               : payee.method === 'Wire / ACH' ? 'a wire. Sam will email for the bank details'
@@ -215,9 +188,6 @@
       var method = $('f_method').value, handle = $('f_handle').value.trim();
       if (!method) { err.textContent = 'Pick how you want it.'; err.classList.remove('hidden'); return; }
       if (HANDLES[method] && !handle) { err.textContent = 'We need your ' + HANDLES[method][0] + '.'; err.classList.remove('hidden'); return; }
-      var sp = split();
-      if (total() && HANDLES[method] && !(Number($('f_now').value) > 0)) { err.textContent = 'How much by ' + method + '? Put the whole ' + money(total()) + ' if you want it all that way.'; err.classList.remove('hidden'); return; }
-      if (total() && sp.check > 0 && !$('f_legal').value.trim()) { err.textContent = 'Who does Grace make the check out to?'; err.classList.remove('hidden'); return; }
       if ((method === 'Check' || method === 'Wire / ACH') && !$('f_legal').value.trim()) { err.textContent = 'Who do we make it out to?'; err.classList.remove('hidden'); return; }
       btn.disabled = true; btn.textContent = 'Saving…';
       try {
@@ -230,8 +200,7 @@
         }
         var res = await sb.rpc('payee_save', { p_token: token, p_w9_path: w9Path, p_data: {
           method: method, handle: HANDLES[method] ? handle : '', legal_name: $('f_legal').value.trim(),
-          email: $('f_email').value.trim(), phone: $('f_phone').value.trim(),
-          request: total() ? { now_amount: sp.now, check_amount: sp.check } : null } });
+          email: $('f_email').value.trim(), phone: $('f_phone').value.trim() } });
         if (res.error) throw new Error(res.error.message);
         payee = res.data;
         $('doneLine').textContent = doneLine();
