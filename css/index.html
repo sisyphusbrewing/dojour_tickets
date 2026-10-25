@@ -126,6 +126,7 @@
       <textarea class="input" id="n_body" maxlength="2000" placeholder="Killed on the late show. Brought 20 friends. Wants a Saturday."></textarea>
       <div class="d-actions">
         <button class="btn btn-primary grow" id="noteBtn" type="submit">Add note</button>
+        <button class="btn" type="button" onclick="copyComicLink()">Copy comic link</button>
         <button class="btn" type="button" onclick="$('detail').close()">Close</button>
         <button class="btn btn-danger" type="button" onclick="removeComic()">Remove</button>
       </div>
@@ -288,6 +289,14 @@
     });
     $('d_tc').addEventListener('change', function () { if (open) save(open, { twin_cities: $('d_tc').checked }); });
     $('detail').addEventListener('close', function () { open = null; });
+
+    // The comic's own Good-Enough-o-Matic reveal (goodenough/), keyed by their private share_token.
+    async function copyComicLink() {
+      if (!open || !open.share_token) { toast('No link for this comic yet', true); return; }
+      var url = 'https://staff.sisyphusbrewing.com/goodenough/?t=' + open.share_token;
+      try { await navigator.clipboard.writeText(url); toast('Link copied. Send it to ' + open.comedian + '.'); }
+      catch (e) { prompt('Copy this link:', url); }
+    }
 
     async function removeComic(name) {
       var c = name ? comics.find(function (x) { return x.comedian === name; }) : open;
