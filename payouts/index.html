@@ -210,12 +210,17 @@
       } else {
         how = escapeHtml(p.method) + (p.handle ? ' · ' + escapeHtml(p.handle) : '') + (p.method === 'Check' && p.legal_name ? ' · to ' + escapeHtml(p.legal_name) : '');
       }
+      // What they asked for on the get-paid page when it carried a settlement.
+      var rq = l.status === 'owed' && p.request;
+      if (rq) how += '<br><span class="okay">Wants</span> ' + [rq.now_amount > 0 ? money(rq.now_amount) + ' by ' + escapeHtml(p.method) : '',
+        rq.check_amount > 0 ? money(rq.check_amount) + ' by check' + (p.legal_name ? ' to ' + escapeHtml(p.legal_name) : '') : ''].filter(Boolean).join(' + ');
       var act;
       if (l.status === 'paid') {
         act = '<button class="btn btn-sm" type="button" data-act="unpay">Undo</button>';
       } else {
-        var link = payLink(p, l), payBtn;
-        if (link) payBtn = '<a class="btn btn-sm btn-primary" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">Pay ' + money(l.amount) + '</a>';
+        var nowAmt = p.request && p.request.now_amount > 0 ? Object.assign({}, l, { amount: p.request.now_amount }) : l;
+        var link = payLink(p, nowAmt), payBtn;
+        if (link) payBtn = '<a class="btn btn-sm btn-primary" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">Pay ' + money(nowAmt.amount) + '</a>';
         else if (p.method === 'Zelle' || (p.method === 'PayPal' && p.handle)) payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="copy">Copy for ' + escapeHtml(p.method) + '</button>';
         else if (!p.method) payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="payee">Get pay info</button>';
         else payBtn = '';
@@ -392,7 +397,7 @@
       else if (a === 'payee') editPayee(payeeOf(l));
       else if (a === 'paid') markPaid(l, true);
       else if (a === 'unpay') markPaid(l, false);
-      else if (a === 'copy') { var p = payeeOf(l); copyText(p.handle + '  ' + Number(l.amount).toFixed(2), 'Copied ' + p.handle + ' and ' + money(l.amount) + '. Open your bank app.'); }
+      else if (a === 'copy') { var p = payeeOf(l), amt = p.request && p.request.now_amount > 0 ? p.request.now_amount : l.amount; copyText(p.handle + '  ' + Number(amt).toFixed(2), 'Copied ' + p.handle + ' and ' + money(amt) + '. Open your bank app.'); }
     });
 
     setupSignIn(async function (role) {
