@@ -142,6 +142,10 @@ def reddit_search(page, url, scrolls):
         page.mouse.wheel(0, 20000)
         page.wait_for_timeout(1200)
     rows = page.eval_on_selector_all("[data-testid=search-post-unit]", "es => es.map(e => e.innerText.replace(/\\s+/g, ' '))")
+    if not rows and re.search(r"blocked|network security|whoa there", page.evaluate("() => document.body.innerText"), re.I):
+        raise RuntimeError("Reddit blocked this server")
+    if not rows:
+        print(f"  reddit: no posts at {url} ({page.title()})")
     r = {"posts": 0, "votes": 0, "comments": 0}
     for x in rows:
         r["posts"] += 1
@@ -246,12 +250,17 @@ def measure(page, row, history):
         handles.insert(0, old["instagram_handle"])
     tt = max((r for r in (tiktok(g, name) for g in handles) if r), key=lambda r: r["followers"] or 0, default=None)
     ig = instagram(page, name, handles)
-    rd = reddit(page, name) or {}
+    # Reddit blocks some servers (GitHub's included). Then keep what we had,
+    # and reddit_checked says the buzz wasn't re-measured this time.
+    rd = reddit(page, name)
+    if rd is None:
+        rd = {"votes_year": old.get("reddit_votes"), "posts_year": old.get("reddit_posts"), "local_posts": old.get("reddit_local_posts")}
     c = {"ig": (ig or {}).get("followers"), "instagram_handle": (ig or {}).get("handle"),
          "tiktok": (tt or {}).get("followers"), "tiktok_handle": (tt or {}).get("handle"),
          "youtube": (yt or {}).get("subs"), "youtube_handle": (yt or {}).get("handle"),
          "reddit_votes": rd.get("votes_year"), "reddit_posts": rd.get("posts_year"), "reddit_local_posts": rd.get("local_posts"),
-         "twin_cities": bool(row.get("twin_cities")), "runs": runs_here(name, history)}
+         "twin_cities": bool(row.get("twin_cities")), "runs": runs_here(name, history),
+         "reddit_checked": rd.get("votes_year") is not None}
     pts, per, estimated = points(c)
     found = any(c[k] for k in ("ig", "tiktok", "youtube", "reddit_votes")) or c["runs"]
     print(f"{name}: IG {c['ig']} TT {c['tiktok']} YT {c['youtube']} Reddit {c['reddit_votes']} runs {len(c['runs'])} -> "
