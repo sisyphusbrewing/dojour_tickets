@@ -189,6 +189,12 @@
     var sb = window.supabase.createClient('https://idsdwkubqnavkazlteis.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ',
       { auth: { persistSession: false } });
+    // Every card tap / QR scan (no ?c=) gets a random visit id, so Sam can see
+    // how many people opened the pitch and how far each got (comic_taps).
+    var visit = !tag && window.crypto && crypto.randomUUID ? crypto.randomUUID() : null;
+    function logTap(screen, didSend) {
+      if (visit) sb.rpc('comic_tap', { p_visit: visit, p_via: via, p_screen: screen, p_sent: !!didSend }).then(function () {}, function () {});
+    }
     var answers = { name: who }, sent = false;
     if (tag) {
       STEPS[0] = { band: 'For ' + esc(who), title: 'Sam wants your notes.', html:
@@ -254,6 +260,7 @@
       sb.rpc('comic_feedback_submit', { p_tag: 'booking' + (via ? ':' + via : ''), p_data: data, p_max_screen: i + 1 }).then(function (res) {
         if (res.error) throw res.error;
         sent = true;
+        logTap(i + 1, true);
         sb.functions.invoke('job-applied', { body: { id: res.data, kind: 'comic' } }).catch(function () {});
         go(i + 1);
       }).catch(function (e) {
@@ -340,6 +347,7 @@
       };
       if ($('next')) $('next').onclick = s.roast ? send : s.book ? sendBooking : next;
       if (tag) sb.rpc('comic_view', { p_tag: tag, p_screen: i + 1 }).then(function () {}, function () {});
+      else logTap(i + 1);
       if ($('back')) $('back').onclick = back;
       if ($('again')) $('again').onclick = function () { go(0); };
       try { history.replaceState(null, '', i ? '#' + (i + 1) : location.pathname + location.search); } catch (e) {}
