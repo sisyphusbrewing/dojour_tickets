@@ -13,7 +13,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 /* One phone-height stage. Wonka by way of Seuss: candy stripes, a golden ticket, rhyming copy.
    ?t=<share_token> (from the "copy comic link" button on the CSS page) personalizes it via the css_reveal RPC;
-   the bare link asks for their name (css-lookup edge function) and finds or starts their score. Screens are built one at a time with Sam. */
+   without a valid token the machine stays asleep (the one-night public name box came down Oct 25). Screens are built one at a time with Sam. */
 :root {
   --plum: #3b1f4f;
   --plum-deep: #24112f;
@@ -148,10 +148,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 #s5 .readout { min-height: 0; }
 .sign { font: 400 clamp(17px, 5cqw, 21px)/1.2 var(--seuss); color: var(--cream); opacity: .9; }
 
-/* Name box (bare link; open to everyone for the night of Oct 25, Sam) + first-measuring screen */
-.entry input { font: 400 18px/1.2 var(--body); padding: 12px 14px; border-radius: 10px; border: 2px solid var(--gold); background: var(--cream); color: var(--ink); width: 100%; }
-.entry .err { color: #ff9aa0; font-size: 14px; min-height: 1.2em; }
-.entry .btn { justify-self: center; }
+/* Waiting-on-a-score dots */
 .dots::after { content: ""; animation: dots 1.5s steps(4) infinite; }
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
 
@@ -162,23 +159,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 <div class="stage" id="stage">
   <canvas id="fx"></canvas>
 
-  <!-- Bare link: the comic types their name; css-lookup finds or starts their score. -->
-  <section class="screen" id="ask" hidden>
-    <form class="entry" id="askForm" autocomplete="off">
-      <h2>Who goes there?</h2>
-      <p>The Good-Enough-o-Matic only measures real, live comedians. Type your name the way you bill it.</p>
-      <input id="askName" type="text" maxlength="80" placeholder="Your stage name" aria-label="Your name" enterkeyhint="go">
-      <div class="err" id="askErr"></div>
-      <button class="btn" id="askGo" type="submit">Ring the bell</button>
-    </form>
-  </section>
-
-  <!-- New comic (or an unfinished ticket): poll css_reveal until the score lands. -->
+  <!-- No ticket, a bad one, or one still being scored: links only come from the manager-only CSS page. -->
   <section class="screen" id="noticket" hidden>
     <div class="entry">
       <h2 id="ntTitle">The machine has never met you!</h2>
       <p id="ntBody">It's out looking you up right now: your clips, your fans, your crowds. That takes a few minutes. Keep this page open and it will wake up on its own<span class="dots"></span></p>
-      <button class="btn" id="ntAgain" type="button" hidden>Try a different name</button>
     </div>
   </section>
 
@@ -473,44 +458,24 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
     try { const res = await sb.rpc("css_reveal", { token: t }); return res.error ? { err: true } : { data: res.data }; } catch (e) { return { err: true }; }
   }
   function asleep(title, body) {
-    $("ntTitle").textContent = title; $("ntBody").textContent = body; $("ntAgain").hidden = false; show("noticket");
+    $("ntTitle").textContent = title; $("ntBody").textContent = body; show("noticket");
   }
   let pollT = null;
   async function waitFor(t, tries) {
-    $("ntTitle").textContent = "The machine has never met you!"; $("ntAgain").hidden = true; show("noticket");
+    $("ntTitle").textContent = "The machine has never met you!"; show("noticket");
     const r = await fetchReveal(t);
     if (r.data) { greet(r.data); return; }
     if (tries <= 0) { asleep("The machine is still measuring.", "Some comics take a while. Open this same page again in a few minutes."); return; }
     pollT = setTimeout(() => waitFor(t, tries - 1), 20000);
   }
   async function wake() {
-    if (!token) { show("ask"); return; }
-    if (!/^[0-9a-f]{16,64}$/i.test(token)) { asleep("That ticket looks smudged.", "Open the exact link you were sent, or type your name to get a fresh one."); return; }
+    if (!token) { asleep("The machine is asleep.", "It only wakes up for a golden ticket, and golden tickets only come from Sisyphus. If someone sent you one, open the exact link they sent."); return; }
+    if (!/^[0-9a-f]{16,64}$/i.test(token)) { asleep("That ticket looks smudged.", "Open the exact link you were sent."); return; }
     const r = await fetchReveal(token);
     if (r.err) { asleep("The machine hiccuped.", "Give it a minute and open the link again."); return; }
     if (r.data) { greet(r.data); return; }
     waitFor(token, 18);   // not scored yet: about 6 minutes of patience
   }
-  $("askForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const name = $("askName").value.trim();
-    if (name.split(/\s+/).length < 2) { $("askErr").textContent = "First and last name, please. The machine is formal."; return; }
-    $("askErr").textContent = ""; $("askGo").disabled = true; $("askGo").textContent = "Ding dong…";
-    let out = null, msg = "";
-    try {
-      const { data, error } = await sb.functions.invoke("css-lookup", { body: { name } });
-      if (error) { try { msg = (await error.context.json()).error || ""; } catch (x) {} }
-      else out = data;
-    } catch (x) {}
-    $("askGo").disabled = false; $("askGo").textContent = "Ring the bell";
-    if (out && out.status === "not_found") { $("askErr").textContent = "The machine looked everywhere and couldn't find you. Try the name you perform under."; return; }
-    if (!out || !out.token) { $("askErr").textContent = msg || (out && out.error) || "The machine is asleep. Try again later."; return; }
-    history.replaceState(null, "", `?t=${out.token}`);   // a refresh keeps their ticket
-    chime();
-    const r = await fetchReveal(out.token);
-    if (r.data) greet(r.data); else waitFor(out.token, 24);
-  });
-  $("ntAgain").addEventListener("click", () => { clearTimeout(pollT); history.replaceState(null, "", location.pathname); $("askName").value = ""; show("ask"); });
   wake();
   $("enter").addEventListener("click", () => { chime(); st = stations(reveal); needle(0); show("s2"); });
 })();
