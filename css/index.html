@@ -21,7 +21,7 @@
     .comic { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); cursor: pointer; }
     .comic.waiting { background: transparent; cursor: default; }
     .grade { flex: 0 0 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; font-family: var(--head); font-weight: 700; font-size: 26px; padding-top: 3px; color: #fff; }
-    .g-A { background: #3d7a52; } .g-B { background: var(--slate); } .g-C { background: #8a6d2f; } .g-D { background: var(--danger); } .g-x { background: var(--line); font-size: 18px; }
+    .g-S { background: #6b4fa0; } .g-A { background: #3d7a52; } .g-B { background: var(--slate); } .g-C { background: #8a6d2f; } .g-D, .g-F { background: var(--danger); } .g-x { background: var(--line); font-size: 18px; }
     .c-main { min-width: 0; flex: 1 1 auto; }
     .c-name { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; line-height: 1.15; padding-top: 2px; word-break: break-word; }
     .c-sub { color: var(--gray); font-size: 13px; margin-top: 3px; }
@@ -92,7 +92,7 @@
     <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
     <div id="sheet">
       <p class="intro">Out of 100: draw here 30, Instagram 12, Reddit 6, TikTok 6, YouTube 6, local pull 10, momentum 5, and your house stars 25.
-        Under 35 is a D, about where a show stops paying for itself. 🙂 moves a comic up a grade, 🙁 down one. Tap a comic for the breakdown and notes.</p>
+        Grades run F to S on a bell curve against every comic who's played here. 💸 marks under 35 points, about where a show stops paying for itself. 🙂 moves a comic up a grade, 🙁 down one. Tap a comic for the breakdown and notes.</p>
       <div id="list"><div class="empty">Loading comics…</div></div>
     </div>
   </main>
@@ -148,25 +148,43 @@
       return p;
     }
     function total(c) { var p = pts(c); return Math.round(LABELS.reduce(function (s, l) { return s + (Number(p[l[0]]) || 0); }, 0)); }
-    function baseGrade(t) { return t >= 60 ? 'A' : t >= 45 ? 'B' : t >= 35 ? 'C' : 'D'; }
-    function grade(c) { var i = 'ABCD'.indexOf(baseGrade(total(c))) - (c.likeability || 0); return 'ABCD'[Math.max(0, Math.min(3, i))]; }
+    // Grades are on a bell curve against every comic who has played here
+    // (mean and spread recomputed on load): C is the middle, within half a
+    // standard deviation; B/D the next band out; A +1.5, S +2, F below -1.5.
+    // Break-even is separate: under 35 points is about where a show stops
+    // paying for itself, whatever the grade.
+    var curve = { mu: 46, sd: 13 };
+    function setCurve() {
+      var t = comics.filter(function (c) { return scored(c) && !c.draw_estimated; }).map(total);
+      if (t.length < 10) return;
+      var mu = t.reduce(function (a, b) { return a + b; }, 0) / t.length;
+      var sd = Math.sqrt(t.reduce(function (a, b) { return a + (b - mu) * (b - mu); }, 0) / t.length);
+      curve = { mu: mu, sd: sd || 1 };
+    }
+    function baseGrade(t) {
+      var z = (t - curve.mu) / curve.sd;
+      return z >= 2 ? 'S' : z >= 1.5 ? 'A' : z >= 0.5 ? 'B' : z >= -0.5 ? 'C' : z >= -1.5 ? 'D' : 'F';
+    }
+    function underBreakEven(c) { return total(c) < 35; }
+    function grade(c) { var i = 'SABCDF'.indexOf(baseGrade(total(c))) - (c.likeability || 0); return 'SABCDF'[Math.max(0, Math.min(5, i))]; }
     function scored(c) { return c.status === 'scored'; }
 
     async function load() {
       var res = await sb.from('comic_scores').select('*');
       if (res.error) { toast(res.error.message, true); return; }
       comics = res.data || [];
+      setCurve();
       render();
       clearTimeout(pollTimer);
       if (comics.some(function (c) { return c.status === 'requested'; })) pollTimer = setTimeout(load, 30000);
     }
 
     function render() {
-      var counts = { A: 0, B: 0, C: 0, D: 0 };
+      var counts = { S: 0, A: 0, B: 0, C: 0, D: 0, F: 0 };
       comics.filter(scored).forEach(function (c) { counts[grade(c)]++; });
       var waiting = comics.filter(function (c) { return !scored(c); }).length;
-      $('summary').textContent = comics.length + ' comics · ' + counts.A + ' A · ' + counts.D + ' D';
-      var fl = [['all', 'Everyone'], ['A', 'A · ' + counts.A], ['B', 'B · ' + counts.B], ['C', 'C · ' + counts.C], ['D', 'D · ' + counts.D]];
+      $('summary').textContent = comics.length + ' comics · ' + comics.filter(function (c) { return scored(c) && underBreakEven(c); }).length + ' under break-even';
+      var fl = [['all', 'Everyone']].concat('SABCDF'.split('').map(function (g) { return [g, g + ' · ' + counts[g]]; }));
       if (waiting) fl.push(['wait', 'Waiting · ' + waiting]);
       $('filters').innerHTML = fl.map(function (f) { return '<button class="chip' + (filter === f[0] ? ' on' : '') + '" type="button" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('');
       var q = $('search').value.trim().toLowerCase();
@@ -190,6 +208,7 @@
       var t = total(c), g = grade(c), base = baseGrade(t), inp = c.inputs || {};
       var bits = [t + ' pts'];
       if (g !== base) bits.push('<span class="shift">' + base + ' → ' + g + '</span>');
+      if (underBreakEven(c)) bits.push('<span class="shift">💸 under break-even</span>');
       bits.push(c.draw_estimated ? '~' + c.per_show + '/show est.' : c.per_show + '/show here');
       bits.push('IG ' + k(inp.ig) + ' · Reddit ' + k(inp.reddit_votes));
       if (c.house_stars) bits.push('★'.repeat(c.house_stars));
@@ -204,6 +223,7 @@
       var res = await sb.from('comic_scores').update(patch).eq('comedian', c.comedian).select().single();
       if (res.error) { toast('Save failed: ' + res.error.message, true); return false; }
       Object.assign(c, res.data);
+      setCurve();
       render();
       if (open === c) showDetail(c);
       return true;
@@ -214,7 +234,7 @@
       var p = pts(c), t = total(c), g = grade(c), base = baseGrade(t), inp = c.inputs || {};
       $('d_name').textContent = c.comedian;
       $('d_total').innerHTML = '<b>' + t + ' points, grade ' + g + '</b>' + (g !== base ? ' (' + base + ' on points, moved by the face)' : '') +
-        '. ' + (c.draw_estimated ? 'Never played here; draw is estimated at about ' + c.per_show + ' tickets a show.' : 'Sells about ' + c.per_show + ' tickets a show here.');
+        (underBreakEven(c) ? '. 💸 Under break-even (35)' : '') + '. ' + (c.draw_estimated ? 'Never played here; draw is estimated at about ' + c.per_show + ' tickets a show.' : 'Sells about ' + c.per_show + ' tickets a show here.');
       $('d_bars').innerHTML = LABELS.map(function (l) {
         var v = Number(p[l[0]]) || 0;
         return '<div><span>' + l[1] + '</span><span class="bar"><i style="width:' + Math.round(100 * v / l[2]) + '%"></i></span><b>' + (Math.round(v * 10) / 10) + '/' + l[2] + '</b></div>';
