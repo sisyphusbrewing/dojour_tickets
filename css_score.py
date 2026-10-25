@@ -211,6 +211,12 @@ def runs_here(name, history):
 
 # ---------- points ----------
 
+# Reddit blocks GitHub's servers, so a comic added from the page often can't be
+# checked there. Unchecked (None) counts as a typical past headliner (median
+# ~1,300 votes a year), not as zero buzz.
+REDDIT_UNCHECKED = 1300
+
+
 def reach_per_show(ig, reddit_votes, twin_cities):
     # Tickets/show from reach, fit on the 91 past headliners with Instagram (R2 0.45);
     # a Reddit-only fit when no Instagram account was found.
@@ -223,11 +229,12 @@ def reach_per_show(ig, reddit_votes, twin_cities):
 
 def points(c):
     runs = sorted(c["runs"])
+    rv = REDDIT_UNCHECKED if c["reddit_votes"] is None else c["reddit_votes"]
     if runs:
         w = [0.5 ** i for i in range(len(runs))][::-1]   # latest run counts 1, the one before 1/2, ...
         per = sum(wi * t / n for wi, (d, t, n) in zip(w, runs)) / sum(w)
     else:
-        per = reach_per_show(c["ig"], c["reddit_votes"], c["twin_cities"])
+        per = reach_per_show(c["ig"], rv, c["twin_cities"])
     momentum = 2.5
     if len(runs) >= 2:
         ratio = (runs[-1][1] / runs[-1][2]) / max(1, runs[-2][1] / runs[-2][2])
@@ -235,7 +242,7 @@ def points(c):
     pts = {
         "draw_here": 30 * clamp(per / 90),
         "instagram": 12 * clamp((L(c["ig"]) - 3) / 3.3),
-        "reddit": 6 * clamp((L(c["reddit_votes"]) - 1) / 4),
+        "reddit": 6 * clamp((L(rv) - 1) / 4),
         "tiktok": 6 * clamp((L(c["tiktok"]) - 3) / 3.3),
         "youtube": 6 * clamp((L(c["youtube"]) - 3) / 3),
         # r/Minneapolis + r/TwinCities searches also return posts that don't name the
