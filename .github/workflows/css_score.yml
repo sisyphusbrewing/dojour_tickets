@@ -1,0 +1,37 @@
+name: Comic scores
+
+# CSS, the Comic Scoring System (css/index.html, staff hub > CSS). Looks up
+# comics added on the page (Instagram, TikTok, YouTube, Reddit, and every show
+# they've done here from show_history) and saves their points to Supabase
+# comic_scores (css_score.py). The page starts this through the
+# "run-workflow" Supabase function when a name is added. Run it by hand with
+# "Re-measure everyone" to refresh every comic's followers and buzz.
+
+on:
+  workflow_dispatch:
+    inputs:
+      all:
+        description: 'Re-measure everyone, not just new names'
+        type: boolean
+        default: false
+
+concurrency:
+  group: css-score
+  cancel-in-progress: false
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests playwright && python -m playwright install --with-deps chromium
+      - name: Score comics
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SCORE_ALL: ${{ inputs.all && '1' || '' }}
+        run: python css_score.py
