@@ -210,6 +210,11 @@
       } else {
         how = escapeHtml(p.method) + (p.handle ? ' · ' + escapeHtml(p.handle) : '') + (p.method === 'Check' && p.legal_name ? ' · to ' + escapeHtml(p.legal_name) : '');
       }
+      // The headliner's ticket-fee split from the get-paid page, until it's on the sheet.
+      var fs = l.status === 'owed' && l.role === 'Headliner' && p.request && p.request.fee_split;
+      if (fs && fs.length && !p.request.fee_added_at) how += '<br><span class="okay">Fee split</span> ' +
+        fs.map(function (r) { return escapeHtml(r.name) + ' ' + money(r.amount); }).join(', ') +
+        ' · <a href="#" data-act="addfee">Add to sheet</a>';
 
       var act;
       if (l.status === 'paid') {
@@ -316,6 +321,27 @@
       finally { $('saveLine').disabled = false; }
     });
 
+    // One line per comic from the headliner's split, then stamp it as added.
+    async function addFeeSplit(l) {
+      var p = payeeOf(l), fs = p.request.fee_split;
+      if (!confirm('Add ' + fs.length + ' ticket-fee lines for ' + l.show_name + '?')) return;
+      try {
+        for (var i = 0; i < fs.length; i++) {
+          var who = await payeeByName(fs[i].name);
+          var res = await sb.from('payouts').insert({ payee_id: who.id, show_name: l.show_name, show_end: l.show_end,
+            role: 'Host / feature', amount: fs[i].amount, memo: 'Ticket fee share' }).select().single();
+          if (res.error) throw res.error;
+          lines.push(res.data);
+        }
+        var rq = Object.assign({}, p.request, { fee_added_at: new Date().toISOString() });
+        var up = await sb.from('payees').update({ request: rq }).eq('id', p.id);
+        if (up.error) throw up.error;
+        p.request = rq;
+        render();
+        toast('Added. Tap each name to get their pay info.');
+      } catch (ex) { toast('Add failed: ' + ex.message, true); }
+    }
+
     async function removeLine() {
       if (!editing || !confirm('Delete this line? Nothing is paid or unpaid by deleting it.')) return;
       var res = await sb.from('payouts').delete().eq('id', editing.id);
@@ -391,6 +417,7 @@
       var a = act.dataset.act;
       if (a === 'edit') { e.preventDefault(); editLine(l.id); }
       else if (a === 'payee') editPayee(payeeOf(l));
+      else if (a === 'addfee') { e.preventDefault(); addFeeSplit(l); }
       else if (a === 'paid') markPaid(l, true);
       else if (a === 'unpay') markPaid(l, false);
       else if (a === 'copy') { var p = payeeOf(l); copyText(p.handle + '  ' + Number(l.amount).toFixed(2), 'Copied ' + p.handle + ' and ' + money(l.amount) + '. Open your bank app.'); }
