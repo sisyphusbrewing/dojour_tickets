@@ -186,11 +186,15 @@ def show_history():
 
 def runs_here(name, history):
     """[(date, tickets, shows)] for runs whose title names the comic. Shows
-    within 4 days are one run; venue holds (60+ tickets on 3 or fewer orders)
-    and runs under 15 tickets are left out."""
+    within 4 days are one run; canceled dates, venue holds (60+ tickets on 3
+    or fewer orders) and runs under 15 tickets are left out."""
     key, shows = simp(name), []
     for r in history:
-        if not r.get("starts_at") or key not in simp(r.get("show_title") or r.get("event_title")):
+        title = r.get("show_title") or r.get("event_title") or ""
+        if not r.get("starts_at") or key not in simp(title):
+            continue
+        # A canceled date often sits next to the real one with 0 tickets; it isn't a show.
+        if re.search(r"cancel+ed|postponed", title + " " + (r.get("event_title") or ""), re.I) or not r["tickets"]:
             continue
         dt = datetime.fromisoformat(r["starts_at"].replace("Z", "+00:00"))
         if dt > datetime.now(dt.tzinfo) or (r["tickets"] >= 60 and r["orders"] <= 3):
