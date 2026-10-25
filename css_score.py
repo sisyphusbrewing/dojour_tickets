@@ -11,8 +11,9 @@ re-measures everyone. For each comic:
   - Reddit buzz: votes on the top posts naming them in the past year, plus
     posts in r/Minneapolis and r/TwinCities (Reddit only loads in a browser).
   - Tickets per show here, from show_history (Dojour), recent runs counting most.
-The weights come from 105 past headliners (Oct 2026): Reddit buzz predicted
-tickets/show best (R2 0.56), Instagram next (0.38), both together 0.64.
+The weights come from 105 past headliners (Oct 2026): Instagram predicted
+tickets/show best (rank correlation 0.67), then YouTube and Reddit (0.37, 0.36)
+and TikTok (0.27); Sam wants all of them in the score, not Instagram alone.
 House stars, the likeability face and notes are set on the page, which adds
 everything up.
 """
@@ -207,12 +208,12 @@ def runs_here(name, history):
 # ---------- points ----------
 
 def reach_per_show(ig, reddit_votes, twin_cities):
-    # Tickets/show from reach, fit on the 91 past headliners with Instagram (R2 0.64);
-    # the Reddit-only fit (R2 0.56) when no Instagram account was found.
+    # Tickets/show from reach, fit on the 91 past headliners with Instagram (R2 0.45);
+    # a Reddit-only fit when no Instagram account was found.
     if ig:
-        p = -15.0 + 11.0 * L(ig) + 7.9 * L(reddit_votes) + 11.6 * bool(twin_cities)
+        p = -48.4 + 19.2 * L(ig) + 3.7 * L(reddit_votes) + 21.5 * bool(twin_cities)
     else:
-        p = 32.4 + 10.6 * L(reddit_votes)
+        p = 32.0 + 8.1 * L(reddit_votes)
     return max(10, min(90, p))
 
 
@@ -229,10 +230,10 @@ def points(c):
         momentum = 2.5 + 2.5 * max(-1, min(1, (ratio - 1) / 0.5))
     pts = {
         "draw_here": 30 * clamp(per / 90),
-        "reddit": 15 * clamp((L(c["reddit_votes"]) - 1) / 4),
-        "instagram": 9 * clamp((L(c["ig"]) - 3) / 3.3),
-        "tiktok": 3 * clamp((L(c["tiktok"]) - 3) / 3.3),
-        "youtube": 3 * clamp((L(c["youtube"]) - 3) / 3),
+        "instagram": 12 * clamp((L(c["ig"]) - 3) / 3.3),
+        "reddit": 6 * clamp((L(c["reddit_votes"]) - 1) / 4),
+        "tiktok": 6 * clamp((L(c["tiktok"]) - 3) / 3.3),
+        "youtube": 6 * clamp((L(c["youtube"]) - 3) / 3),
         "local": 10.0 if c["twin_cities"] else float(min(5, c["reddit_local_posts"] or 0)),
         "momentum": momentum,
     }
