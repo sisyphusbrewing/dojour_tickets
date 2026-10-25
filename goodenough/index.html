@@ -7,11 +7,13 @@
 <meta property="og:title" content="The Good-Enough-o-Matic">
 <meta property="og:description" content="A machine at Sisyphus has been waiting for you.">
 <title>The Good-Enough-o-Matic</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Henny+Penny&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 /* One phone-height stage. Wonka by way of Seuss: candy stripes, a golden ticket, rhyming copy.
-   ?n=Name personalizes it; with no name, a manager types one in and gets the link. Screens are built one at a time with Sam. */
+   ?t=<share_token> (from the "copy comic link" button on the CSS page) personalizes it via the css_reveal RPC;
+   without a valid token the machine stays asleep. Screens are built one at a time with Sam. */
 :root {
   --plum: #3b1f4f;
   --plum-deep: #24112f;
@@ -73,14 +75,10 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 .from { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
 .from b { background: var(--slate); color: var(--cream); padding: .15em .45em; display: inline-block; transform: rotate(-3deg); letter-spacing: .1em; }
 
-/* Name entry (for Sam) */
+/* No-ticket screen */
 .entry { width: 100%; max-width: 420px; background: rgba(36,17,47,.85); border: 2px solid rgba(242,193,78,.5); border-radius: 18px; padding: 20px; display: grid; gap: 12px; text-align: left; }
 .entry h2 { margin: 0; font: 400 clamp(26px, 8cqw, 36px)/1.05 var(--seuss); color: var(--gold); }
 .entry p { margin: 0; font-size: 14px; line-height: 1.4; opacity: .9; }
-.entry input { font: 400 18px/1.2 var(--body); padding: 12px 14px; border-radius: 10px; border: 2px solid var(--gold); background: var(--cream); color: var(--ink); width: 100%; }
-.entry .row { display: flex; gap: 8px; flex-wrap: wrap; }
-.entry .small { font: 700 15px/1 var(--body); padding: 12px 14px; border-radius: 10px; border: 0; background: var(--gold); color: var(--ink); cursor: pointer; }
-.entry .small.alt { background: transparent; color: var(--cream); box-shadow: inset 0 0 0 2px rgba(255,247,226,.4); }
 .link { font: 400 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; background: rgba(255,247,226,.08); padding: 8px 10px; border-radius: 8px; }
 
 .next { max-width: 420px; display: grid; gap: 10px; }
@@ -94,17 +92,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 <div class="stage" id="stage">
   <canvas id="fx"></canvas>
 
-  <!-- For Sam: type a comic's name, get their link. -->
-  <section class="screen" id="entry" hidden>
+  <!-- No (or a bad) ticket: links only come from the manager-only CSS page. -->
+  <section class="screen" id="noticket" hidden>
     <div class="entry">
-      <h2>Who's walking in?</h2>
-      <p>Type the comic's first name. You'll get a link to text them. Their name shows up all over the machine.</p>
-      <input id="nameIn" type="text" autocomplete="off" placeholder="Dayton" maxlength="40" aria-label="Comic's name">
-      <div class="row">
-        <button class="small" id="make" type="button">Make the link</button>
-        <button class="small alt" id="try" type="button">Try it</button>
-      </div>
-      <div class="link" id="link" hidden></div>
+      <h2 id="ntTitle">The machine is asleep.</h2>
+      <p id="ntBody">It only wakes up for a golden ticket, and golden tickets only come from Sisyphus. If someone sent you one, open the exact link they sent.</p>
     </div>
   </section>
 
@@ -144,9 +136,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const params = new URLSearchParams(location.search);
-  const clean = s => (s || "").replace(/[<>]/g, "").trim().slice(0, 40);
-  const name = clean(params.get("n"));
+  const token = new URLSearchParams(location.search).get("t") || "";
+  const sb = window.supabase.createClient("https://idsdwkubqnavkazlteis.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ",
+    { auth: { persistSession: false } });
+  let reveal = null;   // css_reveal result; the last screen uses it
 
   function show(id) { document.querySelectorAll(".screen").forEach(s => s.hidden = s.id !== id); }
 
@@ -179,23 +173,19 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
     [784, 988, 1175, 1568].forEach((f, i) => { const o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + i * .08; o.type = "triangle"; o.frequency.value = f; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.12, t0 + .01); g.gain.exponentialRampToValueAtTime(.001, t0 + .9); o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + 1); });
   }
 
-  function linkFor(n) { return location.origin + location.pathname + "?n=" + encodeURIComponent(n); }
-
-  if (name) {
-    $("who1").textContent = name; $("who2").textContent = name;
-    document.title = `${name}, the Good-Enough-o-Matic awaits`;
+  async function wake() {
+    if (!/^[0-9a-f]{16,64}$/i.test(token)) { show("noticket"); return; }
+    let res;
+    try { res = await sb.rpc("css_reveal", { token }); } catch (e) { res = { error: e }; }
+    if (res.error) { $("ntTitle").textContent = "The machine hiccuped."; $("ntBody").textContent = "Give it a minute and open the link again."; show("noticket"); return; }
+    if (!res.data) { show("noticket"); return; }
+    reveal = res.data;
+    const first = String(reveal.comedian || "Friend").trim().split(/\s+/)[0];
+    $("who1").textContent = first; $("who2").textContent = first;
+    document.title = `${first}, the Good-Enough-o-Matic awaits`;
     show("s1");
-  } else {
-    show("entry");
-    $("make").addEventListener("click", async () => {
-      const n = clean($("nameIn").value); if (!n) { $("nameIn").focus(); return; }
-      const url = linkFor(n), box = $("link");
-      box.hidden = false; box.textContent = url;
-      try { await navigator.clipboard.writeText(url); box.textContent = url + "  (copied)"; } catch(e) {}
-    });
-    $("try").addEventListener("click", () => { const n = clean($("nameIn").value); if (n) location.href = linkFor(n); else $("nameIn").focus(); });
-    $("nameIn").addEventListener("keydown", e => { if (e.key === "Enter") $("make").click(); });
   }
+  wake();
   $("enter").addEventListener("click", () => { chime(); show("s2"); });
 })();
 </script>
