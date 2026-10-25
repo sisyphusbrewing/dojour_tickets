@@ -24,7 +24,7 @@ import re
 import sys
 import unicodedata
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import requests
 
@@ -104,6 +104,35 @@ def tiktok(handle, name):
         return None
 
 
+NOT_HANDLES = {"p", "reel", "reels", "explore", "stories", "tv", "accounts", "about", "developer", "legal", "direct", "share"}
+
+
+def web_handles(name, yt):
+    """Instagram and TikTok handles from the comic's YouTube About links and a
+    web search. Plenty of comics don't use their name (Ryan Kahl is
+    @idiotryankahl), so guessing from the name alone misses them. Search
+    engines often turn servers away; then this just finds fewer."""
+    ig, tt, pages = {}, {}, []
+    if yt and yt.get("handle"):
+        pages.append(("https://www.youtube.com/@" + yt["handle"] + "/about", {}))
+    pages.append(("https://html.duckduckgo.com/html/", {"q": f'"{name}" comedian instagram'}))
+    for url, params in pages:
+        try:
+            h = unquote(requests.get(url, params=params, headers={"User-Agent": UA, "Accept-Language": "en-US"}, timeout=20).text)
+        except Exception as e:
+            print(f"  web: {e}")
+            continue
+        for m in re.finditer(r"instagram\.com/([A-Za-z0-9_.]{2,30})", h):
+            x = m.group(1).rstrip(".").lower()
+            if x not in NOT_HANDLES:
+                ig[x] = ig.get(x, 0) + 1
+        for m in re.finditer(r"tiktok\.com/@([A-Za-z0-9_.]{2,30})", h):
+            x = m.group(1).rstrip(".").lower()
+            tt[x] = tt.get(x, 0) + 1
+    top = lambda d: [k for k, _ in sorted(d.items(), key=lambda kv: -kv[1])][:5]
+    return top(ig), top(tt)
+
+
 def guesses(name, yt):
     base, f, l = simp(name), simp(name.split()[0]), simp(name.split()[-1])
     g = ([yt["handle"]] if yt and yt.get("handle") else []) + \
@@ -115,7 +144,7 @@ def guesses(name, yt):
     return out
 
 
-def instagram(page, name, handles):
+def instagram(page, name, handles, trusted=False):
     last, best = simp(name.split()[-1]), None
     for g in handles:
         try:
@@ -128,10 +157,10 @@ def instagram(page, name, handles):
             continue
         lines = [s.strip() for s in text.split("\n") if s.strip()]
         display = lines[1] if len(lines) > 1 else ""
-        if last not in simp(g) and last not in simp(display):
+        if not trusted and last not in simp(g) and last not in simp(display):
             continue
         n = num(m.group(1))
-        if n and n >= 1000 and (not best or n > best["followers"]):
+        if n and (trusted or n >= 1000) and (not best or n > best["followers"]):
             best = {"handle": g, "followers": n}
     return best
 
@@ -260,10 +289,20 @@ def measure(page, row, history):
     old = row.get("inputs") or {}
     yt = youtube(name)
     handles = guesses(name, yt)
-    if old.get("instagram_handle") and old["instagram_handle"] not in handles:
-        handles.insert(0, old["instagram_handle"])
-    tt = max((r for r in (tiktok(g, name) for g in handles) if r), key=lambda r: r["followers"] or 0, default=None)
-    ig = instagram(page, name, handles)
+    web_ig, web_tt = web_handles(name, yt)
+    ig_handles = web_ig + [g for g in handles if g not in web_ig]
+    if old.get("instagram_handle") and old["instagram_handle"] not in ig_handles:
+        ig_handles.insert(0, old["instagram_handle"])
+    tt = max((r for r in (tiktok(g, name) for g in web_tt + [g for g in handles if g not in web_tt]) if r),
+             key=lambda r: r["followers"] or 0, default=None)
+    # A handle a manager typed on the CSS page ("Fix Instagram") is the one, even
+    # if a bigger look-alike turns up. Some accounts turn off the embed page;
+    # then keep the follower count they typed.
+    if old.get("instagram_manual") and old.get("instagram_handle"):
+        ig = instagram(page, name, [old["instagram_handle"]], trusted=True) or \
+            {"handle": old["instagram_handle"], "followers": old.get("ig")}
+    else:
+        ig = instagram(page, name, ig_handles)
     # Reddit blocks some servers (GitHub's included). Then keep what we had,
     # and reddit_checked says the buzz wasn't re-measured this time.
     rd = reddit(page, name)
@@ -274,7 +313,7 @@ def measure(page, row, history):
          "youtube": (yt or {}).get("subs"), "youtube_handle": (yt or {}).get("handle"),
          "reddit_votes": rd.get("votes_year"), "reddit_posts": rd.get("posts_year"), "reddit_local_posts": rd.get("local_posts"),
          "twin_cities": bool(row.get("twin_cities")), "runs": runs_here(name, history),
-         "reddit_checked": rd.get("votes_year") is not None}
+         "reddit_checked": rd.get("votes_year") is not None, "instagram_manual": bool(old.get("instagram_manual"))}
     pts, per, estimated = points(c)
     found = any(c[k] for k in ("ig", "tiktok", "youtube", "reddit_votes")) or c["runs"]
     print(f"{name}: IG {c['ig']} TT {c['tiktok']} YT {c['youtube']} Reddit {c['reddit_votes']} runs {len(c['runs'])} -> "
