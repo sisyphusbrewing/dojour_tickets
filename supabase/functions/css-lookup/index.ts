@@ -9,6 +9,10 @@
 // Needs the same GITHUB_TOKEN secret as run-workflow.
 
 const REPO = "sisyphusbrewing/dojour_tickets";
+// The public name box was a one-night thing (Oct 25 2026). While ASLEEP, every
+// lookup gets 410 { status: "asleep" } and the page shows its asleep message;
+// Sam's ?t= links don't use this function. Flip to false to open it again.
+const ASLEEP = true;
 const MAX_NEW_PER_HOUR = 30;   // keeps a spammer from queueing hundreds of lookups
 
 const CORS = {
@@ -35,6 +39,7 @@ function cleanName(raw: string): string {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return respond(405, { error: "POST only" });
+  if (ASLEEP) return respond(410, { status: "asleep" });
 
   let name = "";
   try { name = cleanName(String((await req.json()).name ?? "")); } catch { /* bad body */ }
