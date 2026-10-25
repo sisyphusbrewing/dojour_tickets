@@ -53,6 +53,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events
 .face img, .face svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .shades { position: absolute; left: 14%; right: 14%; top: 30%; opacity: 0; transform: translateY(-260%); transition: transform .7s cubic-bezier(.3,1.5,.5,1), opacity .2s; pointer-events: none; }
 .booked .shades { opacity: 1; transform: none; }
+.dayton.photo .shades { left: 33%; right: 23%; top: 37%; }
 
 /* Worries */
 .worry {
@@ -145,7 +146,7 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
   <button class="dayton" id="dayton" type="button" aria-label="Dayton Bissett, relaxed">
     <div class="shake" id="shake">
       <div class="face" id="face">
-        <!-- Drawn stand-in. Drop a dayton.jpg next to this file and the photo takes over. -->
+        <!-- Drawn fallback; dayton.jpg (his punchup.live photo) replaces it on load. -->
         <svg viewBox="0 0 200 200" aria-hidden="true" id="drawn">
           <rect width="200" height="200" fill="#a9c3d8"/>
           <path d="M40 215 Q42 150 100 148 Q158 150 160 215Z" fill="#4a6c86"/>
@@ -263,7 +264,7 @@ h1 { margin: 0; font: 400 clamp(38px, 13cqw, 68px)/.95 var(--display); }
 
   // Use Dayton's photo if dayton.jpg is there; otherwise keep the drawn face.
   const img = new Image();
-  img.onload = () => { $("face").innerHTML = ""; img.alt = ""; $("face").appendChild(img); };
+  img.onload = () => { $("face").innerHTML = ""; img.alt = ""; $("face").appendChild(img); dayton.classList.add("photo"); };
   img.src = "dayton.jpg";
 
   function setChill(v) {
