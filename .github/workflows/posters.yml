@@ -58,11 +58,13 @@ jobs:
         run: python make_posters.py $HANDLES
 
       - name: Make social images
+        continue-on-error: true          # never let social images hold up the posters
         env:
           HANDLES: ${{ inputs.handles }}
         run: python make_social.py $HANDLES
 
       - name: Publish to the "social" release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           ONLY: ${{ inputs.handles }}
