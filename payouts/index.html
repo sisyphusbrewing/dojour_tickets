@@ -40,6 +40,7 @@
     .d-actions .grow { flex: 1; }
     .linkbox { display: flex; gap: 6px; margin-top: 6px; }
     .linkbox input { flex: 1; min-width: 0; }
+    .line.req { border-color: var(--slate-light); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
@@ -86,6 +87,7 @@
     <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
     <div id="sheet">
       <p class="intro" id="intro">Tap Pay and your Venmo, PayPal or Cash App opens with the amount filled in. Send it, come back, tap Paid so it’s logged.</p>
+      <div id="reqs"></div>
       <div id="list"><div class="empty">Counting what we owe…</div></div>
     </div>
   </main>
@@ -140,7 +142,7 @@
   <div id="toast" class="toast hidden"></div>
 
   <script>
-    var payees = [], lines = [], tab = 'owed', editing = null, editingPayee = null, me = '', mailTimer = null;
+    var payees = [], lines = [], reqs = [], tab = 'owed', editing = null, editingPayee = null, me = '', mailTimer = null;
     var GETPAID = 'https://staff.sisyphusbrewing.com/getpaid/?t=';
 
     function money(v) { var n = Number(v), a = Math.abs(n); return (n < 0 ? '−$' : '$') + (a % 1 ? a.toFixed(2) : a.toLocaleString('en-US')); }
@@ -162,8 +164,9 @@
     async function load() {
       var r1 = await sb.from('payees').select('*').order('name');
       var r2 = await sb.from('payouts').select('*').order('show_end', { ascending: false, nullsFirst: true }).order('created_at');
+      var r3 = await sb.from('pay_requests').select('*').eq('status', 'new').order('created_at');
       if (r1.error || r2.error) { toast((r1.error || r2.error).message, true); return; }
-      payees = r1.data || []; lines = r2.data || [];
+      payees = r1.data || []; lines = r2.data || []; reqs = r3.data || [];
       render();
     }
 
@@ -177,6 +180,7 @@
       $('shows').innerHTML = lines.map(function (l) { return l.show_name; }).filter(function (v, i, a) { return a.indexOf(v) === i; })
         .map(function (s) { return '<option value="' + escapeHtml(s) + '">'; }).join('');
       $('intro').classList.toggle('hidden', tab !== 'owed');
+      renderReqs();
       if (tab === 'year') { renderYear(); return; }
 
       var shown = lines.filter(function (l) { return l.status === tab; });
@@ -232,6 +236,82 @@
         '<div class="l-sub">' + bits.join(' · ') + ' · <a href="#" data-act="edit">change</a></div><div class="l-sub">' + how + '</div></div>' +
         '<div class="l-act">' + act + '</div></div>';
     }
+
+    // Requests from the public "Venmo me for this show" form (payme/), until a
+    // manager approves (matches or makes the payee and owed line) or dismisses.
+    var PAYME = 'https://staff.sisyphusbrewing.com/payme/';
+    function bare(h) { return String(h || '').replace(/^@/, '').trim().toLowerCase(); }
+    function firstWord(n) { return String(n || '').trim().split(/\s+/)[0].toLowerCase(); }
+    function reqMatch(q) {
+      return lines.find(function (l) {
+        if (l.status !== 'owed' || l.show_name.toLowerCase() !== q.show_name.toLowerCase()) return false;
+        var p = payeeOf(l);
+        return (p.handle && bare(p.handle) === bare(q.handle)) || String(p.name).toLowerCase() === q.name.toLowerCase() ||
+          (p.name && p.name.trim().indexOf(' ') === -1 && firstWord(p.name) === firstWord(q.name));
+      });
+    }
+    function renderReqs() {
+      if (tab !== 'owed' || !reqs.length) { $('reqs').innerHTML = ''; return; }
+      $('reqs').innerHTML = '<div class="band-row"><span class="band">Asking to be paid</span><span class="group-total">' + reqs.length + '</span></div>' +
+        '<div class="rows">' + reqs.map(function (q) {
+          var m = reqMatch(q);
+          var match = m ? '<span class="okay">On the sheet</span> as ' + escapeHtml(payeeOf(m).name) + ' ' + money(m.amount) +
+            (q.amount && Number(q.amount) !== Number(m.amount) ? ' <span class="warn">(they said ' + money(q.amount) + ')</span>' : '')
+            : '<span class="warn">Not on the sheet yet</span>';
+          return '<div class="line req" data-req="' + q.id + '"><div class="l-main">' +
+            '<div class="l-name">' + escapeHtml(q.name) + '<span class="amt">' + (q.amount ? money(q.amount) : '$?') + '</span></div>' +
+            '<div class="l-sub">' + escapeHtml(q.show_name) + (q.show_dates ? ' · ' + escapeHtml(q.show_dates) : '') + ' · ' + escapeHtml(q.role) +
+            ' · Venmo ' + escapeHtml(q.handle) + '</div>' +
+            '<div class="l-sub">' + [q.phone, q.email].filter(Boolean).map(escapeHtml).join(' · ') + (q.note ? '<br>“' + escapeHtml(q.note) + '”' : '') + '</div>' +
+            '<div class="l-sub">' + match + '</div></div>' +
+            '<div class="l-act"><button class="btn btn-sm btn-primary" type="button" data-act="approve">Approve</button>' +
+            '<button class="btn btn-sm" type="button" data-act="dismiss">Dismiss</button></div></div>';
+        }).join('') + '</div>' +
+        '<p class="help">The form comics use: <a href="#" data-act="copyform">' + PAYME + '</a></p>';
+    }
+    async function approveReq(q) {
+      try {
+        var m = reqMatch(q), p, line;
+        if (m) {
+          p = payeeOf(m); line = m;
+        } else {
+          var amt = Number(prompt('Pay ' + q.name + ' how much for ' + q.show_name + '?', q.amount ? Number(q.amount) : ''));
+          if (!(amt > 0)) return;
+          p = payees.find(function (x) { return x.handle && bare(x.handle) === bare(q.handle); }) || await payeeByName(q.name);
+          var ins = await sb.from('payouts').insert({ payee_id: p.id, show_name: q.show_name, show_end: q.show_end,
+            role: q.role, amount: amt, memo: q.show_dates ? q.role + ' · ' + q.show_dates : null, receipt_wanted: false }).select().single();
+          if (ins.error) throw ins.error;
+          line = ins.data; lines.push(line);
+        }
+        // Their Venmo from the form; a fuller name if we only had a first name.
+        var patch = { method: 'Venmo', handle: q.handle };
+        if (p.name.trim().indexOf(' ') === -1 && q.name.trim().indexOf(' ') > 0) patch.name = q.name.trim();
+        if (!p.email && q.email) patch.email = q.email;
+        if (!p.phone && q.phone) patch.phone = q.phone;
+        var up = await sb.from('payees').update(patch).eq('id', p.id).select().single();
+        if (up.error) throw up.error;
+        Object.assign(p, up.data);
+        var done = await sb.from('pay_requests').update({ status: 'approved', payout_id: line.id, handled_by: me, handled_at: new Date().toISOString() }).eq('id', q.id);
+        if (done.error) throw done.error;
+        reqs = reqs.filter(function (x) { return x !== q; });
+        render();
+        toast('Approved. Tap Pay on ' + p.name + '’s line.');
+      } catch (ex) { toast('Approve failed: ' + ex.message, true); }
+    }
+    async function dismissReq(q) {
+      if (!confirm('Dismiss ' + q.name + '’s request for ' + q.show_name + '? Nothing gets paid.')) return;
+      var res = await sb.from('pay_requests').update({ status: 'dismissed', handled_by: me, handled_at: new Date().toISOString() }).eq('id', q.id);
+      if (res.error) { toast(res.error.message, true); return; }
+      reqs = reqs.filter(function (x) { return x !== q; });
+      render();
+    }
+    $('reqs').addEventListener('click', function (e) {
+      var act = e.target.closest('[data-act]'); if (!act) return;
+      if (act.dataset.act === 'copyform') { e.preventDefault(); copyText(PAYME, 'Form link copied'); return; }
+      var el = e.target.closest('[data-req]'); if (!el) return;
+      var q = reqs.find(function (x) { return x.id === el.dataset.req; });
+      if (act.dataset.act === 'approve') approveReq(q); else if (act.dataset.act === 'dismiss') dismissReq(q);
+    });
 
     // The 1099 view: what each person got this calendar year, and W-9 status.
     function renderYear() {

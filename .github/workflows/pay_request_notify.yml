@@ -1,0 +1,35 @@
+name: Pay request
+
+# A comic asked to be paid on Venmo for a show (payme/index.html). The
+# "job-applied" Supabase function starts this, and it emails the request to
+# booking@ (pay_request_notify.py). Set the PAY_EMAIL_TO repo variable to send
+# them somewhere else.
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: 'pay_requests.id to email'
+        required: true
+        type: string
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email the request to booking
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          PAY_EMAIL_TO: ${{ vars.PAY_EMAIL_TO }}
+        run: python pay_request_notify.py

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Get Paid for a Show · Sisyphus</title>
+  <meta name="description" content="Did a show at Sisyphus? Tell Sam and get paid on Venmo.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Comic-facing, open to anyone: "I did a show, Venmo me." Goes through
+       pay_request(); lands on the pay sheet (payouts/index.html) for Sam to
+       approve, and booking@ gets an email. -->
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Get paid<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewForm">
+      <div class="show-card">
+        <div class="show-eyebrow">Did a show?</div>
+        <div class="show-name">Get paid on Venmo</div>
+        <div class="show-when">Tell Sam which show and where to send it.</div>
+      </div>
+
+      <form id="payForm" novalidate>
+        <div class="band-wrap"><span class="band">The show</span></div>
+        <div class="card"><div class="grid">
+          <div class="field full"><label for="f_show">Which show <span class="req">*</span></label>
+            <select class="input" id="f_show" required><option value="">Loading shows…</option></select></div>
+          <div class="field full hidden" id="otherField"><label for="f_other">Show name and date <span class="req">*</span></label>
+            <input class="input" id="f_other" maxlength="120" placeholder="Open mic, Tue Oct 20"></div>
+          <div class="field"><label for="f_role">What you did <span class="req">*</span></label>
+            <select class="input" id="f_role" required>
+              <option value="">Pick one</option>
+              <option>Host</option><option>Feature</option><option>Opener</option><option>Headliner</option><option>Other</option>
+            </select></div>
+          <div class="field"><label for="f_amount">Amount you were told</label>
+            <input class="input" id="f_amount" type="number" min="1" step="1" inputmode="decimal" placeholder="$">
+            <div class="help">If you know it.</div></div>
+        </div></div>
+
+        <div class="band-wrap"><span class="band">You</span></div>
+        <div class="card"><div class="grid">
+          <div class="field full"><label for="f_name">Your name <span class="req">*</span></label>
+            <input class="input" id="f_name" maxlength="120" autocomplete="name" required></div>
+          <div class="field full"><label for="f_handle">Venmo username <span class="req">*</span></label>
+            <input class="input" id="f_handle" maxlength="60" autocapitalize="none" autocorrect="off" placeholder="@yourname" required>
+            <div class="help">The one after the @. Double check it. Venmo doesn't give money back.</div></div>
+          <div class="field"><label for="f_phone">Phone</label><input class="input" id="f_phone" type="tel" maxlength="40" autocomplete="tel" inputmode="tel"></div>
+          <div class="field"><label for="f_email">Email</label><input class="input" id="f_email" type="email" maxlength="200" autocomplete="email" inputmode="email"></div>
+          <div class="field full"><label for="f_note">Anything else</label>
+            <textarea class="input" id="f_note" rows="2" maxlength="1000" placeholder="Which nights, who booked you"></textarea></div>
+        </div></div>
+
+        <div class="submit-row">
+          <div class="err hidden" id="formError"></div>
+          <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Send it to Sam</button>
+          <div class="help">Phone or email, one of them, so Sam can reach you.</div>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="done">
+        <div class="band-wrap"><span class="band">Sent</span></div>
+        <p class="done-big" id="doneLine"></p>
+        <p>Sam checks it against the show and sends it on Venmo. Questions: <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a>.</p>
+        <p class="camus">Il faut imaginer Sisyphe heureux. Easier when paid.</p>
+        <button class="btn" id="againBtn" type="button">Another show</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var shows = [];
+
+    function day(d, withDow) {
+      var p = d.split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2]);
+      return dt.toLocaleDateString('en-US', withDow ? { weekday: 'short', month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric' });
+    }
+    function when(s) {
+      if (s.first === s.last) return day(s.first, true);
+      var a = s.first.split('-'), b = s.last.split('-');
+      return a[1] === b[1] ? day(s.first) + '–' + +b[2] : day(s.first) + '–' + day(s.last);
+    }
+
+    $('f_show').addEventListener('change', function () {
+      $('otherField').classList.toggle('hidden', this.value !== 'other');
+    });
+
+    $('payForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = $('formError'), btn = $('sendBtn');
+      var fail = function (m) { err.textContent = m; err.classList.remove('hidden'); };
+      err.classList.add('hidden');
+      var pick = $('f_show').value, s = pick && pick !== 'other' ? shows[+pick] : null;
+      var showName = s ? s.title : $('f_other').value.trim();
+      if (!pick) return fail('Which show?');
+      if (!showName) return fail('Tell us the show name and date.');
+      if (!$('f_role').value) return fail('What did you do on the show?');
+      if (!$('f_name').value.trim()) return fail('We need your name.');
+      var handle = $('f_handle').value.trim().replace(/^https?:\/\/(www\.)?venmo\.com\/(u\/)?/i, '').replace(/\s+/g, '');
+      if (!handle) return fail('We need your Venmo username.');
+      if (handle.charAt(0) !== '@') handle = '@' + handle;
+      if (!$('f_phone').value.trim() && !$('f_email').value.trim()) return fail('Leave a phone or an email in case Sam has a question.');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        var res = await sb.rpc('pay_request', { p_data: {
+          show_name: showName, show_dates: s ? when(s) : '', show_end: s ? s.last : '',
+          role: $('f_role').value, amount: $('f_amount').value, name: $('f_name').value.trim(), handle: handle,
+          phone: $('f_phone').value.trim(), email: $('f_email').value.trim(), note: $('f_note').value.trim() } });
+        if (res.error) throw new Error(res.error.message);
+        sb.functions.invoke('job-applied', { body: { id: res.data, kind: 'pay' } }).catch(function () {});
+        $('doneLine').textContent = 'Got it. ' + showName + ', Venmo to ' + handle + '.';
+        $('payForm').reset(); $('otherField').classList.add('hidden');
+        $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden');
+        window.scrollTo(0, 0);
+      } catch (ex) {
+        fail(ex.message || 'That did not send. Try again?');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send it to Sam';
+      }
+    });
+    $('againBtn').addEventListener('click', function () {
+      $('viewDone').classList.add('hidden'); $('viewForm').classList.remove('hidden');
+    });
+
+    (async function boot() {
+      var res = await sb.rpc('pay_shows');
+      shows = (res.data || []);
+      $('f_show').innerHTML = '<option value="">Pick one</option>' + shows.map(function (s, i) {
+        var o = document.createElement('option'); o.value = i; o.textContent = s.title + ' · ' + when(s); return o.outerHTML;
+      }).join('') + '<option value="other">Another show (not listed)</option>';
+    })();
+  </script>
+</body>
+</html>
