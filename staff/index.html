@@ -14,8 +14,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../staff.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
   <style>
-    /* Staff start page: one tap to every tool. Each tool keeps its own login. */
+    /* Staff start page: one tap to every tool this login can open. */
     .intro { color: var(--muted); margin: 18px 0 4px; }
     .role-pick { margin-top: 14px; }
     .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
@@ -25,11 +27,25 @@
     .tile .ico { flex: 0 0 40px; height: 40px; border-radius: 10px; background: var(--slate); display: grid; place-items: center; font-size: 20px; }
     .tile b { display: block; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 14px; padding-top: 3px; }
     .tile span { display: block; color: var(--muted); font-size: 14px; margin-top: 4px; line-height: 1.35; }
-    .tile .lock { display: inline-block; margin-top: 6px; color: var(--slate-light); font-size: 12px; font-weight: 600; }
     .foot { color: var(--gray); font-size: 14px; margin-top: 30px; text-align: center; }
   </style>
 </head>
 <body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Staff</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
   <header>
     <div class="wrap">
       <div class="hdr">
@@ -38,7 +54,7 @@
           <div class="hdr-title">Staff<small>Everything, one tap away</small></div>
         </a>
       </div>
-      <div class="chips role-pick" id="roles">
+      <div class="chips role-pick hidden" id="roles">
         <button class="chip on" data-role="all">Everything</button>
         <button class="chip" data-role="events">Events</button>
         <button class="chip" data-role="comedy">Comedy</button>
@@ -47,54 +63,69 @@
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="wrap hidden" id="hub">
     <p class="intro">Pick a job, push a button. The boulder does not push itself.</p>
 
     <!-- data-roles says who sees a section when a role chip is picked. -->
     <section data-roles="events comedy bar">
       <div class="band-row"><span class="band">Show night</span></div>
       <div class="tiles">
-        <a class="tile" href="../"><div class="ico">🎟️</div><div><b>Door</b><span>Tonight's guest list and check-in.</span><em class="lock">Staff login</em></div></a>
-        <a class="tile" href="../timer/"><div class="ico">⏱️</div><div><b>Stage timer</b><span>The light the comic sees. Started from the Stream Deck.</span></div></a>
-        <a class="tile" href="stream-deck.html"><div class="ico">🎛️</div><div><b>Stream Deck guide</b><span>What every button and knob at the bar does.</span></div></a>
-        <a class="tile" href="../av/if-it-crashes.html"><div class="ico">🧯</div><div><b>If the show computer restarts</b><span>Get sound and lights back, step by step.</span></div></a>
+        <a class="tile" data-min="door" href="../"><div class="ico">🎟️</div><div><b>Door</b><span>Tonight's guest list and check-in.</span></div></a>
+        <a class="tile" data-min="staff" href="../timer/"><div class="ico">⏱️</div><div><b>Stage timer</b><span>The light the comic sees. Started from the Stream Deck.</span></div></a>
+        <a class="tile" data-min="staff" href="stream-deck.html"><div class="ico">🎛️</div><div><b>Stream Deck guide</b><span>What every button and knob at the bar does.</span></div></a>
+        <a class="tile" data-min="staff" href="../av/if-it-crashes.html"><div class="ico">🧯</div><div><b>If the show computer restarts</b><span>Get sound and lights back, step by step.</span></div></a>
+        <a class="tile" data-min="staff" href="../supplies/"><div class="ico">📦</div><div><b>Supplies</b><span>The stock sheet. Count it, and booking@ hears when something runs low.</span></div></a>
       </div>
     </section>
 
     <section data-roles="events">
       <div class="band-row"><span class="band">Events</span></div>
       <div class="tiles">
-        <a class="tile" href="../manager/"><div class="ico">📋</div><div><b>Manager</b><span>Guest lists for every show, ticket counts, new shows, staff logins.</span><em class="lock">Manager login</em></div></a>
-        <a class="tile" href="../supplies/"><div class="ico">📦</div><div><b>Supplies</b><span>The stock sheet. Count it, and booking@ hears when something runs low.</span><em class="lock">Manager login</em></div></a>
+        <a class="tile" data-min="manager" href="../manager/"><div class="ico">📋</div><div><b>Manager</b><span>Guest lists for every show, ticket counts, new shows, staff logins.</span></div></a>
       </div>
     </section>
 
     <section data-roles="comedy">
       <div class="band-row"><span class="band">Comedy</span></div>
       <div class="tiles">
-        <a class="tile" href="../advance/booking.html"><div class="ico">🎤</div><div><b>Booking desk</b><span>Comedian advances: who's booked, what they sent, what's missing.</span><em class="lock">Manager login</em></div></a>
-        <a class="tile" href="../payouts/"><div class="ico">💸</div><div><b>Pay comics</b><span>Who we owe. Tap Pay, send it, tap Paid.</span><em class="lock">Manager login</em></div></a>
-        <a class="tile" href="../payme/"><div class="ico">🙋</div><div><b>Comic pay request form</b><span>Send this to a comic who needs paying. Their request shows up on Pay comics.</span><em class="lock">Public link</em></div></a>
-        <a class="tile" href="../css/"><div class="ico">📊</div><div><b>CSS</b><span>Comic Scoring System. Grades, house stars, the face, and notes on every comic.</span><em class="lock">Manager login</em></div></a>
-        <a class="tile" href="../tank/review.html"><div class="ico">🦈</div><div><b>Sam's Tank pitches</b><span>Monthly show pitches to read and rate.</span><em class="lock">Manager login</em></div></a>
+        <a class="tile" data-min="manager" href="../advance/booking.html"><div class="ico">🎤</div><div><b>Booking desk</b><span>Comedian advances: who's booked, what they sent, what's missing.</span></div></a>
+        <a class="tile" data-min="owner" href="../payouts/"><div class="ico">💸</div><div><b>Pay comics</b><span>Who we owe. Tap Pay, send it, tap Paid.</span></div></a>
+        <a class="tile" data-min="manager" href="../payme/"><div class="ico">🙋</div><div><b>Comic pay request form</b><span>Send this to a comic who needs paying. Their request shows up on Pay comics.</span></div></a>
+        <a class="tile" data-min="owner" href="../css/"><div class="ico">📊</div><div><b>CSS</b><span>Comic Scoring System. Grades, house stars, the face, and notes on every comic.</span></div></a>
+        <a class="tile" data-min="manager" href="../tank/review.html"><div class="ico">🦈</div><div><b>Sam's Tank pitches</b><span>Monthly show pitches to read and rate.</span></div></a>
       </div>
     </section>
 
     <section data-roles="bar">
       <div class="band-row"><span class="band">Bar &amp; beer</span></div>
       <div class="tiles">
-        <a class="tile" href="../menu/print.html"><div class="ico">🖨️</div><div><b>Print menu</b><span>Today's taps on one page, straight from GoTab.</span></div></a>
-        <a class="tile" href="https://www.sisyphusbrewing.com/pages/tv-menu"><div class="ico">📺</div><div><b>TV menu board</b><span>What the taproom TV is showing.</span></div></a>
-        <a class="tile" href="../brewing/"><div class="ico">🍺</div><div><b>Batch log</b><span>Tanks, batches and recipes.</span><em class="lock">Manager login</em></div></a>
+        <a class="tile" data-min="staff" href="../menu/print.html"><div class="ico">🖨️</div><div><b>Print menu</b><span>Today's taps on one page, straight from GoTab.</span></div></a>
+        <a class="tile" data-min="staff" href="https://www.sisyphusbrewing.com/pages/tv-menu"><div class="ico">📺</div><div><b>TV menu board</b><span>What the taproom TV is showing.</span></div></a>
+        <a class="tile" data-min="manager" href="../brewing/"><div class="ico">🍺</div><div><b>Batch log</b><span>Tanks, batches and recipes.</span></div></a>
       </div>
     </section>
 
-    <p class="foot">Door staff logins open the Door. Manager logins open everything. Where a page asks for an email, type your username followed by @sisyphusbrewing.com.<br>Forgot a password? A manager can set a new one under Manager › Staff logins.</p>
+    <p class="foot"><span id="whoami"></span> · <button class="btn-link" onclick="signOut()">Sign out</button><br>
+      Where a page asks for an email, type your username followed by @sisyphusbrewing.com.<br>Forgot a password? A manager can set a new one under Manager › Staff logins.</p>
   </main>
 
   <script>
-    // Role chips just filter sections; the pick is remembered on this device.
-    (function () {
+    // Only the tiles this login can open are shown. Role chips then filter
+    // sections by job; the pick is remembered on this device.
+    setupSignIn(async function (role) {
+      var u = (await sb.auth.getUser()).data.user;
+      $('whoami').textContent = (u ? u.email.replace('@' + LOGIN_DOMAIN, '') + ' · ' : '') + ROLE_LABEL[role] + ' login';
+      document.querySelectorAll('.tile').forEach(function (t) {
+        if (!roleAtLeast(role, t.dataset.min)) t.remove();
+      });
+      document.querySelectorAll('main section').forEach(function (s) {
+        if (!s.querySelector('.tile')) s.remove();
+      });
+      $('roles').classList.toggle('hidden', !roleAtLeast(role, 'manager'));
+      $('hub').classList.remove('hidden');
+      startChips(roleAtLeast(role, 'manager'));
+    });
+    function startChips(useChips) {
       var chips = document.querySelectorAll('#roles .chip');
       var sections = document.querySelectorAll('main section');
       function pick(role) {
@@ -107,9 +138,9 @@
       chips.forEach(function (c) { c.addEventListener('click', function () { pick(c.dataset.role); }); });
       var saved = 'all';
       try { saved = localStorage.getItem('staffRole') || 'all'; } catch (e) {}
-      if (!document.querySelector('#roles .chip[data-role="' + saved + '"]')) saved = 'all';
+      if (!useChips || !document.querySelector('#roles .chip[data-role="' + saved + '"]')) saved = 'all';
       pick(saved);
-    })();
+    }
   </script>
 </body>
 </html>

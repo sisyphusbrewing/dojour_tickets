@@ -62,6 +62,7 @@
     <div id="guestList"><div class="empty">Loading tonight…</div></div>
     <div class="foot">
       <span id="whoami"></span> · <button class="btn-link" onclick="signOut()">Sign out</button>
+      <span id="staffLink" class="hidden"> · <a href="staff/">Staff page</a></span>
       <span id="managerLink" class="hidden"> · <a href="manager/">Manager page</a></span>
     </div>
   </main>
@@ -193,7 +194,8 @@
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       $('whoami').textContent = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
-      $('managerLink').classList.toggle('hidden', role !== 'manager');
+      $('staffLink').classList.toggle('hidden', !roleAtLeast(role, 'staff'));
+      $('managerLink').classList.toggle('hidden', !roleAtLeast(role, 'manager'));
       await loadShows();
       // Keep every door device in step.
       setInterval(function () { if (!document.hidden) loadShows(); }, 20000);
