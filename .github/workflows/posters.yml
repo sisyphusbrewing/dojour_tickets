@@ -3,6 +3,8 @@ name: Show posters
 # Makes a print-ready 11 x 17 in poster for every upcoming show (make_posters.py)
 # and keeps them on the repo's "posters" release, so each show has a stable link:
 #   https://github.com/<owner>/<repo>/releases/tag/posters
+# The same run makes phone-sized social images (make_social.py: 4:5 feed + 9:16 story per show)
+# and keeps them on the "social" release: .../releases/download/social/<handle>-feed.jpg
 # Runs after the daily sync and after a show is created, or on demand.
 
 on:
@@ -54,6 +56,28 @@ jobs:
           HANDLES: ${{ inputs.handles }}
           POSTER_FROM: ${{ inputs.from }}
         run: python make_posters.py $HANDLES
+
+      - name: Make social images
+        continue-on-error: true          # never let social images hold up the posters
+        env:
+          HANDLES: ${{ inputs.handles }}
+        run: python make_social.py $HANDLES
+
+      - name: Publish to the "social" release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ONLY: ${{ inputs.handles }}
+        run: |
+          if ! gh release view social >/dev/null 2>&1; then
+            gh release create social --title "Social images" --notes "Feed (1080x1350) and story (1080x1920) images for every upcoming show." --latest=false
+          fi
+          gh release upload social social/out/*.jpg social/out/manifest.json --clobber
+          if [ -z "$ONLY" ]; then
+            for asset in $(gh release view social --json assets -q '.assets[].name'); do
+              [ -f "social/out/$asset" ] || gh release delete-asset social "$asset" -y
+            done
+          fi
 
       - name: Attach posters to this run
         uses: actions/upload-artifact@v4
