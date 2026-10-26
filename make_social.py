@@ -12,6 +12,8 @@ as the posters (headshot, tilted slate band, Josefin Sans), from the website:
     python make_social.py                          # every upcoming show -> social/out/
     python make_social.py michael-longfellow       # only these product handles
     python make_social.py michael-longfellow --kicker "9 PM SHOWS"   # small label over the band
+    python make_social.py michael-longfellow --with "Joey Hamburger=https://.../joey.jpg"
+                                                   # add supporting comics as round photos (repeatable)
     SOCIAL_OUT=/some/dir python make_social.py
 
 The shared show reading, face finding and cropping come from make_posters.py,
@@ -76,7 +78,7 @@ def photo(show, w, h):
         faces = top_face if mp.crop_window(src, w, h, top_face) else []
     if mode == "auto":
         loss = mp.crop_loss(src, w, h)
-        mode = "cover" if (faces and loss <= 0.5) or loss <= 0.06 else "fit"
+        mode = "cover" if (faces and loss <= 0.6) or loss <= 0.06 else "fit"
     img = mp.fit_on_blur(src, w, h) if mode == "fit" else mp.cover(src, w, h, faces)
     return mp.fade_bottom(img, int(h * 0.32))
 
@@ -164,15 +166,48 @@ def footer(canvas, bottom, show):
     canvas.paste(badge, (W - 60 - badge.size[0], int(bottom - badge.size[1] + 28)), badge)
 
 
-def render(show, kind, path, kicker=None):
+def round_photo(url, size):
+    """A supporting comic's photo as a circle (face-centred when OpenCV finds one), white ring."""
+    src = mp.fetch_image(url)
+    img = mp.cover(src, size, size, mp.find_faces(src), focus_y=0.2).convert("RGBA")
+    mask = Image.new("L", (size * 4, size * 4), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, size * 4 - 1, size * 4 - 1], fill=255)
+    img.putalpha(mask.resize((size, size), Image.LANCZOS))
+    ring = Image.new("RGBA", (size + 12, size + 12), (0, 0, 0, 0))
+    ImageDraw.Draw(ring).ellipse([0, 0, size + 11, size + 11], fill=WHITE + (255,))
+    ring.paste(img, (6, 6), img)
+    return ring
+
+
+def featuring(canvas, top, comics, size):
+    """"WITH" and a row of round photos with names under them; returns the y below the row."""
+    W = canvas.size[0]
+    d = ImageDraw.Draw(canvas)
+    wf = font("JosefinSans-SemiBold", 30)
+    draw_spaced(d, W / 2, top + 30 * mp.CAP, "WITH", wf, GRAY, 30 * 0.2)
+    top += 52
+    nf = font("JosefinSans-Bold", 34)
+    slot = min(W / len(comics), size * 2.4)
+    x0 = (W - slot * len(comics)) / 2
+    for i, (name, url) in enumerate(comics):
+        cx = x0 + slot * (i + 0.5)
+        ring = round_photo(url, size)
+        canvas.paste(ring, (int(cx - ring.size[0] / 2), int(top)), ring)
+        draw_spaced(d, cx, top + ring.size[1] + 22 + 34 * mp.CAP, name.upper(), nf, WHITE, 34 * 0.06)
+    return top + size + 12 + 22 + 34 + 10
+
+
+def render(show, kind, path, kicker=None, comics=()):
     W, H = SIZES[kind]
     canvas = Image.new("RGB", (W, H), mp.CHARCOAL_RGB)
     if kind == "feed":
-        photo_h, band_y, max_lines, bottom = 800, 790, 4, H - 60
+        photo_h, max_lines, bottom, ring = (620 if comics else 800), 4, H - 60, 150
     else:
-        photo_h, band_y, max_lines, bottom = 1150, 1140, 4, H - 300
+        photo_h, max_lines, bottom, ring = (840 if comics else 1150), 4, H - 270, 190
     canvas.paste(photo(show, W, photo_h), (0, 0))
-    below = band(canvas, band_y, show["title"], kicker) + 30
+    below = band(canvas, photo_h - 10, show["title"], kicker) + 30
+    if comics:
+        below = featuring(canvas, below, comics, ring) + 20
     d = ImageDraw.Draw(canvas)
     dates = show["dates"]
     if show.get("recurring"):                # "EVERY THURSDAY · 8:00 PM", then the next date
@@ -186,7 +221,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("handles", nargs="*")
     ap.add_argument("--kicker", help="small label over the band, e.g. '9 PM SHOWS' or 'TONIGHT'")
+    ap.add_argument("--with", dest="comics", action="append", default=[], metavar="NAME=PHOTO_URL",
+                    help="a supporting comic shown under the band as a round photo (repeatable)")
     args = ap.parse_args()
+    comics = [tuple(part.strip() for part in c.split("=", 1)) for c in args.comics]
     wanted = {h.strip().lower() for h in args.handles if h.strip()}
     now = datetime.now(CENTRAL_TZ)
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -200,7 +238,7 @@ def main():
         try:
             for kind in SIZES:
                 name = f"{show['handle']}-{kind}.jpg"
-                render(show, kind, os.path.join(OUT_DIR, name), args.kicker)
+                render(show, kind, os.path.join(OUT_DIR, name), args.kicker, comics)
                 files[kind] = name
         except Exception as exc:                       # keep going; report at the end
             failures.append((show["handle"], str(exc)))
