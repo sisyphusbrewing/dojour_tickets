@@ -237,7 +237,22 @@ function findOnOtherShows(other, query) {
 }
 
 // ---------- Sign-in ----------
-// onReady(role) runs once a login is confirmed; role is 'door' or 'manager'.
+// Each login has one role, and each role can do everything the ones below it
+// can: door (tonight's check-in), staff (staff tools), manager, owner (Sam).
+var ROLE_RANK = { door: 1, staff: 2, manager: 3, owner: 4 };
+var ROLE_LABEL = { door: 'Door', staff: 'Staff', manager: 'Manager', owner: 'Owner' };
+function roleAtLeast(role, min) { return (ROLE_RANK[role] || 1) >= ROLE_RANK[min]; }
+// What a page shows a login that can't open it.
+function showNoAccess(min, hide) {
+  (hide || []).forEach(function (id) { var el = $(id); if (el) el.classList.add('hidden'); });
+  var el = $('notManager');
+  if (!el) return;
+  var who = { staff: 'Staff', manager: 'Managers', owner: 'Owner' }[min] || 'Staff';
+  el.innerHTML = '<b>' + who + ' only</b>This login can’t open this page. <a href="/staff/">Back to the staff page</a>.';
+  el.classList.remove('hidden');
+}
+
+// onReady(role) runs once a login is confirmed; role is door, staff, manager or owner.
 function setupSignIn(onReady) {
   var started = false;
   async function ready() {

@@ -365,13 +365,7 @@
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       me = u ? u.email : '';
-      if (role !== 'manager') {
-        $('sheet').classList.add('hidden');
-        $('filters').classList.add('hidden');
-        $('search').classList.add('hidden');
-        $('notManager').classList.remove('hidden');
-        return;
-      }
+      if (!roleAtLeast(role, 'owner')) { showNoAccess('owner', ['sheet', 'filters', 'search']); return; }
       load();
     });
   </script>

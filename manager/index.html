@@ -28,7 +28,7 @@
     .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .field label.btn { font-size: 15px; text-transform: none; letter-spacing: 0; color: #fff; margin: 0; }
     .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
-    .staff-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .staff-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .staff-row:last-child { border-bottom: 0; }
     .staff-row .n { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; padding-top: 2px; }
     .staff-row .s { color: var(--gray); font-size: 13px; }
@@ -37,6 +37,7 @@
     .seg button { min-height: 38px; padding: 6px 12px; border: 0; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
     .seg button.on { background: var(--slate); color: #fff; }
     .seg button:disabled { cursor: default; }
+    .seg button:disabled:not(.on) { opacity: .4; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
@@ -178,7 +179,9 @@
     <section id="tab-staff" class="hidden">
       <div class="band-row"><span class="band">Staff logins</span></div>
       <p class="help" style="margin-top:-4px"><b>Door</b> logins see tonight's guest list and check people in. That's it.
-        <b>Manager</b> logins get this page, comps, brewing and everything else.</p>
+        <b>Staff</b> add the staff tools: supplies, stage timer, menus.
+        <b>Manager</b> logins get this page, comps, booking, brewing and the rest.
+        <b>Owner</b> gets everything, including comic pay, W-9s and CSS scores, and is the only one who can make managers.</p>
       <div class="card" id="staffList"><div class="empty" style="padding:20px">Loading…</div></div>
 
       <div class="band-row"><span class="band">Add a login</span></div>
@@ -188,7 +191,7 @@
           <div class="field"><label for="newPass">Password</label><input class="input" id="newPass" required minlength="8" autocomplete="new-password"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-          <div class="seg" id="newRole"><button type="button" class="on" data-role="door">Door</button><button type="button" data-role="manager">Manager</button></div>
+          <div class="seg" id="newRole"><button type="button" class="on" data-role="door">Door</button><button type="button" data-role="staff">Staff</button><button type="button" data-role="manager">Manager</button><button type="button" data-role="owner">Owner</button></div>
           <button class="btn btn-primary" id="addStaffBtn" type="submit">Add login</button>
         </div>
         <div class="help">They sign in with just the username.</div>
@@ -547,6 +550,8 @@
     }
 
     // ---------- Staff logins ----------
+    var myRole = 'door';
+    function canGive(role) { return myRole === 'owner' || ROLE_RANK[role] < ROLE_RANK.manager; }
     async function staffCall(body) {
       var res = await sb.functions.invoke('staff-admin', { body: body });
       if (!res.error) return res.data;
@@ -561,10 +566,11 @@
           var id = jsArg(u.user_id);
           var seen = u.last_sign_in_at ? 'Last in ' + new Date(u.last_sign_in_at).toLocaleDateString() : 'Never signed in';
           return '<div class="staff-row"><div><div class="n">' + escapeHtml(u.login) + (u.me ? ' <span class="tag">You</span>' : '') + '</div>' +
-              '<div class="s">' + seen + ' · <button class="btn-link" onclick="resetPass(' + id + ',' + jsArg(u.login) + ')">New password</button>' +
-              (u.me ? '' : ' · <button class="btn-link" style="color:#f0b7ac" onclick="removeStaff(' + id + ',' + jsArg(u.login) + ')">Remove</button>') + '</div></div>' +
-            '<div class="seg">' + ['door', 'manager'].map(function (r) {
-              return '<button class="' + (u.role === r ? 'on' : '') + '"' + (u.me ? ' disabled' : '') + ' onclick="setRole(' + id + ',' + jsArg(r) + ')">' + (r === 'door' ? 'Door' : 'Manager') + '</button>';
+              '<div class="s">' + seen + (u.me || canGive(u.role) ? ' · <button class="btn-link" onclick="resetPass(' + id + ',' + jsArg(u.login) + ')">New password</button>' : '') +
+              (u.me || !canGive(u.role) ? '' : ' · <button class="btn-link" style="color:#f0b7ac" onclick="removeStaff(' + id + ',' + jsArg(u.login) + ')">Remove</button>') + '</div></div>' +
+            '<div class="seg">' + ['door', 'staff', 'manager', 'owner'].map(function (r) {
+              var locked = u.me || !canGive(u.role) || !canGive(r);
+              return '<button class="' + (u.role === r ? 'on' : '') + '"' + (locked ? ' disabled' : '') + ' onclick="setRole(' + id + ',' + jsArg(r) + ')">' + ROLE_LABEL[r] + '</button>';
             }).join('') + '</div></div>';
         }).join('');
       } catch (e) {
@@ -610,11 +616,16 @@
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       $('whoami').textContent = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
-      if (role !== 'manager') {
+      myRole = role;
+      if (!roleAtLeast(role, 'manager')) {
         document.querySelectorAll('main > section, #tabs').forEach(function (el) { el.classList.add('hidden'); });
-        $('notManager').classList.remove('hidden');
+        showNoAccess('manager');
         return;
       }
+      // Managers hand out door and staff logins; only the owner makes managers.
+      document.querySelectorAll('#newRole button').forEach(function (b) {
+        b.classList.toggle('hidden', !canGive(b.dataset.role));
+      });
       loadShowList();
       setInterval(function () { if (!document.hidden && !$('tab-door').classList.contains('hidden')) loadGuests(); }, 30000);
     });
