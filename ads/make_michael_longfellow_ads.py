@@ -82,7 +82,9 @@ TIMES, PRICE = "THU 8 · FRI 7 & 9 · SAT 7 & 9 · SUN 6", "TICKETS $28"
 ADS = (
     ("tickets", "THREE SEASONS OF SNL. ONE BREWERY.", "NOV 5–8 · SIX SHOWS"),
     ("remarketing", "STILL THINKING ABOUT IT?", "FROM SNL · NOV 5–8 · SIX SHOWS"),
+    ("room", "THESE THREE STILL HAVE ROOM.", "FRI 9PM · SAT 9PM · SUN 6PM"),
 )
 for kind, kicker, big in ADS:
-    make(1080, 1350, kicker, (big, TIMES, PRICE)).save(f"{out}/michael-longfellow-{kind}-4x5.jpg", quality=92)
-    make(1080, 1080, kicker, (big, TIMES, PRICE)).save(f"{out}/michael-longfellow-{kind}-1x1.jpg", quality=92)
+    times = "FROM SNL · NOV 6, 7 & 8" if kind == "room" else TIMES
+    make(1080, 1350, kicker, (big, times, PRICE)).save(f"{out}/michael-longfellow-{kind}-4x5.jpg", quality=92)
+    make(1080, 1080, kicker, (big, times, PRICE)).save(f"{out}/michael-longfellow-{kind}-1x1.jpg", quality=92)
