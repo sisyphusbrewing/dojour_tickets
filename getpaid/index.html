@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Get Paid · Sisyphus</title>
-  <meta name="description" content="Tell Sisyphus how you want to be paid. Once.">
+  <meta name="description" content="Tell Sisyphus your Venmo. Once.">
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#2b2929">
   <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
@@ -26,7 +26,7 @@
 </head>
 <body>
   <!-- Comic-facing: a per-person link from the pay sheet (payouts/index.html).
-       They tell us how to pay them once; it's saved for every show after. -->
+       Just their Venmo username (Sam, Oct 27 2026); saved for every show after. -->
   <header>
     <div class="wrap hdr">
       <a class="hdr-brand" href="https://sisyphusbrewing.com" style="text-decoration:none;color:inherit">
@@ -48,7 +48,7 @@
       <div class="show-card">
         <div class="show-eyebrow">Getting paid</div>
         <div class="show-name" id="who"></div>
-        <div class="show-when" id="whoSub">Fill this out once. We'll use it every time.</div>
+        <div class="show-when" id="whoSub">Your Venmo, once. We'll use it every time.</div>
       </div>
 
       <!-- A settlement, when a manager attached one to this link. -->
@@ -60,25 +60,14 @@
         </div>
       </div>
 
-      <p class="lede" id="lede">Money is easier to send when we know where it goes. Thirty seconds. Less if you know your own Venmo.</p>
+      <p class="lede" id="lede">Money is easier to send when we know where it goes. Ten seconds.</p>
 
       <form id="payForm" novalidate>
-        <div class="band-wrap"><span class="band">Where it goes</span></div>
+        <div class="band-wrap"><span class="band">Your Venmo</span></div>
         <div class="card"><div class="grid">
-          <div class="field full"><label for="f_method">How you want it <span class="req">*</span></label>
-            <select class="input" id="f_method" required>
-              <option value="">Pick one</option>
-              <option>Venmo</option><option>Zelle</option><option>PayPal</option><option>Cash App</option>
-              <option>Check</option><option>Wire / ACH</option>
-            </select></div>
-          <div class="field full" id="handleField"><label for="f_handle" id="handleLabel">Handle</label>
-            <input class="input" id="f_handle" autocapitalize="none" autocorrect="off">
-            <div class="help" id="handleHelp"></div></div>
-          <div class="field full"><label for="f_legal">Legal name or company</label>
-            <input class="input" id="f_legal" autocomplete="name">
-            <div class="help">Exactly as the bank and the IRS know you. Checks get made out to this.</div></div>
-          <div class="field"><label for="f_email">Email</label><input class="input" id="f_email" type="email" autocomplete="email" inputmode="email"></div>
-          <div class="field"><label for="f_phone">Phone</label><input class="input" id="f_phone" type="tel" autocomplete="tel" inputmode="tel"></div>
+          <div class="field full"><label for="f_handle">Venmo username <span class="req">*</span></label>
+            <input class="input" id="f_handle" maxlength="60" autocapitalize="none" autocorrect="off" placeholder="@yourname">
+            <div class="help">The one after the @.</div></div>
         </div></div>
 
         <!-- Headliner splits the run's $3 ticket fee among the comics who worked it. -->
@@ -90,13 +79,6 @@
             <button class="btn btn-sm" type="button" id="feeAdd" style="margin-top:10px">+ Add a comic</button>
             <p class="help" id="feeLeft" style="margin-top:10px"></p>
           </div>
-        </div>
-
-        <div class="band-wrap"><span class="band">W-9</span></div>
-        <p class="intro">The IRS wants one from anyone we pay much of anything. Fill out the <a href="https://www.irs.gov/pub/irs-pdf/fw9.pdf" target="_blank" rel="noopener">blank form</a>, then add it here. A phone photo is fine. Only the owner can see it.</p>
-        <div class="card">
-          <div class="notice hidden" id="w9OnFile" style="margin:0 0 10px">We already have your W-9. Add a new one only if something changed.</div>
-          <div class="filebox"><input type="file" id="f_w9" accept="application/pdf,image/*"><div class="filepreview" id="w9Preview"></div></div>
         </div>
 
         <div class="submit-row">
@@ -111,7 +93,7 @@
       <div class="done">
         <div class="band-wrap"><span class="band">Saved</span></div>
         <p class="done-big" id="doneLine"></p>
-        <p>Changed banks? Changed names? Come back to this link any time.</p>
+        <p>New Venmo? Come back to this link any time.</p>
         <p class="camus">Il faut imaginer Sisyphe heureux. Easier when paid.</p>
         <button class="btn" id="editBtn" type="button">Change it</button>
       </div>
@@ -127,25 +109,6 @@
     var $ = function (id) { return document.getElementById(id); };
     var token = new URLSearchParams(location.search).get('t') || '';
     var payee = null;
-
-    // What to ask for, per method. Check and wire need no handle.
-    var HANDLES = {
-      'Venmo':      ['Venmo username', '@yourname', 'The one after the @.'],
-      'Zelle':      ['Zelle phone or email', '612-555-0100', 'Whatever your bank has Zelle set up on.'],
-      'PayPal':     ['PayPal.me name or email', 'yourname', 'From paypal.me/yourname, or the email on the account.'],
-      'Cash App':   ['$Cashtag', '$yourname', ''],
-      'Wire / ACH': null,
-      'Check':      null
-    };
-    function syncHandle() {
-      var h = HANDLES[$('f_method').value];
-      $('handleField').classList.toggle('hidden', !h);
-      if (!h) return;
-      $('handleLabel').innerHTML = h[0] + ' <span class="req">*</span>';
-      $('f_handle').placeholder = h[1];
-      $('handleHelp').textContent = h[2];
-    }
-    $('f_method').addEventListener('change', syncHandle);
 
     function money(v) { var n = Math.round(Number(v) * 100) / 100; return (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
     // ---------- ticket fee split ----------
@@ -177,17 +140,12 @@
 
     function fill() {
       $('who').textContent = payee.name;
-      $('f_method').value = payee.method && payee.method !== 'Cash' ? payee.method : '';
-      $('f_handle').value = payee.handle || '';
-      $('f_legal').value = payee.legal_name || '';
-      $('f_email').value = payee.email || '';
-      $('f_phone').value = payee.phone || '';
-      $('w9OnFile').classList.toggle('hidden', !payee.w9_on_file);
+      $('f_handle').value = payee.method === 'Venmo' ? payee.handle || '' : '';
       var st = payee.statement;
       $('stmt').classList.toggle('hidden', !st);
       if (st) {
         $('whoSub').textContent = st.title || 'Settling up';
-        $('lede').textContent = 'Thanks for a great run. Here is the door. Pick one way to get it and it all goes that way.';
+        $('lede').textContent = 'Thanks for a great run. Here is the door.';
         var esc = function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
         $('stmtRows').innerHTML = (st.rows || []).map(function (r) {
           return '<tr><td>' + esc(r.label) + '</td><td>' + esc(r.tickets) + '</td><td>' + money(r.amount) + '</td></tr>';
@@ -201,59 +159,35 @@
         $('feeRows').innerHTML = (saved && saved.length ? saved : (st.pool_suggested || [])).map(feeRowHtml).join('');
         syncFee();
       }
-      syncHandle();
     }
 
     function doneLine() {
-      if (total()) {
-        var to = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
-               : payee.method === 'Wire / ACH' ? 'wire. Sam will email for the bank details'
-               : payee.method + (payee.handle ? ' to ' + payee.handle : '');
-        return 'Got it: ' + money(total()) + ' by ' + to + '.' + (pool() ? ' Ticket fee split saved.' : '') + (payee.w9_on_file ? '' : ' Still need that W-9 when you get a minute.');
-      }
-      var how = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
-              : payee.method === 'Wire / ACH' ? 'a wire. Sam will email for the bank details'
-              : payee.method + (payee.handle ? ' to ' + payee.handle : '');
-      return 'Next time, it comes by ' + how + '.' + (payee.w9_on_file ? '' : ' Still need that W-9 when you get a minute.');
+      var to = payee.method === 'Check' ? 'a check made out to ' + (payee.legal_name || payee.name)
+             : (payee.method || 'Venmo') + (payee.handle ? ' to ' + payee.handle : '');
+      if (total()) return 'Got it: ' + money(total()) + ' by ' + to + '.' + (pool() ? ' Ticket fee split saved.' : '');
+      return 'Next time, it comes by ' + to + '.';
     }
-
-    $('f_w9').addEventListener('change', function () {
-      var f = this.files && this.files[0], pv = $('w9Preview');
-      pv.textContent = '';
-      if (!f) return;
-      if (f.size > 10 * 1024 * 1024) { pv.textContent = 'Over 10 MB. Try a smaller photo.'; this.value = ''; return; }
-      pv.textContent = f.name + ' · ' + (f.size / 1e6).toFixed(1) + ' MB';
-    });
 
     $('payForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var err = $('formError'), btn = $('sendBtn');
       err.classList.add('hidden');
-      var method = $('f_method').value, handle = $('f_handle').value.trim();
-      if (!method) { err.textContent = 'Pick how you want it.'; err.classList.remove('hidden'); return; }
-      if (HANDLES[method] && !handle) { err.textContent = 'We need your ' + HANDLES[method][0] + '.'; err.classList.remove('hidden'); return; }
+      var handle = $('f_handle').value.trim().replace(/^(https?:\/\/)?(www\.)?venmo\.com\/(u\/)?/i, '').replace(/\s+/g, '');
+      if (!handle) { err.textContent = 'We need your Venmo username.'; err.classList.remove('hidden'); return; }
+      if (handle.charAt(0) !== '@') handle = '@' + handle;
       if (pool()) {
         if (feeSplit().some(function (r) { return !r.name || !(r.amount > 0); })) { err.textContent = 'Each comic in the fee split needs a name and an amount.'; err.classList.remove('hidden'); return; }
         if (feeLeft() !== 0) { err.textContent = 'The ticket fee split has to add up to ' + money(pool()) + '. ' + $('feeLeft').textContent; err.classList.remove('hidden'); return; }
       }
-      if ((method === 'Check' || method === 'Wire / ACH') && !$('f_legal').value.trim()) { err.textContent = 'Who do we make it out to?'; err.classList.remove('hidden'); return; }
       btn.disabled = true; btn.textContent = 'Saving…';
       try {
-        var w9Path = null, f = $('f_w9').files[0];
-        if (f) {
-          var ext = (f.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'pdf';
-          w9Path = token + '/w9-' + Date.now() + '.' + ext;
-          var up = await sb.storage.from('w9').upload(w9Path, f, { contentType: f.type || 'application/pdf' });
-          if (up.error) throw new Error('The W-9 did not upload: ' + up.error.message);
-        }
-        var res = await sb.rpc('payee_save', { p_token: token, p_w9_path: w9Path, p_data: {
-          method: method, handle: HANDLES[method] ? handle : '', legal_name: $('f_legal').value.trim(),
-          email: $('f_email').value.trim(), phone: $('f_phone').value.trim(),
+        // payee_save clears legal_name when it's missing, so send back what's on file.
+        var res = await sb.rpc('payee_save', { p_token: token, p_data: {
+          method: 'Venmo', handle: handle, legal_name: payee.legal_name || '',
           request: pool() ? { fee_split: feeSplit() } : null } });
         if (res.error) throw new Error(res.error.message);
         payee = res.data;
         $('doneLine').textContent = doneLine();
-        $('f_w9').value = ''; $('w9Preview').textContent = '';
         view('viewDone');
       } catch (ex) {
         err.textContent = ex.message || 'That did not save. Try again?';
