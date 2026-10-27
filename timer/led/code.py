@@ -2,7 +2,7 @@
 # that shows the same countdown as https://staff.sisyphusbrewing.com/timer/
 # and follows the Stream Deck buttons (Supabase rpc timer_start/stop/add/light).
 #
-# CircuitPython 9. Copy this file, settings.toml and the libraries listed in
+# CircuitPython 10. Copy this file, settings.toml and the libraries listed in
 # README.md onto the CIRCUITPY drive.
 
 import os
