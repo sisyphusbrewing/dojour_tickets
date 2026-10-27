@@ -1,5 +1,7 @@
 // Sisyphus - Reddit Ads API bridge.
 //
+// GET  ?start=<state>       Sends Sam to Reddit's Allow page (state must be
+//                           one we issued in reddit_oauth_state).
 // GET  ?code=...&state=...  Reddit sends Sam back here after "Allow". We swap
 //                           the code for a refresh token and keep it in
 //                           reddit_auth. Only states we issued are accepted.
@@ -17,6 +19,7 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/reddit-ads`;
 const API = "https://ads-api.reddit.com/api/v3/";
 const UA = "web:sisyphus-ads:v1 (by /u/SisyphusComedy)";
+const SCOPES = "adsread adsedit";
 
 function db(path: string, init: RequestInit = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -70,7 +73,24 @@ async function sha256(text: string) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function start(state: string) {
+  const s = await db(`reddit_oauth_state?state=eq.${encodeURIComponent(state)}&used_at=is.null&select=state`);
+  if (!s.ok || !(await s.json()).length) return page("Link expired", "Ask Claude for a fresh Allow link.");
+  const auth = new URL("https://www.reddit.com/api/v1/authorize");
+  auth.search = new URLSearchParams({
+    client_id: Deno.env.get("REDDIT_CLIENT_ID") ?? "",
+    response_type: "code",
+    state,
+    redirect_uri: REDIRECT_URI,
+    duration: "permanent",
+    scope: SCOPES,
+  }).toString();
+  return Response.redirect(auth.toString(), 302);
+}
+
 async function callback(url: URL) {
+  const begin = url.searchParams.get("start");
+  if (begin) return start(begin);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state") ?? "";
   if (url.searchParams.get("error")) {
