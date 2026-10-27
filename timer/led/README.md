@@ -13,14 +13,20 @@ follows the same Stream Deck timer buttons as the timer page.
 
 ## Setup (once, about 20 minutes)
 
-1. Plug the Matrix Portal onto the back of the panel and power it.
-2. Install CircuitPython 9 for "Adafruit Matrix Portal S3" from circuitpython.org
-   (double-tap reset, drag the .uf2 onto the drive).
-3. Install the libraries with circup from a computer with the board plugged in:
-   `pip install circup` then
-   `circup install adafruit_matrixportal adafruit_display_text adafruit_requests adafruit_connection_manager`
-4. Copy `code.py` and `settings.toml` (with the Wi-Fi name and password filled
-   in) to `CIRCUITPY/`.
+1. Press the Matrix Portal onto the panel's **INPUT** header (the arrows on the
+   back of the panel point away from it). Screw the panel's red power lead to
+   the board's `+5V` post and the black to `GND`.
+2. Install CircuitPython 10 for "Adafruit Matrix Portal S3" from
+   https://circuitpython.org/board/adafruit_matrixportal_s3/ : plug in USB-C,
+   double-click the reset button, drag the .uf2 onto the `MATRIXS3BOOT` drive.
+   It reboots as `CIRCUITPY`.
+3. Copy everything inside the ready-made kit's `CIRCUITPY` folder
+   (`code.py`, `settings.toml`, `lib/`) onto the `CIRCUITPY` drive. The kit is
+   in the project files at `av/timer/stage-clock-CIRCUITPY.zip`; to rebuild it,
+   take `code.py` and `settings.toml` from here and the libraries with
+   `circup install adafruit_matrixportal adafruit_display_text adafruit_requests adafruit_connection_manager`.
+4. Open `settings.toml` on the drive and fill in the Wi-Fi name and password.
+   The board restarts on save.
 
 It shows `WIFI` while connecting, then the timer: dim gray when stopped, white
 while running, red at the light, blinking red with a count-up when over.
