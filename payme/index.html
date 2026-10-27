@@ -118,7 +118,7 @@
       if (!showName) return fail('Tell us the show name and date.');
       if (!$('f_role').value) return fail('What did you do on the show?');
       if (!$('f_name').value.trim()) return fail('We need your name.');
-      var handle = $('f_handle').value.trim().replace(/^https?:\/\/(www\.)?venmo\.com\/(u\/)?/i, '').replace(/\s+/g, '');
+      var handle = $('f_handle').value.trim().replace(/^(https?:\/\/)?(www\.)?venmo\.com\/(u\/)?/i, '').replace(/\s+/g, '');
       if (!handle) return fail('We need your Venmo username.');
       if (handle.charAt(0) !== '@') handle = '@' + handle;
       if (!$('f_phone').value.trim() && !$('f_email').value.trim()) return fail('Leave a phone or an email in case Sam has a question.');

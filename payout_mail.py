@@ -80,10 +80,10 @@ def invite_email(p, owed):
         total = sum(float(l["amount"]) for l in owed)
         lines += [f"We owe you {money(total)}. This is the good kind of email.", ""]
         lines += [line_text(l) for l in owed] + [""]
-    lines += ["Tell us once how you want to get paid (Venmo, Zelle, check, whatever) and add a W-9:",
+    lines += ["Drop your Venmo here once:",
               GETPAID_URL + p["token"], "",
-              "Thirty seconds. We use it every time after.", ""] + SIGN_OFF
-    return "How do you want to get paid?", "\n".join(lines)
+              "Ten seconds. We use it every time after.", ""] + SIGN_OFF
+    return "What's your Venmo?", "\n".join(lines)
 
 
 def receipt_email(p, paid):
@@ -91,8 +91,6 @@ def receipt_email(p, paid):
     how = how_paid(p, paid[0].get("paid_via"))
     lines = [f"Hi {first_name(p)},", "", f"Sent you {money(total)}{' ' + how if how else ''}.", ""]
     lines += [line_text(l) for l in paid] + [""]
-    if not p.get("w9_path"):
-        lines += ["We still need a W-9 for taxes. Add it here when you get a minute:", GETPAID_URL + p["token"], ""]
     lines += ["Thanks for making people laugh in a brewery. Weird room. Good people.", ""] + SIGN_OFF
     return f"Paid: {money(total)} from Sisyphus", "\n".join(lines)
 
