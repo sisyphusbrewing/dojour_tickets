@@ -11,8 +11,8 @@ import time
 import adafruit_connection_manager
 import adafruit_requests
 import board
-import digitalio
 import displayio
+import keypad
 import terminalio
 import wifi
 from adafruit_display_text import label
@@ -62,25 +62,26 @@ for item in (kevin_sprite, kevin_line1, kevin_line2):
     kevin_group.append(item)
 
 
-def button(pin):
-    b = digitalio.DigitalInOut(pin)
-    b.switch_to_input(pull=digitalio.Pull.UP)
-    return b
-
-
-up, down = button(board.BUTTON_UP), button(board.BUTTON_DOWN)
+# keypad watches the buttons in the background, so a quick tap still counts
+# while the board is busy asking the server for the timer.
+buttons = keypad.Keys((board.BUTTON_UP, board.BUTTON_DOWN), value_when_pressed=False, pull=True)
+UP, DOWN = 0, 1
 kevin_mode = False
 kevin_step, kevin_until = 0, 0.0
 
 
 def check_buttons():
     global kevin_mode, kevin_step, kevin_until
-    if not up.value and not kevin_mode:
-        kevin_mode, kevin_step, kevin_until = True, 0, 0.0
-        display.root_group = kevin_group
-    elif not down.value and kevin_mode:
-        kevin_mode = False
-        display.root_group = root
+    event = buttons.events.get()
+    while event:
+        if event.pressed:
+            if event.key_number == UP and not kevin_mode:
+                kevin_mode, kevin_step, kevin_until = True, 0, 0.0
+                display.root_group = kevin_group
+            elif kevin_mode:  # DOWN, or UP again, goes back to the timer
+                kevin_mode = False
+                display.root_group = root
+        event = buttons.events.get()
 
 
 def kevin_tick():
