@@ -1,0 +1,53 @@
+name: Ticket exchange
+
+# Started by the ticket-exchange edge function when a customer swaps their
+# tickets at sisyphusbrewing.com/pages/exchange (see exchange_ticket.py).
+# With no exchange_id it only pulls fresh website orders and showtimes, so an
+# order bought minutes ago can be found.
+
+on:
+  workflow_dispatch:
+    inputs:
+      exchange_id:
+        description: 'ticket_exchanges id (blank = just refresh orders and showtimes)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Check the swap, change nothing'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ticket-exchange-${{ inputs.exchange_id || 'refresh' }}
+
+jobs:
+  exchange:
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+      SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+      SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+
+      - name: Swap the tickets
+        if: inputs.exchange_id != ''
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python exchange_ticket.py "${{ inputs.exchange_id }}"
+
+      - name: Pull fresh website orders and showtimes
+        if: inputs.exchange_id == ''
+        run: |
+          python fetch_tickets.py --shopify-only
+          python exchange_ticket.py --refresh

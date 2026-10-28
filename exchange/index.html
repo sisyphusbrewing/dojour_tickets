@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Change Your Tickets · Sisyphus</title>
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <style>
+    .small { color: var(--gray); font-size: 14px; margin: 8px 0 0; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .line { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid var(--line); }
+    .line:first-child { border-top: 0; padding-top: 0; }
+    .line b { display: block; font-size: 17px; }
+    .line span { color: var(--gray); font-size: 14px; }
+    .opts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .opt { display: flex; justify-content: space-between; gap: 10px; align-items: center; width: 100%; text-align: left;
+           background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; color: var(--white);
+           font: inherit; cursor: pointer; }
+    .opt:hover, .opt:focus-visible { border-color: var(--slate-light); outline: none; }
+    .opt.sel { border-color: var(--slate-light); background: var(--slate-dark); }
+    .opt small { display: block; color: var(--gray); font-size: 13px; }
+    .opt .tag { flex: none; font-size: 13px; color: var(--slate-light); }
+    .group { font-family: var(--head); text-transform: uppercase; letter-spacing: .08em; font-size: 13px; color: var(--gray); margin: 16px 0 0; }
+    .summary { background: var(--bg); border-radius: 12px; padding: 12px 14px; margin-top: 14px; line-height: 1.5; }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    select.input { appearance: auto; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Change your tickets<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewFind">
+      <div class="show-card">
+        <div class="show-eyebrow">Wrong night?</div>
+        <div class="show-name">Swap it yourself</div>
+        <div class="show-when">Move your tickets to another night or show, up to 2 hours before showtime. Same price or cheaper.</div>
+      </div>
+      <form class="card" id="findForm" autocomplete="on">
+        <div class="grid">
+          <div class="field"><label for="fOrder">Order number</label><input class="input" id="fOrder" inputmode="numeric" placeholder="#4418" required></div>
+          <div class="field"><label for="fEmail">Email you bought with</label><input class="input" id="fEmail" type="email" autocomplete="email" required></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit" id="findBtn">Find my tickets</button>
+          <div id="findMsg" class="small">The order number is in your confirmation email.</div>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewLines" class="hidden">
+      <div class="band-wrap"><span class="band">Your tickets</span></div>
+      <div class="card" id="lines"></div>
+      <p class="small"><a href="#" id="startOver">Different order</a></p>
+    </section>
+
+    <section id="viewPick" class="hidden">
+      <div class="band-wrap"><span class="band">Move to</span></div>
+      <div class="card">
+        <div id="fromLine"></div>
+        <div class="field" id="qtyField" style="margin-top:12px"><label for="qty">How many to move</label><select class="input" id="qty"></select></div>
+        <div id="opts"></div>
+        <div id="summary" class="summary hidden"></div>
+        <div class="actions">
+          <button class="btn btn-primary" type="button" id="swapBtn" disabled>Swap them</button>
+          <button class="btn" type="button" id="backBtn">Back</button>
+          <div id="swapMsg" class="small"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewWork" class="hidden">
+      <div class="card" style="text-align:center">
+        <div class="show-name" id="workHead" style="font-size:22px">Swapping…</div>
+        <p id="workMsg" class="small" style="font-size:16px">Moving your seats. About a minute. Don't refresh; nobody's going anywhere.</p>
+        <div class="actions" id="workActions"></div>
+      </div>
+    </section>
+  </main>
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis · Questions: <a href="mailto:ticketing@sisyphusbrewing.com">ticketing@sisyphusbrewing.com</a></footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    var money = function (n) { return '$' + Number(n).toFixed(2).replace('.00', ''); };
+    var data = null, line = null, pick = null, creds = null;
+
+    // Embedded in sisyphusbrewing.com/pages/exchange: the site has its own header.
+    if (window.parent !== window) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ advanceHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+
+    function view(id) { ['viewFind', 'viewLines', 'viewPick', 'viewWork'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
+
+    async function call(body) {
+      var res = await sb.functions.invoke('ticket-exchange', { body: body });
+      if (!res.error) return { data: res.data };
+      var msg = res.error.message, status = 0;
+      try { status = res.error.context.status; var b = await res.error.context.json(); if (b && b.error) msg = b.error; } catch (e) {}
+      return { error: msg, status: status };
+    }
+
+    // ---- 1. find the order ----
+    var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    $('findForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      creds = { order: $('fOrder').value.trim(), email: $('fEmail').value.trim() };
+      var btn = $('findBtn'), msg = $('findMsg');
+      btn.disabled = true; btn.textContent = 'Looking…'; msg.textContent = '';
+      try {
+        // A brand-new order isn't on our list yet; the server fetches it, so keep asking for ~2 minutes.
+        for (var tries = 0; tries < 8; tries++) {
+          var r = await call(Object.assign({ action: 'lookup' }, creds));
+          if (r.data) { data = r.data; showLines(); return; }
+          if (r.error !== 'not_found') { msg.textContent = r.error; return; }
+          msg.textContent = tries ? 'Still looking. If you just bought them, this can take a minute or two.' : 'Checking the newest orders…';
+          await sleep(15000);
+        }
+        msg.innerHTML = "No upcoming tickets on that order with that email. Check both, or write <a href=\"mailto:ticketing@sisyphusbrewing.com\">ticketing@sisyphusbrewing.com</a>.";
+      } catch (err) { msg.textContent = 'Could not reach the server. Try again.'; }
+      finally { btn.disabled = false; btn.textContent = 'Find my tickets'; }
+    });
+
+    // ---- 2. pick which tickets ----
+    function showLines() {
+      $('lines').innerHTML = data.lines.map(function (l, i) {
+        var what = l.tickets + ' × ' + (l.ticket_type || 'ticket');
+        return '<div class="line"><div><b>' + esc(l.show_title) + '</b><span>' + esc(l.show_date) + ' · ' + esc(what) + '</span>' +
+          (l.blocked ? '<span style="display:block;margin-top:4px">' + esc(l.blocked) + '</span>' : '') + '</div>' +
+          (l.blocked ? '' : '<button class="btn btn-sm" type="button" data-i="' + i + '">Change</button>') + '</div>';
+      }).join('');
+      $('lines').querySelectorAll('button[data-i]').forEach(function (b) {
+        b.addEventListener('click', function () { line = data.lines[+b.dataset.i]; showPick(); });
+      });
+      view('viewLines');
+    }
+    $('startOver').addEventListener('click', function (e) { e.preventDefault(); view('viewFind'); });
+
+    // ---- 3. pick the new showtime ----
+    function showPick() {
+      pick = null;
+      $('fromLine').innerHTML = '<span class="small" style="margin:0">From</span><div><b>' + esc(line.show_title) + '</b> · ' + esc(line.show_date) +
+        (line.ticket_type ? ' · ' + esc(line.ticket_type) : '') + (line.price != null ? ' · ' + money(line.price) + ' each' : '') + '</div>';
+      var q = $('qty'); q.innerHTML = '';
+      for (var n = line.tickets; n >= 1; n--) q.insertAdjacentHTML('beforeend', '<option value="' + n + '">' + n + (n === line.tickets ? ' (all)' : '') + '</option>');
+      $('qtyField').classList.toggle('hidden', line.tickets < 2);
+      renderOpts();
+      view('viewPick');
+    }
+    $('qty').addEventListener('change', function () { pick = null; renderOpts(); });
+
+    function renderOpts() {
+      var qty = +$('qty').value || line.tickets;
+      var list = data.showtimes.filter(function (t) {
+        return t.variant_id !== line.variant_id && t.seats_left >= qty && (line.price == null || t.price <= line.price + 0.001);
+      });
+      // Same show first, then everything else by date.
+      var same = list.filter(function (t) { return t.show_title === line.show_title; });
+      var other = list.filter(function (t) { return t.show_title !== line.show_title; });
+      var html = '';
+      if (same.length) html += '<div class="group">Other nights of ' + esc(line.show_title) + '</div><div class="opts">' + same.map(optHtml).join('') + '</div>';
+      if (other.length) html += '<div class="group">' + (same.length ? 'Or a different show' : 'Shows you can move to') + '</div><div class="opts">' + other.map(optHtml).join('') + '</div>';
+      if (!list.length) html = '<p class="small">Nothing open at the same price or less right now. Write <a href="mailto:ticketing@sisyphusbrewing.com">ticketing@sisyphusbrewing.com</a> and a human will help.</p>';
+      $('opts').innerHTML = html;
+      $('opts').querySelectorAll('.opt').forEach(function (b) {
+        b.addEventListener('click', function () {
+          pick = data.showtimes.find(function (t) { return String(t.variant_id) === b.dataset.v; });
+          $('opts').querySelectorAll('.opt').forEach(function (o) { o.classList.toggle('sel', o === b); });
+          renderSummary();
+        });
+      });
+      renderSummary();
+    }
+
+    function optHtml(t) {
+      var diff = line.price == null ? 0 : t.price - line.price;
+      var tag = Math.abs(diff) < 0.005 ? 'Same price' : money(-diff) + ' less';
+      var seats = t.seats_left <= 10 ? ' · ' + t.seats_left + ' left' : '';
+      return '<button type="button" class="opt" data-v="' + t.variant_id + '"><div><b>' + esc(t.date_text) + '</b>' +
+        '<small>' + esc(t.show_title) + (t.ticket_type ? ' · ' + esc(t.ticket_type) : '') + seats + '</small></div><span class="tag">' + tag + '</span></button>';
+    }
+
+    function renderSummary() {
+      var s = $('summary'), btn = $('swapBtn');
+      btn.disabled = !pick;
+      if (!pick) { s.classList.add('hidden'); return; }
+      var qty = +$('qty').value || line.tickets;
+      var cheaper = line.price != null && pick.price < line.price - 0.005;
+      s.innerHTML = '<b>' + qty + ' × ' + esc(pick.ticket_type || 'ticket') + '</b><br>' + esc(line.show_date) + ' → <b>' + esc(pick.date_text) + '</b>' +
+        (pick.show_title !== line.show_title ? '<br>' + esc(pick.show_title) : '') +
+        (cheaper ? '<br><span class="small" style="display:block">The new ones are ' + money((line.price - pick.price) * qty) + ' cheaper. We don\'t refund swaps, so the difference stays with the comedians. They\'ll drink to you.</span>' : '');
+      s.classList.remove('hidden');
+    }
+
+    $('backBtn').addEventListener('click', function () { view('viewLines'); });
+
+    // ---- 4. swap ----
+    $('swapBtn').addEventListener('click', async function () {
+      var btn = $('swapBtn'), msg = $('swapMsg');
+      btn.disabled = true; msg.textContent = '';
+      var r = await call(Object.assign({ action: 'swap', unique_id: line.unique_id, variant_id: pick.variant_id, tickets: +$('qty').value || line.tickets }, creds));
+      if (r.error) { msg.textContent = r.error; btn.disabled = false; return; }
+      $('workHead').textContent = 'Swapping…';
+      $('workMsg').textContent = "Moving your seats. About a minute. Don't refresh; nobody's going anywhere.";
+      $('workActions').innerHTML = '';
+      view('viewWork');
+      for (var i = 0; i < 60; i++) {
+        await sleep(4000);
+        var st = await call({ action: 'status', id: r.data.id });
+        if (st.data && st.data.status === 'done') return finished(true, st.data.message);
+        if (st.data && st.data.status === 'failed') return finished(false, st.data.message);
+      }
+      finished(null, "This is taking longer than usual. You'll get an email when it's done. If nothing shows up in 15 minutes, write ticketing@sisyphusbrewing.com.");
+    });
+
+    function finished(ok, text) {
+      $('workHead').textContent = ok ? 'Done.' : ok === false ? "That didn't work" : 'Still going';
+      $('workMsg').textContent = text + (ok ? ' A confirmation email is on its way.' : '');
+      $('workActions').innerHTML = ok === false ? '<button class="btn" type="button" id="againBtn">Try something else</button>' : '';
+      var again = $('againBtn');
+      if (again) again.addEventListener('click', function () { $('findForm').requestSubmit(); });
+    }
+
+    // Links from emails can fill the form: /pages/exchange?order=4418&email=...
+    (function prefill() {
+      var p = new URLSearchParams(location.search);
+      if (p.get('order')) $('fOrder').value = p.get('order');
+      if (p.get('email')) $('fEmail').value = p.get('email');
+    })();
+  </script>
+</body>
+</html>

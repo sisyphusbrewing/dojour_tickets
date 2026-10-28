@@ -53,6 +53,17 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
         run: python sync_inventory.py
 
+      - name: Refresh showtimes customers can swap to
+        continue-on-error: true
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python exchange_ticket.py --refresh
+
       - name: Save website show nights before past ones are removed
         continue-on-error: true
         env:
