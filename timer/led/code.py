@@ -1,5 +1,5 @@
 # Sisyphus stage clock: a 64x32 LED panel on an Adafruit Matrix Portal S3
-# that shows the same countdown as https://staff.sisyphusbrewing.com/timer/
+# that shows the same count-up clock as https://staff.sisyphusbrewing.com/timer/
 # and follows the Stream Deck buttons (Supabase rpc timer_start/stop/add/light).
 #
 # CircuitPython 10. Copy this file, settings.toml and the libraries listed in
@@ -44,7 +44,7 @@ digits = label.Label(terminalio.FONT, text="", color=IDLE, scale=2)
 digits.anchor_point = (0.5, 0.5)
 digits.anchored_position = (32, 16)
 root.append(digits)
-# long lines scroll right to left, then the count-up shows for a moment
+# long lines scroll right to left, then the time shows for a moment
 words = label.Label(terminalio.FONT, text="", color=RED, scale=2)
 words.anchor_point = (0, 0.5)
 words.hidden = True
@@ -233,13 +233,15 @@ while True:
         else:
             show(fmt(state["set_seconds"]), IDLE)
     else:
-        left = state["set_seconds"] - (elapsed_at_fetch + time.monotonic() - fetched)
+        # counts up from 0:00 (a countdown makes comics panic, Sam, Oct 28 2026)
+        elapsed = elapsed_at_fetch + time.monotonic() - fetched
+        left = state["set_seconds"] - elapsed
         if left > 0 and (state["light_now"] or left <= WRAP_AT):
-            wrap(fmt(-(-left // 1)))
+            wrap(fmt(elapsed))
         elif left > 0:
             lit = state["light_seconds"] > 0 and left <= state["light_seconds"]
-            show(fmt(-(-left // 1)), RED if lit else WHITE)
+            show(fmt(elapsed), RED if lit else WHITE)
         else:
-            # over time: the comic gets told, with the count-up in between
-            scroll(OVER if left > -60 else WAY_OVER, "+" + fmt(-left))
+            # over time: the comic gets told, with the time in between
+            scroll(OVER if left > -60 else WAY_OVER, fmt(elapsed))
     time.sleep(0.03)

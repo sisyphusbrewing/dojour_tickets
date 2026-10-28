@@ -1,12 +1,14 @@
 # Stage timer
 
-Comic-facing countdown at https://staff.sisyphusbrewing.com/timer/
+Comic-facing stage clock (counts up from 0:00) at https://staff.sisyphusbrewing.com/timer/
 
 Open it full screen on whatever screen the comic can see (a TV on the back wall,
 or a tablet at the stage edge). Black screen, only the digits glow, so it
-doesn't light the room. The digits turn red with LIGHT at one minute left and
-blink red with a count-up once time is out. Time of day sits small at the top.
-It keeps the screen awake. Tap the screen for buttons (5/7/10/15/20 min, +/-1, Light, Stop);
+doesn't light the room. The digits count up from 0:00 (a countdown makes comics
+panic), turn red with LIGHT at one minute left, say WRAP IT UP at 30 seconds left, and
+over time say "You better know what you are doing....", then "No seriously.... are you
+famous?" a minute over. Time of day sits small at the top.
+It keeps the screen awake. Tap the screen for buttons (5/7/10/15/20 min, +/-1, Wrap it up, Stop);
 they hide again after 10 seconds.
 
 State is one row in Supabase (`stage_timer`, migration
