@@ -29,7 +29,7 @@ follows the same Stream Deck timer buttons as the timer page.
    The board restarts on save.
 
 It shows `WIFI` while connecting, then the timer: dim gray when stopped, white
-while running, red at the light, WRAP IT UP at 30 seconds left (or when the deck's WRAP IT UP key is pressed), and over time a scrolling "YOU BETTER KNOW WHAT YOU ARE DOING....", then "NO SERIOUSLY.... ARE YOU FAMOUS?" a minute over, with the count-up in between.
+while running, red at the light, WRAP IT UP at 30 seconds left (or when the deck's WRAP IT UP key is pressed), and over time a scrolling "YOU BETTER KNOW WHAT YOU ARE DOING....", then "NO SERIOUSLY.... ARE YOU FAMOUS?" a minute over, with the time in between. The digits count up from 0:00.
 
 Press **UP** for Kevin (`kevin.py`): a pixel guy in a robe with an empty mug
 asking for another beer. Press **DOWN** (or UP again) to go back to the timer. Kevin works

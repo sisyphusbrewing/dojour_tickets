@@ -128,14 +128,16 @@
         cls = 'idle'; text = fmt(state.set_seconds);
         if (state.light_now) { cls = 'light words'; label = text; text = WRAP; }
       } else {
-        var left = state.set_seconds - (Date.now() + offset - Date.parse(state.started_at)) / 1000;
+        // counts up from 0:00 (a countdown makes comics panic, Sam, Oct 28 2026)
+        var elapsed = (Date.now() + offset - Date.parse(state.started_at)) / 1000;
+        var left = state.set_seconds - elapsed;
         if (left > 0) {
-          text = fmt(Math.ceil(left));
+          text = fmt(elapsed);
           if (state.light_now || left <= WRAP_AT) { cls = 'light words'; label = text; text = WRAP; }
           else if (state.light_seconds > 0 && left <= state.light_seconds) { cls = 'light'; label = 'Light'; }
           else cls = 'running';
         } else {
-          cls = 'light words long'; label = '+' + fmt(-left); text = left > -60 ? OVER : WAY_OVER;
+          cls = 'light words long'; label = fmt(elapsed); text = left > -60 ? OVER : WAY_OVER;
         }
       }
       if (clockEl.textContent !== text) clockEl.textContent = text;
