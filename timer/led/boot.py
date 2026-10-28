@@ -43,7 +43,10 @@ def update():
                         continue
             except OSError:
                 pass  # not on the board yet
-            compile(new, name, "exec")  # raises on a broken or cut-off file
+            try:
+                compile(new.decode(), name, "exec")  # raises on a broken or cut-off file
+            except NameError:  # a build without compile(): trust the download
+                pass
             with open(name + ".new", "wb") as f:
                 f.write(new)
             try:
