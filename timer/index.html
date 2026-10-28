@@ -26,6 +26,10 @@
 
     #clock { font-weight: 700; font-variant-numeric: tabular-nums; line-height: .9;
       font-size: min(42vw, 78vh); letter-spacing: -.02em; }
+    /* words instead of numbers: WRAP IT UP, and what it says when they go over */
+    body.words #clock { font-size: min(13vw, 24vh); line-height: 1; text-align: center;
+      text-transform: uppercase; letter-spacing: .02em; padding: 0 4vw; }
+    body.long #clock { font-size: min(8vw, 15vh); }
     #label { font-weight: 700; text-transform: uppercase; letter-spacing: .18em;
       font-size: min(5vw, 9vh); color: var(--dim); margin-top: 2vh; min-height: 1.2em; }
 
@@ -66,7 +70,7 @@
     <button data-start="20">20 min</button>
     <button data-add="60" class="alt">+1 min</button>
     <button data-add="-60" class="alt">&minus;1 min</button>
-    <button data-rpc="timer_light" class="warn">Light</button>
+    <button data-rpc="timer_light" class="warn">Wrap it up</button>
     <button data-rpc="timer_stop" class="alt">Stop</button>
     <button data-close class="alt">Hide</button>
   </div>
@@ -103,6 +107,12 @@
       }).catch(function () { statusEl.className = ''; });
     }
 
+    // What the clock says to the comic (Sam, Oct 28 2026); the deck's WRAP IT UP key is timer_light.
+    var WRAP_AT = 30;
+    var WRAP = 'Wrap it up';
+    var OVER = 'You better know what you are doing\u2026.';
+    var WAY_OVER = 'No seriously\u2026. are you famous?';
+
     function fmt(sec) {
       sec = Math.max(0, Math.floor(sec));
       return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
@@ -116,16 +126,16 @@
       var cls, text, label = '';
       if (!state.started_at) {
         cls = 'idle'; text = fmt(state.set_seconds);
-        if (state.light_now) { cls = 'light'; label = 'Light'; }
+        if (state.light_now) { cls = 'light words'; label = text; text = WRAP; }
       } else {
         var left = state.set_seconds - (Date.now() + offset - Date.parse(state.started_at)) / 1000;
         if (left > 0) {
           text = fmt(Math.ceil(left));
-          var lit = state.light_now || (state.light_seconds > 0 && left <= state.light_seconds);
-          cls = lit ? 'light' : 'running';
-          if (lit) label = 'Light';
+          if (state.light_now || left <= WRAP_AT) { cls = 'light words'; label = text; text = WRAP; }
+          else if (state.light_seconds > 0 && left <= state.light_seconds) { cls = 'light'; label = 'Light'; }
+          else cls = 'running';
         } else {
-          cls = 'over'; text = '+' + fmt(-left); label = 'Time';
+          cls = 'light words long'; label = '+' + fmt(-left); text = left > -60 ? OVER : WAY_OVER;
         }
       }
       if (clockEl.textContent !== text) clockEl.textContent = text;
