@@ -8,7 +8,7 @@ doesn't light the room. The digits count up from 0:00 (a countdown makes comics
 panic), turn red with LIGHT at one minute left, say WRAP IT UP at 30 seconds left, and
 over time say "You better know what you are doing....", then "No seriously.... are you
 famous?" a minute over. Time of day sits small at the top.
-It keeps the screen awake. Tap the screen for buttons (5/7/10/15/20 min, +/-1, Wrap it up, Stop);
+It keeps the screen awake. Tap the screen for buttons (3/5/7/10 min, +/-1, Wrap it up, Stop);
 they hide again after 10 seconds.
 
 State is one row in Supabase (`stage_timer`, migration

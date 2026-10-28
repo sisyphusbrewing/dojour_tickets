@@ -3436,7 +3436,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\n5 MIN\\ntimer",
+              "text": "START\\n3 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -3454,6 +3454,75 @@
                     {
                       "type": "action",
                       "id": "a0048",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"minutes\": 3}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "START\\n5 MIN\\ntimer",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2055982,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0049",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3498,75 +3567,6 @@
             },
             "localVariables": []
           },
-          "2": {
-            "type": "button",
-            "options": {
-              "stepProgression": "auto",
-              "rotaryActions": false
-            },
-            "style": {
-              "text": "START\\n7 MIN\\ntimer",
-              "textExpression": false,
-              "size": "auto",
-              "alignment": "center:center",
-              "pngalignment": "center:center",
-              "color": 16777215,
-              "bgcolor": 2055982,
-              "show_topbar": "default",
-              "png64": null
-            },
-            "feedbacks": [],
-            "steps": {
-              "0": {
-                "action_sets": {
-                  "down": [
-                    {
-                      "type": "action",
-                      "id": "a0049",
-                      "connectionId": "http",
-                      "definitionId": "post",
-                      "options": {
-                        "url": {
-                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
-                          "isExpression": false
-                        },
-                        "body": {
-                          "value": "{\"minutes\": 7}",
-                          "isExpression": false
-                        },
-                        "header": {
-                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
-                          "isExpression": false
-                        },
-                        "contenttype": {
-                          "value": "application/json",
-                          "isExpression": false
-                        },
-                        "jsonResultDataVariable": {
-                          "value": "",
-                          "isExpression": false
-                        },
-                        "result_stringify": {
-                          "value": true,
-                          "isExpression": false
-                        },
-                        "statusCodeVariable": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": 3
-                    }
-                  ],
-                  "up": []
-                },
-                "options": {
-                  "runWhileHeld": []
-                }
-              }
-            },
-            "localVariables": []
-          },
           "3": {
             "type": "button",
             "options": {
@@ -3574,7 +3574,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\n10 MIN\\ntimer",
+              "text": "START\\n7 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -3600,7 +3600,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 10}",
+                          "value": "{\"minutes\": 7}",
                           "isExpression": false
                         },
                         "header": {
@@ -3645,7 +3645,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\n15 MIN\\ntimer",
+              "text": "START\\n10 MIN\\ntimer",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -3671,7 +3671,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 15}",
+                          "value": "{\"minutes\": 10}",
                           "isExpression": false
                         },
                         "header": {

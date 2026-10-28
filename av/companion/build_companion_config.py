@@ -394,10 +394,10 @@ PAGES = {
         "name": "TIMER",
         "controls": {
             (0, 0): page_key("TIMER", "SHOW", 1, TIMER_COLOR),
-            (0, 1): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
-            (0, 2): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
-            (0, 3): timer_key("START\\n10 MIN\\ntimer", "timer_start", {"minutes": 10}),
-            (1, 0): timer_key("START\\n15 MIN\\ntimer", "timer_start", {"minutes": 15}),
+            (0, 1): timer_key("START\\n3 MIN\\ntimer", "timer_start", {"minutes": 3}),
+            (0, 2): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
+            (0, 3): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
+            (1, 0): timer_key("START\\n10 MIN\\ntimer", "timer_start", {"minutes": 10}),
             (1, 1): timer_key("ADD\\n1 MIN\\nto timer", "timer_add", {"seconds": 60}, bgcolor=DARK),
             (1, 2): timer_key("STOP\\ntimer", "timer_stop", bgcolor=RED),
             # WRAP IT UP on the stage clock now (timer_light); press again to clear
