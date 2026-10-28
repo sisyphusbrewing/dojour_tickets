@@ -118,6 +118,13 @@ def connect():
 
 pool = adafruit_connection_manager.get_radio_socketpool(wifi.radio)
 ssl = adafruit_connection_manager.get_radio_ssl_context(wifi.radio)
+# The built-in certificate list on these boards misses the root Supabase uses
+# (Google Trust Services, GTS Root R4), so trust a short list of roots directly.
+try:
+    with open("roots.pem") as f:
+        ssl.load_verify_locations(cadata=f.read())
+except Exception as e:
+    print("roots", e)
 http = adafruit_requests.Session(pool, ssl)
 
 
