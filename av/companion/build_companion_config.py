@@ -60,12 +60,24 @@ TIMER_GREEN = 0x1F5F2E
 SUPABASE = "https://idsdwkubqnavkazlteis.supabase.co"
 SUPABASE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 
-# Prints today's taproom menu on the office printer (menu/print-menu.ps1, fetched fresh each press)
-PRINT_MENU_COMMAND = (
-    'powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create('
-    "(New-Object Net.WebClient).DownloadString("
-    "'https://staff.sisyphusbrewing.com/menu/print-menu.ps1')))\""
-)
+# Prints today's taproom menu on the office printer: Edge renders menu/print.html to a PDF, SumatraPDF
+# prints it (winget installs it the first time). Plain cmd, no PowerShell and nothing downloaded and run,
+# because Defender flags the old "download a script and run it" PowerShell line as a virus (Oct 28 2026).
+# Files live in C:\Users\Public\sisyphus-menu (no spaces, so no quotes are needed). The ^& are escaped so
+# the outer cmd hands the whole chain to the detached `cmd /c` that shell_key starts.
+_MENU = r"%PUBLIC%\sisyphus-menu"
+_SUMATRA = r"%LOCALAPPDATA%\SumatraPDF\SumatraPDF.exe"
+PRINT_MENU_COMMAND = " ^& ".join([
+    f"cmd /c md {_MENU}",
+    rf"del /q {_MENU}\taproom-menu.pdf",
+    'start "" /wait /min msedge --headless=new --disable-gpu --no-first-run'
+    rf" --user-data-dir={_MENU}\profile --no-pdf-header-footer --virtual-time-budget=15000"
+    rf" --print-to-pdf={_MENU}\taproom-menu.pdf"
+    " https://staff.sisyphusbrewing.com/menu/print.html?t=%RANDOM%",
+    f"(if not exist {_SUMATRA} winget install -e --id SumatraPDF.SumatraPDF --silent"
+    " --accept-package-agreements --accept-source-agreements)",
+    rf"{_SUMATRA} -print-to-default -print-settings noscale -silent {_MENU}\taproom-menu.pdf",
+])
 
 # --------------------------------------------------------------------------
 # Building blocks
@@ -281,7 +293,7 @@ def shell_key(text, command, bgcolor=MENU_BLUE):
 
 
 def print_menu_key():
-    """Prints today's taproom menu (menu/print-menu.ps1)."""
+    """Prints today's taproom menu (see PRINT_MENU_COMMAND)."""
     return shell_key("PRINT\\nMENU\\n(paper)", PRINT_MENU_COMMAND)
 
 
