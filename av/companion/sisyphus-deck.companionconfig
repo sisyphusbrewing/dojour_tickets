@@ -3852,13 +3852,13 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "FLASH\\nLIGHT",
+              "text": "WRAP\\nIT UP",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
-              "bgcolor": 8018432,
+              "bgcolor": 12582912,
               "show_topbar": "default",
               "png64": null
             },

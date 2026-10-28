@@ -400,8 +400,8 @@ PAGES = {
             (1, 0): timer_key("START\\n15 MIN\\ntimer", "timer_start", {"minutes": 15}),
             (1, 1): timer_key("ADD\\n1 MIN\\nto timer", "timer_add", {"seconds": 60}, bgcolor=DARK),
             (1, 2): timer_key("STOP\\ntimer", "timer_stop", bgcolor=RED),
-            # flash the comic's light by hand
-            (1, 3): timer_key("FLASH\\nLIGHT", "timer_light", bgcolor=0x7A5A00),
+            # WRAP IT UP on the stage clock now (timer_light); press again to clear
+            (1, 3): timer_key("WRAP\\nIT UP", "timer_light", bgcolor=RED),
         },
     },
 }

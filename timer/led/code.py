@@ -28,6 +28,14 @@ WHITE = 0xB4B4B4  # not full white: plenty from the stage, less glow
 RED = 0xFF0000
 IDLE = 0x101010
 
+# What the clock says to the comic (Sam, Oct 28 2026). The deck's WRAP IT UP key
+# (timer_light) shows the first one at any time.
+WRAP_AT = 30  # seconds left
+WRAP = ("WRAP", "IT UP")
+OVER = "YOU BETTER KNOW WHAT YOU ARE DOING...."
+WAY_OVER = "NO SERIOUSLY.... ARE YOU FAMOUS?"  # a minute or more over
+SCROLL = 60  # pixels a second
+
 # ---- display ----
 matrix = Matrix(width=64, height=32, bit_depth=4)
 display = matrix.display
@@ -36,6 +44,11 @@ digits = label.Label(terminalio.FONT, text="", color=IDLE, scale=2)
 digits.anchor_point = (0.5, 0.5)
 digits.anchored_position = (32, 16)
 root.append(digits)
+# long lines scroll right to left, then the count-up shows for a moment
+words = label.Label(terminalio.FONT, text="", color=RED, scale=2)
+words.anchor_point = (0, 0.5)
+words.hidden = True
+root.append(words)
 display.root_group = root
 
 # Kevin: press UP for Kevin asking for another beer, DOWN for the timer.
@@ -102,10 +115,36 @@ def kevin_tick():
 
 
 def show(text, color):
+    words.hidden, digits.hidden = True, False
     if digits.text != text:
         digits.text = text
     if digits.color != color:
         digits.color = color
+
+
+def wrap(time_text):
+    """WRAP, IT UP, then the time, big, round and round."""
+    step = int(time.monotonic() / 0.8) % 3
+    show(WRAP[step] if step < 2 else time_text, RED)
+
+
+scroll_text, scroll_start = None, 0.0
+
+
+def scroll(text, time_text):
+    global scroll_text, scroll_start
+    now = time.monotonic()
+    if text != scroll_text:
+        scroll_text, scroll_start = text, now
+        words.text = text
+    x = 64 - int((now - scroll_start) * SCROLL) // 2 * 2  # whole font pixels at scale 2
+    if x < -12 * len(text):  # scrolled off: show the time for 2 s, then go again
+        show(time_text, RED)
+        if x < -12 * len(text) - 2 * SCROLL:
+            scroll_start = now
+        return
+    digits.hidden, words.hidden = True, False
+    words.anchored_position = (x, 16)
 
 
 # ---- network ----
@@ -189,13 +228,18 @@ while True:
     elif state is None:
         show("...", IDLE)
     elif not state["started_at"]:
-        show(fmt(state["set_seconds"]), RED if state["light_now"] else IDLE)
+        if state["light_now"]:
+            wrap(fmt(state["set_seconds"]))
+        else:
+            show(fmt(state["set_seconds"]), IDLE)
     else:
         left = state["set_seconds"] - (elapsed_at_fetch + time.monotonic() - fetched)
-        if left > 0:
-            lit = state["light_now"] or (state["light_seconds"] > 0 and left <= state["light_seconds"])
+        if left > 0 and (state["light_now"] or left <= WRAP_AT):
+            wrap(fmt(-(-left // 1)))
+        elif left > 0:
+            lit = state["light_seconds"] > 0 and left <= state["light_seconds"]
             show(fmt(-(-left // 1)), RED if lit else WHITE)
         else:
-            # over time: blink red, counting up
-            show("+" + fmt(-left) if int(-left * 2) % 2 == 0 else "", RED)
-    time.sleep(0.05)
+            # over time: the comic gets told, with the count-up in between
+            scroll(OVER if left > -60 else WAY_OVER, "+" + fmt(-left))
+    time.sleep(0.03)
