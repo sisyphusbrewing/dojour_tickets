@@ -1,7 +1,8 @@
 # Prints today's taproom menu (menu/print.html, live from GoTab) on the office PC's printer.
-# The Stream Deck PRINT MENU key runs it through Companion's "System: Run shell path (local)", fetching the
-# latest copy from GitHub Pages each time, so nothing has to be copied onto the PC:
-#   powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://staff.sisyphusbrewing.com/menu/print-menu.ps1')))"
+# The Stream Deck PRINT MENU key no longer uses this script: it runs the same steps as one plain cmd line
+# (PRINT_MENU_COMMAND in av/companion/build_companion_config.py), because Defender flags a PowerShell line
+# that downloads a script and runs it as a virus (Oct 28 2026). Kept as a manual fallback: save it on the PC
+# and run  powershell -NoProfile -File print-menu.ps1
 # Uses Microsoft Edge (built into Windows) and SumatraPDF for silent printing (installed with winget on first run).
 # A log of each press is in %TEMP%\sisyphus-menu\print-menu.log.
 # Options: -Copies 3 for more than one sheet, -Printer "Name" for a printer other than the Windows default.

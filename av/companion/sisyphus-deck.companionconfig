@@ -1365,7 +1365,7 @@
                       "definitionId": "exec",
                       "options": {
                         "path": {
-                          "value": "start \"\" /min powershell -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((New-Object Net.WebClient).DownloadString('https://staff.sisyphusbrewing.com/menu/print-menu.ps1')))\"",
+                          "value": "start \"\" /min cmd /c md %PUBLIC%\\sisyphus-menu ^& del /q %PUBLIC%\\sisyphus-menu\\taproom-menu.pdf ^& start \"\" /wait /min msedge --headless=new --disable-gpu --no-first-run --user-data-dir=%PUBLIC%\\sisyphus-menu\\profile --no-pdf-header-footer --virtual-time-budget=15000 --print-to-pdf=%PUBLIC%\\sisyphus-menu\\taproom-menu.pdf https://staff.sisyphusbrewing.com/menu/print.html?t=%RANDOM% ^& (if not exist %LOCALAPPDATA%\\SumatraPDF\\SumatraPDF.exe winget install -e --id SumatraPDF.SumatraPDF --silent --accept-package-agreements --accept-source-agreements) ^& %LOCALAPPDATA%\\SumatraPDF\\SumatraPDF.exe -print-to-default -print-settings noscale -silent %PUBLIC%\\sisyphus-menu\\taproom-menu.pdf",
                           "isExpression": false
                         },
                         "cwd": {
