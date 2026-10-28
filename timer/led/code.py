@@ -10,11 +10,15 @@ import time
 
 import adafruit_connection_manager
 import adafruit_requests
+import board
+import digitalio
 import displayio
 import terminalio
 import wifi
 from adafruit_display_text import label
 from adafruit_matrixportal.matrix import Matrix
+
+import kevin
 
 URL = "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_state"
 KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
@@ -34,6 +38,67 @@ digits.anchored_position = (32, 16)
 root.append(digits)
 display.root_group = root
 
+# Kevin: press UP for Kevin asking for another beer, DOWN for the timer.
+kevin_palette = displayio.Palette(len(kevin.PALETTE))
+kevin_index = {}
+for i, (ch, color) in enumerate(kevin.PALETTE.items()):
+    kevin_palette[i] = color
+    kevin_index[ch] = i
+kevin_bitmaps = {}
+for pic, _, _ in kevin.SCRIPT:
+    key = "".join(pic)
+    if key not in kevin_bitmaps:
+        bmp = displayio.Bitmap(24, 32, len(kevin.PALETTE))
+        for y, row in enumerate(pic):
+            for x, ch in enumerate(row):
+                bmp[x, y] = kevin_index[ch]
+        kevin_bitmaps[key] = bmp
+first = kevin_bitmaps["".join(kevin.SCRIPT[0][0])]
+kevin_sprite = displayio.TileGrid(first, pixel_shader=kevin_palette)
+kevin_line1 = label.Label(terminalio.FONT, text="", color=kevin.AMBER, x=26, y=8)
+kevin_line2 = label.Label(terminalio.FONT, text="", color=kevin.AMBER, x=26, y=22)
+kevin_group = displayio.Group()
+for item in (kevin_sprite, kevin_line1, kevin_line2):
+    kevin_group.append(item)
+
+
+def button(pin):
+    b = digitalio.DigitalInOut(pin)
+    b.switch_to_input(pull=digitalio.Pull.UP)
+    return b
+
+
+up, down = button(board.BUTTON_UP), button(board.BUTTON_DOWN)
+kevin_mode = False
+kevin_step, kevin_until = 0, 0.0
+
+
+def check_buttons():
+    global kevin_mode, kevin_step, kevin_until
+    if not up.value and not kevin_mode:
+        kevin_mode, kevin_step, kevin_until = True, 0, 0.0
+        display.root_group = kevin_group
+    elif not down.value and kevin_mode:
+        kevin_mode = False
+        display.root_group = root
+
+
+def kevin_tick():
+    global kevin_step, kevin_until
+    now = time.monotonic()
+    if now < kevin_until:
+        return
+    pic, (l1, l2), seconds = kevin.SCRIPT[kevin_step]
+    kevin_sprite.bitmap = kevin_bitmaps["".join(pic)]
+    if l2:
+        kevin_line1.text, kevin_line2.text = l1, l2
+        kevin_line1.y = 8
+    else:
+        kevin_line1.text, kevin_line2.text = l1, ""
+        kevin_line1.y = 15
+    kevin_until = now + seconds
+    kevin_step = (kevin_step + 1) % len(kevin.SCRIPT)
+
 
 def show(text, color):
     if digits.text != text:
@@ -44,16 +109,13 @@ def show(text, color):
 
 # ---- network ----
 def connect():
-    show("WIFI", IDLE)
-    while not wifi.radio.connected:
-        try:
-            wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
-        except Exception as e:  # keep trying; the room's Wi-Fi may come up after us
-            print("wifi", e)
-            time.sleep(3)
+    """One try at joining Wi-Fi; the main loop keeps retrying, so Kevin still works offline."""
+    try:
+        wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
+    except Exception as e:  # the room's Wi-Fi may come up after us
+        print("wifi", e)
 
 
-connect()
 pool = adafruit_connection_manager.get_radio_socketpool(wifi.radio)
 ssl = adafruit_connection_manager.get_radio_ssl_context(wifi.radio)
 http = adafruit_requests.Session(pool, ssl)
@@ -90,12 +152,20 @@ fetched = time.monotonic()
 last_poll = -POLL
 
 while True:
+    check_buttons()
+    if kevin_mode:
+        kevin_tick()
+        time.sleep(0.02)
+        continue
     now = time.monotonic()
     if now - last_poll >= POLL:
         last_poll = now
+        if not wifi.radio.connected:
+            show("WIFI", IDLE)
+            connect()
+            last_poll = time.monotonic() + 2  # give a failed join a few seconds before the next try
+            continue
         try:
-            if not wifi.radio.connected:
-                connect()
             r = http.post(URL, headers={"apikey": KEY, "Content-Type": "application/json"}, data="{}")
             s = r.json()
             r.close()
@@ -106,7 +176,9 @@ while True:
         except Exception as e:  # lost a poll: keep counting on the last state we had
             print("poll", e)
 
-    if state is None:
+    if not wifi.radio.connected:
+        show("WIFI", IDLE)
+    elif state is None:
         show("...", IDLE)
     elif not state["started_at"]:
         show(fmt(state["set_seconds"]), RED if state["light_now"] else IDLE)

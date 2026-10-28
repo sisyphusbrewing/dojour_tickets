@@ -30,3 +30,7 @@ follows the same Stream Deck timer buttons as the timer page.
 
 It shows `WIFI` while connecting, then the timer: dim gray when stopped, white
 while running, red at the light, blinking red with a count-up when over.
+
+Press **UP** for Kevin (`kevin.py`): a pixel guy in a robe with an empty mug
+asking for another beer. Press **DOWN** to go back to the timer. Kevin works
+even when Wi-Fi doesn't.
