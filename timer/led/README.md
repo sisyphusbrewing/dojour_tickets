@@ -21,7 +21,7 @@ follows the same Stream Deck timer buttons as the timer page.
    double-click the reset button, drag the .uf2 onto the `MATRIXS3BOOT` drive.
    It reboots as `CIRCUITPY`.
 3. Copy everything inside the ready-made kit's `CIRCUITPY` folder
-   (`code.py`, `settings.toml`, `lib/`) onto the `CIRCUITPY` drive. The kit is
+   (`boot.py`, `code.py`, `kevin.py`, `roots.pem`, `settings.toml`, `lib/`) onto the `CIRCUITPY` drive. The kit is
    in the project files at `av/timer/stage-clock-CIRCUITPY.zip`; to rebuild it,
    take `code.py` and `settings.toml` from here and the libraries with
    `circup install adafruit_matrixportal adafruit_display_text adafruit_requests adafruit_connection_manager`.
@@ -30,6 +30,18 @@ follows the same Stream Deck timer buttons as the timer page.
 
 It shows `WIFI` while connecting, then the timer: dim gray when stopped, white
 while running, red at the light, WRAP IT UP at 30 seconds left (or when the deck's WRAP IT UP key is pressed), and over time a scrolling "YOU BETTER KNOW WHAT YOU ARE DOING....", then "NO SERIOUSLY.... ARE YOU FAMOUS?" a minute over, with the time in between. The digits count up from 0:00.
+
+## Updates over Wi-Fi
+
+`boot.py` checks https://staff.sisyphusbrewing.com/timer/led/ every time the
+clock is powered up or RESET is pressed, and swaps in a newer `code.py` or
+`kevin.py` by itself. Merge the change, wait a couple of minutes for the site to
+publish, then press RESET. A file that doesn't download whole or doesn't
+compile is skipped, so a bad copy never replaces a good one.
+
+Because the board writes its own files, the computer sees `CIRCUITPY` as
+read-only. To copy files over USB (new libraries, Wi-Fi settings), hold
+**DOWN** while pressing **RESET**; the drive is writable until the next reset.
 
 Press **UP** for Kevin (`kevin.py`): a pixel guy in a robe with an empty mug
 asking for another beer. Press **DOWN** (or UP again) to go back to the timer. Kevin works
