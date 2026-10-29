@@ -17,7 +17,7 @@ on:
         default: '20.00'
         type: string
       room_capacity:
-        description: 'Room Capacity / Ticket Limit per variant'
+        description: 'Ticket Limit per variant (90 max, the room)'
         required: true
         default: '90'
         type: string
