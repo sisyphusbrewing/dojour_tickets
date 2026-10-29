@@ -65,6 +65,7 @@ SUPABASE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 # because Defender flags the old "download a script and run it" PowerShell line as a virus (Oct 28 2026).
 # Files live in C:\Users\Public\sisyphus-menu (no spaces, so no quotes are needed). The ^& are escaped so
 # the outer cmd hands the whole chain to the detached `cmd /c` that shell_key starts.
+MENU_COPIES = 5  # one press prints a stack for the bar (Sam, Oct 29 2026)
 _MENU = r"%PUBLIC%\sisyphus-menu"
 _SUMATRA = r"%LOCALAPPDATA%\SumatraPDF\SumatraPDF.exe"
 PRINT_MENU_COMMAND = " ^& ".join([
@@ -76,7 +77,7 @@ PRINT_MENU_COMMAND = " ^& ".join([
     " https://staff.sisyphusbrewing.com/menu/print.html?t=%RANDOM%",
     f"(if not exist {_SUMATRA} winget install -e --id SumatraPDF.SumatraPDF --silent"
     " --accept-package-agreements --accept-source-agreements)",
-    rf"{_SUMATRA} -print-to-default -print-settings noscale -silent {_MENU}\taproom-menu.pdf",
+    rf"{_SUMATRA} -print-to-default -print-settings noscale,{MENU_COPIES}x -silent {_MENU}\taproom-menu.pdf",
 ])
 
 # --------------------------------------------------------------------------
@@ -214,18 +215,23 @@ CHANNEL = lambda n: dict(  # noqa: E731
     strip={"type": "/ch/", "num": n}, mute_strip={"type": "/ch/", "num": n},
     feedback_strip={"theChannel": n},
 )
-# Pre-show music comes from the office PC's headphone jack into Aux in 17/18 (source set
-# to the analog jacks). USB playback into channels 15/16 never passed audio (Oct 19 2026).
-MUSIC = dict(fader_action="usbFad_a", mute_action="usbMute", mute_feedback="rtn_aux",
-             level_var="f_rtn_aux_d")
-SOURCES = [("MIC 1", CHANNEL(1)), ("MIC 2", CHANNEL(2)), ("MUSIC", MUSIC), ("GOD MIC", CHANNEL(5))]
+# Pre-show music comes from the office PC over USB into channels 3/4 (linked, named MUSIC):
+# Windows plays to "OUT 3-4", and on the XR18 a channel's USB return only hears the PC output
+# with its own number; Behringer's driver gives Windows outputs 1-8 only. The headphone-jack
+# cable it replaces caused a ground-loop click (Oct 29 2026).
+MUSIC = CHANNEL(3)
+# Mics 3 and 4 are on channels 9 and 10 for nights with more people on stage (Oct 29 2026).
+# The deck has a 2-mic and a 4-mic layout (MICS key on the SHOW page): with 4 mics the knobs
+# ride the four mics instead of music and the god mic.
+SOURCES_2 = [("MIC 1", CHANNEL(1)), ("MIC 2", CHANNEL(2)), ("MUSIC", MUSIC), ("GOD MIC", CHANNEL(5))]
+SOURCES_4 = [("MIC 1", CHANNEL(1)), ("MIC 2", CHANNEL(2)), ("MIC 3", CHANNEL(9)), ("MIC 4", CHANNEL(10))]
 
 
-def sound_controls():
+def sound_controls(sources):
     """Knobs, touch strip labels and mute keys, identical on every page so the
     knobs always do the same thing whatever page the deck is on."""
     controls = {}
-    for col, (name, s) in enumerate(SOURCES):
+    for col, (name, s) in enumerate(sources):
         controls[(2, col)] = strip_label(name, s["level_var"], s["mute_action"], s["mute_feedback"],
                                          s.get("mute_strip"), s.get("feedback_strip"))
         controls[(3, col)] = volume_knob(s["fader_action"], s["mute_action"],
@@ -233,11 +239,11 @@ def sound_controls():
     return controls
 
 
-def show_mute_keys():
+def show_mute_keys(sources):
     """Bottom key row: one mute key above each knob, same order."""
     return {(1, col): mute_key(name, s["mute_action"], s["mute_feedback"],
                                s.get("mute_strip"), s.get("feedback_strip"))
-            for col, (name, s) in enumerate(SOURCES)}
+            for col, (name, s) in enumerate(sources)}
 
 
 def page_key(this_page, next_page, number, color):
@@ -316,11 +322,11 @@ CUSTOM_VARIABLES = {
 }
 
 
-def timer_readout_key():
+def timer_readout_key(show_page=1):
     """Top-left of the TIMER page: what the comic's clock says; press for the next page."""
     return button(
         TIMER_READOUT,
-        press=[action(INTERNAL, "set_page", surfaceId="self", page=1)],
+        press=[action(INTERNAL, "set_page", surfaceId="self", page=show_page)],
         feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
                             expression=TIMER_RED)],
         bgcolor=TIMER_COLOR,
@@ -346,7 +352,7 @@ def shell_key(text, command, bgcolor=MENU_BLUE):
 
 def print_menu_key():
     """Prints today's taproom menu (see PRINT_MENU_COMMAND)."""
-    return shell_key("PRINT\\nMENU\\n(paper)", PRINT_MENU_COMMAND)
+    return shell_key(f"PRINT\\n{MENU_COPIES} MENUS\\n(paper)", PRINT_MENU_COMMAND)
 
 
 def govee(bulb, kind, instance, value):
@@ -422,44 +428,60 @@ def reset_sound_key():
 # sound_controls(): rows 2-3, the touch strip labels and the four knobs.
 # --------------------------------------------------------------------------
 
-PAGES = {
-    1: {
-        "name": "SHOW",
-        "controls": {
-            (0, 0): page_key("SHOW", "BAR", 2, SHOW_COLOR),
-            (0, 1): record_key(),
-            (0, 3): reset_sound_key(),
-            # (0, 2): free, for DOORS / INTERMISSION scenes later
-            **show_mute_keys(),
+def layout(sources, first, mics, other_first):
+    """SHOW, BAR and TIMER pages for one mic layout, numbered from `first`."""
+    show, bar, timer = first, first + 1, first + 2
+    tag = "" if mics == 2 else " 4"  # page names: SHOW / SHOW 4 ...
+    pages = {
+        show: {
+            "name": f"SHOW{tag}",
+            "controls": {
+                (0, 0): page_key(f"SHOW{tag}", "BAR", bar, SHOW_COLOR),
+                (0, 1): record_key(),
+                (0, 2): mics_key(mics, other_first),
+                (0, 3): reset_sound_key(),
+                **show_mute_keys(sources),
+            },
         },
-    },
-    2: {
-        "name": "BAR",
-        "controls": {
-            (0, 0): page_key("BAR", "TIMER", 3, BAR_COLOR),
-            (0, 1): menu_refresh_key(),
-            (0, 2): print_menu_key(),
-            **hall_keys(),
+        bar: {
+            "name": f"BAR{tag}",
+            "controls": {
+                (0, 0): page_key(f"BAR{tag}", "TIMER", timer, BAR_COLOR),
+                (0, 1): menu_refresh_key(),
+                (0, 2): print_menu_key(),
+                **hall_keys(),
+            },
         },
-    },
-    3: {
-        "name": "TIMER",
-        "controls": {
-            # live readout of the stage clock; press for the SHOW page
-            (0, 0): timer_readout_key(),
-            (0, 1): timer_key("START\\n3 MIN\\ntimer", "timer_start", {"minutes": 3}),
-            (0, 2): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
-            (0, 3): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
-            (1, 0): timer_key("START\\n10 MIN\\ntimer", "timer_start", {"minutes": 10}),
-            (1, 1): timer_key("ADD\\n1 MIN\\nto timer", "timer_add", {"seconds": 60}, bgcolor=DARK),
-            (1, 2): timer_key("STOP\\ntimer", "timer_stop", bgcolor=RED),
-            # WRAP IT UP on the stage clock now (timer_light); press again to clear
-            (1, 3): timer_key("WRAP\\nIT UP", "timer_light", bgcolor=RED),
+        timer: {
+            "name": f"TIMER{tag}",
+            "controls": {
+                # live readout of the stage clock; press for the SHOW page
+                (0, 0): timer_readout_key(show),
+                (0, 1): timer_key("START\\n3 MIN\\ntimer", "timer_start", {"minutes": 3}),
+                (0, 2): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
+                (0, 3): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
+                (1, 0): timer_key("START\\n10 MIN\\ntimer", "timer_start", {"minutes": 10}),
+                (1, 1): timer_key("ADD\\n1 MIN\\nto timer", "timer_add", {"seconds": 60}, bgcolor=DARK),
+                (1, 2): timer_key("STOP\\ntimer", "timer_stop", bgcolor=RED),
+                # WRAP IT UP on the stage clock now (timer_light); press again to clear
+                (1, 3): timer_key("WRAP\\nIT UP", "timer_light", bgcolor=RED),
+            },
         },
-    },
-}
-for _page in PAGES.values():
-    _page["controls"].update(sound_controls())
+    }
+    for page in pages.values():
+        page["controls"].update(sound_controls(sources))
+    return pages
+
+
+def mics_key(mics, other_first):
+    """SHOW page: which mic layout the knobs use; press to switch."""
+    other = 4 if mics == 2 else 2
+    return button(f"{mics} MICS\\n\\npress for {other}", bgcolor=0x3A3A6A, size="14",
+                  press=[action(INTERNAL, "set_page", surfaceId="self", page=other_first)])
+
+
+PAGES = {**layout(SOURCES_2, 1, 2, 4), **layout(SOURCES_4, 4, 4, 1)}
+
 
 GRID = {"minColumn": 0, "maxColumn": 3, "minRow": 0, "maxRow": 3}
 
