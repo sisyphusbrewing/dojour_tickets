@@ -295,9 +295,13 @@ def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
         sets = {"timer_t0": "0", "timer_wrap": "0"}
     else:  # timer_light = WRAP IT UP toggle
         sets = {"timer_wrap": "1 - $(custom:timer_wrap)"}
-    key["steps"]["0"]["action_sets"]["down"] += [
-        action(INTERNAL, "custom_variable_set_expression", name=name, expression=expr)
-        for name, expr in sets.items()]
+    # Companion 5.1 ignores the old "custom_variable_set_expression" on import (its upgrade
+    # script doesn't run on our imports), so use "custom_variable_set_value" with the
+    # value marked as an expression.
+    for name, expr in sets.items():
+        act = action(INTERNAL, "custom_variable_set_value", name=name, value=expr)
+        act["options"]["value"]["isExpression"] = True
+        key["steps"]["0"]["action_sets"]["down"].append(act)
     return key
 
 
