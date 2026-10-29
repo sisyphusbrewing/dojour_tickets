@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Draw on the Sign · Sisyphus</title>
+  <meta name="description" content="Tell the LED sign at Sisyphus what to draw. It draws it, staff OK it, and it goes up in the taproom.">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <script src="art.js"></script>
+  <style>
+    .post { margin-top: 22px; }
+    .post h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 38px; line-height: 1; margin: 6px 0 12px; }
+    .post p { color: #d9d6d6; font-size: 17px; margin: 0 0 12px; }
+    .ideas { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+    .ideas button { border: 1px solid var(--line); background: transparent; color: #d9d6d6; border-radius: 999px; padding: 7px 12px; font: 600 14px var(--body); cursor: pointer; }
+    canvas { width: 100%; aspect-ratio: 2 / 1; border-radius: 10px; display: block; background: #050505; }
+    .result { margin-top: 18px; }
+    .result p { margin: 12px 0 0; color: #d9d6d6; font-size: 17px; }
+    .drawing { text-align: center; color: var(--slate-light); font-family: var(--head); text-transform: uppercase; letter-spacing: .12em; padding: 28px 0; }
+    .drawing span { display: inline-block; animation: push 1.2s ease-in-out infinite; }
+    @keyframes push { 0%, 100% { transform: translateX(-10px); } 50% { transform: translateX(10px); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://www.sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">The Sign<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="post">
+      <h1>Draw on the sign</h1>
+      <p>Tell the sign what to draw. It draws it right here, the bar gives it a look, and then it goes up in the taproom.</p>
+    </section>
+
+    <form class="card" id="form">
+      <div class="field">
+        <label for="prompt">What should it draw?</label>
+        <input class="input" id="prompt" maxlength="100" required placeholder="A moose drinking a stout" autocomplete="off">
+      </div>
+      <div class="ideas" id="ideas"></div>
+      <div class="field">
+        <label for="name">Your name <span class="help">(optional, so staff know who to thank)</span></label>
+        <input class="input" id="name" maxlength="40" autocomplete="given-name">
+      </div>
+      <div class="err hidden" id="err" style="margin-top:10px"></div>
+      <button class="btn btn-primary" id="go" type="submit" style="width:100%;margin-top:14px">Draw it</button>
+    </form>
+
+    <div class="result hidden" id="result">
+      <canvas id="art"></canvas>
+      <p id="msg"></p>
+      <button class="btn" id="again" type="button" style="width:100%;margin-top:14px">Draw something else</button>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+    var FN = 'https://idsdwkubqnavkazlteis.supabase.co/functions/v1/sign-art';
+    var IDEAS = ['A moose drinking a stout', 'Sisyphus on a skateboard', 'A loon in sunglasses', 'Pizza with a mustache', 'My dog Biscuit'];
+    var $ = function (id) { return document.getElementById(id); };
+
+    $('ideas').innerHTML = IDEAS.map(function (i) { return '<button type="button">' + i + '</button>'; }).join('');
+    $('ideas').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { $('prompt').value = b.textContent; $('prompt').focus(); } });
+
+    function busy(on) {
+      $('go').disabled = on;
+      $('go').innerHTML = on ? '<span class="drawing" style="padding:0"><span>Drawing</span></span>' : 'Draw it';
+    }
+
+    $('form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      $('err').classList.add('hidden');
+      busy(true);
+      try {
+        var r = await fetch(FN, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: $('prompt').value, name: $('name').value })
+        });
+        var data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Something went wrong.');
+        $('form').classList.add('hidden');
+        $('result').classList.remove('hidden');
+        if (data.status === 'rejected') {
+          $('art').classList.add('hidden');
+          $('msg').textContent = "The sign won't draw that one" + (data.note ? ': ' + data.note.replace(/\.$/, '') : '') + '. Try something else?';
+        } else {
+          $('art').classList.remove('hidden');
+          drawSignArt($('art'), data.art, 64);
+          $('msg').textContent = "Here's your picture. Staff will give it a look, then it goes up on the sign in the taproom.";
+        }
+      } catch (err) {
+        $('err').textContent = err.message || 'Could not reach the sign. Try again in a minute.';
+        $('err').classList.remove('hidden');
+      } finally { busy(false); }
+    });
+
+    $('again').addEventListener('click', function () {
+      $('result').classList.add('hidden'); $('form').classList.remove('hidden');
+      $('prompt').value = ''; $('prompt').focus();
+    });
+  })();
+  </script>
+</body>
+</html>
