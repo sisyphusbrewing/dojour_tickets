@@ -492,7 +492,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0056",
+                "id": "f0074",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -520,7 +520,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0055",
+                      "id": "a0073",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -569,7 +569,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0061",
+                "id": "f0079",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -597,7 +597,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0060",
+                      "id": "a0078",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -646,7 +646,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0066",
+                "id": "f0084",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -670,7 +670,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0065",
+                      "id": "a0083",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -711,7 +711,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0071",
+                "id": "f0089",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -739,7 +739,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0070",
+                      "id": "a0088",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -794,7 +794,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0059",
+                      "id": "a0077",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -818,7 +818,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0058",
+                      "id": "a0076",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -849,7 +849,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0057",
+                      "id": "a0075",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -909,7 +909,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0064",
+                      "id": "a0082",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -933,7 +933,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0063",
+                      "id": "a0081",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -964,7 +964,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0062",
+                      "id": "a0080",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1024,7 +1024,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0069",
+                      "id": "a0087",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -1040,7 +1040,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0068",
+                      "id": "a0086",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -1063,7 +1063,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0067",
+                      "id": "a0085",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -1115,7 +1115,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0074",
+                      "id": "a0092",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1139,7 +1139,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0073",
+                      "id": "a0091",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1170,7 +1170,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0072",
+                      "id": "a0090",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2654,7 +2654,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0076",
+                "id": "f0094",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2682,7 +2682,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0075",
+                      "id": "a0093",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2731,7 +2731,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0081",
+                "id": "f0099",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2759,7 +2759,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0080",
+                      "id": "a0098",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2808,7 +2808,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0086",
+                "id": "f0104",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -2832,7 +2832,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0085",
+                      "id": "a0103",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -2873,7 +2873,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0091",
+                "id": "f0109",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2901,7 +2901,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0090",
+                      "id": "a0108",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2956,7 +2956,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0079",
+                      "id": "a0097",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -2980,7 +2980,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0078",
+                      "id": "a0096",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3011,7 +3011,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0077",
+                      "id": "a0095",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3071,7 +3071,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0084",
+                      "id": "a0102",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3095,7 +3095,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0083",
+                      "id": "a0101",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3126,7 +3126,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0082",
+                      "id": "a0100",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3186,7 +3186,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0089",
+                      "id": "a0107",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -3202,7 +3202,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0088",
+                      "id": "a0106",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -3225,7 +3225,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0087",
+                      "id": "a0105",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -3277,7 +3277,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0094",
+                      "id": "a0112",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3301,7 +3301,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0093",
+                      "id": "a0111",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3332,7 +3332,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0092",
+                      "id": "a0110",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3388,9 +3388,9 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "TIMER page\\n\\nnext: SHOW",
-              "textExpression": false,
-              "size": "14",
+              "text": "$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : secondsToTimestamp(($(internal:time_unix) - $(custom:timer_t0)), 'mm:ss') + '\\n' + (($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) + 60 ? 'FAMOUS?' : ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) ? 'OVER' : ($(custom:timer_wrap) == 1 || $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 30) ? 'WRAP IT UP' : $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 60 ? 'LIGHT' : 'of ' + secondsToTimestamp($(custom:timer_len), 'mm:ss'))",
+              "textExpression": true,
+              "size": "18",
               "alignment": "center:center",
               "pngalignment": "center:center",
               "color": 16777215,
@@ -3398,7 +3398,25 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0048",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:timer_t0) != 0 && ($(custom:timer_wrap) == 1 || $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 60)",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
@@ -3453,7 +3471,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0048",
+                      "id": "a0049",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3487,6 +3505,54 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0050",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0051",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "180",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0052",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3522,7 +3588,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0049",
+                      "id": "a0053",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3556,6 +3622,54 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0054",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0055",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "300",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0056",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3591,7 +3705,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0050",
+                      "id": "a0057",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3625,6 +3739,54 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0058",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0059",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "420",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0060",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3662,7 +3824,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0051",
+                      "id": "a0061",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3696,6 +3858,54 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0062",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0063",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "600",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0064",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3731,7 +3941,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0052",
+                      "id": "a0065",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3765,6 +3975,38 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0066",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "$(custom:timer_len) + 60",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0067",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3800,7 +4042,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0053",
+                      "id": "a0068",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3834,6 +4076,38 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0069",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0070",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "0",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3869,7 +4143,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0054",
+                      "id": "a0071",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3903,6 +4177,22 @@
                         }
                       },
                       "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0072",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_expression",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "expression": {
+                          "value": "1 - $(custom:timer_wrap)",
+                          "isExpression": false
+                        }
+                      }
                     }
                   ],
                   "up": []
@@ -3936,7 +4226,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0096",
+                "id": "f0114",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3964,7 +4254,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0095",
+                      "id": "a0113",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4013,7 +4303,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0101",
+                "id": "f0119",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -4041,7 +4331,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0100",
+                      "id": "a0118",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4090,7 +4380,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0106",
+                "id": "f0124",
                 "connectionId": "xair",
                 "definitionId": "rtn_aux",
                 "options": {
@@ -4114,7 +4404,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0105",
+                      "id": "a0123",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -4155,7 +4445,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0111",
+                "id": "f0129",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -4183,7 +4473,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0110",
+                      "id": "a0128",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4238,7 +4528,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0099",
+                      "id": "a0117",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4262,7 +4552,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0098",
+                      "id": "a0116",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4293,7 +4583,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0097",
+                      "id": "a0115",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4353,7 +4643,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0104",
+                      "id": "a0122",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4377,7 +4667,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0103",
+                      "id": "a0121",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4408,7 +4698,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0102",
+                      "id": "a0120",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4468,7 +4758,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0109",
+                      "id": "a0127",
                       "connectionId": "xair",
                       "definitionId": "usbMute",
                       "options": {
@@ -4484,7 +4774,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0108",
+                      "id": "a0126",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -4507,7 +4797,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0107",
+                      "id": "a0125",
                       "connectionId": "xair",
                       "definitionId": "usbFad_a",
                       "options": {
@@ -4559,7 +4849,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0114",
+                      "id": "a0132",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4583,7 +4873,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0113",
+                      "id": "a0131",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4614,7 +4904,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0112",
+                      "id": "a0130",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4700,5 +4990,24 @@
     }
   },
   "triggers": {},
-  "custom_variables": {}
+  "custom_variables": {
+    "timer_t0": {
+      "description": "Stage timer: unix time the set started on the deck (0 = stopped)",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 0
+    },
+    "timer_len": {
+      "description": "Stage timer: set length in seconds",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 1
+    },
+    "timer_wrap": {
+      "description": "Stage timer: 1 while WRAP IT UP is on",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 2
+    }
+  }
 }
