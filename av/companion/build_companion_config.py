@@ -119,15 +119,16 @@ def feedback(connection, definition, style=None, **options):
         "definitionId": definition,
         "options": _opts(options),
         "isInverted": False,
-        "upgradeIndex": CONNECTIONS[connection]["lastUpgradeIndex"],
     }
+    if connection in CONNECTIONS:  # Companion's internal feedbacks carry no upgrade index
+        fb["upgradeIndex"] = CONNECTIONS[connection]["lastUpgradeIndex"]
     if style is not None:
         fb["style"] = style
     return fb
 
 
 def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks=(),
-           color=WHITE, bgcolor=BLACK, size="auto"):
+           color=WHITE, bgcolor=BLACK, size="auto", expression=False):
     rotary = bool(turn_left or turn_right)
     action_sets = {"down": list(press), "up": list(release)}
     if rotary:
@@ -138,7 +139,7 @@ def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks
         "options": {"stepProgression": "auto", "rotaryActions": rotary},
         "style": {
             "text": text,
-            "textExpression": False,
+            "textExpression": expression,
             "size": size,
             "alignment": "center:center",
             "pngalignment": "center:center",
@@ -273,8 +274,59 @@ def menu_refresh_key():
 
 
 def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
-    """Stage timer (staff.sisyphusbrewing.com/timer/, see timer/README.md)."""
-    return supabase_key(text, rpc, body, bgcolor)
+    """Stage timer (staff.sisyphusbrewing.com/timer/, see timer/README.md).
+
+    Each press also updates Companion's own copy of the timer (custom variables
+    timer_t0 / timer_len / timer_wrap) so the TIMER page readout can show it."""
+    key = supabase_key(text, rpc, body, bgcolor)
+    body = body or {}
+    if rpc == "timer_start":
+        sets = {"timer_t0": "$(internal:time_unix)", "timer_len": str(body["minutes"] * 60), "timer_wrap": "0"}
+    elif rpc == "timer_add":
+        sets = {"timer_len": f"$(custom:timer_len) + {body['seconds']}", "timer_wrap": "0"}
+    elif rpc == "timer_stop":
+        sets = {"timer_t0": "0", "timer_wrap": "0"}
+    else:  # timer_light = WRAP IT UP toggle
+        sets = {"timer_wrap": "1 - $(custom:timer_wrap)"}
+    key["steps"]["0"]["action_sets"]["down"] += [
+        action(INTERNAL, "custom_variable_set_expression", name=name, expression=expr)
+        for name, expr in sets.items()]
+    return key
+
+
+# What the stage clock is showing, worked out on the deck from the variables above.
+# It follows deck presses (a set started from the timer web page doesn't show here).
+_E = "($(internal:time_unix) - $(custom:timer_t0))"  # seconds into the set
+_L = "$(custom:timer_len)"
+TIMER_READOUT = (
+    f"$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : "
+    f"secondsToTimestamp({_E}, 'mm:ss') + '\\n' + ("
+    f"{_E} >= {_L} + 60 ? 'FAMOUS?' : "
+    f"{_E} >= {_L} ? 'OVER' : "
+    f"($(custom:timer_wrap) == 1 || {_L} - {_E} <= 30) ? 'WRAP IT UP' : "
+    f"{_L} - {_E} <= 60 ? 'LIGHT' : "
+    f"'of ' + secondsToTimestamp({_L}, 'mm:ss'))"
+)
+# red from the light on (1 min left, or WRAP IT UP pressed)
+TIMER_RED = (f"$(custom:timer_t0) != 0 && ($(custom:timer_wrap) == 1 || {_L} - {_E} <= 60)")
+CUSTOM_VARIABLES = {
+    "timer_t0": "Stage timer: unix time the set started on the deck (0 = stopped)",
+    "timer_len": "Stage timer: set length in seconds",
+    "timer_wrap": "Stage timer: 1 while WRAP IT UP is on",
+}
+
+
+def timer_readout_key():
+    """Top-left of the TIMER page: what the comic's clock says; press for the next page."""
+    return button(
+        TIMER_READOUT,
+        press=[action(INTERNAL, "set_page", surfaceId="self", page=1)],
+        feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
+                            expression=TIMER_RED)],
+        bgcolor=TIMER_COLOR,
+        size="18",
+        expression=True,
+    )
 
 
 def shell_key(text, command, bgcolor=MENU_BLUE):
@@ -393,7 +445,8 @@ PAGES = {
     3: {
         "name": "TIMER",
         "controls": {
-            (0, 0): page_key("TIMER", "SHOW", 1, TIMER_COLOR),
+            # live readout of the stage clock; press for the SHOW page
+            (0, 0): timer_readout_key(),
             (0, 1): timer_key("START\\n3 MIN\\ntimer", "timer_start", {"minutes": 3}),
             (0, 2): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
             (0, 3): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
@@ -438,7 +491,10 @@ def build():
         "pages": pages,
         "instances": instances,
         "triggers": {},
-        "custom_variables": {},
+        "custom_variables": {
+            name: {"description": desc, "defaultValue": 0, "persistCurrentValue": False, "sortOrder": i}
+            for i, (name, desc) in enumerate(CUSTOM_VARIABLES.items())
+        },
     }
 
 
