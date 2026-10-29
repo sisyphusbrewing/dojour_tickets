@@ -1471,7 +1471,7 @@
         parts.push('sku=' + id + '&qty=' + w.qty + '&seller=1');
       });
       if (!parts.length) { if (win) win.close(); alert('Nothing could go in the cart:\n' + skip.join('\n')); return; }
-      var url = 'https://www.rahrbsg.com/checkout/cart/add?' + parts.join('&') + '&sc=1';
+      var url = 'https://www.rahrbsg.com/checkout/cart/add?' + parts.join('&');   // no sc=: the signed-in account's own sales channel applies
       if (skip.length) alert(parts.length + ' items going in the RahrBSG cart. Add these by hand:\n' + skip.join('\n'));
       if (win) win.location.href = url; else location.href = url;
     });
