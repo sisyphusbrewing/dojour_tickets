@@ -130,7 +130,7 @@ def refresh_showtimes(shop):
 ORDER_QUERY = """
 query Order($q: String!) {
   orders(first: 1, query: $q) { nodes {
-    id name email cancelledAt customer { email firstName }
+    id name email cancelledAt
     lineItems(first: 100) { nodes {
       id title variantTitle currentQuantity
       variant { id product { id } }
@@ -178,8 +178,8 @@ def find_order(shop, order_name, email):
     order = (shop.gql(ORDER_QUERY, {"q": f"name:{order_name}"})["orders"]["nodes"] or [None])[0]
     if not order or order["name"] != order_name:
         raise Refused("We couldn't find that order.")
-    emails = {(order.get("email") or "").lower(), ((order.get("customer") or {}).get("email") or "").lower()}
-    if email.lower() not in emails:
+    # The app has no read_customers scope, so the order's own email is the check.
+    if email.lower() != (order.get("email") or "").strip().lower():
         raise Refused("That email doesn't match the order.")
     if order.get("cancelledAt"):
         raise Refused("That order was cancelled.")
@@ -264,11 +264,11 @@ def exchange(shop, ex):
 
     # Door list: the new night gets a row, the old row shrinks or goes.
     order_num = num(order["id"])
-    customer = order.get("customer") or {}
+    guest = (door or {}).get("guest_name") or "Guest"
     sb("POST", "tickets?on_conflict=unique_id", headers={"Prefer": "resolution=merge-duplicates,return=minimal"}, json=[{
         "unique_id": f"shopify_{order_num}_{num(new_line['id'])}",
         "show_date": format_show_date(new_dt), "show_title": new_title,
-        "guest_name": (door or {}).get("guest_name") or customer.get("firstName") or "Guest",
+        "guest_name": guest,
         "email": (door or {}).get("email") or ex["email"],
         "tickets": qty, "ticket_type": ttype, "source": "Website",
         "order_name": order["name"], "variant_id": num(variant["id"]),
@@ -280,7 +280,7 @@ def exchange(shop, ex):
         sb("DELETE", f"tickets?unique_id=eq.{ex['from_unique_id']}", headers={"Prefer": "return=minimal"})
     print("Door list updated.")
     return {"diff": diff, "qty": qty, "old_label": old_label, "new_label": new_label,
-            "first_name": customer.get("firstName") or ""}
+            "first_name": guest.split()[0] if guest != "Guest" else ""}
 
 
 # ---------------------------------------------------------------------------
