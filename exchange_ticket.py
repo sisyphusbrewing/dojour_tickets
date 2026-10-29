@@ -14,6 +14,9 @@ That edits the Shopify order in place (Shopify's own order editing):
   * the door list (Supabase `tickets`) moves them to the new night
   * the customer gets a short confirmation email from the box office
 
+Only within the same week, Monday to Sunday (Sam, Oct 28 2026: "only amongst
+shows of the same weekend"), to any show that week.
+
 Money (Sam: no refunds unless a show is cancelled or rescheduled):
   * same price            nothing changes
   * new tickets cheaper   no refund; an untouchable "Exchange credit" line on
@@ -49,6 +52,14 @@ from show_dates import parse_show_datetime, CENTRAL_TZ
 # Swaps close this long before the original show, and the new show must be at
 # least this far off too. The edge function uses the same number.
 CUTOFF_HOURS = 2
+
+
+def week_of(dt):
+    """Monday of the show's week in Central time; swaps stay inside one week."""
+    d = dt.astimezone(CENTRAL_TZ).date()
+    return d - timedelta(days=d.weekday())
+
+
 CREDIT_TITLE = "Exchange credit (no refund)"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 
@@ -210,6 +221,8 @@ def exchange(shop, ex):
     new_dt = parse_show_datetime(date_text(variant), require_time=True)
     if not new_dt or new_dt <= cutoff:
         raise Refused("That showtime is too soon or already happened.")
+    if week_of(new_dt) != week_of(old_dt):
+        raise Refused("Swaps stay within the same weekend.")
     if (variant.get("inventoryItem") or {}).get("tracked", True) and (variant.get("inventoryQuantity") or 0) < qty:
         raise Refused("That showtime doesn't have enough seats left.")
 

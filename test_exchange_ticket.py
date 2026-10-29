@@ -120,6 +120,7 @@ class SwapTest(unittest.TestCase):
         cases = [
             (dict(REQ, email="someone@else.com"), variant(), "email"),
             (dict(REQ), variant(seats=1), "seats"),
+            (dict(REQ), variant(date="Fri, Nov 13 • 7:00 PM"), "weekend"),
         ]
         for req, var, word in cases:
             with self.assertRaises(ex.Refused) as ctx:
