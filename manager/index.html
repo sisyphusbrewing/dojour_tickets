@@ -154,7 +154,7 @@
         <div class="grid2">
           <div class="field"><label for="newPrice">Ticket price ($)</label><input class="input" id="newPrice" value="20.00" inputmode="decimal">
             <div class="help">The $3 fee is added on top. <button class="btn-link" type="button" onclick="$('newPrice').value='0.00'">Free show</button></div></div>
-          <div class="field"><label for="newCapacity">Room limit</label><input class="input" id="newCapacity" type="number" value="90"></div>
+          <div class="field"><label for="newCapacity">Room limit</label><input class="input" id="newCapacity" type="number" value="90" max="90"></div>
         </div>
 
         <div class="field"><label>Poster</label>
@@ -527,7 +527,7 @@
         comedian_name: $('newTitle').value.trim(),
         showtimes: showtimes.join(' | '),
         ticket_price: $('newPrice').value.trim() || '20.00',
-        room_capacity: String(parseInt($('newCapacity').value, 10) || 90),
+        room_capacity: String(Math.min(parseInt($('newCapacity').value, 10) || 90, 90)),
         bio: $('newBio').value.trim(),
         image_url: $('posterUrl').value.trim()
       };
