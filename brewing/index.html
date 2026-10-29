@@ -179,7 +179,7 @@
     .rcard .rc-notes { white-space: pre-wrap; font-size: 15px; color: #393636; }
     .rcard .rc-src { margin-top: 16px; font-size: 12px; color: #918f90; }
     .rcard .rc-empty { color: #918f90; font-style: italic; }
-    .rcard-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    .rcard-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 10px; }
     /* ---------- grain order ---------- */
     .plan-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
     .plan-row:last-child { border-bottom: 0; }
@@ -456,7 +456,8 @@
       <div class="rcard-actions no-print">
         <button class="btn btn-sm" id="grainClear" type="button">Clear brews</button>
         <button class="btn btn-sm" id="grainPrint" type="button">Print</button>
-        <button class="btn btn-sm btn-primary" id="grainCopy" type="button">Copy order</button>
+        <button class="btn btn-sm" id="grainCopy" type="button">Copy order</button>
+        <button class="btn btn-sm btn-primary" id="grainRahr" type="button">Fill RahrBSG cart</button>
       </div>
     </section>
 
@@ -1234,6 +1235,7 @@
       if (/w[ -]?34\/70/i.test(s)) return 'W-34/70';
       if (/us[ -]?05/i.test(s)) return 'US-05';
       if (/t[ -]?58/i.test(s)) return 'T-58';
+      if (/s[ -]?23\b|west european/i.test(s)) return 'S-23';
       return s;
     }
     function toG(amount, unit) {
@@ -1245,14 +1247,76 @@
       { key: 'grain', title: 'Grain', label: 'Malt', unit: 'lb', pack: BAG_LB, packName: 'bag', name: maltName, qty: toLb,
         pick: function (i) { return i.category === 'grain' || (i.category === 'adjunct' && /mash/i.test(i.stage || '')); },
         note: 'Bags are ' + BAG_LB + ' lb. On hand is in pounds and saves as you type.' },
-      { key: 'hops', title: 'Hops', label: 'Hop', unit: 'lb', pack: 1, packName: 'lb', name: hopName, qty: toLb,
+      { key: 'hops', title: 'Hops', label: 'Hop', unit: 'lb', pack: 11, packName: 'bag', name: hopName, qty: toLb,
         pick: function (i) { return i.category === 'hops'; },
-        note: 'Rounded up to whole pounds. On hand is in pounds.' },
+        note: 'Pellets in 11 lb bags. On hand is in pounds.' },
       { key: 'yeast', title: 'Yeast', label: 'Yeast', unit: 'g', pack: 500, packName: 'brick', name: yeastName, qty: toG,
         pick: function (i) { return i.category === 'yeast'; },
         note: 'Dry yeast in 500 g bricks. On hand is in grams.' }
     ];
     var orderRows = {};
+
+    // What each order line is on rahrbsg.com (a VTEX store). sku is the item id the cart takes;
+    // lb/g is what one of it holds. Hops give the product slug instead: the page picks the newest
+    // crop year in stock when the cart is filled. Lines missing here are left for Sam to add by hand.
+    var RAHR = {
+      '2-Row': { sku: '663', lb: 55, label: 'Rahr 2-Row 55 lb' },
+      'Pilsner': { sku: '687', lb: 55, label: 'Rahr North Star Pils 55 lb' },
+      'Pale Ale Malt': { sku: '674', lb: 55, label: 'Rahr Pale Ale 55 lb' },
+      'Malted Oats': { sku: '686', lb: 55, label: 'Rahr Malted Oats 55 lb' },
+      'White Wheat': { sku: '679', lb: 55, label: 'Rahr White Wheat 55 lb' },
+      'Carapils / Dextrine': { sku: '685', lb: 55, label: 'Rahr Dextrin 55 lb' },
+      'Munich I': { sku: '733', lb: 55, label: 'Weyermann Munich I 55 lb' },
+      'Vienna': { sku: '732', lb: 55, label: 'Weyermann Vienna 55 lb' },
+      'Caramunich I': { sku: '737', lb: 55, label: 'Weyermann Caramunich I 55 lb' },
+      'Acidulated Malt': { sku: '761', lb: 55, label: 'Weyermann Acidulated 55 lb' },
+      'Carafa III': { sku: '744', lb: 55, label: 'Weyermann Carafa III 55 lb' },
+      'Simpsons Crystal T-50': { sku: '708', lb: 55, label: 'Simpsons Crystal T50 55 lb' },
+      'Roasted Barley': { sku: '711', lb: 55, label: 'Simpsons Roasted Barley 55 lb' },
+      'Chocolate': { sku: '709', lb: 55, label: 'Simpsons Chocolate 55 lb' },
+      'Black Malt': { sku: '710', lb: 55, label: 'Simpsons Black 55 lb' },
+      'Maris Otter': { sku: '600', lb: 55, label: 'Crisp Maris Otter 55 lb' },
+      'Golden Promise': { sku: '689', lb: 55, label: 'Simpsons Golden Promise 55 lb' },
+      'Golden Naked Oats': { sku: '715', lb: 55, label: 'Simpsons Golden Naked Oats 55 lb' },
+      'Special B': { sku: '638', lb: 55, label: 'Dingemans Special B 55 lb' },
+      'Victory': { sku: '629', lb: 55, label: 'Dingemans Biscuit 55 lb (no Victory on the site)' },
+      'Flaked Corn': { sku: '1075', lb: 50, label: 'Ceratex Flaked Corn 50 lb' },
+      'Flaked Barley': { sku: '27', lb: 50, label: 'Flaked Barley 50 lb' },
+      'Flaked Rye': { sku: '28', lb: 50, label: 'Flaked Rye 50 lb' },
+      'Flaked Oats': { sku: '29', lb: 50, label: 'Rolled Oats 50 lb' },
+      'Flaked Wheat': { sku: '13221', lb: 10, label: 'Wintermar Flaked Wheat 10 lb' },
+      'Rice': { sku: '35', lb: 55, label: 'Wintermar Flaked Rice 55 lb' },
+      'Citra': { slug: 'citra-t-90-hop-pellets-11-lb', lb: 11, label: 'Citra 11 lb' },
+      'Mosaic': { slug: 'mosaic-t-90-hop-pellets-11-lb', lb: 11, label: 'Mosaic 11 lb' },
+      'Amarillo': { slug: 'amarillo-t-90-hop-pellets-11-lb', lb: 11, label: 'Amarillo 11 lb' },
+      'Centennial': { slug: 'centennial-t-90-hop-pellets-11-lb', lb: 11, label: 'Centennial 11 lb' },
+      'CTZ': { slug: 'ctz-t-90-hop-pellets-11-lb', lb: 11, label: 'CTZ 11 lb' },
+      'Comet': { slug: 'comet-t-90-hop-pellets-11-lb', lb: 11, label: 'Comet 11 lb' },
+      'Fuggle': { slug: 'english-fuggle-t-90-hop-pellets-11-lb', lb: 11, label: 'English Fuggle 11 lb' },
+      'Motueka': { slug: 'motueka-t-90-hop-pellets-11-lb', lb: 11, label: 'Motueka 11 lb' },
+      'Nelson Sauvin': { slug: 'nelson-sauvin-t-90-hop-pellets-11-lb', lb: 11, label: 'Nelson Sauvin 11 lb' },
+      'Saaz': { slug: 'czech-saaz-t-90-hop-pellets-11-lb', lb: 11, label: 'Czech Saaz 11 lb' },
+      'Sabro': { slug: 'sabro-11-lb', lb: 11, label: 'Sabro 11 lb' },
+      'Simcoe': { slug: 'simcoe-hops-11-lb', lb: 11, label: 'Simcoe 11 lb' },
+      'Sterling': { slug: 'sterling-t-90-hop-pellets-11-lb', lb: 11, label: 'Sterling 11 lb' },
+      'Willamette': { slug: 'willamette-t-90-hop-pellets-11-lb', lb: 11, label: 'Willamette 11 lb' },
+      'US-05': { sku: '258', g: 500, label: 'Fermentis US-05 500 g' },
+      'W-34/70': { sku: '264', g: 500, label: 'Fermentis W-34/70 500 g' },
+      'S-23': { sku: '263', g: 500, label: 'Fermentis S-23 500 g' },
+      'T-58': { sku: '260', g: 500, label: 'Fermentis T-58 500 g' }
+    };
+    // Hop items are crop years ("2025", "2025S"). The S items carry list prices; the plain ones are
+    // contract lots. Take the newest S year in stock, else the newest year in stock.
+    function pickHop(list) {
+      var best = null;
+      (list || []).forEach(function (i) {
+        var m = /^(\d{4})(S?)$/.exec(i.name.replace(/^.*\s/, ''));
+        if (!m || i.avail <= 0) return;
+        var rank = Number(m[1]) + (m[2] ? 10000 : 0);
+        if (!best || rank > best.rank) best = { id: i.id, name: i.name, rank: rank };
+      });
+      return best;
+    }
 
     async function openGrain() {
       $('hdrSub').textContent = 'Order';
@@ -1317,7 +1381,9 @@
           (rows.length ? '<b>' + total + '</b> ' + plural(total, k.packName) + ' to order' : '') + '</span></div>' +
           '<div class="card" data-kind="' + k.key + '">' + (rows.length ? '<div class="g-head"><span>' + k.label + '</span><span>Need ' + k.unit +
           '</span><span>On hand</span><span>Order</span></div>' + rows.map(function (x) {
-            return '<div class="g-row"><div><div class="main">' + esc(x.name) + '</div><div class="sub">' + esc(x.from.join(', ')) + '</div></div>' +
+            var rahr = RAHR[x.name];
+            return '<div class="g-row"><div><div class="main">' + esc(x.name) + '</div><div class="sub">' + esc(x.from.join(', ')) + '</div>' +
+              '<div class="sub">' + (rahr ? 'RahrBSG: ' + esc(rahr.label) : 'Not on the RahrBSG list, add by hand') + '</div></div>' +
               '<div class="n">' + fmtNum(x.need) + '</div>' +
               '<div><input class="input" type="number" min="0" step="any" inputmode="decimal" data-malt="' + esc(x.name) + '" value="' + (x.have ? fmtNum(x.have) : '') + '" placeholder="0" aria-label="' + esc(x.name) + ' on hand, ' + k.unit + '"></div>' +
               '<div class="n order' + (x.packs ? '' : ' zero') + '">' + (x.packs ? x.packs + ' ' + plural(x.packs, k.packName) : 'covered') + '</div></div>';
@@ -1373,6 +1439,40 @@
       var text = 'Sisyphus order\n\n' + parts.join('\n\n');
       try { await navigator.clipboard.writeText(text); toast('Order copied'); }
       catch (err) { window.prompt('Copy the order:', text); }
+    });
+
+    // Opens rahrbsg.com with the order in the cart (VTEX's /checkout/cart/add link). Sam signs in
+    // there for his prices and checks out himself; nothing is ordered from here.
+    $('grainRahr').addEventListener('click', async function () {
+      var want = [], skip = [];
+      ORDER_KINDS.forEach(function (k) {
+        (orderRows[k.key] || []).forEach(function (x) {
+          if (!x.packs) return;
+          var r = RAHR[x.name];
+          if (!r) { skip.push(x.name + ' (not on the list)'); return; }
+          var size = k.unit === 'g' ? r.g : r.lb;
+          want.push({ name: x.name, r: r, qty: Math.max(1, Math.ceil((x.need - x.have) / size - 1e-9)) });
+        });
+      });
+      if (!want.length) { toast(skip.length ? 'Nothing RahrBSG carries on this order' : 'Nothing to order'); return; }
+      var win = window.open('about:blank', '_blank');   // opened now so the pop-up blocker allows it
+      toast('Checking RahrBSG…');
+      var res = await sb.functions.invoke('rahr-catalog', { body: {
+        skus: want.filter(function (w) { return w.r.sku; }).map(function (w) { return w.r.sku; }),
+        slugs: want.filter(function (w) { return w.r.slug; }).map(function (w) { return w.r.slug; })
+      } });
+      if (res.error || !res.data) { if (win) win.close(); fail(res.error ? res : { error: 'no answer' }, 'RahrBSG lookup'); return; }
+      var parts = [];
+      want.forEach(function (w) {
+        var id = w.r.sku, item = id ? res.data.skus[id] : pickHop(res.data.slugs[w.r.slug]);
+        if (item && !id) id = item.id;
+        if (!item || item.avail <= 0) { skip.push(w.name + ' (out of stock)'); return; }
+        parts.push('sku=' + id + '&qty=' + w.qty + '&seller=1');
+      });
+      if (!parts.length) { if (win) win.close(); alert('Nothing could go in the cart:\n' + skip.join('\n')); return; }
+      var url = 'https://www.rahrbsg.com/checkout/cart/add?' + parts.join('&') + '&sc=1';
+      if (skip.length) alert(parts.length + ' items going in the RahrBSG cart. Add these by hand:\n' + skip.join('\n'));
+      if (win) win.location.href = url; else location.href = url;
     });
 
     boot();
