@@ -304,14 +304,16 @@ def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
 # It follows deck presses (a set started from the timer web page doesn't show here).
 _E = "($(internal:time_unix) - $(custom:timer_t0))"  # seconds into the set
 _L = "$(custom:timer_len)"
+# Companion 5.1 expressions don't join text with "+" (it adds as numbers, giving NaN), so
+# the text is built with concat().
 TIMER_READOUT = (
     f"$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : "
-    f"secondsToTimestamp({_E}, 'mm:ss') + '\\n' + ("
+    f"concat(secondsToTimestamp({_E}, 'mm:ss'), '\\n', "
     f"{_E} >= {_L} + 60 ? 'FAMOUS?' : "
     f"{_E} >= {_L} ? 'OVER' : "
     f"($(custom:timer_wrap) == 1 || {_L} - {_E} <= 30) ? 'WRAP IT UP' : "
     f"{_L} - {_E} <= 60 ? 'LIGHT' : "
-    f"'of ' + secondsToTimestamp({_L}, 'mm:ss'))"
+    f"concat('of ', secondsToTimestamp({_L}, 'mm:ss')))"
 )
 # red from the light on (1 min left, or WRAP IT UP pressed)
 TIMER_RED = (f"$(custom:timer_t0) != 0 && ($(custom:timer_wrap) == 1 || {_L} - {_E} <= 60)")

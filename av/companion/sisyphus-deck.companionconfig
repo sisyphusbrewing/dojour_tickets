@@ -3520,7 +3520,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : secondsToTimestamp(($(internal:time_unix) - $(custom:timer_t0)), 'mm:ss') + '\\n' + (($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) + 60 ? 'FAMOUS?' : ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) ? 'OVER' : ($(custom:timer_wrap) == 1 || $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 30) ? 'WRAP IT UP' : $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 60 ? 'LIGHT' : 'of ' + secondsToTimestamp($(custom:timer_len), 'mm:ss'))",
+              "text": "$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : concat(secondsToTimestamp(($(internal:time_unix) - $(custom:timer_t0)), 'mm:ss'), '\\n', ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) + 60 ? 'FAMOUS?' : ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) ? 'OVER' : ($(custom:timer_wrap) == 1 || $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 30) ? 'WRAP IT UP' : $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 60 ? 'LIGHT' : concat('of ', secondsToTimestamp($(custom:timer_len), 'mm:ss')))",
               "textExpression": true,
               "size": "18",
               "alignment": "center:center",
@@ -8634,7 +8634,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : secondsToTimestamp(($(internal:time_unix) - $(custom:timer_t0)), 'mm:ss') + '\\n' + (($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) + 60 ? 'FAMOUS?' : ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) ? 'OVER' : ($(custom:timer_wrap) == 1 || $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 30) ? 'WRAP IT UP' : $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 60 ? 'LIGHT' : 'of ' + secondsToTimestamp($(custom:timer_len), 'mm:ss'))",
+              "text": "$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : concat(secondsToTimestamp(($(internal:time_unix) - $(custom:timer_t0)), 'mm:ss'), '\\n', ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) + 60 ? 'FAMOUS?' : ($(internal:time_unix) - $(custom:timer_t0)) >= $(custom:timer_len) ? 'OVER' : ($(custom:timer_wrap) == 1 || $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 30) ? 'WRAP IT UP' : $(custom:timer_len) - ($(internal:time_unix) - $(custom:timer_t0)) <= 60 ? 'LIGHT' : concat('of ', secondsToTimestamp($(custom:timer_len), 'mm:ss')))",
               "textExpression": true,
               "size": "18",
               "alignment": "center:center",
