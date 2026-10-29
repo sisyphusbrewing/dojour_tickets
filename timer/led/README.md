@@ -28,8 +28,14 @@ follows the same Stream Deck timer buttons as the timer page.
 4. Open `settings.toml` on the drive and fill in the Wi-Fi name and password.
    The board restarts on save.
 
-It shows `WIFI` while connecting, then the timer: dim gray when stopped, white
-while running, red at the light, WRAP IT UP at 30 seconds left (or when the deck's WRAP IT UP key is pressed), and over time a scrolling "YOU BETTER KNOW WHAT YOU ARE DOING....", then "NO SERIOUSLY.... ARE YOU FAMOUS?" a minute over, with the time in between. The digits count up from 0:00.
+It shows `WIFI` while connecting, then the timer. The time the comic has done is big on top
+and counts up from 0:00; the time left is small underneath ("3:21 LEFT"). Dim gray when
+stopped, white while running, red at the light. At 30 seconds left (or when the deck's WRAP IT UP
+key is pressed) a bowling ball rolls in and knocks the pins down, then WRAP IT UP flashes, and the
+small line keeps flashing WRAP IT UP. Time added to a running set (deck TIME knob) gets a
+bowling-alley BONUS TIME burst with the added time. Over time, the small line scrolls "YOU BETTER
+KNOW WHAT YOU ARE DOING....", then "NO SERIOUSLY.... ARE YOU FAMOUS?" a minute over, with how far
+over in between; the big time keeps counting.
 
 ## Updates over Wi-Fi
 
