@@ -215,11 +215,11 @@ CHANNEL = lambda n: dict(  # noqa: E731
     strip={"type": "/ch/", "num": n}, mute_strip={"type": "/ch/", "num": n},
     feedback_strip={"theChannel": n},
 )
-# Pre-show music comes from the office PC's headphone jack into Aux in 17/18 (analog jacks).
-# USB playback into the board never passed audio, on ch 15/16 (Oct 19) or ch 3/4 (Oct 29 2026),
-# though USB into the PC works; the cable's clicking went away after an XR18 power cycle.
-MUSIC = dict(fader_action="usbFad_a", mute_action="usbMute", mute_feedback="rtn_aux",
-             level_var="f_rtn_aux_d")
+# Pre-show music comes from the office PC over USB into channels 3/4 (linked, named MUSIC):
+# Windows plays to "OUT 3-4", and on the XR18 a channel's USB return only hears the PC output
+# with its own number. USB playback into the board was silent until the XR18 firmware went
+# from 1.19 to 1.26 (Oct 29 2026); it replaces the headphone-jack cable into Aux In.
+MUSIC = CHANNEL(3)
 # Mics 3 and 4 are on channels 9 and 10 for nights with more people on stage (Oct 29 2026).
 # The deck has a 2-mic and a 4-mic layout (MICS key on the SHOW page): with 4 mics the knobs
 # ride the four mics instead of music and the god mic.
