@@ -67,7 +67,7 @@
     <div class="band-row"><span class="band">The basics</span></div>
     <div class="card">
       <p>The Stream Deck at the bar runs sound, the record button, the stage timer, the hallway lights and the menus. It's a remote control: the brains are on the <b>office PC</b> (a program called Companion), and the mixer is in the office too.</p>
-      <p>The deck has <b>three pages</b>: <b>SHOW</b>, <b>BAR</b> and <b>TIMER</b>. The purple, blue or green key in the top-left corner says which page you're on. Press it to go to the next one. Swiping sideways on the touch strip also changes page.</p>
+      <p>The deck has <b>three pages</b>: <b>SHOW</b>, <b>BAR</b> and <b>TIMER</b>. The top-left key on every page says <b>NEXT PAGE</b>: press it to go to the next one. Its colour (purple, blue or green) tells you which page you're on. Swiping sideways on the touch strip also changes page.</p>
       <p><b>The four knobs never change.</b> Whatever page you're on, they're always MIC 1, MIC 2, MUSIC and GOD MIC. Turn for louder or quieter, push to mute. The strip above each knob shows its name and level, and turns red with <b>MUTED</b> when it's off. Tap the strip to unmute.</p>
       <p>The overall room volume is set once on the mixer and never lives on a knob. If the whole room is too loud or too quiet, see <a href="#trouble">If something's wrong</a>.</p>
     </div>
@@ -83,9 +83,9 @@
     <section class="page on" id="page-show">
       <div class="deck" aria-label="SHOW page layout">
         <div class="keys">
-          <div class="key" style="background:#5a2a82">Show page<br>next: bar</div>
+          <div class="key" style="background:#5a2a82">NEXT<br>PAGE &gt;</div>
           <div class="key" style="background:#202020">Record<br>video</div>
-          <div class="key" style="background:#3a3a6a">2 mics<br>press for 4</div>
+          <div class="key" style="background:#3a3a6a">Using<br>2 mics<br>tap for 4</div>
           <div class="key" style="background:#7a3a00">Reset<br>sound</div>
           <div class="key" style="background:#1e5e2a">Mic 1<br>on</div>
           <div class="key" style="background:#1e5e2a">Mic 2<br>on</div>
@@ -108,7 +108,7 @@
     <section class="page" id="page-bar">
       <div class="deck" aria-label="BAR page layout">
         <div class="keys">
-          <div class="key" style="background:#1e4c7a">Bar page<br>next: timer</div>
+          <div class="key" style="background:#1e4c7a">NEXT<br>PAGE &gt;</div>
           <div class="key" style="background:#1e4c7a">Refresh<br>TV menu</div>
           <div class="key" style="background:#1e4c7a">Print<br>5 menus</div>
           <div class="key" style="background:#7a5a00">Hall lights<br>pre-show</div>
@@ -135,23 +135,22 @@
     <section class="page" id="page-timer">
       <div class="deck" aria-label="TIMER page layout">
         <div class="keys">
+          <div class="key" style="background:#1f5f2e">NEXT<br>PAGE &gt;</div>
           <div class="key" style="background:#1f5f2e">04:12<br>of 05:00</div>
           <div class="key" style="background:#1f5f2e">Start<br>3 min</div>
           <div class="key" style="background:#1f5f2e">Start<br>5 min</div>
           <div class="key" style="background:#1f5f2e">Start<br>7 min</div>
           <div class="key" style="background:#1f5f2e">Start<br>10 min</div>
-          <div class="key" style="background:#202020">Add<br>1 min</div>
-          <div class="key" style="background:#c00000">Stop<br>timer</div>
+          <div class="key" style="background:#c00000">Stop<br>clock</div>
           <div class="key" style="background:#c00000">Wrap<br>it up</div>
         </div>
         <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>GOD MIC</div></div>
         <div class="knobs"><span></span><span></span><span></span><span></span></div>
       </div>
       <ul class="keylist">
-        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Timer readout</b><p>Shows what the comic's clock says (time on stage, then LIGHT, WRAP IT UP, OVER) and turns red from the light on. It follows the keys on this deck, so a set started from the timer web page won't show here. Press it to go back to SHOW.</p></div></li>
-        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Start 3 / 5 / 7 / 10 min</b><p>Starts the comic's clock (counting up from 0:00) on the <a href="../timer/">stage timer</a> screen. Press it when the comic hits the stage. Pressing another one restarts at the new length.</p></div></li>
-        <li><span class="sw" style="background:#202020;border:1px solid #555"></span><div><b>Add 1 min</b><p>Gives the comic one more minute. Press it as many times as you're feeling generous.</p></div></li>
-        <li><span class="sw" style="background:#c00000"></span><div><b>Stop timer</b><p>Clears the timer. Press it when the comic is off.</p></div></li>
+        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Timer readout</b><p>Shows what the comic's clock says (time on stage, then LIGHT, WRAP IT UP, OVER) and turns red from the light on. It follows the keys on this deck, so a set started from the timer web page won't show here. It's only a display; the NEXT PAGE key next to it goes back to SHOW.</p></div></li>
+        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Start 3 / 5 / 7 / 10 min</b><p>Starts the comic's clock (counting up from 0:00) on the <a href="../timer/">stage timer</a> screen. Press it when the comic hits the stage. Pressing another one restarts from 0:00 at the new length. Need to give extra time? Use +1 on the timer web page.</p></div></li>
+        <li><span class="sw" style="background:#c00000"></span><div><b>Stop clock</b><p>Clears the timer. Press it when the comic is off.</p></div></li>
         <li><span class="sw" style="background:#c00000"></span><div><b>Wrap it up</b><p>Puts WRAP IT UP on the stage clock right now; press again to clear. The clock already goes red at 1 minute left and says WRAP IT UP on its own at 30 seconds. Over time it says "You better know what you are doing....", and a minute over, "No seriously.... are you famous?"</p></div></li>
       </ul>
     </section>
@@ -161,7 +160,7 @@
       <ol class="steps">
         <li><b>Doors.</b> BAR page: <b>Hall lights pre-show</b>. Start the pre-show playlist in Spotify on the office PC and set it with the <b>MUSIC</b> knob.</li>
         <li><b>Host walks up.</b> SHOW page: check <b>MIC 1</b> is green. Turn MUSIC down or push the knob to mute it. Press <b>Record video</b>.</li>
-        <li><b>Each comic.</b> TIMER page: start their time. <b>Stop timer</b> when they're off.</li>
+        <li><b>Each comic.</b> TIMER page: start their time. <b>Stop clock</b> when they're off.</li>
         <li><b>Announcements</b> from the office: <b>GOD MIC</b> on, talk, mute it again.</li>
         <li><b>After the show.</b> SHOW page: press <b>Record video</b> to stop (the key goes back to dark). Music back up. BAR page: hall lights to whatever suits the rest of the night.</li>
       </ol>
