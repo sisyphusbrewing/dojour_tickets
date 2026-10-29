@@ -200,7 +200,7 @@ def mute_key(name, mute_action, mute_feedback, mute_strip=None, feedback_strip=N
     """A key that mutes/unmutes; green ON, red MUTED. Two short lines so the
     longest name (GOD MIC) still fits the key at a readable size."""
     return button(
-        f"{name}\\nON",
+        f"{name}\\nON\\ntap to mute",
         press=[action(XAIR, mute_action, mute="2", **(mute_strip or {}))],
         feedbacks=[feedback(XAIR, mute_feedback, muted(f"{name}\\nMUTED"),
                             state="1", **(feedback_strip or {}))],
@@ -247,9 +247,10 @@ def show_mute_keys(sources):
 
 
 def page_key(this_page, next_page, number, color):
-    """Top-left key on every page: names the page you are on; press for the next one."""
+    """Top-left key on every page: press for the next page (Sam: "it should always just
+    say next page"). The page colour tells you which page you're on."""
     return button(
-        f"{this_page} page\\n\\nnext: {next_page}",
+        "NEXT\\nPAGE >",
         press=[action(INTERNAL, "set_page", surfaceId="self", page=number)],
         bgcolor=color,
         size="14",
@@ -276,7 +277,7 @@ def supabase_key(text, rpc, body=None, bgcolor=MENU_BLUE):
 
 def menu_refresh_key():
     """Tells the taproom TV menu board to reload."""
-    return supabase_key("REFRESH\\nTV MENU", "bump_menu_refresh")
+    return supabase_key("REFRESH\\nTV MENU\\nscreen", "bump_menu_refresh")
 
 
 def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
@@ -324,11 +325,10 @@ CUSTOM_VARIABLES = {
 }
 
 
-def timer_readout_key(show_page=1):
-    """Top-left of the TIMER page: what the comic's clock says; press for the next page."""
+def timer_readout_key():
+    """TIMER page: what the comic's clock says. Display only (pressing does nothing)."""
     return button(
         TIMER_READOUT,
-        press=[action(INTERNAL, "set_page", surfaceId="self", page=show_page)],
         feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
                             expression=TIMER_RED)],
         bgcolor=TIMER_COLOR,
@@ -354,7 +354,7 @@ def shell_key(text, command, bgcolor=MENU_BLUE):
 
 def print_menu_key():
     """Prints today's taproom menu (see PRINT_MENU_COMMAND)."""
-    return shell_key(f"PRINT\\n{MENU_COPIES} MENUS\\n(paper)", PRINT_MENU_COMMAND)
+    return shell_key(f"PRINT\\n{MENU_COPIES} PAPER\\nMENUS", PRINT_MENU_COMMAND)
 
 
 def govee(bulb, kind, instance, value):
@@ -406,7 +406,7 @@ def hall_keys():
 def record_key():
     """Starts/stops OBS recording; red with the running time while recording."""
     return button(
-        "RECORD\\nvideo\\n$(obs:recording_timecode)",
+        "RECORD\\nVIDEO\\n$(obs:recording_timecode)",
         # OBS module v4 "Recording - Controls: Toggle"; page imports don't run the module's upgrade
         # scripts, so older ids (StartStopRecording, toggle_recording) import as dead actions
         press=[action(OBS, "recording", action="toggle")],
@@ -457,15 +457,15 @@ def layout(sources, first, mics, other_first):
         timer: {
             "name": f"TIMER{tag}",
             "controls": {
-                # live readout of the stage clock; press for the SHOW page
-                (0, 0): timer_readout_key(show),
-                (0, 1): timer_key("START\\n3 MIN\\ntimer", "timer_start", {"minutes": 3}),
-                (0, 2): timer_key("START\\n5 MIN\\ntimer", "timer_start", {"minutes": 5}),
-                (0, 3): timer_key("START\\n7 MIN\\ntimer", "timer_start", {"minutes": 7}),
-                (1, 0): timer_key("START\\n10 MIN\\ntimer", "timer_start", {"minutes": 10}),
-                (1, 1): timer_key("ADD\\n1 MIN\\nto timer", "timer_add", {"seconds": 60}, bgcolor=DARK),
-                (1, 2): timer_key("STOP\\ntimer", "timer_stop", bgcolor=RED),
-                # WRAP IT UP on the stage clock now (timer_light); press again to clear
+                (0, 0): page_key(f"TIMER{tag}", "SHOW", show, TIMER_COLOR),
+                (0, 1): timer_readout_key(),  # live readout of the stage clock
+                (0, 2): timer_key("START\\n3 MIN\\nSET", "timer_start", {"minutes": 3}),
+                (0, 3): timer_key("START\\n5 MIN\\nSET", "timer_start", {"minutes": 5}),
+                (1, 0): timer_key("START\\n7 MIN\\nSET", "timer_start", {"minutes": 7}),
+                (1, 1): timer_key("START\\n10 MIN\\nSET", "timer_start", {"minutes": 10}),
+                (1, 2): timer_key("STOP\\nCLOCK", "timer_stop", bgcolor=RED),
+                # WRAP IT UP on the stage clock now (timer_light); press again to clear.
+                # (+1 MIN gave up its key to the readout; it's still on the timer web page.)
                 (1, 3): timer_key("WRAP\\nIT UP", "timer_light", bgcolor=RED),
             },
         },
@@ -478,7 +478,7 @@ def layout(sources, first, mics, other_first):
 def mics_key(mics, other_first):
     """SHOW page: which mic layout the knobs use; press to switch."""
     other = 4 if mics == 2 else 2
-    return button(f"{mics} MICS\\n\\npress for {other}", bgcolor=0x3A3A6A, size="14",
+    return button(f"USING\\n{mics} MICS\\ntap for {other}", bgcolor=0x3A3A6A, size="14",
                   press=[action(INTERNAL, "set_page", surfaceId="self", page=other_first)])
 
 
