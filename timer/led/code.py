@@ -40,7 +40,8 @@ SCROLL = 30  # pixels a second (small line)
 
 # Layout (Sam, Oct 29 2026): time done is the most important, so it's big on top;
 # time left is small underneath. Time added gets a bowling-alley BONUS TIME burst,
-# and WRAP IT UP gets a bowling ball knocking the pins down first.
+# time taken away a GUTTER BALL "penalty for being a bad comedian", and WRAP IT UP
+# gets a bowling ball knocking the pins down first.
 
 # ---- display ----
 matrix = Matrix(width=64, height=32, bit_depth=4)
@@ -77,6 +78,7 @@ RAINBOW = (0xFF0000, 0xFFB000, 0xFFFF00, 0x00FF40, 0x00A0FF, 0xC040FF)
 WHITE_I, RED_I = 7, 1
 
 BONUS_LEN = 3.5
+GUTTER_LEN = 4.5
 STRIKE_LEN = 4.0
 fx_kind, fx_start, fx_text = None, 0.0, ""
 particles = []  # [x, y, dx, dy, color index]
@@ -130,6 +132,30 @@ def fx_tick():
             fx_big.anchored_position = (32, 10 - int(abs(math.sin((t - 0.6) * 6)) * 4 * max(0, 1.6 - (t - 0.6)) / 1.6))
             fx_small.text = "BONUS TIME"
             fx_small.color = 0xFFFFFF if int(t * 4) % 2 else 0xFFFF00
+        return True
+    if fx_kind == "gutter":
+        if t > GUTTER_LEN:
+            fx_kind = None
+            return False
+        if t < 1.4:  # the ball heads for the pins... and drops in the gutter
+            fx_big.text = fx_small.text = ""
+            for i in range(3):
+                draw_pin(48 + i * 5, 20 - (i % 2) * 2)
+            bx = -4 + t / 1.4 * 70
+            by = 26 + max(0, (t - 0.6) * 12)  # veers off the bottom
+            for dx, dy in BALL:
+                px(bx + dx, by + dy, 6)
+            for x in range(0, 64, 4):
+                px(x, 31, 2)
+        else:
+            # the lost time drops in, red and shaking
+            drop = min(0, -12 + (t - 1.4) * 40)
+            shake = random.choice((-1, 0, 1)) if t < 2.6 else 0
+            fx_big.text = fx_text
+            fx_big.color = RED if int(t * 6) % 2 else 0x800000
+            fx_big.anchored_position = (32 + shake, 10 + int(drop))
+            fx_small.text = ("GUTTERBALL", "PENALTY!", "BAD COMIC")[int((t - 1.4) / 1.0) % 3]
+            fx_small.color = RED
         return True
     if fx_kind == "strike":
         if t > STRIKE_LEN:
@@ -326,7 +352,7 @@ elapsed_at_fetch = 0.0  # seconds into the set when we last heard from the serve
 fetched = time.monotonic()
 last_poll = -POLL
 was_wrapping = False
-bonus_pending, bonus_seen = 0, 0.0  # added seconds waiting for the knob to stop turning
+bonus_pending, bonus_seen = 0, 0.0  # seconds added (or taken, < 0) waiting for the knob to stop
 
 while True:
     check_buttons()
@@ -351,10 +377,10 @@ while True:
             r = http.post(URL, headers={"apikey": KEY, "Content-Type": "application/json"}, data="{}")
             s = r.json()
             r.close()
-            # time added to a running set (not a new START): save it up while the
-            # deck knob is still turning, then play BONUS TIME once
+            # time added to or taken from a running set (not a new START): add it up
+            # while the deck knob is still turning, then play one animation for the total
             if (state and s["started_at"] and s["started_at"] == state["started_at"]
-                    and s["set_seconds"] > state["set_seconds"]):
+                    and s["set_seconds"] != state["set_seconds"]):
                 bonus_pending += s["set_seconds"] - state["set_seconds"]
                 bonus_seen = time.monotonic()
             elif state and s["started_at"] != state["started_at"]:
@@ -365,8 +391,11 @@ while True:
                 elapsed_at_fetch = seconds_between(s["started_at"], s["now"])
         except Exception as e:  # lost a poll: keep counting on the last state we had
             print("poll", e)
-    if bonus_pending > 0 and time.monotonic() - bonus_seen > 1.5:
-        start_fx("bonus", "+" + fmt(bonus_pending))
+    if bonus_pending and time.monotonic() - bonus_seen > 1.5:
+        if bonus_pending > 0:
+            start_fx("bonus", "+" + fmt(bonus_pending))
+        else:
+            start_fx("gutter", "-" + fmt(-bonus_pending))
         bonus_pending = 0
         continue
 

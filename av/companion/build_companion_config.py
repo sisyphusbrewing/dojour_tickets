@@ -313,7 +313,7 @@ def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
 
 # TIMER page (2-mic layout): the GOD MIC knob becomes TIME (nobody makes announcements
 # mid-set). Sam, Oct 29 2026: "one of the knobs on the timer page adjust the timer".
-TIME_STEP = 5  # seconds per click; a minute at 1 s a click is 60 clicks
+TIME_STEP = 15  # seconds per click (Sam, Oct 29 2026)
 
 
 def time_knob():
@@ -327,9 +327,10 @@ def time_knob():
 
 
 def time_strip():
-    """Touch strip label above the TIME knob: the set length."""
+    """Touch strip above the TIME knob: the set length; tap it for one more minute too."""
     return button(
-        f"concat('TIME\\n', secondsToTimestamp($(custom:timer_len), 'mm:ss'), '\\nturn / push +1')",
+        f"concat('TIME ', secondsToTimestamp($(custom:timer_len), 'mm:ss'), '\\ntap: +1 MIN')",
+        press=timer_actions("timer_add", {"seconds": 60}),
         bgcolor=TIMER_COLOR,
         size="14",
         expression=True,
