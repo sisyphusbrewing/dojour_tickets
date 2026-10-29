@@ -16,7 +16,7 @@ def order(qty=2, price="28.0", paid=None, email="Fan@Example.com", new_line=None
     if new_line:
         lines.append(new_line)
     return {"orders": {"nodes": [{"id": f"gid://shopify/Order/{ORDER_ID}", "name": "#4417", "email": email,
-                                  "cancelledAt": None, "customer": {"email": email, "firstName": "Pat"},
+                                  "cancelledAt": None,
                                   "lineItems": {"nodes": lines}}]}}
 
 
