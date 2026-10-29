@@ -12,6 +12,7 @@ import time
 
 import adafruit_connection_manager
 import adafruit_requests
+import bitmaptools
 import board
 import displayio
 import keypad
@@ -39,9 +40,10 @@ WAY_OVER = "NO SERIOUSLY.... ARE YOU FAMOUS?"  # a minute or more over
 SCROLL = 30  # pixels a second (small line)
 
 # Layout (Sam, Oct 29 2026): time done is the most important, so it's big on top;
-# time left is small underneath. Time added gets a bowling-alley BONUS TIME burst,
-# time taken away a GUTTER BALL "penalty for being a bad comedian", and WRAP IT UP
-# gets a bowling ball knocking the pins down first.
+# time left is small underneath. Time added gets a BONUS TIME burst,
+# time taken away a game-show buzzer "penalty for being a bad comedian", and WRAP IT UP
+# a present getting wrapped. (Sam: big over-the-top celebrations, like a bowling alley's
+# screen, but nothing actually about bowling.)
 
 # ---- display ----
 matrix = Matrix(width=64, height=32, bit_depth=4)
@@ -59,7 +61,7 @@ small.anchored_position = (32, 26)
 root.append(small)
 display.root_group = root
 
-# ---- bowling-alley animations ----
+# ---- big celebration animations ----
 FX_COLORS = (0x000000, 0xFF0000, 0xFFB000, 0xFFFF00, 0x00FF40, 0x00A0FF, 0xC040FF, 0xFFFFFF)
 fx_palette = displayio.Palette(len(FX_COLORS))
 for i, c in enumerate(FX_COLORS):
@@ -78,10 +80,9 @@ RAINBOW = (0xFF0000, 0xFFB000, 0xFFFF00, 0x00FF40, 0x00A0FF, 0xC040FF)
 WHITE_I, RED_I = 7, 1
 
 BONUS_LEN = 3.5
-GUTTER_LEN = 4.5
-STRIKE_LEN = 4.0
+PENALTY_LEN = 4.5
+PRESENT_LEN = 4.5
 fx_kind, fx_start, fx_text = None, 0.0, ""
-particles = []  # [x, y, dx, dy, color index]
 
 
 def px(x, y, c):
@@ -90,22 +91,50 @@ def px(x, y, c):
         fx_bmp[x, y] = c
 
 
-BALL = ((1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (3, 1), (0, 2), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3))
+def rect(x0, y0, x1, y1, c):
+    """Fill x0..x1-1, y0..y1-1, clipped to the panel."""
+    x0, y0 = max(0, int(x0)), max(0, int(y0))
+    x1, y1 = min(64, int(x1)), min(32, int(y1))
+    if x1 > x0 and y1 > y0:
+        bitmaptools.fill_region(fx_bmp, x0, y0, x1, y1, c)
 
 
-def draw_pin(x, y):
-    """A bowling pin, 3 wide and 8 tall, top-left at x, y."""
-    for dy in range(8):
-        for dx in range(3):
-            if dy in (0, 1) and dx != 1:
-                continue  # narrow neck
-            px(x + dx, y + dy, RED_I if dy == 3 else WHITE_I)
+# the present: a box 24 wide, 14 tall, sitting at the bottom middle, and its bow
+BOX_X, BOX_Y, BOX_W, BOX_H = 20, 17, 24, 14
+BOW = ((-4, (-5, -4, -3, 2, 3, 4)), (-3, (-6, -5, -4, -3, -2, 1, 2, 3, 4, 5)),
+       (-2, (-5, -4, -3, -2, -1, 0, 1, 2, 3, 4)), (-1, (-2, -1, 0, 1)))
+
+
+def draw_present(t):
+    """WRAP IT UP, literally: the box drops in, the paper wraps it, the ribbon goes
+    round, a bow pops on top. t runs 0..2.6 s."""
+    drop = 0
+    if t < 0.5:  # falls in from the top with a little bounce
+        drop = -30 * (1 - t / 0.5) ** 2
+    elif t < 0.7:
+        drop = -2 * math.sin((t - 0.5) / 0.2 * math.pi)
+    x, y = BOX_X, BOX_Y + int(drop)
+    rect(x, y, x + BOX_W, y + BOX_H, 2)  # plain cardboard (amber)
+    if t > 0.7:  # red paper sweeps across
+        w = min(BOX_W, int((t - 0.7) / 0.6 * BOX_W))
+        rect(x, y, x + w, y + BOX_H, 1)
+    cx = x + BOX_W // 2
+    if t > 1.3:  # ribbon down the middle...
+        h = min(BOX_H, int((t - 1.3) / 0.3 * BOX_H))
+        rect(cx - 1, y, cx + 1, y + h, 3)
+    if t > 1.6:  # ...and across
+        w = min(BOX_W, int((t - 1.6) / 0.3 * BOX_W))
+        rect(x, y + BOX_H // 2 - 1, x + w, y + BOX_H // 2 + 1, 3)
+    if t > 1.9:  # the bow pops on (jumps a pixel as it lands)
+        lift = 1 if t < 2.05 else 0
+        for dy, xs in BOW:
+            for dx in xs:
+                px(cx + dx, y + dy - lift, 3)
 
 
 def start_fx(kind, text=""):
-    global fx_kind, fx_start, fx_text, particles
+    global fx_kind, fx_start, fx_text
     fx_kind, fx_start, fx_text = kind, time.monotonic(), text
-    particles = []
     fx_bmp.fill(0)
     fx_big.text, fx_small.text = "", ""
     display.root_group = fx_group
@@ -113,14 +142,14 @@ def start_fx(kind, text=""):
 
 def fx_tick():
     """One frame of the running animation; returns False when it's done."""
-    global fx_kind, particles
+    global fx_kind
     t = time.monotonic() - fx_start
     fx_bmp.fill(0)
     if fx_kind == "bonus":
         if t > BONUS_LEN:
             fx_kind = None
             return False
-        if t < 0.6:  # the whole screen flashes, like a lane after a strike
+        if t < 0.6:  # the whole screen flashes rainbow
             fx_bmp.fill(1 + int(t * 10) % 6)
             fx_big.text = fx_small.text = ""
         else:
@@ -133,57 +162,39 @@ def fx_tick():
             fx_small.text = "BONUS TIME"
             fx_small.color = 0xFFFFFF if int(t * 4) % 2 else 0xFFFF00
         return True
-    if fx_kind == "gutter":
-        if t > GUTTER_LEN:
+    if fx_kind == "penalty":  # time taken away: game-show buzzer for a bad comedian
+        if t > PENALTY_LEN:
             fx_kind = None
             return False
-        if t < 1.4:  # the ball heads for the pins... and drops in the gutter
+        if t < 0.4:  # two red flashes
+            if int(t * 10) % 2 == 0:
+                fx_bmp.fill(RED_I)
             fx_big.text = fx_small.text = ""
-            for i in range(3):
-                draw_pin(48 + i * 5, 20 - (i % 2) * 2)
-            bx = -4 + t / 1.4 * 70
-            by = 26 + max(0, (t - 0.6) * 12)  # veers off the bottom
-            for dx, dy in BALL:
-                px(bx + dx, by + dy, 6)
-            for x in range(0, 64, 4):
-                px(x, 31, 2)
-        else:
-            # the lost time drops in, red and shaking
-            drop = min(0, -12 + (t - 1.4) * 40)
+        elif t < 1.5:  # a big red X stamps on, shaking
+            shake = random.choice((-1, 0, 1))
+            for i in range(-11, 12):
+                for w in (-1, 0, 1):
+                    px(32 + i + w + shake, 16 + i, RED_I)
+                    px(32 + i + w + shake, 16 - i, RED_I)
+            fx_big.text = fx_small.text = ""
+        else:  # then the lost time, red and shaking
             shake = random.choice((-1, 0, 1)) if t < 2.6 else 0
             fx_big.text = fx_text
             fx_big.color = RED if int(t * 6) % 2 else 0x800000
-            fx_big.anchored_position = (32 + shake, 10 + int(drop))
-            fx_small.text = ("GUTTERBALL", "PENALTY!", "BAD COMIC")[int((t - 1.4) / 1.0) % 3]
+            fx_big.anchored_position = (32 + shake, 10)
+            fx_small.text = ("PENALTY!", "BAD COMIC", "BOOOOO")[int((t - 1.5) / 1.0) % 3]
             fx_small.color = RED
         return True
-    if fx_kind == "strike":
-        if t > STRIKE_LEN:
+    if fx_kind == "present":  # WRAP IT UP: a present gets wrapped
+        if t > PRESENT_LEN:
             fx_kind = None
             return False
-        if t < 1.2:  # the ball rolls down the lane at the pins
+        if t < 2.6:
             fx_big.text = fx_small.text = ""
-            for i in range(3):
-                draw_pin(48 + i * 5, 20 - (i % 2) * 2)
-            bx = -4 + t / 1.2 * 52
-            for dx, dy in BALL:
-                px(bx + dx, 26 + dy, 6)
-            for x in range(0, 64, 4):  # lane arrows
-                px(x, 31, 2)
-        elif t < 2.0:  # STRIKE: pins fly everywhere
-            if not particles:
-                for _ in range(30):
-                    particles.append([52.0, 23.0, random.uniform(-40, 30), random.uniform(-45, 5),
-                                      random.choice((WHITE_I, WHITE_I, RED_I, 3))])
-            if t < 1.3 and int(t * 20) % 2:  # a yellow flash as the ball hits
-                fx_bmp.fill(3)
-            dt = 1 / 30
-            for p in particles:
-                p[0] += p[2] * dt
-                p[1] += p[3] * dt
-                p[3] += 60 * dt  # gravity
-                px(p[0], p[1], p[4])
-        else:  # then the message, big and flashing
+            draw_present(t)
+        else:  # then the message, big and flashing, with confetti
+            for _ in range(12):
+                px(random.randrange(64), random.randrange(32), random.randrange(1, 8))
             fx_big.text = "WRAP"
             fx_big.anchored_position = (32, 8)
             col = RED if int(t * 5) % 2 else 0xFFFF00
@@ -395,7 +406,7 @@ while True:
         if bonus_pending > 0:
             start_fx("bonus", "+" + fmt(bonus_pending))
         else:
-            start_fx("gutter", "-" + fmt(-bonus_pending))
+            start_fx("penalty", "-" + fmt(-bonus_pending))
         bonus_pending = 0
         continue
 
@@ -416,7 +427,7 @@ while True:
         wrapping = left > 0 and (state["light_now"] or left <= WRAP_AT)
         if wrapping and not was_wrapping:
             was_wrapping = True
-            start_fx("strike")
+            start_fx("present")
             continue
         was_wrapping = wrapping
         if wrapping:
