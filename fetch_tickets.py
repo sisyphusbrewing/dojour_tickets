@@ -491,7 +491,7 @@ def fetch_shopify_tickets() -> list:
     orders_seen = 0
     recent_cutoff = datetime.now(CENTRAL_TZ) - timedelta(days=14)
     exclude_re = re.compile(
-        r'\b(tips?|donations?|fees?|gratuity|service charge|room rental|event deposit)\b',
+        r'\b(tips?|donations?|fees?|gratuity|service charge|room rental|event deposit|exchange)\b',
         re.IGNORECASE)
 
     try:
@@ -570,7 +570,12 @@ def fetch_shopify_tickets() -> list:
                     formatted_date = format_show_date(show_dt)
                     item_id = str(item.get("id"))
                     unique_id = f"shopify_{order_id}_{item_id}"
-                    tickets_count = int(item.get("quantity", 1))
+                    # current_quantity drops when a line is edited out of the order
+                    # (a ticket exchange, see exchange_ticket.py); quantity never does.
+                    tickets_count = int(item.get("current_quantity", item.get("quantity", 1)))
+                    if tickets_count <= 0:
+                        skip(item_desc, "removed from the order (exchanged)")
+                        continue
 
                     # Ticket type is the part of the variant after the showtime:
                     # "Thu, Oct 15 • 8:00 PM / VIP / Reserved Seating" -> "VIP / Reserved Seating"
@@ -585,6 +590,8 @@ def fetch_shopify_tickets() -> list:
                         "tickets": tickets_count,
                         "ticket_type": ticket_type or None,
                         "source": "Website",
+                        "order_name": order.get("name"),
+                        "variant_id": item.get("variant_id"),
                         "_product_id": item.get("product_id"),
                         "_sort_dt": show_dt
                     })
@@ -731,10 +738,11 @@ def sync_to_supabase(tickets: list):
     # Supabase needs every row in a batch to have the same fields, so rows with a ticket type
     # and rows without one go in separate batches. Rows without one (most Dojour sales) leave
     # the stored ticket type alone, so a VIP tag set by hand is kept.
-    typed = [t for t in tickets if "ticket_type" in t]
-    untyped = [t for t in tickets if "ticket_type" not in t]
-    chunks = [typed[i:i + chunk_size] for i in range(0, len(typed), chunk_size)]
-    chunks += [untyped[i:i + chunk_size] for i in range(0, len(untyped), chunk_size)]
+    # Website rows also carry order_name / variant_id, so batch by the exact set of fields.
+    groups = {}
+    for t in tickets:
+        groups.setdefault(frozenset(t), []).append(t)
+    chunks = [g[i:i + chunk_size] for g in groups.values() for i in range(0, len(g), chunk_size)]
     include_ticket_type = True
 
     for chunk in chunks:
