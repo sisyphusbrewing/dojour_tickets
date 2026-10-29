@@ -257,22 +257,23 @@ def page_key(this_page, next_page, number, color):
     )
 
 
-def supabase_key(text, rpc, body=None, bgcolor=MENU_BLUE):
-    """A key that calls one of our Supabase functions (menu board, stage timer)."""
-    return button(
-        text,
-        press=[action(
-            HTTP, "post",
-            url=f"{SUPABASE}/rest/v1/rpc/{rpc}",
-            body=json.dumps(body or {}),
-            header=json.dumps({"apikey": SUPABASE_KEY}),
-            contenttype="application/json",
-            jsonResultDataVariable="",
-            result_stringify=True,
-            statusCodeVariable="",
-        )],
-        bgcolor=bgcolor,
+def supabase_call(rpc, body=None):
+    """Calls one of our Supabase functions (menu board, stage timer)."""
+    return action(
+        HTTP, "post",
+        url=f"{SUPABASE}/rest/v1/rpc/{rpc}",
+        body=json.dumps(body or {}),
+        header=json.dumps({"apikey": SUPABASE_KEY}),
+        contenttype="application/json",
+        jsonResultDataVariable="",
+        result_stringify=True,
+        statusCodeVariable="",
     )
+
+
+def supabase_key(text, rpc, body=None, bgcolor=MENU_BLUE):
+    """A key that calls one of our Supabase functions."""
+    return button(text, press=[supabase_call(rpc, body)], bgcolor=bgcolor)
 
 
 def menu_refresh_key():
@@ -280,29 +281,59 @@ def menu_refresh_key():
     return supabase_key("REFRESH\\nTV MENU\\nscreen", "bump_menu_refresh")
 
 
-def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
+def timer_actions(rpc, body=None):
     """Stage timer (staff.sisyphusbrewing.com/timer/, see timer/README.md).
 
-    Each press also updates Companion's own copy of the timer (custom variables
-    timer_t0 / timer_len / timer_wrap) so the TIMER page readout can show it."""
-    key = supabase_key(text, rpc, body, bgcolor)
+    Calls the Supabase rpc and also updates Companion's own copy of the timer (custom
+    variables timer_t0 / timer_len / timer_wrap) so the TIMER page readout can show it."""
     body = body or {}
     if rpc == "timer_start":
         sets = {"timer_t0": "$(internal:time_unix)", "timer_len": str(body["minutes"] * 60), "timer_wrap": "0"}
-    elif rpc == "timer_add":
-        sets = {"timer_len": f"$(custom:timer_len) + {body['seconds']}", "timer_wrap": "0"}
+    elif rpc == "timer_add":  # the rpc never goes below a 1-minute set; match it
+        new_len = f"$(custom:timer_len) + {body['seconds']}"
+        sets = {"timer_len": f"{new_len} < 60 ? 60 : {new_len}", "timer_wrap": "0"}
     elif rpc == "timer_stop":
         sets = {"timer_t0": "0", "timer_wrap": "0"}
     else:  # timer_light = WRAP IT UP toggle
         sets = {"timer_wrap": "1 - $(custom:timer_wrap)"}
+    acts = [supabase_call(rpc, body)]
     # Companion 5.1 ignores the old "custom_variable_set_expression" on import (its upgrade
     # script doesn't run on our imports), so use "custom_variable_set_value" with the
     # value marked as an expression.
     for name, expr in sets.items():
         act = action(INTERNAL, "custom_variable_set_value", name=name, value=expr)
         act["options"]["value"]["isExpression"] = True
-        key["steps"]["0"]["action_sets"]["down"].append(act)
-    return key
+        acts.append(act)
+    return acts
+
+
+def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
+    return button(text, press=timer_actions(rpc, body), bgcolor=bgcolor)
+
+
+# TIMER page (2-mic layout): the GOD MIC knob becomes TIME (nobody makes announcements
+# mid-set). Sam, Oct 29 2026: "one of the knobs on the timer page adjust the timer".
+TIME_STEP = 5  # seconds per click; a minute at 1 s a click is 60 clicks
+
+
+def time_knob():
+    """Turn: give or take TIME_STEP seconds. Push: one more minute (never stops the clock)."""
+    return button(
+        "",
+        turn_right=timer_actions("timer_add", {"seconds": TIME_STEP}),
+        turn_left=timer_actions("timer_add", {"seconds": -TIME_STEP}),
+        press=timer_actions("timer_add", {"seconds": 60}),
+    )
+
+
+def time_strip():
+    """Touch strip label above the TIME knob: the set length."""
+    return button(
+        f"concat('TIME\\n', secondsToTimestamp($(custom:timer_len), 'mm:ss'), '\\nturn / push +1')",
+        bgcolor=TIMER_COLOR,
+        size="14",
+        expression=True,
+    )
 
 
 # What the stage clock is showing, worked out on the deck from the variables above.
@@ -469,13 +500,15 @@ def layout(sources, first, mics, other_first):
                 (1, 1): timer_key("START\\n10 MIN\\nSET", "timer_start", {"minutes": 10}),
                 (1, 2): timer_key("STOP\\nCLOCK", "timer_stop", bgcolor=RED),
                 # WRAP IT UP on the stage clock now (timer_light); press again to clear.
-                # (+1 MIN gave up its key to the readout; it's still on the timer web page.)
+                # (+1 MIN gave up its key to the readout; push the TIME knob instead.)
                 (1, 3): timer_key("WRAP\\nIT UP", "timer_light", bgcolor=RED),
             },
         },
     }
     for page in pages.values():
         page["controls"].update(sound_controls(sources))
+    if mics == 2:  # with 4 mics every knob is a mic, so TIMER 4 keeps them
+        pages[timer]["controls"].update({(2, 3): time_strip(), (3, 3): time_knob()})
     return pages
 
 
