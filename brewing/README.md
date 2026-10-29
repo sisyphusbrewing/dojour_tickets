@@ -37,13 +37,23 @@ count for each), type what's on hand in pounds, and it adds up every recipe's
 mash bill, groups the same malt written different ways (Rahr 2-Row, Pale Malt
 2-Row, …), subtracts stock and rounds up to 55 lb bags. "Copy order" puts the
 list on the clipboard to paste into an e-mail. Hops are added up the same way
-and rounded up to whole pounds; dry yeast is in grams and rounded up to 500 g
+and rounded up to 11 lb bags; dry yeast is in grams and rounded up to 500 g
 bricks. Recipes with no yeast line are named under the yeast list. On-hand
 amounts for all three live in `grain_stock`, keyed by name (pounds for grain
 and hops, grams for yeast). Malts the supplier no longer
 carries are swapped in `maltSub()`: any 55L crystal/caramel becomes Simpsons
 Crystal T-50 and any 120L crystal becomes Simpsons Dark Roast Crystal (shown
 that way on recipe cards too).
+
+"Fill RahrBSG cart" opens rahrbsg.com with the whole order already in the
+cart. Sign in there for account prices, add milling notes, and check out
+yourself; nothing is ordered from the batch log. Each order line maps to a
+RahrBSG item in `RAHR` in `index.html` (shown under each line as "RahrBSG:
+…"). Lines with no mapping, or out of stock, are listed for adding by hand.
+Hops map to the 11 lb product, and the newest crop year in stock is picked
+when the cart is filled, so nothing needs changing at harvest. The lookup goes
+through the `rahr-catalog` edge function because the RahrBSG catalog API
+(VTEX) does not allow calls from other sites.
 
 ## Data
 
