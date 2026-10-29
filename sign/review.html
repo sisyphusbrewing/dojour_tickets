@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sign Pictures · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <style>
+    #lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    #lock .card { width: 100%; max-width: 360px; }
+    #lock h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 4px; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 16px 0 8px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: #d9d6d6; font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; }
+    .chip.on { background: var(--slate); border-color: var(--slate); color: #fff; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .art canvas { width: 100%; aspect-ratio: 2 / 1; border-radius: 8px; display: block; background: #050505; }
+    .a-ask { color: #fff; font-size: 16px; margin: 10px 0 0; }
+    .a-sub { color: var(--slate-light); font-size: 13px; margin-top: 3px; }
+    .a-note { color: var(--danger); font-size: 13px; margin-top: 4px; }
+    .a-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .btn-ok { background: var(--ok); border-color: var(--ok); color: #1d2a20; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #fff; color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 60; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="art.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <h2>Sign pictures</h2>
+      <p class="help" style="margin:0 0 14px">Same sign-in as the door app. Managers only.</p>
+      <form id="loginForm">
+        <div class="field"><label>Email</label><input class="input" id="email" type="email" required autocomplete="email"></div>
+        <div class="field" style="margin-top:10px"><label>Password</label><input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError" style="margin-top:10px"></div>
+        <button class="btn btn-primary" id="loginBtn" type="submit" style="width:100%;margin-top:14px">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap hdr">
+      <div class="hdr-brand">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Sign pictures<small id="count">Taproom LED sign</small></div>
+      </div>
+      <div class="hdr-right">
+        <a class="btn btn-sm" href="./" target="_blank" rel="noopener">The form</a>
+        <button class="btn btn-sm" id="beers" type="button">Draw new beers</button>
+        <button class="btn btn-sm" id="signOut" type="button">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="list"></div>
+  </main>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var $ = function (id) { return document.getElementById(id); };
+    var FILTERS = [['pending', 'Waiting'], ['approved', 'On the sign'], ['rejected', 'Turned down']];
+    var items = [], filter = 'pending';
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function toast(m) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200); }
+    function day(d) { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+
+    function showLock(on) { $('lock').classList.toggle('hidden', !on); }
+    $('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Signing in…'; $('loginError').classList.add('hidden');
+      try {
+        var res = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+        if (res.error) { $('loginError').textContent = res.error.message; $('loginError').classList.remove('hidden'); return; }
+        $('password').value = ''; showLock(false); load();
+      } catch (err) { $('loginError').textContent = 'Could not reach the server.'; $('loginError').classList.remove('hidden'); }
+      finally { btn.disabled = false; btn.textContent = 'Sign in'; }
+    });
+    $('signOut').addEventListener('click', async function () { await sb.auth.signOut(); items = []; render(); showLock(true); });
+
+    async function load() {
+      var res = await sb.from('sign_art').select('*').order('created_at', { ascending: false });
+      if (res.error) { toast(res.error.message); return; }
+      items = res.data || []; render();
+    }
+    async function save(id, patch) {
+      var res = await sb.from('sign_art').update(patch).eq('id', id).select().single();
+      if (res.error) { toast('Save failed: ' + res.error.message); return; }
+      var i = items.findIndex(function (a) { return a.id === id; }); if (i >= 0) items[i] = res.data;
+      render();
+    }
+    async function call(body, label) {
+      toast(label);
+      var res = await sb.functions.invoke('sign-art', { body: body });
+      if (res.error) {
+        var msg = res.error.message;
+        try { msg = (await res.error.context.json()).error || msg; } catch (e) { /* not JSON */ }
+        toast(msg); return null;
+      }
+      return res.data;
+    }
+
+    function render() {
+      var pending = items.filter(function (a) { return a.status === 'pending'; }).length;
+      $('count').textContent = pending ? pending + ' waiting for a look' : 'Taproom LED sign';
+      $('chips').innerHTML = FILTERS.map(function (f) {
+        var c = items.filter(function (a) { return a.status === f[0]; }).length;
+        return '<button class="chip' + (filter === f[0] ? ' on' : '') + '" data-f="' + f[0] + '" type="button">' + f[1] + ' · ' + c + '</button>';
+      }).join('');
+      var rows = items.filter(function (a) { return a.status === filter; });
+      if (!rows.length) {
+        $('list').innerHTML = '<div class="empty"><b>Nothing here</b>' + (filter === 'pending' ? 'No suggestions waiting.' : 'Nothing yet.') + '</div>';
+        return;
+      }
+      $('list').innerHTML = rows.map(function (a) {
+        var who = a.kind === 'beer' ? 'Beer on tap' : (a.from_name ? 'From ' + esc(a.from_name) : 'From a customer');
+        var acts = a.status === 'pending'
+          ? '<button class="btn btn-ok btn-sm" data-act="approve" type="button">Put it up</button><button class="btn btn-sm" data-act="reject" type="button">Turn down</button>'
+          : a.status === 'approved'
+            ? '<button class="btn btn-sm" data-act="reject" type="button">Take it down</button>'
+            : '<button class="btn btn-sm" data-act="approve" type="button">Put it up anyway</button>';
+        return '<div class="card art" data-id="' + a.id + '"><canvas></canvas>' +
+          '<div class="a-ask">' + esc(a.prompt) + '</div>' +
+          '<div class="a-sub">' + who + ' · ' + day(a.created_at) + '</div>' +
+          (a.note ? '<div class="a-note">' + esc(a.note) + '</div>' : '') +
+          '<div class="a-actions">' + acts + '<button class="btn btn-sm" data-act="redraw" type="button">Draw it again</button></div></div>';
+      }).join('');
+      Array.prototype.forEach.call($('list').querySelectorAll('.art'), function (card) {
+        var a = items.find(function (x) { return String(x.id) === card.dataset.id; });
+        drawSignArt(card.querySelector('canvas'), a, 64);
+      });
+    }
+
+    $('chips').addEventListener('click', function (e) { var b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; render(); } });
+    $('list').addEventListener('click', async function (e) {
+      var b = e.target.closest('[data-act]'); if (!b) return;
+      var id = Number(b.closest('.art').dataset.id), now = new Date().toISOString();
+      if (b.dataset.act === 'approve') save(id, { status: 'approved', decided_at: now, note: null });
+      else if (b.dataset.act === 'reject') save(id, { status: 'rejected', decided_at: now });
+      else if (b.dataset.act === 'redraw') {
+        b.disabled = true;
+        var data = await call({ redraw: id }, 'Drawing it again…');
+        if (data && data.art) { var i = items.findIndex(function (a) { return a.id === id; }); items[i] = data.art; render(); }
+        b.disabled = false;
+      }
+    });
+    $('beers').addEventListener('click', async function () {
+      var b = $('beers'); b.disabled = true;
+      var data = await call({ beers: true }, 'Drawing the beers on tap. This takes a minute or two…');
+      b.disabled = false;
+      if (!data) return;
+      toast(data.drawn.length ? 'Drew ' + data.drawn.join(', ') + (data.left ? '. Press again for the rest.' : '') : 'Every beer on tap already has a picture.');
+      filter = 'approved'; load();
+    });
+
+    (async function boot() {
+      var res = await sb.auth.getSession();
+      if (res.data && res.data.session) { showLock(false); load(); } else { showLock(true); }
+      sb.auth.onAuthStateChange(function (event, session) { if (event === 'SIGNED_OUT' || !session) showLock(true); });
+    })();
+  </script>
+</body>
+</html>
