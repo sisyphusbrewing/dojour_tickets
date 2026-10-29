@@ -10,8 +10,8 @@
 //
 // Order number + email is the key, like a store's order-status page. Only the
 // service key reads the tables. The swap itself (Shopify order edit, door list,
-// email) is exchange_ticket.py. Same price or cheaper only, and only to shows
-// the same week, Monday to Sunday Central (Sam, Oct 28 2026).
+// email) is exchange_ticket.py. Same price or cheaper only, and only to another
+// showtime of the same product (Sam, Oct 28-29 2026).
 // Needs the GITHUB_TOKEN secret, like run-workflow.
 
 const REPO = "sisyphusbrewing/dojour_tickets";
@@ -56,14 +56,7 @@ function orderName(raw: unknown) {
   return digits ? `#${digits}` : "";
 }
 
-// Monday (Central) of the week a show falls in, as "YYYY-MM-DD".
-function weekOf(iso: string) {
-  const local = new Date(new Date(iso).toLocaleString("en-US", { timeZone: "America/Chicago" }));
-  local.setDate(local.getDate() - ((local.getDay() + 6) % 7));
-  return `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}-${String(local.getDate()).padStart(2, "0")}`;
-}
-
-type Showtime = { variant_id: number; show_title: string; date_text: string; ticket_type: string | null; starts_at: string; price: number; seats_left: number };
+type Showtime = { variant_id: number; product_id: number; show_title: string; date_text: string; ticket_type: string | null; starts_at: string; price: number; seats_left: number };
 
 // The customer's upcoming website tickets on that order, with what each cost.
 async function findLines(order: string, email: string) {
@@ -87,14 +80,14 @@ async function findLines(order: string, email: string) {
     return {
       unique_id: r.unique_id, show_title: r.show_title, show_date: r.show_date, tickets: r.tickets,
       ticket_type: r.ticket_type, variant_id: r.variant_id, price: t ? Number(t.price) : null, blocked,
-      week: t ? weekOf(t.starts_at) : null,
+      product_id: t ? Number(t.product_id) : null,
     };
   });
 }
 
 async function showtimes(): Promise<Showtime[]> {
   const after = new Date(Date.now() + CUTOFF_HOURS * 3600e3).toISOString();
-  return await db(`exchange_showtimes?starts_at=gt.${encodeURIComponent(after)}&seats_left=gt.0&select=variant_id,show_title,date_text,ticket_type,starts_at,price,seats_left&order=starts_at,show_title,price`);
+  return await db(`exchange_showtimes?starts_at=gt.${encodeURIComponent(after)}&seats_left=gt.0&select=variant_id,product_id,show_title,date_text,ticket_type,starts_at,price,seats_left&order=starts_at,show_title,price`);
 }
 
 // A brand-new order isn't on the door list until the next sync; ask for a quick one.
@@ -136,8 +129,7 @@ Deno.serve(async (req) => {
         try { await refreshSoon(); } catch (e) { console.error(e); }
         return respond(404, { error: "not_found" });
       }
-      const times = (await showtimes()).map((t) => ({ ...t, week: weekOf(t.starts_at) }));
-      return respond(200, { order, lines, showtimes: times });
+      return respond(200, { order, lines, showtimes: await showtimes() });
     }
 
     if (p.action === "swap") {
@@ -149,7 +141,7 @@ Deno.serve(async (req) => {
       const target = (await showtimes()).find((t) => Number(t.variant_id) === Number(p.variant_id));
       if (!target) return respond(409, { error: "That showtime isn't available anymore. Pick another." });
       if (target.seats_left < qty) return respond(409, { error: "Not enough seats left for that showtime." });
-      if (weekOf(target.starts_at) !== line.week) return respond(409, { error: "Swaps stay within the same weekend." });
+      if (Number(target.product_id) !== line.product_id) return respond(409, { error: "Tickets can only move to another night of the same show." });
       if (Number(target.variant_id) === Number(line.variant_id)) return respond(400, { error: "Those are the tickets you already have." });
       if (line.price !== null && Number(target.price) > Number(line.price) + 0.001) {
         return respond(409, { error: "Those cost more than what you have. Email ticketing@sisyphusbrewing.com and we'll sort it out." });

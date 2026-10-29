@@ -14,8 +14,9 @@ That edits the Shopify order in place (Shopify's own order editing):
   * the door list (Supabase `tickets`) moves them to the new night
   * the customer gets a short confirmation email from the box office
 
-Only within the same week, Monday to Sunday (Sam, Oct 28 2026: "only amongst
-shows of the same weekend"), to any show that week.
+Only to another showtime of the same Shopify product, the same show's other
+nights and ticket types (Sam, Oct 29 2026: "they can only move amongst the
+same product").
 
 Money (Sam: no refunds unless a show is cancelled or rescheduled):
   * same price            nothing changes
@@ -52,13 +53,6 @@ from show_dates import parse_show_datetime, CENTRAL_TZ
 # Swaps close this long before the original show, and the new show must be at
 # least this far off too. The edge function uses the same number.
 CUTOFF_HOURS = 2
-
-
-def week_of(dt):
-    """Monday of the show's week in Central time; swaps stay inside one week."""
-    d = dt.astimezone(CENTRAL_TZ).date()
-    return d - timedelta(days=d.weekday())
-
 
 CREDIT_TITLE = "Exchange credit (no refund)"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
@@ -139,7 +133,7 @@ query Order($q: String!) {
     id name email cancelledAt customer { email firstName }
     lineItems(first: 100) { nodes {
       id title variantTitle currentQuantity
-      variant { id }
+      variant { id product { id } }
       originalUnitPriceSet { shopMoney { amount } }
       discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount } }
     } }
@@ -221,8 +215,8 @@ def exchange(shop, ex):
     new_dt = parse_show_datetime(date_text(variant), require_time=True)
     if not new_dt or new_dt <= cutoff:
         raise Refused("That showtime is too soon or already happened.")
-    if week_of(new_dt) != week_of(old_dt):
-        raise Refused("Swaps stay within the same weekend.")
+    if not line.get("variant") or line["variant"]["product"]["id"] != variant["product"]["id"]:
+        raise Refused("Tickets can only move to another night of the same show.")
     if (variant.get("inventoryItem") or {}).get("tracked", True) and (variant.get("inventoryQuantity") or 0) < qty:
         raise Refused("That showtime doesn't have enough seats left.")
 

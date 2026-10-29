@@ -10,7 +10,7 @@ OLD = "Fri, Nov 6 • 7:00 PM / General Admission"
 
 def order(qty=2, price="28.0", paid=None, email="Fan@Example.com", new_line=None):
     lines = [{"id": f"gid://shopify/LineItem/{LINE_ID}", "title": "Michael Longfellow", "variantTitle": OLD,
-              "currentQuantity": qty, "variant": {"id": "gid://shopify/ProductVariant/1"},
+              "currentQuantity": qty, "variant": {"id": "gid://shopify/ProductVariant/1", "product": {"id": "gid://shopify/Product/5"}},
               "originalUnitPriceSet": {"shopMoney": {"amount": price}},
               "discountedUnitPriceAfterAllDiscountsSet": {"shopMoney": {"amount": paid or price}}}]
     if new_line:
@@ -20,12 +20,12 @@ def order(qty=2, price="28.0", paid=None, email="Fan@Example.com", new_line=None
                                   "lineItems": {"nodes": lines}}]}}
 
 
-def variant(price="28.00", date="Sat, Nov 7 • 9:00 PM", seats=20):
+def variant(price="28.00", date="Sat, Nov 7 • 9:00 PM", seats=20, product=5):
     return {"productVariant": {"id": "gid://shopify/ProductVariant/2", "title": f"{date} / General Admission",
                                "price": price, "inventoryQuantity": seats, "inventoryItem": {"tracked": True},
                                "selectedOptions": [{"name": "Date & Time", "value": date},
                                                    {"name": "Ticket Type", "value": "General Admission"}],
-                               "product": {"id": "gid://shopify/Product/5", "title": "Michael Longfellow",
+                               "product": {"id": f"gid://shopify/Product/{product}", "title": "Michael Longfellow",
                                            "status": "ACTIVE", "handle": "michael-longfellow", "tags": [],
                                            "productType": "Comedy Ticket", "isGiftCard": False}}}
 
@@ -55,7 +55,7 @@ class FakeShop:
 REQ = {"order_name": "#4417", "email": "fan@example.com", "from_unique_id": f"shopify_{ORDER_ID}_{LINE_ID}",
        "to_variant_id": 2, "tickets": None}
 NEW_LINE = {"id": "gid://shopify/LineItem/333", "title": "Michael Longfellow", "variantTitle": "x", "currentQuantity": 2,
-            "variant": {"id": "gid://shopify/ProductVariant/2"},
+            "variant": {"id": "gid://shopify/ProductVariant/2", "product": {"id": "gid://shopify/Product/5"}},
             "originalUnitPriceSet": {"shopMoney": {"amount": "28"}},
             "discountedUnitPriceAfterAllDiscountsSet": {"shopMoney": {"amount": "28"}}}
 
@@ -120,7 +120,7 @@ class SwapTest(unittest.TestCase):
         cases = [
             (dict(REQ, email="someone@else.com"), variant(), "email"),
             (dict(REQ), variant(seats=1), "seats"),
-            (dict(REQ), variant(date="Fri, Nov 13 • 7:00 PM"), "weekend"),
+            (dict(REQ), variant(product=6), "same show"),
         ]
         for req, var, word in cases:
             with self.assertRaises(ex.Refused) as ctx:

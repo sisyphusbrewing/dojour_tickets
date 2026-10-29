@@ -47,7 +47,7 @@
       <div class="show-card">
         <div class="show-eyebrow">Wrong night?</div>
         <div class="show-name">Swap it yourself</div>
-        <div class="show-when">Move your tickets to another night or show that same weekend, up to 2 hours before showtime. Same price or cheaper.</div>
+        <div class="show-when">Move your tickets to another night of the same show, up to 2 hours before showtime. Same price or cheaper.</div>
       </div>
       <form class="card" id="findForm" autocomplete="on">
         <div class="grid">
@@ -171,15 +171,10 @@
     function renderOpts() {
       var qty = +$('qty').value || line.tickets;
       var list = data.showtimes.filter(function (t) {
-        return t.variant_id !== line.variant_id && t.week === line.week && t.seats_left >= qty && (line.price == null || t.price <= line.price + 0.001);
+        return t.variant_id !== line.variant_id && t.product_id === line.product_id && t.seats_left >= qty && (line.price == null || t.price <= line.price + 0.001);
       });
-      // Same show first, then everything else by date.
-      var same = list.filter(function (t) { return t.show_title === line.show_title; });
-      var other = list.filter(function (t) { return t.show_title !== line.show_title; });
-      var html = '';
-      if (same.length) html += '<div class="group">Other times this weekend for ' + esc(line.show_title) + '</div><div class="opts">' + same.map(optHtml).join('') + '</div>';
-      if (other.length) html += '<div class="group">' + (same.length ? 'Or a different show that weekend' : 'Shows that weekend') + '</div><div class="opts">' + other.map(optHtml).join('') + '</div>';
-      if (!list.length) html = '<p class="small">Nothing else open that weekend at the same price or less. Write <a href="mailto:ticketing@sisyphusbrewing.com">ticketing@sisyphusbrewing.com</a> and a human will help.</p>';
+      var html = '<div class="group">Other times for ' + esc(line.show_title) + '</div><div class="opts">' + list.map(optHtml).join('') + '</div>';
+      if (!list.length) html = '<p class="small">No other nights of this show open at the same price or less. Write <a href="mailto:ticketing@sisyphusbrewing.com">ticketing@sisyphusbrewing.com</a> and a human will help.</p>';
       $('opts').innerHTML = html;
       $('opts').querySelectorAll('.opt').forEach(function (b) {
         b.addEventListener('click', function () {
@@ -206,7 +201,6 @@
       var qty = +$('qty').value || line.tickets;
       var cheaper = line.price != null && pick.price < line.price - 0.005;
       s.innerHTML = '<b>' + qty + ' × ' + esc(pick.ticket_type || 'ticket') + '</b><br>' + esc(line.show_date) + ' → <b>' + esc(pick.date_text) + '</b>' +
-        (pick.show_title !== line.show_title ? '<br>' + esc(pick.show_title) : '') +
         (cheaper ? '<br><span class="small" style="display:block">The new ones are ' + money((line.price - pick.price) * qty) + ' cheaper. We don\'t refund swaps, so the difference stays with the comedians. They\'ll drink to you.</span>' : '');
       s.classList.remove('hidden');
     }
