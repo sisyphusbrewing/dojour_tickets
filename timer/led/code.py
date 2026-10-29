@@ -5,7 +5,9 @@
 # CircuitPython 10. Copy this file, settings.toml and the libraries listed in
 # README.md onto the CIRCUITPY drive.
 
+import math
 import os
+import random
 import time
 
 import adafruit_connection_manager
@@ -27,29 +29,153 @@ POLL = 1.0  # seconds between checks; a deck press shows up within about a secon
 WHITE = 0xB4B4B4  # not full white: plenty from the stage, less glow
 RED = 0xFF0000
 IDLE = 0x101010
+DIM = 0x505050  # the small "left" line: readable, but the big time wins
 
 # What the clock says to the comic (Sam, Oct 28 2026). The deck's WRAP IT UP key
 # (timer_light) shows the first one at any time.
 WRAP_AT = 30  # seconds left
-WRAP = ("WRAP", "IT UP")
 OVER = "YOU BETTER KNOW WHAT YOU ARE DOING...."
 WAY_OVER = "NO SERIOUSLY.... ARE YOU FAMOUS?"  # a minute or more over
-SCROLL = 60  # pixels a second
+SCROLL = 30  # pixels a second (small line)
+
+# Layout (Sam, Oct 29 2026): time done is the most important, so it's big on top;
+# time left is small underneath. Time added gets a bowling-alley BONUS TIME burst,
+# and WRAP IT UP gets a bowling ball knocking the pins down first.
 
 # ---- display ----
 matrix = Matrix(width=64, height=32, bit_depth=4)
 display = matrix.display
 root = displayio.Group()
+# time done: big, on top
 digits = label.Label(terminalio.FONT, text="", color=IDLE, scale=2)
 digits.anchor_point = (0.5, 0.5)
-digits.anchored_position = (32, 16)
+digits.anchored_position = (32, 10)
 root.append(digits)
-# long lines scroll right to left, then the time shows for a moment
-words = label.Label(terminalio.FONT, text="", color=RED, scale=2)
-words.anchor_point = (0, 0.5)
-words.hidden = True
-root.append(words)
+# small line underneath: time left, WRAP IT UP, or the over-time lines scrolling
+small = label.Label(terminalio.FONT, text="", color=DIM)
+small.anchor_point = (0.5, 0.5)
+small.anchored_position = (32, 26)
+root.append(small)
 display.root_group = root
+
+# ---- bowling-alley animations ----
+FX_COLORS = (0x000000, 0xFF0000, 0xFFB000, 0xFFFF00, 0x00FF40, 0x00A0FF, 0xC040FF, 0xFFFFFF)
+fx_palette = displayio.Palette(len(FX_COLORS))
+for i, c in enumerate(FX_COLORS):
+    fx_palette[i] = c
+fx_palette.make_transparent(0)
+fx_bmp = displayio.Bitmap(64, 32, len(FX_COLORS))
+fx_big = label.Label(terminalio.FONT, text="", color=0xFFFF00, scale=2)
+fx_big.anchor_point = (0.5, 0.5)
+fx_small = label.Label(terminalio.FONT, text="", color=0xFFFFFF)
+fx_small.anchor_point = (0.5, 0.5)
+fx_small.anchored_position = (32, 26)
+fx_group = displayio.Group()
+for item in (displayio.TileGrid(fx_bmp, pixel_shader=fx_palette), fx_big, fx_small):
+    fx_group.append(item)
+RAINBOW = (0xFF0000, 0xFFB000, 0xFFFF00, 0x00FF40, 0x00A0FF, 0xC040FF)
+WHITE_I, RED_I = 7, 1
+
+BONUS_LEN = 3.5
+STRIKE_LEN = 4.0
+fx_kind, fx_start, fx_text = None, 0.0, ""
+particles = []  # [x, y, dx, dy, color index]
+
+
+def px(x, y, c):
+    x, y = int(x), int(y)
+    if 0 <= x < 64 and 0 <= y < 32:
+        fx_bmp[x, y] = c
+
+
+BALL = ((1, 0), (2, 0), (0, 1), (1, 1), (2, 1), (3, 1), (0, 2), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3))
+
+
+def draw_pin(x, y):
+    """A bowling pin, 3 wide and 8 tall, top-left at x, y."""
+    for dy in range(8):
+        for dx in range(3):
+            if dy in (0, 1) and dx != 1:
+                continue  # narrow neck
+            px(x + dx, y + dy, RED_I if dy == 3 else WHITE_I)
+
+
+def start_fx(kind, text=""):
+    global fx_kind, fx_start, fx_text, particles
+    fx_kind, fx_start, fx_text = kind, time.monotonic(), text
+    particles = []
+    fx_bmp.fill(0)
+    fx_big.text, fx_small.text = "", ""
+    display.root_group = fx_group
+
+
+def fx_tick():
+    """One frame of the running animation; returns False when it's done."""
+    global fx_kind, particles
+    t = time.monotonic() - fx_start
+    fx_bmp.fill(0)
+    if fx_kind == "bonus":
+        if t > BONUS_LEN:
+            fx_kind = None
+            return False
+        if t < 0.6:  # the whole screen flashes, like a lane after a strike
+            fx_bmp.fill(1 + int(t * 10) % 6)
+            fx_big.text = fx_small.text = ""
+        else:
+            # sparkles all over, the added time bouncing in rainbow colours
+            for _ in range(18):
+                px(random.randrange(64), random.randrange(32), random.randrange(1, 8))
+            fx_big.text = fx_text
+            fx_big.color = RAINBOW[int(t * 8) % len(RAINBOW)]
+            fx_big.anchored_position = (32, 10 - int(abs(math.sin((t - 0.6) * 6)) * 4 * max(0, 1.6 - (t - 0.6)) / 1.6))
+            fx_small.text = "BONUS TIME"
+            fx_small.color = 0xFFFFFF if int(t * 4) % 2 else 0xFFFF00
+        return True
+    if fx_kind == "strike":
+        if t > STRIKE_LEN:
+            fx_kind = None
+            return False
+        if t < 1.2:  # the ball rolls down the lane at the pins
+            fx_big.text = fx_small.text = ""
+            for i in range(3):
+                draw_pin(48 + i * 5, 20 - (i % 2) * 2)
+            bx = -4 + t / 1.2 * 52
+            for dx, dy in BALL:
+                px(bx + dx, 26 + dy, 6)
+            for x in range(0, 64, 4):  # lane arrows
+                px(x, 31, 2)
+        elif t < 2.0:  # STRIKE: pins fly everywhere
+            if not particles:
+                for _ in range(30):
+                    particles.append([52.0, 23.0, random.uniform(-40, 30), random.uniform(-45, 5),
+                                      random.choice((WHITE_I, WHITE_I, RED_I, 3))])
+            if t < 1.3 and int(t * 20) % 2:  # a yellow flash as the ball hits
+                fx_bmp.fill(3)
+            dt = 1 / 30
+            for p in particles:
+                p[0] += p[2] * dt
+                p[1] += p[3] * dt
+                p[3] += 60 * dt  # gravity
+                px(p[0], p[1], p[4])
+        else:  # then the message, big and flashing
+            fx_big.text = "WRAP"
+            fx_big.anchored_position = (32, 8)
+            col = RED if int(t * 5) % 2 else 0xFFFF00
+            fx_big.color = col
+            fx_small.color = col
+            fx_small.text = "IT UP!"
+            fx_small.scale = 2
+            fx_small.anchored_position = (32, 24)
+        return True
+    return False
+
+
+def end_fx():
+    fx_big.anchored_position = (32, 10)
+    fx_small.scale = 1
+    fx_small.anchored_position = (32, 26)
+    display.root_group = root
+
 
 # Kevin: press UP for Kevin asking for another beer, DOWN for the timer.
 kevin_palette = displayio.Palette(len(kevin.PALETTE))
@@ -114,37 +240,39 @@ def kevin_tick():
     kevin_step = (kevin_step + 1) % len(kevin.SCRIPT)
 
 
-def show(text, color):
-    words.hidden, digits.hidden = True, False
+def show(text, color, line="", line_color=DIM):
+    small.anchor_point = (0.5, 0.5)
+    small.anchored_position = (32, 26)
     if digits.text != text:
         digits.text = text
     if digits.color != color:
         digits.color = color
-
-
-def wrap(time_text):
-    """WRAP, IT UP, then the time, big, round and round."""
-    step = int(time.monotonic() / 0.8) % 3
-    show(WRAP[step] if step < 2 else time_text, RED)
+    if small.text != line:
+        small.text = line
+    if small.color != line_color:
+        small.color = line_color
 
 
 scroll_text, scroll_start = None, 0.0
 
 
-def scroll(text, time_text):
+def scroll(time_text, text, over_text):
+    """Over time: the big time stays put; the small line scrolls the message,
+    then shows how far over for 2 s, round and round."""
     global scroll_text, scroll_start
+    show(time_text, RED)
     now = time.monotonic()
     if text != scroll_text:
         scroll_text, scroll_start = text, now
-        words.text = text
-    x = 64 - int((now - scroll_start) * SCROLL) // 2 * 2  # whole font pixels at scale 2
-    if x < -12 * len(text):  # scrolled off: show the time for 2 s, then go again
-        show(time_text, RED)
-        if x < -12 * len(text) - 2 * SCROLL:
+    x = 64 - int((now - scroll_start) * SCROLL)
+    if x < -6 * len(text):  # scrolled off: show how far over for 2 s, then go again
+        show(time_text, RED, over_text, RED)
+        if x < -6 * len(text) - 2 * SCROLL:
             scroll_start = now
         return
-    digits.hidden, words.hidden = True, False
-    words.anchored_position = (x, 16)
+    small.text, small.color = text, RED
+    small.anchor_point = (0, 0.5)
+    small.anchored_position = (x, 26)
 
 
 # ---- network ----
@@ -197,12 +325,19 @@ state = None
 elapsed_at_fetch = 0.0  # seconds into the set when we last heard from the server
 fetched = time.monotonic()
 last_poll = -POLL
+was_wrapping = False
+bonus_pending, bonus_seen = 0, 0.0  # added seconds waiting for the knob to stop turning
 
 while True:
     check_buttons()
     if kevin_mode:
         kevin_tick()
         time.sleep(0.02)
+        continue
+    if fx_kind:  # no polling mid-animation (a poll would freeze it for a moment)
+        if not fx_tick():
+            end_fx()
+        time.sleep(0.03)
         continue
     now = time.monotonic()
     if now - last_poll >= POLL:
@@ -216,32 +351,52 @@ while True:
             r = http.post(URL, headers={"apikey": KEY, "Content-Type": "application/json"}, data="{}")
             s = r.json()
             r.close()
+            # time added to a running set (not a new START): save it up while the
+            # deck knob is still turning, then play BONUS TIME once
+            if (state and s["started_at"] and s["started_at"] == state["started_at"]
+                    and s["set_seconds"] > state["set_seconds"]):
+                bonus_pending += s["set_seconds"] - state["set_seconds"]
+                bonus_seen = time.monotonic()
+            elif state and s["started_at"] != state["started_at"]:
+                bonus_pending = 0
             state = s
             fetched = time.monotonic()
             if s["started_at"]:
                 elapsed_at_fetch = seconds_between(s["started_at"], s["now"])
         except Exception as e:  # lost a poll: keep counting on the last state we had
             print("poll", e)
+    if bonus_pending > 0 and time.monotonic() - bonus_seen > 1.5:
+        start_fx("bonus", "+" + fmt(bonus_pending))
+        bonus_pending = 0
+        continue
 
     if not wifi.radio.connected:
         show("WIFI", IDLE)
     elif state is None:
         show("...", IDLE)
     elif not state["started_at"]:
+        was_wrapping = False
         if state["light_now"]:
-            wrap(fmt(state["set_seconds"]))
+            show(fmt(state["set_seconds"]), RED, "WRAP IT UP", RED)
         else:
             show(fmt(state["set_seconds"]), IDLE)
     else:
         # counts up from 0:00 (a countdown makes comics panic, Sam, Oct 28 2026)
         elapsed = elapsed_at_fetch + time.monotonic() - fetched
         left = state["set_seconds"] - elapsed
-        if left > 0 and (state["light_now"] or left <= WRAP_AT):
-            wrap(fmt(elapsed))
+        wrapping = left > 0 and (state["light_now"] or left <= WRAP_AT)
+        if wrapping and not was_wrapping:
+            was_wrapping = True
+            start_fx("strike")
+            continue
+        was_wrapping = wrapping
+        if wrapping:
+            flash = int(time.monotonic() / 0.5) % 2
+            show(fmt(elapsed), RED, "WRAP IT UP" if flash else fmt(left) + " LEFT", RED)
         elif left > 0:
             lit = state["light_seconds"] > 0 and left <= state["light_seconds"]
-            show(fmt(elapsed), RED if lit else WHITE)
+            show(fmt(elapsed), RED if lit else WHITE, fmt(left) + " LEFT", RED if lit else DIM)
         else:
-            # over time: the comic gets told, with the time in between
-            scroll(OVER if left > -60 else WAY_OVER, fmt(elapsed))
+            # over time: the comic gets told, with how far over in between
+            scroll(fmt(elapsed), OVER if left > -60 else WAY_OVER, fmt(-left) + " OVER")
     time.sleep(0.03)
