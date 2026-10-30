@@ -12,7 +12,7 @@ const REPO = "sisyphusbrewing/dojour_tickets";
 // The public name box was a one-night thing (Oct 25 2026). While ASLEEP, every
 // lookup gets 410 { status: "asleep" } and the page shows its asleep message;
 // Sam's ?t= links don't use this function. Flip to false to open it again.
-const ASLEEP = false;   // Sam woke it for 2 hours, Oct 29 ~5:15-7:15 PM CT
+const ASLEEP = true;
 const MAX_NEW_PER_HOUR = 30;   // keeps a spammer from queueing hundreds of lookups
 
 const CORS = {
