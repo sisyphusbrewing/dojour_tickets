@@ -31,5 +31,6 @@ Portal S3 on the panel, CircuitPython 10, the same libraries. Copy
 by side, add `SIGN_WIDTH = 128` to `settings.toml`.
 
 `boot.py` fetches the latest `code.py` from https://staff.sisyphusbrewing.com/sign/led/
-at every power-up or RESET, like the stage clock. Hold **DOWN** while pressing
+at every power-up or RESET, like the stage clock. It also checks the site every 5 minutes and restarts itself
+when there's a new version, so you never have to press RESET. Hold **DOWN** while pressing
 **RESET** to copy files over USB.
