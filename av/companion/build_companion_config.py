@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Build the Sisyphus showroom Stream Deck + config for Bitfocus Companion.
 
-Edit the PAGES section below, run this script, then import the file it writes
-(sisyphus-deck.companionconfig) on Companion's Import / Export tab.
+Edit the PAGES section below, run this script, commit the file it writes
+(sisyphus-deck.companionconfig), and merge. Then load it on the office PC with no
+clicks: import-config.ps1 (next to this file) backs Companion up, pulls the deck from
+main, swaps in only the buttons and checks the result. Add -DryRun to preview.
 
     python3 build_companion_config.py
 
