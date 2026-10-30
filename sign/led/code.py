@@ -13,6 +13,7 @@ import time
 import adafruit_connection_manager
 import adafruit_requests
 import displayio
+import microcontroller
 import terminalio
 import wifi
 from adafruit_display_text import label
@@ -27,6 +28,10 @@ SCROLL = 20  # pixels a second for captions too long to sit still
 AMBER = 0xE09000
 CODES = ".123456789ABCDEF"
 ART = 32  # pictures are 32x32
+# New versions load by themselves (Sam: remote updates by default): every few minutes
+# the sign compares its code.py with the site and restarts so boot.py swaps it in.
+SITE = "https://staff.sisyphusbrewing.com/sign/led/"
+UPDATE_EVERY = 300
 
 WIDTH = os.getenv("SIGN_WIDTH") or 64
 matrix = Matrix(width=WIDTH, height=32, bit_depth=4)
@@ -137,6 +142,35 @@ except Exception as e:
 http = adafruit_requests.Session(pool, ssl)
 
 
+def checksum(data):
+    c = 0
+    for b in data:
+        c = (c * 31 + b) & 0xFFFFFFFF
+    return c
+
+
+def newer_on_site():
+    """True if code.py on the site differs from the board's copy. Each site version
+    gets one restart (its checksum is kept in nvm), so a version boot.py refuses
+    doesn't make the sign reboot forever."""
+    r = http.get(SITE + "code.py?t=%d" % time.monotonic_ns())
+    new = r.content if r.status_code == 200 else None
+    r.close()
+    if not new:
+        return False
+    try:
+        with open("code.py", "rb") as f:
+            if f.read() == new:
+                return False
+    except OSError:
+        pass
+    mark = checksum(new).to_bytes(4, "little")
+    if bytes(microcontroller.nvm[0:4]) == mark:
+        return False
+    microcontroller.nvm[0:4] = mark
+    return True
+
+
 def next_art():
     r = http.post(URL, headers={"apikey": KEY, "Content-Type": "application/json"}, data="{}")
     a = r.json()
@@ -147,8 +181,18 @@ def next_art():
 show_words("SISYPHUS")
 turn = 0
 next_at = 0.0
+last_update_check = time.monotonic()
 while True:
     now = time.monotonic()
+    if wifi.radio.connected and now - last_update_check > UPDATE_EVERY:
+        last_update_check = now
+        try:
+            if newer_on_site():
+                show_words("UPDATING...")
+                time.sleep(1)
+                microcontroller.reset()  # boot.py downloads the new code
+        except Exception as e:
+            print("update check", e)
     if now >= next_at:
         next_at = now + SHOW
         turn += 1
