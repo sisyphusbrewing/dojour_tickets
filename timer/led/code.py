@@ -200,7 +200,7 @@ def fx_tick():
             col = RED if int(t * 5) % 2 else 0xFFFF00
             fx_big.color = col
             fx_small.color = col
-            fx_small.text = "IT UP!"
+            fx_small.text = "IT UP"  # 5 letters at scale 2 = 60 px; "IT UP!" ran off the edge and cut the I in half
             fx_small.scale = 2
             fx_small.anchored_position = (32, 24)
         return True
