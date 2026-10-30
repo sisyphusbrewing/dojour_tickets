@@ -150,6 +150,9 @@ body {
 /* The late show at Sisyphus */
 #s5 { background: radial-gradient(60% 45% at 50% 30%, rgba(255,236,190,.28), transparent 70%), repeating-linear-gradient(0deg, #6b3a2a 0 22px, #3c2018 22px 25px), #6b3a2a; align-content: start; padding-top: max(20px, env(safe-area-inset-top, 0px)); }
 #s5 .av { --s: clamp(80px, 15cqh, 110px); }
+/* Collect lots of bits and the set list runs long: let the show scroll. */
+#s5 { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#s5 .setlist button.done { background: #d9cdb4; color: #7a6e5c; opacity: 1; }
 #s0 { gap: 10px; }
 @container (max-height: 700px) { #s0 { gap: 6px; } #s0 .lead { font-size: 15px; } #s0 .pipe { height: 40px; } #s0 .title { font-size: 30px; } }
 .setlist { width: 100%; max-width: 400px; display: grid; gap: 8px; }
@@ -459,6 +462,7 @@ body {
         if (!left) setTimeout(() => {
           $("crowd").textContent = "Ryan killed. Or was killed. Hard to tell. He got paid in drink tickets, which he gave to Mrs. Henderson.";
           $("again").hidden = false;
+          $("crowd").scrollIntoView({ behavior: "smooth", block: "start" });
         }, 1400);
       });
       list.appendChild(b);
