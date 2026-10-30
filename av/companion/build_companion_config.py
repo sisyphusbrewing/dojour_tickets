@@ -37,6 +37,12 @@ HALL_BULBS = {
     "Hallway 2": "E0:49:B0:A6:04:30:C2:68",
     "Middle hallway": "02:AF:B0:A6:04:33:26:CC",
 }
+# Govee smart plugs (H5083, on/off only), switched with the hall lights (Sam, Oct 30 2026):
+# ON with PRE-SHOW, OFF with HALL LIGHTS OFF.
+PLUGS = {
+    "Stage wall wash": "07:CF:7C:E8:B1:16:DF:50",
+    "Sisyphus Sign": "0E:C4:D4:05:92:D7:D4:8C",
+}
 # Sam's pre-show look, read off the bulbs Oct 19 2026: (brightness %, RGB colour or white in K)
 HALL_PRESHOW = {
     "Hallway 1": (100, {"rgb": 0x0000FF}),
@@ -393,13 +399,13 @@ def print_menu_key():
     return shell_key(f"PRINT\\n{MENU_COPIES} PAPER\\nMENUS", PRINT_MENU_COMMAND)
 
 
-def govee(bulb, kind, instance, value):
-    """One Govee cloud command to one hallway bulb."""
+def govee(bulb, kind, instance, value, sku="R14C0", device=None):
+    """One Govee cloud command to one hallway bulb (or, with sku/device, any Govee device)."""
     return action(
         HTTP, "post",
         url=GOVEE_URL,
         body=json.dumps({"requestId": "deck", "payload": {
-            "sku": "R14C0", "device": HALL_BULBS[bulb],
+            "sku": sku, "device": device or HALL_BULBS[bulb],
             "capability": {"type": f"devices.capabilities.{kind}", "instance": instance, "value": value}}}),
         header=json.dumps({"Govee-API-Key": "$(internal:custom_govee_key)"}),
         contenttype="application/json",
@@ -426,16 +432,20 @@ def hall_look(look, bulb):
     return [govee(bulb, "on_off", "powerSwitch", 1), colour_cmd, govee(bulb, "range", "brightness", level)]
 
 
+def plugs(on):
+    return [govee(None, "on_off", "powerSwitch", 1 if on else 0, sku="H5083", device=d) for d in PLUGS.values()]
+
+
 def hall_keys():
     return {
         (0, 3): button("HALL LIGHTS\\nPRE-SHOW\\nlook", bgcolor=0x7A5A00, size="14",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]),
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)] + plugs(True)),
         (1, 0): button("HALL LIGHTS\\nDAYTIME", bgcolor=0x6A5A30, size="14",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]),
         (1, 1): button("HALL LIGHTS\\nSUNSET", bgcolor=0x8A2A3A, size="14",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_SUNSET, bulb)]),
         (1, 2): button("HALL LIGHTS\\nOFF", bgcolor=DARK, size="14",
-                       press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]),
+                       press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS] + plugs(False)),
     }
 
 
