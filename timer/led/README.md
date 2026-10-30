@@ -42,8 +42,10 @@ over in between; the big time keeps counting.
 
 `boot.py` checks https://staff.sisyphusbrewing.com/timer/led/ every time the
 clock is powered up or RESET is pressed, and swaps in a newer `code.py` or
-`kevin.py` by itself. Merge the change, wait a couple of minutes for the site to
-publish, then press RESET. A file that doesn't download whole or doesn't
+`kevin.py` by itself. Merge the change and wait a couple of minutes for the site to
+publish. You don't need to press RESET: while the clock is stopped (never mid-set) it checks
+the site every 2 minutes, and when something changed it shows NEW / UPDATING... and
+restarts itself to load it. RESET still works if you want it right away. A file that doesn't download whole or doesn't
 compile is skipped, so a bad copy never replaces a good one.
 
 Because the board writes its own files, the computer sees `CIRCUITPY` as

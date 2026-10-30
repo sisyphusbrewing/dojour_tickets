@@ -15,6 +15,7 @@ import adafruit_requests
 import bitmaptools
 import board
 import displayio
+import microcontroller
 import keypad
 import terminalio
 import wifi
@@ -26,6 +27,11 @@ import kevin
 URL = "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_state"
 KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 POLL = 1.0  # seconds between checks; a deck press shows up within about a second
+# New versions load by themselves: while the clock is stopped (never mid-set), every
+# couple of minutes it compares its files with the site and, if one changed, restarts
+# so boot.py swaps it in. No RESET needed (Sam, Oct 29 2026).
+SITE = "https://staff.sisyphusbrewing.com/timer/led/"
+UPDATE_EVERY = 120
 
 WHITE = 0xB4B4B4  # not full white: plenty from the stage, less glow
 RED = 0xFF0000
@@ -353,6 +359,39 @@ def seconds_between(a, b):
     return (db - da) * 86400 + (sb - sa)
 
 
+def checksum(data):
+    c = 0
+    for b in data:
+        c = (c * 31 + b) & 0xFFFFFFFF
+    return c
+
+
+def newer_on_site():
+    """True if code.py or kevin.py on the site differs from the copy on the board.
+
+    A version that boot.py already refused (didn't download whole, didn't compile)
+    would differ forever, so each site version gets only one restart: its checksum
+    is kept in the board's nvm across the restart."""
+    for name in ("code.py", "kevin.py"):
+        r = http.get(SITE + name + "?t=%d" % time.monotonic_ns())
+        new = r.content if r.status_code == 200 else None
+        r.close()
+        if not new:
+            continue
+        try:
+            with open(name, "rb") as f:
+                same = f.read() == new
+        except OSError:
+            same = False
+        if not same:
+            mark = checksum(new).to_bytes(4, "little")
+            if bytes(microcontroller.nvm[0:4]) == mark:
+                continue  # already restarted once for this version and it didn't take
+            microcontroller.nvm[0:4] = mark
+            return True
+    return False
+
+
 def fmt(sec):
     sec = max(0, int(sec))
     return "%d:%02d" % (sec // 60, sec % 60)
@@ -363,6 +402,7 @@ elapsed_at_fetch = 0.0  # seconds into the set when we last heard from the serve
 fetched = time.monotonic()
 last_poll = -POLL
 was_wrapping = False
+last_update_check = time.monotonic()
 bonus_pending, bonus_seen = 0, 0.0  # seconds added (or taken, < 0) waiting for the knob to stop
 
 while True:
@@ -402,6 +442,16 @@ while True:
                 elapsed_at_fetch = seconds_between(s["started_at"], s["now"])
         except Exception as e:  # lost a poll: keep counting on the last state we had
             print("poll", e)
+    if (state is not None and not state["started_at"] and wifi.radio.connected
+            and time.monotonic() - last_update_check > UPDATE_EVERY):
+        last_update_check = time.monotonic()
+        try:
+            if newer_on_site():
+                show("NEW", WHITE, "UPDATING...", DIM)
+                time.sleep(1)
+                microcontroller.reset()  # boot.py downloads the new files
+        except Exception as e:
+            print("update check", e)
     if bonus_pending and time.monotonic() - bonus_seen > 1.5:
         if bonus_pending > 0:
             start_fx("bonus", "+" + fmt(bonus_pending))
