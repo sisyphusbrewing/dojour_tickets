@@ -32,7 +32,7 @@ import requests
 import recurring_events
 from sales_report import shopify_sales, dojour_sales
 from maintain_shows import Shopify
-from show_dates import CENTRAL_TZ
+from show_dates import CENTRAL_TZ, parse_show_datetime
 
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
@@ -74,6 +74,14 @@ def skipped(title):
     return False
 
 
+def by_night(rows):
+    """Rows in show order (Thu before Fri), not alphabetical."""
+    def key(kv):
+        dt = parse_show_datetime(str(kv[0][1]))
+        return (dt is None, dt.isoformat() if dt else str(kv[0][1]))
+    return sorted(rows.items(), key=key)
+
+
 def money(x):
     return f"${x:,.2f}"
 
@@ -87,7 +95,7 @@ def draft(title):
 
     lines, tickets, door, pool_tix = [], 0, 0.0, 0
     lines.append("WEBSITE")
-    for (_, night), r in sorted(web.items()):
+    for (_, night), r in by_night(web):
         paid = r["tickets"] - r["comps"]
         d = r["gross"] - FEE * paid
         tickets += r["tickets"]; door += d; pool_tix += paid
@@ -96,7 +104,7 @@ def draft(title):
     if not web:
         lines.append("  none")
     lines.append("DOJOUR")
-    for (_, night), r in sorted(dj.items(), key=lambda kv: str(kv[0][1])):
+    for (_, night), r in by_night(dj):
         d = r["revenue"] - FEE * r["tickets"]
         tickets += r["tickets"]; door += d; pool_tix += r["tickets"]
         lines.append(f"  {night}: {r['tickets']} tickets, door {money(d)}")
