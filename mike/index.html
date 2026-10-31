@@ -4,26 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta property="og:title" content="Mike Lester's Pest Pro-Am">
-<meta property="og:description" content="Mike retired from pest control. The pests did not retire from Mike. Three holes, no lessons.">
-<title>Mike Lester's Pest Pro-Am</title>
+<meta property="og:title" content="The Many Careers of Mike Lester">
+<meta property="og:description" content="Pizza guy. Exterminator. Golfer (bad). Retainer printer. Comedian. One rat tail through all of it.">
+<title>The Many Careers of Mike Lester</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Atkinson+Hyperlegible:wght@400;700&family=Special+Elite&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
-/* Mike Lester (comic, ex-exterminator, enthusiastic bad golfer): a three-hole putting course overrun with pests.
-   Drag back from anywhere and let go to putt; Mike's swing adds its own slice. Hitting a pest exterminates it.
-   Title (a wooden tee-box sign) → three holes → a pencil scorecard. */
+/* Mike Lester: comic, ex-pizza driver, ex-exterminator, bad golfer, now 3D-prints dental retainers. Shaved the top
+   (it was leaving anyway), kept a 12-inch rat tail in back. The game is his résumé: five quick jobs, each its own
+   mini-game, and the rat tail grows with every one. The last job is a set at Sisyphus, and the jokes are built
+   from how the earlier jobs went.
+   1 Pizza (tap lit porches) → 2 Exterminator (tap bugs, not your own hair) → 3 Golf (swing meter)
+   → 4 Retainers (stack print layers) → 5 The Set (land each punchline on the beat) → résumé. */
 :root {
-  --fair: #4f9a4a;
-  --fair-2: #5aa854;
-  --rough: #2f6b34;
-  --night: #102214;
-  --cream: #f4efe1;
-  --wood: #8a5a33;
-  --wood-dark: #5c3a1f;
-  --orange: #ef7d22;
+  --paper: #fbf8ee;
   --ink: #23271f;
+  --cream: #f4efe1;
+  --night: #15171c;
+  --orange: #ef7d22;
+  --gold: #ffe7b8;
   --pencil: #3b3f8f;
+  --skin: #f0c7ae;
+  --tail: #8a5a2e;
   --display: "Alfa Slab One", Rockwell, Georgia, serif;
   --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
   --type: "Special Elite", "Courier New", monospace;
@@ -31,129 +33,222 @@
 }
 html, body { height: 100%; margin: 0; }
 [hidden] { display: none !important; }
-body {
-  background: radial-gradient(120% 70% at 50% 20%, #2c5a31 0%, #183a1d 55%, var(--night) 100%);
-  color: var(--cream); font-family: var(--body);
-  overflow: hidden; touch-action: none;
-  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
-}
+body { background: var(--night); color: var(--cream); font-family: var(--body); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 .stage { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; container-type: size; }
-.screen { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 14px; padding: max(14px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px)); text-align: center; animation: in .45s cubic-bezier(.3,1.4,.5,1); }
+.screen { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 12px; padding: max(14px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px)); text-align: center; animation: in .4s cubic-bezier(.3,1.4,.5,1); }
 @keyframes in { from { opacity: 0; transform: translateY(10px); } }
-.btn { font: 400 clamp(19px, 6cqw, 26px)/1 var(--display); color: var(--ink); background: var(--orange); border: 0; border-radius: 12px; padding: 14px 24px; cursor: pointer; box-shadow: 0 6px 0 #a24f0f, 0 12px 22px rgba(0,0,0,.35); }
+.btn { font: 400 clamp(19px, 6cqw, 25px)/1 var(--display); color: var(--ink); background: var(--orange); border: 0; border-radius: 12px; padding: 14px 24px; cursor: pointer; box-shadow: 0 6px 0 #a24f0f, 0 12px 22px rgba(0,0,0,.35); }
+.btn { position: relative; z-index: 3; }
 .btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #a24f0f; }
 .btn:focus-visible { outline: 3px solid var(--cream); outline-offset: 4px; }
 .small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
 
-/* Title: a wooden tee-box sign on a post */
-.sign { position: relative; width: 100%; max-width: 380px; background: repeating-linear-gradient(0deg, var(--wood) 0 18px, #7d5130 18px 20px); border-radius: 10px; padding: 16px 16px 18px; box-shadow: inset 0 0 0 4px var(--wood-dark), 0 16px 34px rgba(0,0,0,.45); color: var(--cream); }
-.sign::after { content: ""; position: absolute; left: 50%; bottom: -46px; width: 18px; height: 46px; margin-left: -9px; background: var(--wood-dark); z-index: -1; }
-.sign .hole { font: 700 12px/1 var(--body); letter-spacing: .2em; text-transform: uppercase; opacity: .85; }
-.sign h1 { margin: 6px 0 4px; font: 400 clamp(28px, 9.5cqw, 42px)/1 var(--display); color: #ffe7b8; text-shadow: 0 3px 0 var(--wood-dark); }
-.sign .sub { font: 700 14px/1.3 var(--body); }
-.face { width: clamp(96px, min(34cqw, 20cqh), 150px); aspect-ratio: 1; border-radius: 50%; object-fit: cover; display: block; margin: 10px auto 6px; border: 5px solid var(--cream); box-shadow: 0 0 0 4px var(--orange), 0 8px 18px rgba(0,0,0,.4); background: #2b3b33; }
-.sign .warn { display: inline-block; margin-top: 8px; background: #f3c623; color: var(--ink); font: 700 12px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase; padding: 5px 10px; border: 2px solid var(--ink); border-radius: 4px; }
-.lead { font: 400 16px/1.45 var(--body); max-width: 32ch; margin: 34px auto 0; }
-.how { font: 400 14px/1.4 var(--body); opacity: .8; max-width: 32ch; margin: 0 auto; }
+/* Mike: bald dome (drawn), his face, glasses and all (photo), and the rat tail (drawn), which grows. */
+.mk { position: relative; width: var(--s, 120px); aspect-ratio: 1; margin-top: calc(var(--s, 120px) * .32); flex: none; }
+.mk .dome { position: absolute; left: 4%; top: -30%; width: 92%; z-index: 2; }
+.mk img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 4px solid var(--cream); background: #333; }
+.mk .tail { position: absolute; left: 66%; top: 46%; width: 30%; height: calc(var(--s, 120px) * var(--len, 1)); z-index: 0; transition: height .8s cubic-bezier(.3,1.5,.5,1); overflow: visible; }
 
-/* The course */
-#game { align-content: stretch; grid-template-rows: auto 1fr auto; gap: 8px; }
-.hud { width: 100%; display: grid; grid-template-columns: 1fr auto auto auto; gap: 14px; align-items: end; font: 700 12px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; }
-.hud b { display: block; font: 400 22px/1 var(--display); letter-spacing: 0; margin-top: 3px; color: #ffe7b8; }
-.hud .name { text-align: left; }
-.hud .name b { font-size: 17px; }
-.course { position: relative; width: 100%; min-height: 0; display: grid; place-items: center; }
-canvas { display: block; border-radius: 14px; box-shadow: 0 0 0 4px var(--rough), 0 14px 30px rgba(0,0,0,.4); touch-action: none; }
-.mikebar { display: flex; align-items: center; gap: 10px; width: 100%; }
-.mikebar img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 3px solid var(--cream); flex: none; }
+/* Title: his résumé */
+#s0 { background: radial-gradient(90% 60% at 50% 30%, #2a2f38, var(--night)); }
+.resume { width: 100%; max-width: 380px; background: var(--paper); color: var(--ink); border-radius: 4px; padding: 14px 16px; text-align: left; box-shadow: 0 18px 40px rgba(0,0,0,.5); font: 400 14px/1.35 var(--type); position: relative; }
+.resume h1 { margin: 0; font: 400 clamp(24px, 8cqw, 32px)/1 var(--display); }
+.resume .obj { margin: 6px 0 8px; font-size: 13px; }
+.resume ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+.resume li { display: grid; grid-template-columns: 26px 1fr auto; gap: 6px; align-items: baseline; border-top: 1px dashed #cfc7b2; padding-top: 5px; }
+.resume li b { font: 700 14px/1.2 var(--body); }
+.resume li .yrs { font-size: 11px; opacity: .65; }
+.resume li .got { font: 700 13px/1 var(--body); color: var(--pencil); white-space: nowrap; }
+.resume li.done .got { color: #1f7a3a; }
+.resume li.now { background: #fff3c9; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 4px; }
+.titlerow { display: flex; gap: 14px; align-items: end; justify-content: center; }
+.best { font: 700 13px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--gold); }
+
+/* Job intro card */
+.intro { width: 100%; max-width: 380px; background: var(--paper); color: var(--ink); border-radius: 14px; padding: 18px 16px; box-shadow: 0 18px 40px rgba(0,0,0,.5); display: grid; gap: 8px; }
+.intro .n { font: 700 12px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: #a24f0f; }
+.intro h2 { margin: 0; font: 400 clamp(26px, 8.5cqw, 34px)/1 var(--display); }
+.intro .yrs { font: 400 13px/1 var(--type); opacity: .7; }
+.intro p { margin: 0; font: 400 16px/1.4 var(--body); }
+.intro .how { font: 700 15px/1.35 var(--body); background: #eef3e6; border-radius: 10px; padding: 10px 12px; }
+.intro .emoji { font-size: 54px; line-height: 1; }
+
+/* The job itself */
+#play { align-content: stretch; grid-template-rows: auto 1fr auto; gap: 8px; }
+.hud { width: 100%; display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: end; font: 700 11px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; text-align: left; }
+.hud b { display: block; font: 400 22px/1 var(--display); letter-spacing: 0; margin-top: 3px; color: var(--gold); }
+.hud .job b { font-size: 17px; }
+.hud b.low { color: #ff8a6b; }
+.field { position: relative; width: 100%; min-height: 0; border-radius: 16px; overflow: hidden; box-shadow: inset 0 0 0 3px rgba(255,255,255,.12), 0 12px 28px rgba(0,0,0,.4); }
+.field.shake { animation: shake .25s; }
+@keyframes shake { 25% { transform: translate(-5px, 3px); } 50% { transform: translate(4px, -3px); } 75% { transform: translate(-2px, 2px); } }
+.bar { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 64px; }
+.bar .mk { --s: 50px; margin-top: 16px; }
 .bubble { flex: 1; background: var(--cream); color: var(--ink); border-radius: 12px; padding: 8px 12px; font: 700 14px/1.3 var(--body); text-align: left; position: relative; min-height: 2.7em; display: flex; align-items: center; }
 .bubble::before { content: ""; position: absolute; left: -8px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-right-color: var(--cream); border-left: 0; }
+.inches { font: 400 13px/1.1 var(--display); color: var(--gold); text-align: center; width: 54px; flex: none; }
+.inches small { display: block; font: 700 9px/1.1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--cream); opacity: .7; }
 
-/* Between holes */
-.card { position: absolute; left: 50%; top: 50%; width: min(86%, 340px); transform: translate(-50%, -50%); background: var(--cream); color: var(--ink); border-radius: 14px; padding: 18px 16px; display: grid; gap: 10px; box-shadow: 0 18px 40px rgba(0,0,0,.5); animation: pop .4s cubic-bezier(.3,1.6,.5,1); z-index: 5; }
-@keyframes pop { from { transform: translate(-50%, -50%) scale(.6); opacity: 0; } }
-.card h2 { margin: 0; font: 400 26px/1 var(--display); color: #a24f0f; }
-.card p { margin: 0; font: 400 15px/1.4 var(--body); }
+.pop { position: absolute; transform: translate(-50%, -50%); pointer-events: none; z-index: 20; text-align: center; white-space: nowrap; font: 400 22px/1 var(--display); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.35); animation: rise .95s ease-out forwards; }
+.pop.big { font-size: 30px; color: var(--gold); text-shadow: 0 3px 0 #a24f0f, 0 0 10px rgba(0,0,0,.4); }
+.pop.bad { color: #ff9a7d; }
+.pop small { display: block; font: 700 12px/1.2 var(--body); letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
+@keyframes rise { 0% { transform: translate(-50%, -50%) scale(.4); } 18% { transform: translate(-50%, -50%) scale(1.15); } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
+.fly { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 15; font-size: 30px; line-height: 1; margin: -15px 0 0 -15px; }
+.sprite { position: absolute; display: grid; place-items: center; line-height: 1; pointer-events: none; transform: translate(-50%, -50%); }
+.sprite.in { animation: popin .22s cubic-bezier(.3,1.8,.5,1); }
+.sprite.out { animation: popout .28s ease-in forwards; }
+@keyframes popin { from { transform: translate(-50%, -50%) scale(0); } }
+@keyframes popout { to { transform: translate(-50%, -50%) scale(0); opacity: 0; } }
+.label { position: absolute; left: 50%; top: -8px; transform: translateX(-50%); font: 700 9px/1 var(--body); letter-spacing: .08em; background: #f3c623; color: var(--ink); padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
 
-/* Scorecard */
-.scorecard { margin-top: 16px; width: 100%; max-width: 380px; background: #fbf8ee; color: var(--ink); border-radius: 6px; padding: 16px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.45); text-align: left; position: relative; }
-.scorecard h2 { margin: 0; font: 400 22px/1 var(--display); color: var(--rough); }
-.scorecard .club { font: 400 12px/1.3 var(--type); opacity: .75; margin: 4px 0 10px; }
-.scorecard table { width: 100%; border-collapse: collapse; font: 400 15px/1.2 var(--type); }
-.scorecard th { font: 700 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; text-align: center; padding: 6px 2px; background: var(--rough); color: var(--cream); }
-.scorecard th:first-child { text-align: left; padding-left: 6px; }
-.scorecard td { border-bottom: 1px solid #c9d6c2; padding: 7px 2px; text-align: center; }
-.scorecard td:first-child { text-align: left; padding-left: 6px; }
-.scorecard td.pen { font: 400 19px/1 var(--type); color: var(--pencil); transform: rotate(-3deg); }
-.scorecard tr.tot td { font-weight: 700; border-bottom: 0; }
-.scorecard .note { margin-top: 10px; font: 400 15px/1.35 var(--type); color: var(--pencil); }
-.scorecard .attest { margin-top: 10px; display: flex; justify-content: space-between; font: 700 10px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase; opacity: .6; gap: 8px; }
-.scorecard .sig { font: 400 22px/1 var(--type); color: var(--pencil); text-transform: none; letter-spacing: 0; opacity: 1; transform: rotate(-5deg); }
-.ribbon { position: absolute; right: 8px; top: -14px; background: var(--orange); color: var(--ink); font: 400 13px/1 var(--display); padding: 8px 10px; transform: rotate(8deg) scale(2.6); opacity: 0; box-shadow: 0 4px 10px rgba(0,0,0,.3); transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .2s; }
-.ribbon.on { transform: rotate(8deg) scale(1); opacity: 1; }
+/* 1 Pizza: a night street */
+.f-pizza { background: linear-gradient(#1c2233, #263149 60%, #39404c 60%, #39404c 100%); }
+.f-pizza .lane { position: absolute; left: 0; right: 0; height: 2px; background: repeating-linear-gradient(90deg, #f3c623 0 18px, transparent 18px 36px); opacity: .5; }
+.house { font-size: 46px; }
+.house.lit::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; background: radial-gradient(circle, rgba(255,220,120,.55), transparent 65%); z-index: -1; }
+.house .door { position: absolute; bottom: -10px; font: 700 10px/1 var(--body); color: var(--gold); }
+.car { position: absolute; left: 12px; bottom: 10px; font-size: 40px; z-index: 5; pointer-events: none; transform: scaleX(-1); }
+.clock { position: absolute; right: 10px; top: 10px; font: 400 14px/1 var(--display); background: #c8372d; color: #fff; padding: 6px 8px; border-radius: 6px; z-index: 5; }
 
-/* Short phones (iPhone SE): tighten the tee sign so everything fits. */
+/* 2 Exterminator: a kitchen floor */
+.f-bug { background: repeating-conic-gradient(#e9e4d8 0 25%, #cfc8b6 0 50%) 0 0 / 56px 56px; }
+.bugspr { font-size: 38px; }
+.bugspr.rat { font-size: 46px; }
+.hairspr svg { width: 46px; height: 80px; overflow: visible; }
+.spray { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.85), rgba(200,230,255,.4) 45%, transparent 70%); pointer-events: none; z-index: 12; animation: spray .4s ease-out forwards; }
+@keyframes spray { from { transform: scale(.3); } to { transform: scale(1.3); opacity: 0; } }
+.splat { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; pointer-events: none; z-index: 1; }
+
+/* 3 Golf: a driving range seen from behind */
+.f-golf { background: linear-gradient(#8fd0f5 0 28%, #6bb35f 28%, #4c9446 100%); }
+.yard { position: absolute; left: 0; right: 0; height: 1px; background: rgba(255,255,255,.35); font: 700 10px/1 var(--body); color: rgba(255,255,255,.8); }
+.yard span { position: absolute; right: 8px; top: -12px; }
+.meter { position: absolute; left: 14px; right: 14px; bottom: 14px; height: 30px; border-radius: 15px; background: #2a2f38; box-shadow: inset 0 0 0 3px #fff; overflow: hidden; z-index: 6; }
+.meter .zone { position: absolute; top: 0; bottom: 0; background: #48c26a; }
+.meter .sweet { position: absolute; top: 0; bottom: 0; background: #ffe066; }
+.meter .needle { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; background: #fff; border-radius: 3px; box-shadow: 0 0 6px #000; }
+.golfmike { position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 5; pointer-events: none; }
+.golfball { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); z-index: 7; pointer-events: none; }
+.swingn { position: absolute; left: 12px; top: 10px; font: 700 12px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: #123; background: rgba(255,255,255,.75); padding: 5px 8px; border-radius: 6px; z-index: 6; }
+
+/* 4 Retainers: a print bed */
+.f-print { background: linear-gradient(#2a2e36, #1d2026); }
+.f-print .frame { position: absolute; left: 6%; right: 6%; top: 8px; height: 10px; background: #4a505b; border-radius: 5px; }
+.f-print .bed { position: absolute; left: 4%; right: 4%; bottom: 14px; height: 14px; background: repeating-linear-gradient(90deg, #6b717c 0 8px, #5b616b 8px 16px); border-radius: 3px; }
+.layer { position: absolute; height: 22px; border-radius: 6px; background: linear-gradient(rgba(150,240,220,.95), rgba(90,200,180,.9)); box-shadow: inset 0 -3px 0 rgba(0,0,0,.15), 0 0 10px rgba(120,240,210,.35); }
+.layer.moving { box-shadow: inset 0 -3px 0 rgba(0,0,0,.15), 0 0 16px rgba(120,240,210,.8); }
+.layer.cut { transition: transform 1s ease-in, opacity 1s; }
+.nozzle { position: absolute; width: 22px; height: 26px; margin-left: -11px; background: linear-gradient(#c9ccd0, #8f969c); clip-path: polygon(0 0, 100% 0, 100% 60%, 60% 100%, 40% 100%, 0 60%); z-index: 4; }
+.teeth { position: absolute; left: 50%; transform: translateX(-50%); font-size: 40px; z-index: 3; pointer-events: none; }
+
+/* 5 The set: Sisyphus brick */
+.f-set { background: radial-gradient(55% 45% at 50% 32%, rgba(255,236,190,.3), transparent 70%), repeating-linear-gradient(0deg, #6b3a2a 0 22px, #3c2018 22px 25px), #6b3a2a; }
+.setmike { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); }
+.setmike .mk { --s: clamp(70px, 14cqh, 100px); }
+.mic { position: absolute; left: 50%; top: calc(9% + 20px); margin-left: 32px; font-size: 30px; }
+.joke { position: absolute; left: 12px; right: 12px; bottom: 96px; background: var(--paper); color: var(--ink); border-radius: 12px; padding: 12px 14px; font: 700 16px/1.35 var(--body); text-align: left; box-shadow: 0 10px 20px rgba(0,0,0,.35); z-index: 5; }
+.joke .punch { display: block; margin-top: 6px; color: #a24f0f; }
+.beat { position: absolute; left: 14px; right: 14px; bottom: 16px; height: 62px; z-index: 6; }
+.beat .lbl { font: 700 11px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; color: var(--gold); }
+.beat .track { position: relative; height: 34px; border-radius: 17px; background: #1c1d22; box-shadow: inset 0 0 0 3px var(--cream); overflow: hidden; }
+.beat .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #555, #888); }
+.beat .pz { position: absolute; top: 0; bottom: 0; background: rgba(255,224,102,.55); }
+.laughs { position: absolute; left: 12px; top: 10px; font: 700 11px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); z-index: 6; }
+.laughs .lm { width: 90px; height: 10px; border-radius: 5px; background: rgba(0,0,0,.4); margin-top: 5px; overflow: hidden; }
+.laughs .lm div { height: 100%; width: 0; background: linear-gradient(90deg, #f3c623, #ef7d22); transition: width .5s; }
+
+/* Between jobs */
+.result { width: 100%; max-width: 380px; background: var(--paper); color: var(--ink); border-radius: 14px; padding: 16px; box-shadow: 0 18px 40px rgba(0,0,0,.5); display: grid; gap: 8px; text-align: left; }
+.result .n { font: 700 12px/1 var(--body); letter-spacing: .18em; text-transform: uppercase; color: #a24f0f; }
+.result h2 { margin: 0; font: 400 24px/1.05 var(--display); }
+.result .stats { font: 400 15px/1.4 var(--type); }
+.result .leave { font: 400 15px/1.35 var(--type); color: var(--pencil); border-top: 1px dashed #cfc7b2; padding-top: 8px; }
+.result .grow { font: 400 18px/1 var(--display); color: #1f7a3a; }
+
+/* Final résumé */
+.final .resume { padding-bottom: 12px; margin-top: 22px; }
+.stampx { position: absolute; right: -6px; top: -30px; background: var(--paper); border: 4px double #c8372d; color: #c8372d; font: 400 15px/1.05 var(--display); padding: 6px 8px; text-align: center; max-width: 46%; transform: rotate(10deg) scale(2.6); opacity: 0; transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .2s; }
+.stampx.on { transform: rotate(10deg) scale(1); opacity: .92; }
+.newbest { font: 400 17px/1 var(--display); color: var(--gold); }
+
 @container (max-height: 700px) {
-  #s1 { gap: 8px; }
-  .sign { padding: 12px 14px 14px; }
-  .sign h1 { font-size: 27px; }
-  .sign .sub { font-size: 13px; }
-  .sign .warn { margin-top: 6px; font-size: 11px; }
-  .sign::after { bottom: -24px; height: 24px; }
-  .lead { margin-top: 18px; font-size: 15px; }
-  .how { font-size: 13px; }
-  .hud { gap: 10px; font-size: 11px; }
-  .hud b { font-size: 19px; }
-  .hud .name b { font-size: 15px; }
+  .screen { gap: 8px; }
+  .resume { font-size: 13px; padding: 12px 14px; }
+  .resume li { padding-top: 3px; }
+  .resume .obj { margin: 4px 0 6px; font-size: 12px; }
+  .resume li .yrs { font-size: 10px; }
+  .intro { padding: 14px; gap: 6px; }
+  .intro p { font-size: 15px; }
+  .intro .emoji { font-size: 40px; }
+  .joke { font-size: 15px; bottom: 88px; }
 }
-@media (prefers-reduced-motion: reduce) { .screen, .card { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .screen, .sprite.in, .field.shake { animation: none; } }
 </style>
 </head>
 <body>
 <div class="stage">
 
-  <!-- 1. The tee-box sign -->
-  <section class="screen" id="s1">
-    <div class="sign">
-      <div class="hole">Holes 1–3 · Par 12 · Members & pests</div>
-      <h1>MIKE LESTER'S PEST PRO-AM</h1>
-      <img class="face" src="mike.jpg" alt="Mike Lester, in glasses, looking like he's already lost a ball">
-      <div class="sub">Former exterminator. Current golfer. Neither on purpose.</div>
-      <div class="warn">⚠ Course recently treated. Not well.</div>
+  <!-- 0. The résumé (title) -->
+  <section class="screen" id="s0">
+    <div class="titlerow"><div class="mk" data-mk style="--s: clamp(60px, min(30cqw, 12cqh), 130px)"></div></div>
+    <div class="resume" id="cv">
+      <h1>MIKE LESTER</h1>
+      <div class="obj">Objective: one more job. Skills: whatever this one needs. Hair: business in the back, nothing in the front.</div>
+      <ol id="jobs"></ol>
     </div>
-    <p class="lead">Mike retired from pest control. The pests did not retire from Mike. They followed him to the golf course.</p>
-    <p class="how">Drag back from anywhere and let go to putt. Hit a bug, it's exterminated. Mike's swing adds its own ideas.</p>
-    <button class="btn" id="tee" type="button">Tee off</button>
+    <div class="best" id="best" hidden></div>
+    <button class="btn" id="start" type="button">Clock in</button>
   </section>
 
-  <!-- 2. The course -->
-  <section class="screen" id="game" hidden>
+  <!-- 1. Job intro -->
+  <section class="screen" id="s1" hidden>
+    <div class="intro">
+      <div class="emoji" id="iEmoji"></div>
+      <div class="n" id="iN"></div>
+      <h2 id="iTitle"></h2>
+      <div class="yrs" id="iYrs"></div>
+      <p id="iBlurb"></p>
+      <div class="how" id="iHow"></div>
+    </div>
+    <button class="btn" id="go" type="button">Start shift</button>
+  </section>
+
+  <!-- 2. The job -->
+  <section class="screen" id="play" hidden>
     <div class="hud">
-      <span class="name">Hole <span id="hNum">1</span><b id="hName">The Anthill</b></span>
-      <span>Par<b id="par">3</b></span>
-      <span>Strokes<b id="strokes">0</b></span>
-      <span>Pests<b id="pests">0</b></span>
+      <span class="job">Job <span id="hN">1</span>/5<b id="hJob"></b></span>
+      <span><span id="hScoreL">Score</span><b id="hScore">0</b></span>
+      <span><span id="hTimeL">Time</span><b id="hTime">20</b></span>
     </div>
-    <div class="course" id="course">
-      <canvas id="cv" aria-label="Golf hole. Drag back and release to putt."></canvas>
-    </div>
-    <div class="mikebar"><img src="mike.jpg" alt="Mike"><div class="bubble" id="say">Pull back and let it go. That's also how I quit my last job.</div></div>
+    <div class="field" id="field"></div>
+    <div class="bar"><div class="mk" data-mk id="barMk"></div><div class="bubble" id="say"></div><div class="inches"><span id="inch">12.0"</span><small>rat tail</small></div></div>
   </section>
 
-  <!-- 3. The scorecard -->
+  <!-- 3. Between jobs -->
   <section class="screen" id="s3" hidden>
-    <div class="scorecard">
-      <div class="ribbon" id="ribbon">TECHNICALLY A SPORT</div>
-      <h2>OFFICIAL SCORECARD</h2>
-      <div class="club">Pest Pro-Am · Sisyphus Country Club (not a real club) · Player: M. Lester</div>
-      <table>
-        <thead><tr><th>Hole</th><th>Par</th><th>Mike</th><th>Pests</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <div class="note" id="note"></div>
-      <div class="attest"><span>Player<br><span class="sig">M. Lester</span></span><span>Attested by<br><span class="sig">a raccoon</span></span></div>
+    <div class="result">
+      <div class="n" id="rN"></div>
+      <h2 id="rTitle"></h2>
+      <div class="stats" id="rStats"></div>
+      <div class="leave" id="rLeave"></div>
+      <div class="grow" id="rGrow"></div>
     </div>
-    <button class="btn" id="again" type="button">Play another round</button>
+    <div class="mk" data-mk id="resMk" style="--s: 84px"></div>
+    <button class="btn" id="next" type="button">Next job</button>
+  </section>
+
+  <!-- 4. Final résumé -->
+  <section class="screen final" id="s4" hidden>
+    <div class="mk" data-mk style="--s: clamp(56px, 10cqh, 84px)"></div>
+    <div class="resume">
+      <div class="stampx" id="stamp"></div>
+      <h1>MIKE LESTER</h1>
+      <div class="obj" id="fObj"></div>
+      <ol id="fJobs"></ol>
+    </div>
+    <div class="newbest" id="newbest" hidden>New personal best!</div>
+    <button class="btn" id="again" type="button">Start a new life</button>
     <div class="small">Mike Lester · as seen at Sisyphus</div>
   </section>
 </div>
@@ -164,267 +259,462 @@ canvas { display: block; border-radius: 14px; box-shadow: 0 0 0 4px var(--rough)
   const show = id => document.querySelectorAll(".screen").forEach(s => s.hidden = s.id !== id);
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   let ac;
-  function tone(f, d = .15, type = "square", vol = .05, slide = .5) {
+  function tone(f, d = .15, type = "square", vol = .05, slide = .5, delay = 0) {
     try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
-    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + delay;
     o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * slide, t + d);
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
     o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
   }
+  const good = () => { tone(660, .08, "triangle", .06, 1); tone(990, .12, "triangle", .05, 1, .07); };
+  const bad = () => { tone(200, .2, "sawtooth", .06, .5); };
+  const squish = () => { tone(180, .14, "sawtooth", .08, .35); tone(70, .12, "square", .06, .7, .03); };
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
-  // Mike's lines: half exterminator, half golfer who should not be.
-  const SAY = {
-    shot: ["That's what I was going for.", "I'm not licensed for golf.", "The green is fast today. Or I'm very strong.",
-           "My pro says I have a natural swing. My pro is my uncle.", "Does it count if nobody saw it?",
-           "I used to get paid to walk around grass looking for things. This is the same job."],
-    shank: ["SHANK. That one's going to need a permit.", "Mulligan. That's French for \"again.\"", "Fore. Five. Six. However many."],
-    bug: ["Old habits.", "That ant had a family. Not anymore.", "I'm not saying I aimed for it. I'm not saying I didn't.",
-          "Still got it.", "That's a two-application roach.", "Professional courtesy: none."],
-    sand: ["Sand. My nemesis. Also my lunch, once.", "I'm gonna be in here a while. Tell my wife."],
-    water: ["It wanted to go swimming. I respect that.", "That's a donation to the pond.", "The mice saw that. They're laughing."],
-    raccoon: ["The raccoon touched it. That's his ball now.", "I've fought bigger raccoons. Lost to most of them."],
-    lip: ["It looked at the hole and said no.", "Too much sauce on it."],
-    sink: ["IN THE HOLE. Somebody write that down.", "That's going on my headstone.", "I knew it the whole time. I'm lying."],
+  // ---------- Mike ----------
+  const DOME = '<svg class="dome" viewBox="0 0 100 50" aria-hidden="true"><path d="M2 50C2 18 24 2 50 2s48 16 48 48z" fill="#f0c7ae"/><path d="M2 50C2 18 24 2 50 2s48 16 48 48" fill="none" stroke="#d9a98e" stroke-width="2"/><ellipse cx="34" cy="17" rx="14" ry="6" fill="#fff" opacity=".7" transform="rotate(-22 34 17)"/><path d="M72 8l3-6M80 13l5-4M64 5l1-5" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/></svg>';
+  const TAIL = '<svg class="tail" viewBox="0 0 30 100" preserveAspectRatio="none" aria-hidden="true"><path d="M8 0C22 10 2 20 16 30S4 50 16 60 6 80 14 92" fill="none" stroke="#5a3a1c" stroke-width="9" stroke-linecap="round"/><path d="M8 0C22 10 2 20 16 30S4 50 16 60 6 80 14 92" fill="none" stroke="#a06a36" stroke-width="5" stroke-linecap="round" stroke-dasharray="4 3"/><path d="M14 92l-4 8M14 92l4 8M14 92v8" stroke="#a06a36" stroke-width="2" stroke-linecap="round"/></svg>';
+  function drawMike() { document.querySelectorAll("[data-mk]").forEach(el => { el.innerHTML = DOME + '<img src="face.jpg" alt="Mike Lester: shaved on top, glasses, rat tail in back">' + TAIL; }); }
+  let inches = 12;
+  function setTail() {
+    document.querySelectorAll("[data-mk]").forEach(el => el.style.setProperty("--len", (.9 + (inches - 12) * .16).toFixed(2)));
+    $("inch").textContent = inches.toFixed(1) + '"';
+  }
+  let sayT;
+  function say(t) { $("say").textContent = t; }
+
+  // ---------- Shared field helpers ----------
+  const field = $("field");
+  let fw = 0, fh = 0;
+  const measure = () => { const r = field.getBoundingClientRect(); fw = r.width; fh = r.height; };
+  function pop(x, y, text, cls = "", sub = "") {
+    const p = document.createElement("div"); p.className = "pop " + cls; p.style.left = x + "px"; p.style.top = y + "px"; p.textContent = text;
+    if (sub) { const s = document.createElement("small"); s.textContent = sub; p.appendChild(s); }
+    field.appendChild(p); setTimeout(() => p.remove(), 950);
+  }
+  function sprite(html, x, y, cls = "") {
+    const el = document.createElement("div"); el.className = "sprite in " + cls; el.innerHTML = html;
+    el.style.left = x + "px"; el.style.top = y + "px"; field.appendChild(el); return el;
+  }
+  function fly(emoji, x0, y0, x1, y1, dur, done) {
+    const el = document.createElement("div"); el.className = "fly"; el.textContent = emoji; field.appendChild(el);
+    const d = Math.hypot(x1 - x0, y1 - y0);
+    el.animate([
+      { transform: `translate(${x0}px, ${y0}px) rotate(0) scale(.8)` },
+      { transform: `translate(${(x0 + x1) / 2}px, ${(y0 + y1) / 2 - d * .25}px) rotate(300deg) scale(1.3)`, offset: .5 },
+      { transform: `translate(${x1}px, ${y1}px) rotate(600deg) scale(1)` },
+    ], { duration: dur, easing: "ease-out" }).onfinish = () => { el.remove(); done && done(); };
+  }
+  function shake() { field.classList.remove("shake"); void field.offsetWidth; field.classList.add("shake"); }
+  function splat(x, y, color) {
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("class", "splat"); s.setAttribute("viewBox", "-32 -32 64 64"); s.style.left = x + "px"; s.style.top = y + "px";
+    let d = ""; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2, r = i % 2 ? rnd(7, 12) : rnd(17, 26); d += (i ? "L" : "M") + (Math.cos(a) * r).toFixed(1) + " " + (Math.sin(a) * r).toFixed(1); }
+    s.innerHTML = `<path d="${d}Z" fill="${color}" opacity=".65"/>`; field.appendChild(s);
+  }
+  const hud = (score, time, timeLabel) => {
+    $("hScore").textContent = score;
+    if (time != null) { $("hTime").textContent = time; }
+    if (timeLabel) $("hTimeL").textContent = timeLabel;
   };
 
-  // Holes in a 100 × 150 world: tee at the bottom, cup at the top. Pests wander; hit one with the ball to exterminate it.
-  const HOLES = [
-    { name: "The Anthill", par: 3, tee: [50, 136], cup: [50, 18],
-      walls: [], mounds: [[50, 78, 7]], sand: [], water: [],
-      pests: { e: "🐜", n: 9, speed: .32, size: 3.4, from: [50, 78], spawn: true } },
-    { name: "Roach Motel", par: 4, tee: [18, 136], cup: [80, 20],
-      walls: [[0, 74, 64, 6], [78, 96, 18, 14]], mounds: [], sand: [[52, 34, 30, 12]], water: [],
-      pests: { e: "🪳", n: 6, speed: .75, size: 3.6, from: [87, 103], spawn: true } },
-    { name: "Mouse Trap Lake", par: 5, tee: [50, 138], cup: [50, 15],
-      walls: [[0, 38, 30, 5], [70, 38, 30, 5]], mounds: [], sand: [[8, 112, 20, 12]], water: [[50, 80, 30, 13]],
-      pests: { e: "🐭", n: 5, speed: .5, size: 3.8, from: null, spawn: false }, raccoon: true },
-  ];
+  // ---------- The jobs ----------
+  // Each job: init() builds the field, tap(x, y) handles a tap, tick(dt) runs per frame and returns true when the
+  // shift is over, finish() returns { stats, leave, inches, joke } for the result card and the closing set.
+  const JOBS = [];
 
-  const cv = $("cv"), ctx = cv.getContext("2d");
-  let W = 100, H = 150, scale = 1, dpr = 1;
-  function fit() {
-    const box = $("course").getBoundingClientRect();
-    const w = Math.max(10, Math.min(box.width - 8, (box.height - 8) * W / H));
-    scale = w / W; dpr = Math.min(3, window.devicePixelRatio || 1);
-    cv.style.width = w + "px"; cv.style.height = w * H / W + "px";
-    cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr);
-  }
-  window.addEventListener("resize", () => { if (!$("game").hidden) fit(); });
-
-  let hole, hi = 0, ball, strokes, pestsHit, pests, splats, raccoon, aim = null, moving = false, done = false, last, card = null, results = [], spawnClock = 0, raf;
-
-  function say(kind) { $("say").textContent = pick(SAY[kind]); }
-
-  function makePest() {
-    const p = hole.pests, a = rnd(0, Math.PI * 2);
-    const [x, y] = p.from ? p.from : [rnd(12, 88), rnd(25, 125)];
-    return { x, y, a, e: p.e, r: p.size };
-  }
-
-  function loadHole(i) {
-    hi = i; hole = HOLES[i];
-    ball = { x: hole.tee[0], y: hole.tee[1], vx: 0, vy: 0 }; last = { x: ball.x, y: ball.y };
-    strokes = 0; pestsHit = 0; splats = []; done = false; moving = false; aim = null; card && card.remove(); card = null;
-    pests = []; for (let k = 0; k < (hole.pests.spawn ? 3 : hole.pests.n); k++) pests.push(makePest());
-    raccoon = hole.raccoon ? { x: 85, y: 60, a: Math.PI, cool: 0 } : null;
-    $("hNum").textContent = i + 1; $("hName").textContent = hole.name; $("par").textContent = hole.par;
-    $("strokes").textContent = 0; $("pests").textContent = 0;
-    $("say").textContent = ["Pull back and let it go. That's also how I quit my last job.",
-      "Roach Motel. I've stayed here. Professionally.", "There's a raccoon by the lake. We have history."][i];
-  }
-
-  // Input: drag back from anywhere on the course, release to putt.
-  const pt = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }; };
-  cv.addEventListener("pointerdown", e => { if (moving || done) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); const p = pt(e); aim = { sx: p.x, sy: p.y, dx: 0, dy: 0 }; });
-  cv.addEventListener("pointermove", e => { if (!aim) return; const p = pt(e); aim.dx = aim.sx - p.x; aim.dy = aim.sy - p.y; });
-  const release = () => {
-    if (!aim) return;
-    const len = Math.hypot(aim.dx, aim.dy), a0 = Math.atan2(aim.dy, aim.dx); aim = null;
-    if (len < 4) return;
-    const power = Math.min(len, 55) / 55;
-    // Mike's swing: a slice that grows with power, and now and then a full shank.
-    const shank = Math.random() < .14;
-    const a = a0 + (shank ? rnd(-.9, .9) : rnd(-.16, .16) * (.4 + power));
-    const v = 3.6 * power * (shank ? rnd(.5, 1.3) : 1);
-    last = { x: ball.x, y: ball.y };
-    ball.vx = Math.cos(a) * v; ball.vy = Math.sin(a) * v; moving = true;
-    strokes++; $("strokes").textContent = strokes;
-    say(shank ? "shank" : "shot"); tone(shank ? 140 : 320, .12, "triangle", .08, shank ? .4 : 1.3); buzz(12);
-  };
-  cv.addEventListener("pointerup", release); cv.addEventListener("pointercancel", () => aim = null);
-
-  const inRect = (x, y, [rx, ry, rw, rh]) => x > rx && x < rx + rw && y > ry && y < ry + rh;
-  const inEllipse = (x, y, [cx, cy, rx, ry]) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < 1;
-
-  function step() {
-    // Pests wander (and new ants climb out of the hill).
-    spawnClock++;
-    if (hole.pests.spawn && pests.length < hole.pests.n && spawnClock % 70 === 0) pests.push(makePest());
-    pests.forEach(p => {
-      p.a += rnd(-.25, .25);
-      p.x += Math.cos(p.a) * hole.pests.speed; p.y += Math.sin(p.a) * hole.pests.speed;
-      if (p.x < 4 || p.x > 96) p.a = Math.PI - p.a;
-      if (p.y < 6 || p.y > 144) p.a = -p.a;
-      if (hole.walls.some(w => inRect(p.x, p.y, w)) || hole.water.some(w => inEllipse(p.x, p.y, w))) { p.a += Math.PI; p.x += Math.cos(p.a) * 2; p.y += Math.sin(p.a) * 2; }
-      p.x = Math.max(3, Math.min(97, p.x)); p.y = Math.max(4, Math.min(146, p.y));
-    });
-    if (raccoon) {
-      raccoon.cool = Math.max(0, raccoon.cool - 1);
-      const toBall = Math.atan2(ball.y - raccoon.y, ball.x - raccoon.x), near = Math.hypot(ball.x - raccoon.x, ball.y - raccoon.y);
-      raccoon.a = near < 30 && !moving ? toBall : raccoon.a + rnd(-.12, .12);
-      raccoon.x += Math.cos(raccoon.a) * .28; raccoon.y += Math.sin(raccoon.a) * .28;
-      if (raccoon.x < 8 || raccoon.x > 92) raccoon.a = Math.PI - raccoon.a;
-      if (raccoon.y < 48 || raccoon.y > 128) raccoon.a = -raccoon.a;
-      raccoon.x = Math.max(8, Math.min(92, raccoon.x)); raccoon.y = Math.max(48, Math.min(128, raccoon.y));
-      if (near < 6 && !raccoon.cool && !done) {
-        // He swats it somewhere. It's his course.
-        const a = rnd(0, Math.PI * 2); ball.vx = Math.cos(a) * 2.2; ball.vy = Math.sin(a) * 2.2; moving = true; raccoon.cool = 120;
-        say("raccoon"); tone(600, .2, "sawtooth", .05, .5); buzz(25);
-      }
-    }
-    if (!moving) return;
-
-    // Ball: move in small substeps so it can't tunnel through walls.
-    const sub = 4;
-    for (let s = 0; s < sub; s++) {
-      const nx = ball.x + ball.vx / sub, ny = ball.y + ball.vy / sub;
-      const hitX = hole.walls.some(w => inRect(nx, ball.y, w)) || nx < 2 || nx > 98;
-      const hitY = hole.walls.some(w => inRect(ball.x, ny, w)) || ny < 2 || ny > 148;
-      if (hitX) { ball.vx *= -.7; tone(500, .04, "square", .03, 1); } else ball.x = nx;
-      if (hitY) { ball.vy *= -.7; tone(500, .04, "square", .03, 1); } else ball.y = ny;
-      hole.mounds.forEach(([mx, my, mr]) => {
-        const dx = ball.x - mx, dy = ball.y - my, d = Math.hypot(dx, dy);
-        if (d < mr + 1.4) { const nx2 = dx / d, ny2 = dy / d, dot = ball.vx * nx2 + ball.vy * ny2; if (dot < 0) { ball.vx -= 1.7 * dot * nx2; ball.vy -= 1.7 * dot * ny2; } ball.x = mx + nx2 * (mr + 1.5); ball.y = my + ny2 * (mr + 1.5); }
+  // 1. Pizza delivery: houses roll past in three lanes; tap a lit porch to throw a pizza. Not dark ones. Not the dog.
+  JOBS.push({
+    key: "pizza", emoji: "🍕", title: "Pizza Delivery Driver", yrs: "Early 2010s · a chain he is not legally allowed to name",
+    blurb: "Thirty minutes or less. Mike's personal record is thirty minutes or more.",
+    how: "Tap the houses with the porch light on to throw them a pizza. Dark house = wrong address. 🐕 = the dog eats it.",
+    init() {
+      this.t = 20; this.tips = 0; this.del = 0; this.wrong = 0; this.dog = 0; this.houses = []; this.next = 0; this.speed = 70;
+      field.className = "field f-pizza";
+      [.3, .55, .8].forEach(f => { const l = document.createElement("div"); l.className = "lane"; l.style.top = (fh * f + 28) + "px"; field.appendChild(l); });
+      field.insertAdjacentHTML("beforeend", '<div class="car">🚗</div><div class="clock" id="pclock">30:00</div>');
+      say("Thirty minutes or less. Or more. Mostly more.");
+      $("hScoreL").textContent = "Tips"; hud("$0", 20, "Time");
+    },
+    spawn() {
+      const r = Math.random(), lane = pick([.3, .55, .8]);
+      if (this.houses.some(h => h.lane === lane && h.x > fw - 40)) return;
+      const kind = r < .55 ? "lit" : r < .85 ? "dark" : "dog";
+      const el = sprite(kind === "dog" ? "🏚️" : "🏠", fw + 40, fh * lane, "house " + (kind === "lit" ? "lit" : ""));
+      if (kind === "dog") el.insertAdjacentHTML("beforeend", '<span class="label">🐕 BEWARE OF DOG</span>');
+      if (kind === "dark") el.style.filter = "brightness(.45)";
+      this.houses.push({ el, x: fw + 40, y: fh * lane, lane, kind, done: false });
+    },
+    tap(x, y) {
+      const h = this.houses.filter(h => !h.done).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
+      const sx = 40, sy = fh - 30;
+      if (!h || Math.hypot(h.x - x, h.y - y) > 55) { fly("🍕", sx, sy, x, y, 300, () => { pop(x, y, "SPLAT", "bad", "pizza on the road"); }); bad(); return; }
+      h.done = true;
+      const tx = h.x - this.speed * .3, ty = h.y;
+      fly("🍕", sx, sy, tx, ty, 300, () => {
+        if (h.kind === "lit") {
+          const tip = Math.round(rnd(1, 8)); this.tips += tip; this.del++;
+          pop(h.x, h.y, `+$${tip}`, tip >= 6 ? "big" : "", pick(["tip", "nice tip", "they said keep it", "in quarters"])); good(); buzz(10);
+          h.el.innerHTML = "🏠<span class='door'>✓ DELIVERED</span>"; h.el.classList.remove("lit");
+          if (this.del % 4 === 0) say(pick(["They tipped in quarters. I counted them in the car.", "Hot and fresh. Well. Fresh.", "That guy answered in a towel. Every time. Same guy."]));
+        } else if (h.kind === "dog") {
+          this.dog++; pop(h.x, h.y, "DOG ATE IT", "bad", "and the box"); bad(); shake(); buzz(30);
+          say("The dog ate it. The dog also tipped. More than the last guy.");
+        } else {
+          this.wrong++; pop(h.x, h.y, "WRONG HOUSE", "bad", "they kept it anyway"); bad(); buzz(20);
+          say(pick(["Wrong house. They took it. Everybody takes it.", "That's not 4410. That's 4401. Close enough for pizza."]));
+        }
+        hud("$" + this.tips);
       });
-    }
-    const speed = Math.hypot(ball.vx, ball.vy);
-    // Exterminate anything it rolls over.
-    pests = pests.filter(p => {
-      if (speed > .25 && Math.hypot(p.x - ball.x, p.y - ball.y) < p.r + 1.6) {
-        pestsHit++; $("pests").textContent = pestsHit; splats.push({ x: p.x, y: p.y, r: p.r });
-        say("bug"); tone(90, .18, "sawtooth", .09, .5); buzz(30); return false;
+    },
+    tick(dt) {
+      this.t -= dt; this.speed = 70 + (20 - this.t) * 4.5;
+      this.next -= dt; if (this.next <= 0) { this.spawn(); this.next = rnd(.45, .85) * (this.t < 8 ? .75 : 1); }
+      this.houses.forEach(h => { h.x -= this.speed * dt; h.el.style.left = h.x + "px"; });
+      this.houses = this.houses.filter(h => { if (h.x < -50) { h.el.remove(); return false; } return true; });
+      const mins = Math.max(0, this.t / 20 * 30), mm = Math.floor(mins), ss = Math.floor((mins - mm) * 60);
+      const c = $("pclock"); if (c) c.textContent = `${mm}:${String(ss).padStart(2, "0")}`;
+      hud("$" + this.tips, Math.ceil(Math.max(0, this.t)));
+      $("hTime").classList.toggle("low", this.t <= 5);
+      return this.t <= 0;
+    },
+    finish() {
+      const inch = this.del >= 12 ? 3 : this.del >= 8 ? 2 : this.del >= 4 ? 1.2 : .5;
+      return {
+        stats: `Delivered: ${this.del} · Wrong house: ${this.wrong} · Fed to dogs: ${this.dog} · Tips: $${this.tips}`,
+        leave: this.del >= 10 ? "Reason for leaving: too good. The other drivers complained." : this.wrong > this.del ? "Reason for leaving: delivered more pizzas to the wrong houses than the right ones. The neighborhood loved him." : "Reason for leaving: the car. Mostly the car.",
+        inches: inch,
+        joke: { setup: `I used to deliver pizza. I could do ${Math.max(this.del, 1)} houses in twenty seconds.${this.wrong ? ` ${this.wrong} of them were the wrong house.` : ""}`,
+                punch: this.wrong ? "Nobody ever gave one back. You know who never sends back a free pizza? Everybody." : "The tips were better than comedy. The tips were in quarters. Still better." },
+      };
+    },
+  });
+
+  // 2. Exterminator: tap the pests. One of them is Mike's own rat tail. Do not spray the rat tail.
+  const HAIR_SVG = '<svg viewBox="0 0 30 100" aria-hidden="true"><path d="M8 0C22 10 2 20 16 30S4 50 16 60 6 80 14 92" fill="none" stroke="#5a3a1c" stroke-width="9" stroke-linecap="round"/><path d="M8 0C22 10 2 20 16 30S4 50 16 60 6 80 14 92" fill="none" stroke="#a06a36" stroke-width="5" stroke-linecap="round" stroke-dasharray="4 3"/></svg>';
+  JOBS.push({
+    key: "bugs", emoji: "🪳", title: "Exterminator", yrs: "Mid 2010s · licensed, technically",
+    blurb: "Mike was great at this job. The only problem: one of the rats in every kitchen was attached to his head.",
+    how: "Tap roaches, ants and rats to spray them. If it's long, brown and braided, that's your rat tail. Don't spray it.",
+    init() {
+      this.t = 20; this.score = 0; this.kills = 0; this.hair = 0; this.bugs = []; this.next = .3; this.streak = 0;
+      field.className = "field f-bug";
+      say("Same job as pizza, really. You go to a house. Something's living there that shouldn't be.");
+      $("hScoreL").textContent = "Score"; hud(0, 20, "Time");
+    },
+    spawn() {
+      const r = Math.random();
+      const kind = r < .14 ? "hair" : r < .44 ? "roach" : r < .7 ? "ant" : "rat";
+      const K = { roach: ["🪳", 10, 90], ant: ["🐜", 5, 35], rat: ["🐀", 25, 60], hair: [HAIR_SVG, -30, 25] }[kind];
+      const b = { kind, pts: K[1], speed: K[2], x: rnd(40, fw - 40), y: rnd(40, fh - 50), a: rnd(0, 6.28), life: rnd(1.5, 2.4), age: 0 };
+      b.el = sprite(K[0], b.x, b.y, kind === "hair" ? "hairspr" : "bugspr" + (kind === "rat" ? " rat" : ""));
+      if (kind === "hair") b.el.insertAdjacentHTML("beforeend", '<span class="label">RAT?</span>');
+      this.bugs.push(b);
+    },
+    tap(x, y) {
+      const sp = document.createElement("div"); sp.className = "spray"; sp.style.left = x + "px"; sp.style.top = y + "px"; field.appendChild(sp); setTimeout(() => sp.remove(), 400);
+      tone(1800, .12, "sawtooth", .02, .4);
+      const hit = this.bugs.filter(b => Math.hypot(b.x - x, b.y - y) < (b.kind === "hair" ? 40 : 42));
+      if (!hit.length) { this.streak = 0; return; }
+      hit.forEach(b => {
+        this.bugs = this.bugs.filter(o => o !== b); b.el.remove();
+        if (b.kind === "hair") {
+          this.hair++; this.streak = 0; this.score += b.pts; pop(b.x, b.y, "OW!", "bad", "that's attached to you"); bad(); shake(); buzz([30, 30, 30]);
+          say(pick(["That's my hair. That's MY hair.", "I sprayed my own tail. It's fine. It's the only thing that grows back.", "Not the tail. Anything but the tail."]));
+          return;
+        }
+        this.streak++; this.kills++;
+        const pts = b.pts * (this.streak >= 5 ? 2 : 1); this.score += pts;
+        splat(b.x, b.y, b.kind === "rat" ? "#6d5a4a" : "#3e2a17"); squish(); buzz(12);
+        pop(b.x, b.y, `+${pts}`, this.streak === 5 ? "big" : "", this.streak === 5 ? "on a roll · ×2" : "");
+        if (this.kills % 5 === 0) say(pick(["Old habits.", "That roach had a family. Had.", "Professional courtesy: none.", "I'm not saying the rat looked at me funny. I'm saying it looked at my hair funny."]));
+      });
+      hud(this.score);
+    },
+    tick(dt) {
+      this.t -= dt; this.next -= dt;
+      if (this.next <= 0) { this.spawn(); if (this.t < 10 && Math.random() < .4) this.spawn(); this.next = rnd(.35, .7); }
+      this.bugs = this.bugs.filter(b => {
+        b.age += dt; if (b.age > b.life) { b.el.classList.add("out"); setTimeout(() => b.el.remove(), 280); return false; }
+        b.a += rnd(-.3, .3); b.x = clamp(b.x + Math.cos(b.a) * b.speed * dt, 30, fw - 30); b.y = clamp(b.y + Math.sin(b.a) * b.speed * dt, 30, fh - 40);
+        if (b.x <= 30 || b.x >= fw - 30) b.a = Math.PI - b.a; if (b.y <= 30 || b.y >= fh - 40) b.a = -b.a;
+        b.el.style.left = b.x + "px"; b.el.style.top = b.y + "px"; return true;
+      });
+      hud(this.score, Math.ceil(Math.max(0, this.t)));
+      $("hTime").classList.toggle("low", this.t <= 5);
+      return this.t <= 0;
+    },
+    finish() {
+      const inch = this.kills >= 22 ? 3 : this.kills >= 14 ? 2 : this.kills >= 7 ? 1.2 : .5;
+      return {
+        stats: `Pests exterminated: ${this.kills} · Times he sprayed his own rat tail: ${this.hair} · Score: ${this.score}`,
+        leave: this.hair >= 2 ? `Reason for leaving: sprayed his own hair ${this.hair} times. The company called it "a pattern."` : this.hair === 1 ? "Reason for leaving: one incident with the tail. One." : "Reason for leaving: the bugs started recognizing him. That's when you go.",
+        inches: inch,
+        joke: { setup: `I was an exterminator. Killed ${this.kills} things in twenty seconds.${this.hair ? ` Sprayed my own rat tail ${this.hair === 1 ? "once" : this.hair + " times"}.` : ""}`,
+                punch: this.hair ? "It survived. It's the only hair I have left that wants to live." : "I shaved the top of my head so the roaches couldn't hide in it. The rat tail is a decoy. It's working." },
+      };
+    },
+  });
+
+  // 3. Golf: a swing meter. Stop the needle in the green; yellow is pure. Once a round, the rat tail gets in his eye.
+  const SHANKS = ["the clubhouse window", "a goose (it's fine, it's furious)", "the snack shack", "the parking lot", "a guy named Gary", "the pond, again"];
+  JOBS.push({
+    key: "golf", emoji: "⛳", title: "Golfer (Enthusiastic)", yrs: "Every weekend since · unpaid, unlicensed, unhelpful",
+    blurb: "Not technically a job. Mike treats it like one: he shows up every day and he is bad at it.",
+    how: "Tap to stop the swing meter. Green is good, yellow is perfect, anything else is a shank. Five balls.",
+    init() {
+      this.balls = 5; this.n = 0; this.yards = 0; this.shanks = 0; this.pures = 0; this.pos = 0; this.dir = 1; this.speed = .9; this.wait = 0;
+      this.tailSwing = 1 + Math.floor(Math.random() * 4);
+      field.className = "field f-golf";
+      [100, 200, 300].forEach((y, i) => { const d = document.createElement("div"); d.className = "yard"; d.style.top = (fh * (.62 - i * .14)) + "px"; d.innerHTML = `<span>${y} YDS</span>`; field.appendChild(d); });
+      field.insertAdjacentHTML("beforeend", '<div class="swingn" id="gN">Ball 1 of 5</div><div class="golfmike"><div class="mk" data-mk style="--s: 64px"></div></div><div class="meter" id="meter"><div class="zone" id="zone"></div><div class="sweet" id="sweet"></div><div class="needle" id="needle"></div></div>');
+      drawMike(); setTail(); this.newZone();
+      say("Golf isn't a job. But I show up every day and I'm bad at it, so.");
+      $("hScoreL").textContent = "Yards"; hud(0, "5", "Balls");
+    },
+    newZone() {
+      const w = clamp(.2 - this.n * .02, .1, .2); this.z = rnd(.1, .9 - w); this.zw = w;
+      $("zone").style.left = this.z * 100 + "%"; $("zone").style.width = w * 100 + "%";
+      $("sweet").style.left = (this.z + w * .38) * 100 + "%"; $("sweet").style.width = w * .24 * 100 + "%";
+      this.speed = .9 + this.n * .22;
+    },
+    tap() {
+      if (this.wait > 0 || this.n >= this.balls) return;
+      this.n++;
+      const p = this.pos, inZone = p >= this.z && p <= this.z + this.zw, sweet = p >= this.z + this.zw * .38 && p <= this.z + this.zw * .62;
+      let yds, label, cls = "", sub = "", sx = fw / 2, endX, endY;
+      if (this.n === this.tailSwing) {
+        yds = Math.round(rnd(5, 40)); label = "RAT TAIL!"; cls = "bad"; sub = "whipped him in the eye"; this.shanks++; endX = rnd(20, fw - 20); endY = fh * .7;
+        say("The tail came around on the backswing. It does that. It has its own swing.");
+      } else if (sweet) {
+        yds = Math.round(rnd(270, 310)); label = "PURE!"; cls = "big"; sub = yds + " yds"; this.pures++; endX = fw / 2 + rnd(-20, 20); endY = fh * .2;
+        say(pick(["Did anybody see that? Nobody saw that.", "That's going on my headstone.", "I'm going pro. I'm not going pro."]));
+      } else if (inZone) {
+        yds = Math.round(rnd(170, 250)); label = yds + " YDS"; endX = fw / 2 + rnd(-60, 60); endY = fh * (.62 - (yds / 100 - 1) * .14);
+        say(pick(["That's a golf shot. That counts.", "Straight-ish. I'll take straight-ish.", "My pro says I have a natural swing. My pro is my uncle."]));
+      } else {
+        yds = Math.round(rnd(10, 90)); label = "SHANK!"; cls = "bad"; sub = "into " + pick(SHANKS); this.shanks++; endX = pick([10, fw - 10]); endY = fh * rnd(.45, .7);
+        say(pick(["Fore. Probably.", "Mulligan. That's French for \"I'm so sorry.\"", "I'll pay for that. I won't, but I'll say I will."]));
       }
-      return true;
-    });
-    const inSand = hole.sand.some(r => inRect(ball.x, ball.y, r));
-    const f = inSand ? .9 : .975;
-    ball.vx *= f; ball.vy *= f;
-    if (inSand && speed > .8 && Math.random() < .03) say("sand");
+      this.yards += yds;
+      tone(cls === "bad" ? 140 : 900, .08, "square", .07, .3); buzz(cls === "bad" ? 30 : 12); if (cls === "bad") shake(); else good();
+      const ball = document.createElement("div"); ball.className = "golfball"; field.appendChild(ball);
+      ball.animate([{ transform: `translate(${sx}px, ${fh - 70}px) scale(1.4)` }, { transform: `translate(${(sx + endX) / 2}px, ${Math.min(endY, fh * .3) - 30}px) scale(1)`, offset: .55 }, { transform: `translate(${endX}px, ${endY}px) scale(.5)` }], { duration: 900, easing: "ease-out" }).onfinish = () => { ball.remove(); pop(endX, endY, label, cls, sub); };
+      this.wait = 1.4; hud(this.yards, String(this.balls - this.n));
+      $("gN").textContent = this.n < this.balls ? `Ball ${this.n + 1} of 5` : "Bucket empty";
+    },
+    tick(dt) {
+      if (this.wait > 0) { this.wait -= dt; if (this.wait <= 0) { if (this.n >= this.balls) return true; this.newZone(); } return false; }
+      this.pos += this.dir * this.speed * dt; if (this.pos > 1) { this.pos = 1; this.dir = -1; } if (this.pos < 0) { this.pos = 0; this.dir = 1; }
+      $("needle").style.left = this.pos * 100 + "%";
+      return false;
+    },
+    finish() {
+      const inch = this.yards >= 1000 ? 3 : this.yards >= 750 ? 2 : this.yards >= 450 ? 1.2 : .5;
+      return {
+        stats: `Total yards: ${this.yards} · Pure strikes: ${this.pures} · Shanks: ${this.shanks} (one was the tail)`,
+        leave: "Reason for leaving: hasn't. Never will. Still out there right now, honestly.",
+        inches: inch,
+        joke: { setup: `I golf. Five balls today: ${this.yards} yards total. ${this.shanks} went sideways.`,
+                punch: "My handicap is the rat tail. On the backswing it comes around and hits me in the eye. It's a 12-inch handicap." },
+      };
+    },
+  });
 
-    if (hole.water.some(w => inEllipse(ball.x, ball.y, w))) {
-      ball.x = last.x; ball.y = last.y; ball.vx = ball.vy = 0; moving = false;
-      strokes++; $("strokes").textContent = strokes; say("water"); tone(200, .4, "sine", .08, .3); buzz(40);
-      return checkGiveUp();
-    }
-    const dc = Math.hypot(ball.x - hole.cup[0], ball.y - hole.cup[1]);
-    if (dc < 3.2) {
-      if (speed < 2.6) return sink();
-      ball.vx += (ball.x - hole.cup[0]) * .25; ball.vy += (ball.y - hole.cup[1]) * .25; say("lip");
-    }
-    if (speed < .06) { ball.vx = ball.vy = 0; moving = false; checkGiveUp(); }
+  // 4. Retainers: a 3D printer slides each layer back and forth; tap to set it. Overhang gets trimmed.
+  JOBS.push({
+    key: "print", emoji: "🦷", title: "Dental Retainer 3D Printer", yrs: "Now · actual current job",
+    blurb: "Today Mike 3D-prints dental retainers. Your teeth's future is in the hands of a man who shanked a ball into a goose.",
+    how: "Tap to set each layer. Line it up with the one below; whatever hangs over gets trimmed. Ten layers makes a retainer.",
+    init() {
+      field.className = "field f-print";
+      field.insertAdjacentHTML("beforeend", '<div class="frame"></div><div class="bed"></div><div class="nozzle" id="noz"></div>');
+      this.layers = []; this.maxL = 10; this.perfect = 0; this.lh = Math.min(22, (fh - 120) / 11); this.done = false; this.end = 0;
+      this.base = { x: fw * .2, w: fw * .6 }; this.startW = this.base.w;
+      this.prev = this.base; this.newLayer();
+      say("I print retainers now. People put these in their mouths. On purpose.");
+      $("hScoreL").textContent = "Accuracy"; hud("100%", "0/10", "Layers");
+    },
+    newLayer() {
+      const i = this.layers.length, y = fh - 28 - (i + 1) * this.lh;
+      const el = document.createElement("div"); el.className = "layer moving"; el.style.height = (this.lh - 2) + "px"; el.style.top = y + "px"; el.style.width = this.prev.w + "px"; field.appendChild(el);
+      this.cur = { el, x: Math.random() < .5 ? 0 : fw - this.prev.w, w: this.prev.w, y, dir: Math.random() < .5 ? 1 : -1, speed: 150 + i * 28 };
+      this.cur.dir = this.cur.x === 0 ? 1 : -1;
+    },
+    tap() {
+      if (this.done || !this.cur) return;
+      const c = this.cur, p = this.prev;
+      const L = Math.max(c.x, p.x), R = Math.min(c.x + c.w, p.x + p.w), w = R - L;
+      c.el.classList.remove("moving");
+      if (w <= 4) { c.el.classList.add("cut"); c.el.style.transform = "translateY(300px) rotate(30deg)"; c.el.style.opacity = "0"; this.done = true; this.fail = true; bad(); shake(); buzz(40);
+        pop(fw / 2, c.y, "MISSED THE PRINT", "bad", "it's a toothpick now"); say("That's not a retainer. That's a toothpick. A very expensive toothpick."); this.end = 1.2; return; }
+      if (Math.abs(c.x - p.x) < 5) { c.x = p.x; c.w = p.w; this.perfect++; pop(fw / 2, c.y, "PERFECT LAYER", "big"); good(); buzz(10); }
+      else {
+        // Trim the overhang: it drops off the bed.
+        const off = document.createElement("div"); off.className = "layer cut"; off.style.height = c.el.style.height; off.style.top = c.y + "px";
+        const offX = c.x < p.x ? c.x : R, offW = c.w - w; off.style.left = offX + "px"; off.style.width = offW + "px"; field.appendChild(off);
+        requestAnimationFrame(() => { off.style.transform = `translateY(${fh}px) rotate(${c.x < p.x ? -40 : 40}deg)`; off.style.opacity = "0"; }); setTimeout(() => off.remove(), 1000);
+        c.x = L; c.w = w; tone(400, .08, "square", .04, .7);
+      }
+      c.el.style.left = c.x + "px"; c.el.style.width = c.w + "px";
+      this.layers.push(c); this.prev = { x: c.x, w: c.w }; this.cur = null;
+      $("noz").style.left = (c.x + c.w / 2) + "px"; $("noz").style.top = (c.y - 28) + "px";
+      const acc = Math.round(c.w / this.startW * 100);
+      hud(acc + "%", `${this.layers.length}/10`);
+      if (this.layers.length >= this.maxL) { this.done = true; this.end = 1.2; this.finishPrint(); return; }
+      if (this.layers.length === 5) say(pick(["Halfway. This is the most focused I've been since the pizza job.", "If this works, somebody's teeth are gonna be so straight."]));
+      this.newLayer();
+    },
+    finishPrint() {
+      const r = this.prev.w / this.startW;
+      const T = document.createElement("div"); T.className = "teeth"; T.textContent = "🦷"; T.style.top = (fh - 28 - this.layers.length * this.lh - 52) + "px"; field.appendChild(T);
+      pop(fw / 2, fh * .3, r > .7 ? "RETAINER!" : r > .4 ? "RETAINER-ISH" : "IT'S A RETAINER", "big", r > .7 ? "dentist approved" : r > .4 ? "for a smaller person" : "for a mouse");
+      good(); buzz([20, 30, 20]);
+    },
+    tick(dt) {
+      if (this.done) { this.end -= dt; return this.end <= 0; }
+      const c = this.cur; if (!c) return false;
+      c.x += c.dir * c.speed * dt; if (c.x < 0) { c.x = 0; c.dir = 1; } if (c.x + c.w > fw) { c.x = fw - c.w; c.dir = -1; }
+      c.el.style.left = c.x + "px";
+      $("noz").style.left = (c.x + c.w / 2) + "px"; $("noz").style.top = (c.y - 28) + "px";
+      return false;
+    },
+    finish() {
+      const r = this.fail ? 0 : this.prev.w / this.startW, n = this.layers.length;
+      const who = this.fail ? "nobody. It's a toothpick." : r > .8 ? "a real human mouth. Somebody's orthodontist would sign off." : r > .55 ? "a kid. A small, nervous kid." : r > .3 ? "a mouse. A very self-conscious mouse." : "a tooth. One tooth. Just the one.";
+      const inch = this.fail ? .5 : r > .8 ? 3 : r > .55 ? 2 : r > .3 ? 1.2 : .7;
+      return {
+        stats: `Layers: ${n}/10 · Perfect layers: ${this.perfect} · Final width: ${Math.round(r * 100)}%`,
+        leave: `Reason for leaving: he hasn't. This is his job now. Today's retainer fits ${who}`,
+        inches: inch,
+        joke: { setup: `Now I 3D print retainers. Today I printed one that fits ${this.fail ? "nobody. It's a toothpick" : r > .55 ? "a real person" : "a mouse"}.`,
+                punch: "People ask, Mike, why retainers? Because you can't print hair. I checked. I checked a lot." },
+      };
+    },
+  });
+
+  // 5. The set at Sisyphus: one callback per job; tap when the beat meter hits the pause to land the punchline.
+  JOBS.push({
+    key: "set", emoji: "🎤", title: "Comedian", yrs: "Tonight · Sisyphus",
+    blurb: "Every job Mike ever had was material. Tonight he uses all of it. The better the earlier jobs went, the better the jokes.",
+    how: "Each joke has a setup. Wait for the pause, then tap in the yellow to land the punchline. Too early steps on it; too late, somebody coughs.",
+    init() {
+      field.className = "field f-set";
+      field.insertAdjacentHTML("beforeend", '<div class="laughs">Laughs<div class="lm"><div id="lm"></div></div></div><div class="setmike"><div class="mk" data-mk></div></div><div class="mic">🎤</div><div class="joke" id="joke"></div><div class="beat"><div class="lbl" id="blbl">Wait for it…</div><div class="track"><div class="pz" id="pz"></div><div class="fill" id="bfill"></div></div></div>');
+      drawMike(); setTail();
+      this.jokes = results.map(r => r.joke); this.i = -1; this.laughs = 0; this.big = 0; this.state = "wait"; this.wait = .6;
+      say("Every job I ever had was so I could stand up here and complain about it.");
+      $("hScoreL").textContent = "Laughs"; hud(0, "1/4", "Joke");
+    },
+    nextJoke() {
+      this.i++; if (this.i >= this.jokes.length) { this.state = "end"; this.wait = 1.2; return; }
+      const j = this.jokes[this.i];
+      $("joke").innerHTML = ""; $("joke").textContent = j.setup;
+      this.pz = rnd(.58, .74); this.pw = .14;
+      $("pz").style.left = this.pz * 100 + "%"; $("pz").style.width = this.pw * 100 + "%";
+      this.fill = 0; this.state = "beat"; $("blbl").textContent = "Wait for the pause…";
+      this.dur = 2.2 - this.i * .2;
+      hud(this.laughs, `${this.i + 1}/4`);
+    },
+    tap() {
+      if (this.state !== "beat") return;
+      const f = this.fill, j = this.jokes[this.i];
+      // Callback strength: the better that job went, the more the room already loves this bit.
+      const strength = 1 + results[this.i].inches / 3;
+      let pts, label, cls, crowd;
+      if (f >= this.pz && f <= this.pz + this.pw) { pts = Math.round(30 * strength); label = "BIG LAUGH"; cls = "big"; this.big++; crowd = pick(["The bartender laughed. The bartender never laughs.", "A guy slapped the table so hard his beer jumped.", "Someone in the back yelled \"THE TAIL!\""]); [523, 659, 784].forEach((x, k) => tone(x, .12, "triangle", .06, 1, k * .07)); buzz([20, 20, 20]); }
+      else if (f < this.pz) { pts = Math.round(10 * strength); label = "STEPPED ON IT"; cls = "bad"; crowd = "Rushed it. A few people laughed anyway, out of kindness."; tone(300, .1, "triangle", .05, 1); }
+      else { pts = Math.round(6 * strength); label = "TOO LONG"; cls = "bad"; crowd = "Held the pause too long. Somebody coughed. Then laughed at the cough."; tone(180, .2, "triangle", .05, .7); }
+      this.laughs += pts;
+      $("joke").innerHTML = ""; $("joke").append(j.setup); const pu = document.createElement("span"); pu.className = "punch"; pu.textContent = j.punch; $("joke").appendChild(pu);
+      pop(fw / 2, fh * .38, label, cls, `+${pts} laughs`);
+      $("lm").style.width = Math.min(100, this.laughs / (4 * 60) * 100) + "%";
+      say(crowd); this.state = "read"; this.wait = 3.4; hud(this.laughs);
+    },
+    tick(dt) {
+      if (this.state === "wait" || this.state === "read") { this.wait -= dt; if (this.wait <= 0) this.nextJoke(); return false; }
+      if (this.state === "end") { this.wait -= dt; return this.wait <= 0; }
+      this.fill += dt / this.dur;
+      $("bfill").style.width = Math.min(100, this.fill * 100) + "%";
+      $("blbl").textContent = this.fill >= this.pz ? "NOW!" : "Wait for the pause…";
+      if (this.fill >= 1) { this.fill = 1.01; this.tap(); }
+      return false;
+    },
+    finish() {
+      const inch = this.big >= 4 ? 3 : this.big >= 3 ? 2 : this.big >= 2 ? 1.2 : .5;
+      return {
+        stats: `Laughs: ${this.laughs} · Big laughs: ${this.big}/4`,
+        leave: this.big >= 3 ? "Reason for leaving: he's not leaving. Sam's booking him again." : "Reason for leaving: the show ended. That's how shows work.",
+        inches: inch, joke: null,
+      };
+    },
+  });
+
+  // ---------- Flow ----------
+  let ji = 0, job, results = [], playing = false, raf, last;
+  const RANKS = [[0, "RAT TAIL\nAPPRENTICE"], [17, "RAT TAIL\nJOURNEYMAN"], [20, "RAT TAIL\nMASTER"], [23, "THE TAIL\nWAGS THE MIKE"]];
+
+  function renderJobs(ol, current) {
+    ol.innerHTML = JOBS.map((j, i) => {
+      const r = results[i];
+      return `<li class="${r ? "done" : i === current ? "now" : ""}"><span>${j.emoji}</span><span><b>${j.title}</b><br><span class="yrs">${j.yrs}</span></span><span class="got">${r ? "+" + r.inches.toFixed(1) + '"' : ""}</span></li>`;
+    }).join("");
+  }
+  function getBest() { try { return +localStorage.getItem("mike-tail-best") || 0; } catch (e) { return 0; } }
+  function setBest(n) { try { localStorage.setItem("mike-tail-best", n); } catch (e) {} }
+  function title() {
+    results = []; inches = 12; ji = 0; drawMike(); setTail(); renderJobs($("jobs"), -1);
+    const b = getBest(); $("best").hidden = !b; $("best").textContent = `Longest rat tail so far: ${b.toFixed(1)}"`;
+    show("s0");
+  }
+  function intro() {
+    job = JOBS[ji];
+    $("iEmoji").textContent = job.emoji; $("iN").textContent = `Job ${ji + 1} of 5`; $("iTitle").textContent = job.title;
+    $("iYrs").textContent = job.yrs; $("iBlurb").textContent = job.blurb; $("iHow").textContent = job.how;
+    show("s1");
+  }
+  function begin() {
+    show("play"); field.innerHTML = ""; field.className = "field"; $("hTime").classList.remove("low");
+    $("hN").textContent = ji + 1; $("hJob").textContent = job.title.replace(/ \(.*\)/, "");
+    measure(); job.init(); playing = true; last = performance.now();
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  }
+  function loop(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    if (job.tick(dt)) return done();
+    raf = requestAnimationFrame(loop);
+  }
+  field.addEventListener("pointerdown", e => {
+    if (!playing) return; e.preventDefault();
+    const r = field.getBoundingClientRect(); job.tap(e.clientX - r.left, e.clientY - r.top);
+  });
+  function done() {
+    playing = false; cancelAnimationFrame(raf);
+    const r = job.finish(); results[ji] = r; inches += r.inches;
+    $("rN").textContent = `Job ${ji + 1} of 5 · ${job.title}`; $("rTitle").textContent = ["Shift over.", "Shift over.", "Bucket's empty.", "Print complete.", "Goodnight, Sisyphus!"][ji];
+    $("rStats").textContent = r.stats; $("rLeave").textContent = r.leave;
+    $("rGrow").textContent = `Rat tail grew ${r.inches.toFixed(1)}". Now ${inches.toFixed(1)}".`;
+    $("next").textContent = ji < JOBS.length - 1 ? `Next job: ${JOBS[ji + 1].title.replace(/ \(.*\)/, "")}` : "Read the résumé";
+    show("s3"); setTimeout(setTail, 250);
+    tone(523, .1, "triangle", .06, 1); tone(784, .2, "triangle", .06, 1, .1);
+  }
+  function finale() {
+    renderJobs($("fJobs"), -1);
+    const rank = RANKS.filter(r => inches >= r[0]).pop()[1];
+    $("fObj").textContent = `Five careers. One rat tail, now ${inches.toFixed(1)} inches. References available on request (the raccoon, the dog, Gary).`;
+    $("stamp").textContent = rank; $("stamp").style.whiteSpace = "pre-line"; $("stamp").classList.remove("on");
+    const best = getBest(); $("newbest").hidden = !(inches > best && best); if (inches > best) setBest(inches);
+    show("s4"); setTimeout(() => { $("stamp").classList.add("on"); tone(110, .3, "square", .08, .7); buzz(40); }, 600);
   }
 
-  function checkGiveUp() {
-    if (strokes >= hole.par + 6) {
-      done = true;
-      showCard("Picked it up", `${strokes} strokes and a gentleman's agreement. ${pestsHit} pest${pestsHit === 1 ? "" : "s"} didn't make it.`, true);
-    }
-  }
-  function sink() {
-    done = true; moving = false; ball.x = hole.cup[0]; ball.y = hole.cup[1]; ball.vx = ball.vy = 0;
-    say("sink"); [523, 659, 784, 1046].forEach((fr, i) => setTimeout(() => tone(fr, .14, "triangle", .07, 1), i * 90)); buzz([20, 30, 20]);
-    const over = strokes - hole.par;
-    const word = strokes === 1 ? "HOLE IN ONE?!" : over <= -1 ? "Under par. Check his pockets." : over === 0 ? "Par. Somebody call his dad." : over <= 2 ? `+${over}. Honestly? Great for Mike.` : `+${over}. Classic Mike.`;
-    showCard(word, `${strokes} stroke${strokes > 1 ? "s" : ""} on a par ${hole.par}. ${pestsHit} pest${pestsHit === 1 ? "" : "s"} exterminated.`, false);
-  }
-  function showCard(title, body, gaveUp) {
-    results[hi] = { name: hole.name, par: hole.par, strokes, pests: pestsHit, gaveUp };
-    card = document.createElement("div"); card.className = "card";
-    const lastHole = hi === HOLES.length - 1;
-    card.innerHTML = `<h2></h2><p></p><button class="btn" type="button">${lastHole ? "Sign the scorecard" : "Next hole"}</button>`;
-    card.querySelector("h2").textContent = title; card.querySelector("p").textContent = body;
-    card.querySelector("button").addEventListener("click", () => lastHole ? scorecard() : loadHole(hi + 1));
-    $("course").appendChild(card);
-  }
-
-  // Drawing
-  function draw() {
-    const s = scale * dpr;
-    ctx.setTransform(s, 0, 0, s, 0, 0);
-    // Fairway stripes
-    for (let y = 0; y < H; y += 10) { ctx.fillStyle = (y / 10) % 2 ? "#4f9a4a" : "#58a652"; ctx.fillRect(0, y, W, 10); }
-    // Sand
-    hole.sand.forEach(([x, y, w, h]) => { ctx.fillStyle = "#e8d39a"; rr(x, y, w, h, 4); ctx.fill(); ctx.fillStyle = "rgba(160,130,70,.35)"; for (let i = 0; i < 12; i++) ctx.fillRect(x + (i * 7.3) % w, y + (i * 3.7) % h, .8, .8); });
-    // Water
-    hole.water.forEach(([cx, cy, rx, ry]) => { ctx.fillStyle = "#2f7fc0"; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(cx - 6, cy - 2, rx * .45, ry * .25, 0, 0, Math.PI); ctx.stroke(); });
-    // Walls (railroad-tie edging) and the motel
-    hole.walls.forEach(([x, y, w, h], i) => {
-      ctx.fillStyle = "#6e4526"; rr(x, y, w, h, 1.5); ctx.fill();
-      ctx.fillStyle = "rgba(0,0,0,.25)"; for (let k = x + 6; k < x + w; k += 8) ctx.fillRect(k, y, .6, h);
-      if (hole.name === "Roach Motel" && i === 1) { ctx.fillStyle = "#f3c623"; ctx.font = "700 3.4px Atkinson Hyperlegible, sans-serif"; ctx.textAlign = "center"; ctx.fillText("MOTEL", x + w / 2, y + 5.5); ctx.fillText("VACANCY", x + w / 2, y + 10); }
-    });
-    // Anthill
-    hole.mounds.forEach(([x, y, r]) => { const g = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, r); g.addColorStop(0, "#c08a55"); g.addColorStop(1, "#7b5230"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3a2412"; ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill(); });
-    // Splats stay where they happened
-    splats.forEach(p => {
-      ctx.fillStyle = "rgba(70,45,20,.6)"; ctx.beginPath();
-      for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, rr2 = p.r * (k % 2 ? .55 : 1); ctx.lineTo(p.x + Math.cos(a) * rr2, p.y + Math.sin(a) * rr2); }
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = .35; ctx.beginPath();
-      [[-1, 1], [1, 1]].forEach(([sx]) => { const ex = p.x + sx * p.r * .3, ey = p.y - p.r * .1, k = p.r * .14; ctx.moveTo(ex - k, ey - k); ctx.lineTo(ex + k, ey + k); ctx.moveTo(ex + k, ey - k); ctx.lineTo(ex - k, ey + k); });
-      ctx.stroke();
-    });
-    // Cup + flag
-    const [cx, cy] = hole.cup;
-    ctx.fillStyle = "#1c2a1a"; ctx.beginPath(); ctx.arc(cx, cy, 2.4, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#eee"; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 13); ctx.stroke();
-    ctx.fillStyle = "#ef7d22"; ctx.beginPath(); ctx.moveTo(cx, cy - 13); ctx.lineTo(cx + 8, cy - 10.5); ctx.lineTo(cx, cy - 8); ctx.fill();
-    // Pests + raccoon (emoji)
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    pests.forEach(p => { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2); ctx.font = `${p.r * 2}px system-ui, sans-serif`; ctx.fillText(p.e, 0, 0); ctx.restore(); });
-    if (raccoon) { ctx.font = "9px system-ui, sans-serif"; ctx.fillText("🦝", raccoon.x, raccoon.y); }
-    // Tee marker
-    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.fillRect(hole.tee[0] - 4, hole.tee[1] + 3, 1.6, 1.6); ctx.fillRect(hole.tee[0] + 2.4, hole.tee[1] + 3, 1.6, 1.6);
-    // Ball
-    if (!done || Math.hypot(ball.x - cx, ball.y - cy) > 1) {
-      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.arc(ball.x + .5, ball.y + .7, 1.6, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ball.x, ball.y, 1.6, 0, Math.PI * 2); ctx.fill();
-    }
-    // Aim: dotted line the way it'll go (roughly; Mike adds the rest) + power bar
-    if (aim) {
-      const len = Math.min(Math.hypot(aim.dx, aim.dy), 55), a = Math.atan2(aim.dy, aim.dx), p = len / 55;
-      ctx.strokeStyle = `rgba(255,255,255,${.4 + p * .5})`; ctx.lineWidth = .8; ctx.setLineDash([1.5, 1.5]);
-      ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x + Math.cos(a) * (6 + len * .8), ball.y + Math.sin(a) * (6 + len * .8)); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(0,0,0,.35)"; rr(4, 4, 30, 3, 1.5); ctx.fill();
-      ctx.fillStyle = p > .85 ? "#e0442c" : "#f3c623"; rr(4, 4, 30 * p, 3, 1.5); ctx.fill();
-    }
-  }
-  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-
-  function loop() { step(); draw(); raf = requestAnimationFrame(loop); }
-
-  function scorecard() {
-    cancelAnimationFrame(raf); card && card.remove();
-    let tp = 0, ts = 0, tk = 0;
-    $("rows").innerHTML = results.map((r, i) => {
-      tp += r.par; ts += r.strokes; tk += r.pests;
-      return `<tr><td>${i + 1}. ${r.name}</td><td>${r.par}</td><td class="pen">${r.strokes}${r.gaveUp ? "*" : ""}</td><td class="pen">${r.pests}</td></tr>`;
-    }).join("") + `<tr class="tot"><td>Total</td><td>${tp}</td><td class="pen">${ts}</td><td class="pen">${tk}</td></tr>`;
-    const over = ts - tp, gave = results.some(r => r.gaveUp);
-    $("note").textContent = (over <= 0 ? `Even or under par. Mike would like this framed and the course investigated.`
-      : over <= 6 ? `+${over}. Mike's best round ever, and he'd like that on the record.`
-      : `+${over}. Mike says the course was "playing long," which is true if you hit it sideways.`)
-      + ` ${tk} pest${tk === 1 ? "" : "s"} exterminated, free of charge, which is the most money he's ever lost at golf.` + (gave ? " *Picked it up." : "");
-    $("ribbon").classList.remove("on"); show("s3");
-    setTimeout(() => { $("ribbon").classList.add("on"); tone(110, .3, "square", .08, .7); buzz(40); }, 650);
-  }
-
-  function round() { results = []; show("game"); fit(); loadHole(0); cancelAnimationFrame(raf); loop(); }
-  $("tee").addEventListener("click", () => { tone(260, .2, "triangle", .07, 1.6); round(); });
-  $("again").addEventListener("click", round);
+  $("start").addEventListener("click", () => { tone(392, .1, "triangle", .06, 1); intro(); });
+  $("go").addEventListener("click", begin);
+  $("next").addEventListener("click", () => { ji++; ji < JOBS.length ? intro() : finale(); });
+  $("again").addEventListener("click", title);
+  drawMike(); title();
 })();
 </script>
 </body>
