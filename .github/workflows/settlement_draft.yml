@@ -1,0 +1,49 @@
+name: Settlement draft
+
+# Emails Sam a settlement draft (tickets, door, host/feature pool; website +
+# Dojour) the morning after a run's last night, so nobody builds the numbers
+# by hand (settlement_draft.py). Run it by hand with a show name for any run.
+# Set the SETTLEMENT_EMAIL_TO repo variable to send these somewhere else.
+
+on:
+  schedule:
+    - cron: '0 15 * * *'   # 10 AM Central (CDT), 9 AM in winter
+  workflow_dispatch:
+    inputs:
+      show:
+        description: "Show or performer name (blank = runs that ended last night)"
+        required: false
+      dry_run:
+        description: 'Show the email on the run page instead of sending it'
+        type: boolean
+        default: false
+
+concurrency:
+  group: settlement-draft
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Build and email the draft
+        env:
+          SHOW_QUERY: ${{ inputs.show }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SETTLEMENT_EMAIL_TO: ${{ vars.SETTLEMENT_EMAIL_TO }}
+        run: python settlement_draft.py
