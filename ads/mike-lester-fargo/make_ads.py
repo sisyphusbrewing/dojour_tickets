@@ -1,5 +1,5 @@
 """Mike Lester (Comedy in the Cellar, Fargo, Dec 18-19 2026) Meta/Reddit ad images, 4:5 and 1:1.
-Photo: Mike cut from the venue's own flyer (venue-flyer.jpg) since it's his current look.
+Photo: Mike cropped from the venue's own flyer (venue-flyer.jpg) since it's his current look.
 Usage: python3 make_ads.py <fonts_dir> <out_dir>
 """
 import os, sys
@@ -11,10 +11,12 @@ F = lambda n, s: ImageFont.truetype(f"{FONTS}/{n}.ttf", s)
 DARK, GOLD, PALE, WHITE = (24, 22, 20), (214, 178, 96), (200, 190, 170), (255, 255, 255)
 
 flyer = Image.open(os.path.join(HERE, "venue-flyer.jpg")).convert("RGB")
-head = flyer.crop((250, 140, 700, 660))  # Mike's head, clear of flyer logos inside the ellipse
-mask = Image.new("L", head.size, 0)
-ImageDraw.Draw(mask).ellipse((72, 14, 392, 556), fill=255)
-mask = mask.filter(ImageFilter.GaussianBlur(3))
+# Mike's head from the flyer, with the flyer's logo bits patched out
+fl = flyer.copy()
+strip = fl.crop((308, 175, 346, 262)).transpose(Image.FLIP_LEFT_RIGHT)
+fl.paste(strip, (618, 175))
+fl.paste(fl.getpixel((345, 640)), (300, 590, 326, 670))
+head = fl.crop((306, 142, 656, 660))
 
 
 def spaced(d, cx, y, text, font, fill, sp):
@@ -38,14 +40,16 @@ def make(w, h, kicker, name):
     tall = h > w
     img = Image.new("RGB", (w, h), DARK)
     ph = int(h * (0.56 if tall else 0.52))
+    top = int(h * 0.075)
+    bg = head.resize((w, int(head.height * w / head.width)), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
+    bg = Image.blend(bg, Image.new("RGB", bg.size, DARK), 0.6)
+    img.paste(bg.crop((0, (bg.height - ph) // 2, w, (bg.height - ph) // 2 + ph)), (0, top))
     s = ph / head.height
     p = head.resize((int(head.width * s), ph), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 60, 2))
-    m = mask.resize(p.size, Image.LANCZOS)
-    px, py = (w - p.width) // 2, int(h * 0.075)
-    img.paste(p, (px, py), m)
+    px = (w - p.width) // 2
+    img.paste(p, (px, top))
     d = ImageDraw.Draw(img)
-    k = p.width / head.width  # gold cameo ring
-    d.ellipse((px + 72 * k - 6, py + 14 * k - 6, px + 392 * k + 6, py + 556 * k + 6), outline=GOLD, width=6)
+    d.rectangle((px - 6, top - 6, px + p.width + 5, top + ph + 5), outline=GOLD, width=6)
     spaced(d, w / 2, int(h * 0.03), kicker, fit(d, kicker, "JosefinSans-Bold", 44, 5, w - 100), GOLD, 5)
     y = int(h * 0.075) + ph - (40 if tall else 30)
     d.polygon([(0, y + 24), (w, y), (w, y + 150), (0, y + 174)], fill=GOLD)
@@ -63,6 +67,6 @@ def make(w, h, kicker, name):
     img.save(os.path.join(OUT, name), quality=92)
 
 
-for k, slug in [("FORMER EXTERMINATOR. CURRENT COMEDIAN.", "exterminator"), ("FARGO'S FUNNIEST BASEMENT", "basement")]:
+for k, slug in [("FORMER EXTERMINATOR. CURRENT COMEDIAN.", "exterminator"), ("FARGO'S FUNNIEST BASEMENT", "basement"), ("BALD. HAS A POMERANIAN. DOING FINE.", "bald")]:
     make(1080, 1350, k, f"mike-lester-{slug}-4x5.jpg")
     make(1080, 1080, k, f"mike-lester-{slug}-1x1.jpg")
