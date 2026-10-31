@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="Mike Lester's Pest Pro-Am">
+<meta property="og:description" content="Mike retired from pest control. The pests did not retire from Mike. Three holes, no lessons.">
+<title>Mike Lester's Pest Pro-Am</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Atkinson+Hyperlegible:wght@400;700&family=Special+Elite&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+/* Mike Lester (comic, ex-exterminator, enthusiastic bad golfer): a three-hole putting course overrun with pests.
+   Drag back from anywhere and let go to putt; Mike's swing adds its own slice. Hitting a pest exterminates it.
+   Title (a wooden tee-box sign) → three holes → a pencil scorecard. */
+:root {
+  --fair: #4f9a4a;
+  --fair-2: #5aa854;
+  --rough: #2f6b34;
+  --night: #102214;
+  --cream: #f4efe1;
+  --wood: #8a5a33;
+  --wood-dark: #5c3a1f;
+  --orange: #ef7d22;
+  --ink: #23271f;
+  --pencil: #3b3f8f;
+  --display: "Alfa Slab One", Rockwell, Georgia, serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --type: "Special Elite", "Courier New", monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: radial-gradient(120% 70% at 50% 20%, #2c5a31 0%, #183a1d 55%, var(--night) 100%);
+  color: var(--cream); font-family: var(--body);
+  overflow: hidden; touch-action: none;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.stage { position: relative; height: 100%; max-width: 520px; margin: 0 auto; overflow: hidden; container-type: size; }
+.screen { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 14px; padding: max(14px, env(safe-area-inset-top, 0px)) 16px max(14px, env(safe-area-inset-bottom, 0px)); text-align: center; animation: in .45s cubic-bezier(.3,1.4,.5,1); }
+@keyframes in { from { opacity: 0; transform: translateY(10px); } }
+.btn { font: 400 clamp(19px, 6cqw, 26px)/1 var(--display); color: var(--ink); background: var(--orange); border: 0; border-radius: 12px; padding: 14px 24px; cursor: pointer; box-shadow: 0 6px 0 #a24f0f, 0 12px 22px rgba(0,0,0,.35); }
+.btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #a24f0f; }
+.btn:focus-visible { outline: 3px solid var(--cream); outline-offset: 4px; }
+.small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+
+/* Title: a wooden tee-box sign on a post */
+.sign { position: relative; width: 100%; max-width: 380px; background: repeating-linear-gradient(0deg, var(--wood) 0 18px, #7d5130 18px 20px); border-radius: 10px; padding: 16px 16px 18px; box-shadow: inset 0 0 0 4px var(--wood-dark), 0 16px 34px rgba(0,0,0,.45); color: var(--cream); }
+.sign::after { content: ""; position: absolute; left: 50%; bottom: -46px; width: 18px; height: 46px; margin-left: -9px; background: var(--wood-dark); z-index: -1; }
+.sign .hole { font: 700 12px/1 var(--body); letter-spacing: .2em; text-transform: uppercase; opacity: .85; }
+.sign h1 { margin: 6px 0 4px; font: 400 clamp(28px, 9.5cqw, 42px)/1 var(--display); color: #ffe7b8; text-shadow: 0 3px 0 var(--wood-dark); }
+.sign .sub { font: 700 14px/1.3 var(--body); }
+.face { width: clamp(96px, min(34cqw, 20cqh), 150px); aspect-ratio: 1; border-radius: 50%; object-fit: cover; display: block; margin: 10px auto 6px; border: 5px solid var(--cream); box-shadow: 0 0 0 4px var(--orange), 0 8px 18px rgba(0,0,0,.4); background: #2b3b33; }
+.sign .warn { display: inline-block; margin-top: 8px; background: #f3c623; color: var(--ink); font: 700 12px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase; padding: 5px 10px; border: 2px solid var(--ink); border-radius: 4px; }
+.lead { font: 400 16px/1.45 var(--body); max-width: 32ch; margin: 34px auto 0; }
+.how { font: 400 14px/1.4 var(--body); opacity: .8; max-width: 32ch; margin: 0 auto; }
+
+/* The course */
+#game { align-content: stretch; grid-template-rows: auto 1fr auto; gap: 8px; }
+.hud { width: 100%; display: grid; grid-template-columns: 1fr auto auto auto; gap: 14px; align-items: end; font: 700 12px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; }
+.hud b { display: block; font: 400 22px/1 var(--display); letter-spacing: 0; margin-top: 3px; color: #ffe7b8; }
+.hud .name { text-align: left; }
+.hud .name b { font-size: 17px; }
+.course { position: relative; width: 100%; min-height: 0; display: grid; place-items: center; }
+canvas { display: block; border-radius: 14px; box-shadow: 0 0 0 4px var(--rough), 0 14px 30px rgba(0,0,0,.4); touch-action: none; }
+.mikebar { display: flex; align-items: center; gap: 10px; width: 100%; }
+.mikebar img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 3px solid var(--cream); flex: none; }
+.bubble { flex: 1; background: var(--cream); color: var(--ink); border-radius: 12px; padding: 8px 12px; font: 700 14px/1.3 var(--body); text-align: left; position: relative; min-height: 2.7em; display: flex; align-items: center; }
+.bubble::before { content: ""; position: absolute; left: -8px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-right-color: var(--cream); border-left: 0; }
+
+/* Between holes */
+.card { position: absolute; left: 50%; top: 50%; width: min(86%, 340px); transform: translate(-50%, -50%); background: var(--cream); color: var(--ink); border-radius: 14px; padding: 18px 16px; display: grid; gap: 10px; box-shadow: 0 18px 40px rgba(0,0,0,.5); animation: pop .4s cubic-bezier(.3,1.6,.5,1); z-index: 5; }
+@keyframes pop { from { transform: translate(-50%, -50%) scale(.6); opacity: 0; } }
+.card h2 { margin: 0; font: 400 26px/1 var(--display); color: #a24f0f; }
+.card p { margin: 0; font: 400 15px/1.4 var(--body); }
+
+/* Scorecard */
+.scorecard { margin-top: 16px; width: 100%; max-width: 380px; background: #fbf8ee; color: var(--ink); border-radius: 6px; padding: 16px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.45); text-align: left; position: relative; }
+.scorecard h2 { margin: 0; font: 400 22px/1 var(--display); color: var(--rough); }
+.scorecard .club { font: 400 12px/1.3 var(--type); opacity: .75; margin: 4px 0 10px; }
+.scorecard table { width: 100%; border-collapse: collapse; font: 400 15px/1.2 var(--type); }
+.scorecard th { font: 700 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; text-align: center; padding: 6px 2px; background: var(--rough); color: var(--cream); }
+.scorecard th:first-child { text-align: left; padding-left: 6px; }
+.scorecard td { border-bottom: 1px solid #c9d6c2; padding: 7px 2px; text-align: center; }
+.scorecard td:first-child { text-align: left; padding-left: 6px; }
+.scorecard td.pen { font: 400 19px/1 var(--type); color: var(--pencil); transform: rotate(-3deg); }
+.scorecard tr.tot td { font-weight: 700; border-bottom: 0; }
+.scorecard .note { margin-top: 10px; font: 400 15px/1.35 var(--type); color: var(--pencil); }
+.scorecard .attest { margin-top: 10px; display: flex; justify-content: space-between; font: 700 10px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase; opacity: .6; gap: 8px; }
+.scorecard .sig { font: 400 22px/1 var(--type); color: var(--pencil); text-transform: none; letter-spacing: 0; opacity: 1; transform: rotate(-5deg); }
+.ribbon { position: absolute; right: 8px; top: -14px; background: var(--orange); color: var(--ink); font: 400 13px/1 var(--display); padding: 8px 10px; transform: rotate(8deg) scale(2.6); opacity: 0; box-shadow: 0 4px 10px rgba(0,0,0,.3); transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .2s; }
+.ribbon.on { transform: rotate(8deg) scale(1); opacity: 1; }
+
+/* Short phones (iPhone SE): tighten the tee sign so everything fits. */
+@container (max-height: 700px) {
+  #s1 { gap: 8px; }
+  .sign { padding: 12px 14px 14px; }
+  .sign h1 { font-size: 27px; }
+  .sign .sub { font-size: 13px; }
+  .sign .warn { margin-top: 6px; font-size: 11px; }
+  .sign::after { bottom: -24px; height: 24px; }
+  .lead { margin-top: 18px; font-size: 15px; }
+  .how { font-size: 13px; }
+  .hud { gap: 10px; font-size: 11px; }
+  .hud b { font-size: 19px; }
+  .hud .name b { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) { .screen, .card { animation: none; } }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 1. The tee-box sign -->
+  <section class="screen" id="s1">
+    <div class="sign">
+      <div class="hole">Holes 1–3 · Par 12 · Members & pests</div>
+      <h1>MIKE LESTER'S PEST PRO-AM</h1>
+      <img class="face" src="mike.jpg" alt="Mike Lester, in glasses, looking like he's already lost a ball">
+      <div class="sub">Former exterminator. Current golfer. Neither on purpose.</div>
+      <div class="warn">⚠ Course recently treated. Not well.</div>
+    </div>
+    <p class="lead">Mike retired from pest control. The pests did not retire from Mike. They followed him to the golf course.</p>
+    <p class="how">Drag back from anywhere and let go to putt. Hit a bug, it's exterminated. Mike's swing adds its own ideas.</p>
+    <button class="btn" id="tee" type="button">Tee off</button>
+  </section>
+
+  <!-- 2. The course -->
+  <section class="screen" id="game" hidden>
+    <div class="hud">
+      <span class="name">Hole <span id="hNum">1</span><b id="hName">The Anthill</b></span>
+      <span>Par<b id="par">3</b></span>
+      <span>Strokes<b id="strokes">0</b></span>
+      <span>Pests<b id="pests">0</b></span>
+    </div>
+    <div class="course" id="course">
+      <canvas id="cv" aria-label="Golf hole. Drag back and release to putt."></canvas>
+    </div>
+    <div class="mikebar"><img src="mike.jpg" alt="Mike"><div class="bubble" id="say">Pull back and let it go. That's also how I quit my last job.</div></div>
+  </section>
+
+  <!-- 3. The scorecard -->
+  <section class="screen" id="s3" hidden>
+    <div class="scorecard">
+      <div class="ribbon" id="ribbon">TECHNICALLY A SPORT</div>
+      <h2>OFFICIAL SCORECARD</h2>
+      <div class="club">Pest Pro-Am · Sisyphus Country Club (not a real club) · Player: M. Lester</div>
+      <table>
+        <thead><tr><th>Hole</th><th>Par</th><th>Mike</th><th>Pests</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="note" id="note"></div>
+      <div class="attest"><span>Player<br><span class="sig">M. Lester</span></span><span>Attested by<br><span class="sig">a raccoon</span></span></div>
+    </div>
+    <button class="btn" id="again" type="button">Play another round</button>
+    <div class="small">Mike Lester · as seen at Sisyphus</div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const show = id => document.querySelectorAll(".screen").forEach(s => s.hidden = s.id !== id);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  let ac;
+  function tone(f, d = .15, type = "square", vol = .05, slide = .5) {
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * slide, t + d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+  }
+  const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+  // Mike's lines: half exterminator, half golfer who should not be.
+  const SAY = {
+    shot: ["That's what I was going for.", "I'm not licensed for golf.", "The green is fast today. Or I'm very strong.",
+           "My pro says I have a natural swing. My pro is my uncle.", "Does it count if nobody saw it?",
+           "I used to get paid to walk around grass looking for things. This is the same job."],
+    shank: ["SHANK. That one's going to need a permit.", "Mulligan. That's French for \"again.\"", "Fore. Five. Six. However many."],
+    bug: ["Old habits.", "That ant had a family. Not anymore.", "I'm not saying I aimed for it. I'm not saying I didn't.",
+          "Still got it.", "That's a two-application roach.", "Professional courtesy: none."],
+    sand: ["Sand. My nemesis. Also my lunch, once.", "I'm gonna be in here a while. Tell my wife."],
+    water: ["It wanted to go swimming. I respect that.", "That's a donation to the pond.", "The mice saw that. They're laughing."],
+    raccoon: ["The raccoon touched it. That's his ball now.", "I've fought bigger raccoons. Lost to most of them."],
+    lip: ["It looked at the hole and said no.", "Too much sauce on it."],
+    sink: ["IN THE HOLE. Somebody write that down.", "That's going on my headstone.", "I knew it the whole time. I'm lying."],
+  };
+
+  // Holes in a 100 × 150 world: tee at the bottom, cup at the top. Pests wander; hit one with the ball to exterminate it.
+  const HOLES = [
+    { name: "The Anthill", par: 3, tee: [50, 136], cup: [50, 18],
+      walls: [], mounds: [[50, 78, 7]], sand: [], water: [],
+      pests: { e: "🐜", n: 9, speed: .32, size: 3.4, from: [50, 78], spawn: true } },
+    { name: "Roach Motel", par: 4, tee: [18, 136], cup: [80, 20],
+      walls: [[0, 74, 64, 6], [78, 96, 18, 14]], mounds: [], sand: [[52, 34, 30, 12]], water: [],
+      pests: { e: "🪳", n: 6, speed: .75, size: 3.6, from: [87, 103], spawn: true } },
+    { name: "Mouse Trap Lake", par: 5, tee: [50, 138], cup: [50, 15],
+      walls: [[0, 38, 30, 5], [70, 38, 30, 5]], mounds: [], sand: [[8, 112, 20, 12]], water: [[50, 80, 30, 13]],
+      pests: { e: "🐭", n: 5, speed: .5, size: 3.8, from: null, spawn: false }, raccoon: true },
+  ];
+
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  let W = 100, H = 150, scale = 1, dpr = 1;
+  function fit() {
+    const box = $("course").getBoundingClientRect();
+    const w = Math.max(10, Math.min(box.width - 8, (box.height - 8) * W / H));
+    scale = w / W; dpr = Math.min(3, window.devicePixelRatio || 1);
+    cv.style.width = w + "px"; cv.style.height = w * H / W + "px";
+    cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr);
+  }
+  window.addEventListener("resize", () => { if (!$("game").hidden) fit(); });
+
+  let hole, hi = 0, ball, strokes, pestsHit, pests, splats, raccoon, aim = null, moving = false, done = false, last, card = null, results = [], spawnClock = 0, raf;
+
+  function say(kind) { $("say").textContent = pick(SAY[kind]); }
+
+  function makePest() {
+    const p = hole.pests, a = rnd(0, Math.PI * 2);
+    const [x, y] = p.from ? p.from : [rnd(12, 88), rnd(25, 125)];
+    return { x, y, a, e: p.e, r: p.size };
+  }
+
+  function loadHole(i) {
+    hi = i; hole = HOLES[i];
+    ball = { x: hole.tee[0], y: hole.tee[1], vx: 0, vy: 0 }; last = { x: ball.x, y: ball.y };
+    strokes = 0; pestsHit = 0; splats = []; done = false; moving = false; aim = null; card && card.remove(); card = null;
+    pests = []; for (let k = 0; k < (hole.pests.spawn ? 3 : hole.pests.n); k++) pests.push(makePest());
+    raccoon = hole.raccoon ? { x: 85, y: 60, a: Math.PI, cool: 0 } : null;
+    $("hNum").textContent = i + 1; $("hName").textContent = hole.name; $("par").textContent = hole.par;
+    $("strokes").textContent = 0; $("pests").textContent = 0;
+    $("say").textContent = ["Pull back and let it go. That's also how I quit my last job.",
+      "Roach Motel. I've stayed here. Professionally.", "There's a raccoon by the lake. We have history."][i];
+  }
+
+  // Input: drag back from anywhere on the course, release to putt.
+  const pt = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }; };
+  cv.addEventListener("pointerdown", e => { if (moving || done) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); const p = pt(e); aim = { sx: p.x, sy: p.y, dx: 0, dy: 0 }; });
+  cv.addEventListener("pointermove", e => { if (!aim) return; const p = pt(e); aim.dx = aim.sx - p.x; aim.dy = aim.sy - p.y; });
+  const release = () => {
+    if (!aim) return;
+    const len = Math.hypot(aim.dx, aim.dy), a0 = Math.atan2(aim.dy, aim.dx); aim = null;
+    if (len < 4) return;
+    const power = Math.min(len, 55) / 55;
+    // Mike's swing: a slice that grows with power, and now and then a full shank.
+    const shank = Math.random() < .14;
+    const a = a0 + (shank ? rnd(-.9, .9) : rnd(-.16, .16) * (.4 + power));
+    const v = 3.6 * power * (shank ? rnd(.5, 1.3) : 1);
+    last = { x: ball.x, y: ball.y };
+    ball.vx = Math.cos(a) * v; ball.vy = Math.sin(a) * v; moving = true;
+    strokes++; $("strokes").textContent = strokes;
+    say(shank ? "shank" : "shot"); tone(shank ? 140 : 320, .12, "triangle", .08, shank ? .4 : 1.3); buzz(12);
+  };
+  cv.addEventListener("pointerup", release); cv.addEventListener("pointercancel", () => aim = null);
+
+  const inRect = (x, y, [rx, ry, rw, rh]) => x > rx && x < rx + rw && y > ry && y < ry + rh;
+  const inEllipse = (x, y, [cx, cy, rx, ry]) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < 1;
+
+  function step() {
+    // Pests wander (and new ants climb out of the hill).
+    spawnClock++;
+    if (hole.pests.spawn && pests.length < hole.pests.n && spawnClock % 70 === 0) pests.push(makePest());
+    pests.forEach(p => {
+      p.a += rnd(-.25, .25);
+      p.x += Math.cos(p.a) * hole.pests.speed; p.y += Math.sin(p.a) * hole.pests.speed;
+      if (p.x < 4 || p.x > 96) p.a = Math.PI - p.a;
+      if (p.y < 6 || p.y > 144) p.a = -p.a;
+      if (hole.walls.some(w => inRect(p.x, p.y, w)) || hole.water.some(w => inEllipse(p.x, p.y, w))) { p.a += Math.PI; p.x += Math.cos(p.a) * 2; p.y += Math.sin(p.a) * 2; }
+      p.x = Math.max(3, Math.min(97, p.x)); p.y = Math.max(4, Math.min(146, p.y));
+    });
+    if (raccoon) {
+      raccoon.cool = Math.max(0, raccoon.cool - 1);
+      const toBall = Math.atan2(ball.y - raccoon.y, ball.x - raccoon.x), near = Math.hypot(ball.x - raccoon.x, ball.y - raccoon.y);
+      raccoon.a = near < 30 && !moving ? toBall : raccoon.a + rnd(-.12, .12);
+      raccoon.x += Math.cos(raccoon.a) * .28; raccoon.y += Math.sin(raccoon.a) * .28;
+      if (raccoon.x < 8 || raccoon.x > 92) raccoon.a = Math.PI - raccoon.a;
+      if (raccoon.y < 48 || raccoon.y > 128) raccoon.a = -raccoon.a;
+      raccoon.x = Math.max(8, Math.min(92, raccoon.x)); raccoon.y = Math.max(48, Math.min(128, raccoon.y));
+      if (near < 6 && !raccoon.cool && !done) {
+        // He swats it somewhere. It's his course.
+        const a = rnd(0, Math.PI * 2); ball.vx = Math.cos(a) * 2.2; ball.vy = Math.sin(a) * 2.2; moving = true; raccoon.cool = 120;
+        say("raccoon"); tone(600, .2, "sawtooth", .05, .5); buzz(25);
+      }
+    }
+    if (!moving) return;
+
+    // Ball: move in small substeps so it can't tunnel through walls.
+    const sub = 4;
+    for (let s = 0; s < sub; s++) {
+      const nx = ball.x + ball.vx / sub, ny = ball.y + ball.vy / sub;
+      const hitX = hole.walls.some(w => inRect(nx, ball.y, w)) || nx < 2 || nx > 98;
+      const hitY = hole.walls.some(w => inRect(ball.x, ny, w)) || ny < 2 || ny > 148;
+      if (hitX) { ball.vx *= -.7; tone(500, .04, "square", .03, 1); } else ball.x = nx;
+      if (hitY) { ball.vy *= -.7; tone(500, .04, "square", .03, 1); } else ball.y = ny;
+      hole.mounds.forEach(([mx, my, mr]) => {
+        const dx = ball.x - mx, dy = ball.y - my, d = Math.hypot(dx, dy);
+        if (d < mr + 1.4) { const nx2 = dx / d, ny2 = dy / d, dot = ball.vx * nx2 + ball.vy * ny2; if (dot < 0) { ball.vx -= 1.7 * dot * nx2; ball.vy -= 1.7 * dot * ny2; } ball.x = mx + nx2 * (mr + 1.5); ball.y = my + ny2 * (mr + 1.5); }
+      });
+    }
+    const speed = Math.hypot(ball.vx, ball.vy);
+    // Exterminate anything it rolls over.
+    pests = pests.filter(p => {
+      if (speed > .25 && Math.hypot(p.x - ball.x, p.y - ball.y) < p.r + 1.6) {
+        pestsHit++; $("pests").textContent = pestsHit; splats.push({ x: p.x, y: p.y, r: p.r });
+        say("bug"); tone(90, .18, "sawtooth", .09, .5); buzz(30); return false;
+      }
+      return true;
+    });
+    const inSand = hole.sand.some(r => inRect(ball.x, ball.y, r));
+    const f = inSand ? .9 : .975;
+    ball.vx *= f; ball.vy *= f;
+    if (inSand && speed > .8 && Math.random() < .03) say("sand");
+
+    if (hole.water.some(w => inEllipse(ball.x, ball.y, w))) {
+      ball.x = last.x; ball.y = last.y; ball.vx = ball.vy = 0; moving = false;
+      strokes++; $("strokes").textContent = strokes; say("water"); tone(200, .4, "sine", .08, .3); buzz(40);
+      return checkGiveUp();
+    }
+    const dc = Math.hypot(ball.x - hole.cup[0], ball.y - hole.cup[1]);
+    if (dc < 3.2) {
+      if (speed < 2.6) return sink();
+      ball.vx += (ball.x - hole.cup[0]) * .25; ball.vy += (ball.y - hole.cup[1]) * .25; say("lip");
+    }
+    if (speed < .06) { ball.vx = ball.vy = 0; moving = false; checkGiveUp(); }
+  }
+
+  function checkGiveUp() {
+    if (strokes >= hole.par + 6) {
+      done = true;
+      showCard("Picked it up", `${strokes} strokes and a gentleman's agreement. ${pestsHit} pest${pestsHit === 1 ? "" : "s"} didn't make it.`, true);
+    }
+  }
+  function sink() {
+    done = true; moving = false; ball.x = hole.cup[0]; ball.y = hole.cup[1]; ball.vx = ball.vy = 0;
+    say("sink"); [523, 659, 784, 1046].forEach((fr, i) => setTimeout(() => tone(fr, .14, "triangle", .07, 1), i * 90)); buzz([20, 30, 20]);
+    const over = strokes - hole.par;
+    const word = strokes === 1 ? "HOLE IN ONE?!" : over <= -1 ? "Under par. Check his pockets." : over === 0 ? "Par. Somebody call his dad." : over <= 2 ? `+${over}. Honestly? Great for Mike.` : `+${over}. Classic Mike.`;
+    showCard(word, `${strokes} stroke${strokes > 1 ? "s" : ""} on a par ${hole.par}. ${pestsHit} pest${pestsHit === 1 ? "" : "s"} exterminated.`, false);
+  }
+  function showCard(title, body, gaveUp) {
+    results[hi] = { name: hole.name, par: hole.par, strokes, pests: pestsHit, gaveUp };
+    card = document.createElement("div"); card.className = "card";
+    const lastHole = hi === HOLES.length - 1;
+    card.innerHTML = `<h2></h2><p></p><button class="btn" type="button">${lastHole ? "Sign the scorecard" : "Next hole"}</button>`;
+    card.querySelector("h2").textContent = title; card.querySelector("p").textContent = body;
+    card.querySelector("button").addEventListener("click", () => lastHole ? scorecard() : loadHole(hi + 1));
+    $("course").appendChild(card);
+  }
+
+  // Drawing
+  function draw() {
+    const s = scale * dpr;
+    ctx.setTransform(s, 0, 0, s, 0, 0);
+    // Fairway stripes
+    for (let y = 0; y < H; y += 10) { ctx.fillStyle = (y / 10) % 2 ? "#4f9a4a" : "#58a652"; ctx.fillRect(0, y, W, 10); }
+    // Sand
+    hole.sand.forEach(([x, y, w, h]) => { ctx.fillStyle = "#e8d39a"; rr(x, y, w, h, 4); ctx.fill(); ctx.fillStyle = "rgba(160,130,70,.35)"; for (let i = 0; i < 12; i++) ctx.fillRect(x + (i * 7.3) % w, y + (i * 3.7) % h, .8, .8); });
+    // Water
+    hole.water.forEach(([cx, cy, rx, ry]) => { ctx.fillStyle = "#2f7fc0"; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = .6; ctx.beginPath(); ctx.ellipse(cx - 6, cy - 2, rx * .45, ry * .25, 0, 0, Math.PI); ctx.stroke(); });
+    // Walls (railroad-tie edging) and the motel
+    hole.walls.forEach(([x, y, w, h], i) => {
+      ctx.fillStyle = "#6e4526"; rr(x, y, w, h, 1.5); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,.25)"; for (let k = x + 6; k < x + w; k += 8) ctx.fillRect(k, y, .6, h);
+      if (hole.name === "Roach Motel" && i === 1) { ctx.fillStyle = "#f3c623"; ctx.font = "700 3.4px Atkinson Hyperlegible, sans-serif"; ctx.textAlign = "center"; ctx.fillText("MOTEL", x + w / 2, y + 5.5); ctx.fillText("VACANCY", x + w / 2, y + 10); }
+    });
+    // Anthill
+    hole.mounds.forEach(([x, y, r]) => { const g = ctx.createRadialGradient(x - 2, y - 2, 1, x, y, r); g.addColorStop(0, "#c08a55"); g.addColorStop(1, "#7b5230"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3a2412"; ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill(); });
+    // Splats stay where they happened
+    splats.forEach(p => {
+      ctx.fillStyle = "rgba(70,45,20,.6)"; ctx.beginPath();
+      for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, rr2 = p.r * (k % 2 ? .55 : 1); ctx.lineTo(p.x + Math.cos(a) * rr2, p.y + Math.sin(a) * rr2); }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = .35; ctx.beginPath();
+      [[-1, 1], [1, 1]].forEach(([sx]) => { const ex = p.x + sx * p.r * .3, ey = p.y - p.r * .1, k = p.r * .14; ctx.moveTo(ex - k, ey - k); ctx.lineTo(ex + k, ey + k); ctx.moveTo(ex + k, ey - k); ctx.lineTo(ex - k, ey + k); });
+      ctx.stroke();
+    });
+    // Cup + flag
+    const [cx, cy] = hole.cup;
+    ctx.fillStyle = "#1c2a1a"; ctx.beginPath(); ctx.arc(cx, cy, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#eee"; ctx.lineWidth = .6; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 13); ctx.stroke();
+    ctx.fillStyle = "#ef7d22"; ctx.beginPath(); ctx.moveTo(cx, cy - 13); ctx.lineTo(cx + 8, cy - 10.5); ctx.lineTo(cx, cy - 8); ctx.fill();
+    // Pests + raccoon (emoji)
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    pests.forEach(p => { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2); ctx.font = `${p.r * 2}px system-ui, sans-serif`; ctx.fillText(p.e, 0, 0); ctx.restore(); });
+    if (raccoon) { ctx.font = "9px system-ui, sans-serif"; ctx.fillText("🦝", raccoon.x, raccoon.y); }
+    // Tee marker
+    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.fillRect(hole.tee[0] - 4, hole.tee[1] + 3, 1.6, 1.6); ctx.fillRect(hole.tee[0] + 2.4, hole.tee[1] + 3, 1.6, 1.6);
+    // Ball
+    if (!done || Math.hypot(ball.x - cx, ball.y - cy) > 1) {
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.arc(ball.x + .5, ball.y + .7, 1.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ball.x, ball.y, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    // Aim: dotted line the way it'll go (roughly; Mike adds the rest) + power bar
+    if (aim) {
+      const len = Math.min(Math.hypot(aim.dx, aim.dy), 55), a = Math.atan2(aim.dy, aim.dx), p = len / 55;
+      ctx.strokeStyle = `rgba(255,255,255,${.4 + p * .5})`; ctx.lineWidth = .8; ctx.setLineDash([1.5, 1.5]);
+      ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x + Math.cos(a) * (6 + len * .8), ball.y + Math.sin(a) * (6 + len * .8)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(0,0,0,.35)"; rr(4, 4, 30, 3, 1.5); ctx.fill();
+      ctx.fillStyle = p > .85 ? "#e0442c" : "#f3c623"; rr(4, 4, 30 * p, 3, 1.5); ctx.fill();
+    }
+  }
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+  function loop() { step(); draw(); raf = requestAnimationFrame(loop); }
+
+  function scorecard() {
+    cancelAnimationFrame(raf); card && card.remove();
+    let tp = 0, ts = 0, tk = 0;
+    $("rows").innerHTML = results.map((r, i) => {
+      tp += r.par; ts += r.strokes; tk += r.pests;
+      return `<tr><td>${i + 1}. ${r.name}</td><td>${r.par}</td><td class="pen">${r.strokes}${r.gaveUp ? "*" : ""}</td><td class="pen">${r.pests}</td></tr>`;
+    }).join("") + `<tr class="tot"><td>Total</td><td>${tp}</td><td class="pen">${ts}</td><td class="pen">${tk}</td></tr>`;
+    const over = ts - tp, gave = results.some(r => r.gaveUp);
+    $("note").textContent = (over <= 0 ? `Even or under par. Mike would like this framed and the course investigated.`
+      : over <= 6 ? `+${over}. Mike's best round ever, and he'd like that on the record.`
+      : `+${over}. Mike says the course was "playing long," which is true if you hit it sideways.`)
+      + ` ${tk} pest${tk === 1 ? "" : "s"} exterminated, free of charge, which is the most money he's ever lost at golf.` + (gave ? " *Picked it up." : "");
+    $("ribbon").classList.remove("on"); show("s3");
+    setTimeout(() => { $("ribbon").classList.add("on"); tone(110, .3, "square", .08, .7); buzz(40); }, 650);
+  }
+
+  function round() { results = []; show("game"); fit(); loadHole(0); cancelAnimationFrame(raf); loop(); }
+  $("tee").addEventListener("click", () => { tone(260, .2, "triangle", .07, 1.6); round(); });
+  $("again").addEventListener("click", round);
+})();
+</script>
+</body>
+</html>
