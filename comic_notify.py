@@ -28,6 +28,7 @@ SMTP_HOST = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
 SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
 SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
+AD_REVIEW_TO = ["sam@sisyphusbrewing.com"]  # ad reviews (rate/index.html) go to Sam, not the booking inbox
 TO = [a.strip() for a in (os.environ.get("COMIC_EMAIL_TO") or "booking@sisyphusbrewing.com").split(",") if a.strip()]
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 SCREENS = 7
@@ -59,6 +60,8 @@ def main():
 
     if data.get("kind") == "booking":
         return send(*booking(data, who))
+    if data.get("kind") == "ad_review":
+        return send(*ad_review(data), to=AD_REVIEW_TO)
 
     lines = [f"{who} roasted the comics pitch.", ""]
     for q in questions():
@@ -94,15 +97,27 @@ def booking(data, who):
     return f"Booking: {who} wants a weekend ({how.lower()})", lines
 
 
-def send(subject, lines):
+def ad_review(data):
+    """A comic rated how we ran their ads (rate/index.html)."""
+    who = data.get("name") or "A comic"
+    lines = [f"{who} inspected the Ad Factory.", ""]
+    for k, label in (("copy", "The words"), ("photos", "The pictures"), ("emails", "The emails"),
+                     ("say", "Who's driving"), ("worth", "Worth it"), ("notes", "Anything else")):
+        v = str(data.get(k) or "").strip() or "-"
+        lines += [label.upper(), "  " + v.replace("\n", "\n  "), ""]
+    return f"Ad review: {who} rated the ad help", lines
+
+
+def send(subject, lines, to=None):
+    to = to or TO
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = f"Sisyphus <{FROM_EMAIL}>"
-    msg["To"] = ", ".join(TO)
+    msg["To"] = ", ".join(to)
     msg.set_content("\n".join(lines))
 
     if DRY_RUN:
-        print(f"[DRY RUN] To: {TO}\nSubject: {msg['Subject']}\n")
+        print(f"[DRY RUN] To: {to}\nSubject: {msg['Subject']}\n")
         print("\n".join(lines))
         return
     if not SMTP_USER or not SMTP_PASS:
@@ -110,7 +125,7 @@ def send(subject, lines):
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
-    print(f"Sent '{msg['Subject']}' to {', '.join(TO)}")
+    print(f"Sent '{msg['Subject']}' to {', '.join(to)}")
 
 
 if __name__ == "__main__":
