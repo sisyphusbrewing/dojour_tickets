@@ -52,7 +52,7 @@ from show_dates import parse_show_datetime, CENTRAL_TZ
 
 # Swaps close this long before the original show, and the new show must be at
 # least this far off too. The edge function uses the same number.
-CUTOFF_HOURS = 2
+CUTOFF_HOURS = 48   # Sam, Oct 30 2026
 
 CREDIT_TITLE = "Exchange credit (no refund)"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
