@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="The Ad Factory Inspection">
+<meta property="og:description" content="A golden ticket from Sisyphus. Inspect the ad factory and tell us how we did.">
+<title>The Ad Factory Inspection</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Henny+Penny&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+/* A comic rates how Sisyphus ran their ads, Wonka style (same look as goodenough/).
+   ?n=<first name> personalizes it. Answers go to comic_feedback (tag ad-review:<name>, data.kind "ad_review")
+   and the "Comic feedback" action emails them to Sam (comic_notify.py). */
+:root {
+  --plum: #3b1f4f; --plum-deep: #24112f; --gold: #f2c14e; --gold-deep: #b98a1c;
+  --cream: #fff7e2; --cherry: #e0414b; --teal: #3fb8a8; --ink: #2b1636; --slate: #4a6c86;
+  --seuss: "Henny Penny", "Comic Sans MS", cursive;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background:
+    radial-gradient(120% 60% at 50% 30%, rgba(242,193,78,.18), transparent 60%),
+    repeating-linear-gradient(115deg, var(--plum) 0 34px, var(--plum-deep) 34px 68px);
+  color: var(--cream); font-family: var(--body);
+  overflow-x: hidden; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.stage { position: relative; min-height: 100%; max-width: 520px; margin: 0 auto; container-type: inline-size; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.screen { position: relative; width: 100%; max-width: 420px; display: grid; justify-items: center; gap: 14px; text-align: center; animation: in .6s cubic-bezier(.3,1.4,.5,1); }
+@keyframes in { from { opacity: 0; transform: translateY(14px) scale(.97); } }
+
+.ticket {
+  position: relative; width: 100%;
+  background: linear-gradient(135deg, #ffe08a, var(--gold) 45%, #e0a92e 70%, #ffe7a3);
+  color: var(--ink); border-radius: 10px; padding: 22px 20px 20px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 0 0 3px rgba(255,255,255,.35);
+  -webkit-mask: radial-gradient(circle 12px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 12px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  animation: shimmer 5s ease-in-out infinite, in .7s cubic-bezier(.3,1.4,.5,1);
+}
+.ticket::before { content: ""; position: absolute; inset: 8px; border: 2px dashed rgba(43,22,54,.45); border-radius: 6px; pointer-events: none; }
+@keyframes shimmer { 50% { filter: brightness(1.08) saturate(1.1); } }
+.admit { font: 700 11px/1 var(--body); letter-spacing: .28em; text-transform: uppercase; opacity: .75; }
+.ticket h1 { margin: 16px 0 4px; font: 400 clamp(30px, 10cqw, 46px)/1.02 var(--seuss); color: var(--plum); text-wrap: balance; }
+.ticket h1 .name { color: var(--cherry); display: inline-block; transform: rotate(-3deg); }
+.verse { margin: 10px auto 0; font: italic 400 clamp(15px, 4.4cqw, 18px)/1.35 var(--body); max-width: 32ch; }
+.verse span { display: block; }
+.fine { margin-top: 10px; font-size: 11px; letter-spacing: .06em; opacity: .7; }
+
+.btn {
+  font: 400 clamp(22px, 7cqw, 30px)/1 var(--seuss); color: var(--ink);
+  background: var(--teal); border: 0; border-radius: 999px; padding: 14px 28px; cursor: pointer;
+  box-shadow: 0 6px 0 #22796e, 0 14px 24px rgba(0,0,0,.35);
+  animation: wobble 2.6s ease-in-out infinite;
+}
+.btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #22796e; animation: none; }
+.btn:focus-visible, .candy:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+.btn[disabled] { opacity: .5; animation: none; }
+@keyframes wobble { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg) scale(1.03); } }
+.from { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+.from b { background: var(--slate); color: var(--cream); padding: .15em .45em; display: inline-block; transform: rotate(-3deg); letter-spacing: .1em; }
+
+.sign { font: 700 12px/1 var(--body); letter-spacing: .2em; text-transform: uppercase; color: var(--ink); background: linear-gradient(#ffe08a, var(--gold-deep)); padding: 7px 12px; border-radius: 4px; box-shadow: 0 3px 0 rgba(0,0,0,.35); }
+.room h2 { margin: 0; font: 400 clamp(28px, 9cqw, 40px)/1.05 var(--seuss); color: var(--gold); text-wrap: balance; }
+.room .q { margin: 0; font: italic 400 clamp(16px, 4.6cqw, 19px)/1.35 var(--body); max-width: 30ch; }
+.prop { font-size: clamp(56px, 18cqw, 80px); line-height: 1; filter: drop-shadow(0 8px 16px rgba(0,0,0,.45)); animation: wobble 2.6s ease-in-out infinite; }
+.candies { width: 100%; display: grid; gap: 10px; }
+.candy {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  font: 700 clamp(15px, 4.4cqw, 17px)/1.25 var(--body); color: var(--ink);
+  border: 0; border-radius: 16px; padding: 12px 14px; cursor: pointer;
+  background: repeating-linear-gradient(115deg, var(--cream) 0 16px, #ffe9ef 16px 32px);
+  box-shadow: 0 5px 0 rgba(0,0,0,.35); transition: transform .15s;
+}
+.candy .e { font-size: 26px; flex: none; }
+.candy:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.candy.picked { background: var(--gold); transform: scale(1.03) rotate(-1deg); }
+.meter { width: 100%; display: flex; justify-content: space-between; gap: 6px; }
+.meter button { flex: 1; aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; font: 400 clamp(22px, 7cqw, 30px)/1 var(--seuss); color: var(--ink); background: radial-gradient(circle at 35% 30%, #fff, var(--teal)); box-shadow: 0 5px 0 #22796e; }
+.meter button.picked { background: radial-gradient(circle at 35% 30%, #fff, var(--gold)); box-shadow: 0 5px 0 var(--gold-deep); transform: scale(1.12); }
+.meterlabel { min-height: 2.6em; font: italic 400 clamp(15px, 4.4cqw, 18px)/1.35 var(--body); }
+textarea { width: 100%; min-height: 120px; resize: vertical; border-radius: 14px; border: 3px solid var(--gold); background: var(--cream); color: var(--ink); padding: 12px; font: 400 16px/1.4 var(--body); }
+.skip { background: none; border: 0; color: var(--cream); opacity: .7; text-decoration: underline; font: 400 14px var(--body); cursor: pointer; }
+.dots { display: flex; gap: 6px; justify-content: center; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,247,226,.25); }
+.dots i.on { background: var(--gold); }
+.letter { width: 100%; background: var(--cream); color: var(--ink); border-radius: 6px; padding: 20px 18px 18px; box-shadow: 0 18px 40px rgba(0,0,0,.45); animation: unfold .8s cubic-bezier(.3,1.3,.5,1); transform-origin: top center; }
+@keyframes unfold { from { transform: scaleY(.05); opacity: 0; } }
+.letter h2 { margin: 0; font: 400 clamp(26px, 8cqw, 34px)/1.1 var(--seuss); color: var(--plum); }
+.letter p { margin: 10px 0 0; font: italic 400 clamp(15px, 4.4cqw, 17px)/1.4 var(--body); }
+.letter .sig { font: 400 22px/1 var(--seuss); color: var(--cherry); margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<main class="stage" id="stage"></main>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var NAME = (params.get("n") || "").trim().slice(0, 30);
+  var who = NAME || "Comedian";
+  var TAG = "ad-review:" + (NAME || "anon").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  var sb = window.supabase.createClient("https://idsdwkubqnavkazlteis.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ",
+    { auth: { persistSession: false } });
+  var stage = document.getElementById("stage");
+  var answers = { kind: "ad_review", name: NAME };
+
+  // The rooms. Each one is a question; "k" is the key in the saved answers and the email.
+  var ROOMS = [
+    { k: "copy", sign: "Room 1 · The Fudge Room", prop: "🍫", title: "The Words",
+      q: "We stirred up some ad copy. How did it taste?",
+      options: [["🏆", "Golden. Sounds like me."], ["🧂", "Tasty. Needs salt."], ["🦝", "Who wrote this, a raccoon?"]] },
+    { k: "photos", sign: "Room 2 · The Picture Tube", prop: "📸", title: "The Pictures",
+      q: "We shrank you down and put you in an ad. How'd you come out?",
+      options: [["✨", "Handsome. Accurate."], ["🙂", "Fine. That's me, I guess."], ["🚔", "Mugshot energy."]] },
+    { k: "emails", sign: "Room 3 · The Inbox River", prop: "📬", title: "The Emails",
+      q: "We sent a few emails. Some of them at the same time.",
+      options: [["👌", "Just right."], ["🌊", "A lot, but I'm floating."], ["🆘", "I am being hunted."]] },
+    { k: "say", sign: "Room 4 · The Steering Wheel", prop: "🎡", title: "Who's Driving",
+      q: "Did you get enough say in your own ads?",
+      options: [["🚗", "I'm driving. Feels good."], ["🤝", "We're carpooling."], ["🧳", "I'm in the trunk."]] },
+    { k: "worth", meter: true, sign: "Room 5 · The Gobstopper Scale", prop: "🍬", title: "Worth It?",
+      q: "Tap a gobstopper. Was this worth your time?",
+      labels: ["Rotten egg. Down the chute.", "Stale.", "Chewy. Fine.", "Pretty sweet.", "Everlasting. Do it again."] },
+    { k: "notes", text: true, sign: "Room 6 · The Suggestion Box", prop: "📝", title: "Anything Else?",
+      q: "What should we do differently? Be honest. The Oompa Loompas can take it.",
+      ph: "More of this, less of that, stop emailing me at 10pm..." }
+  ];
+
+  function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function show(node) { stage.innerHTML = ""; stage.appendChild(node); window.scrollTo(0, 0); }
+  function dots(i) { var s = ""; for (var j = 0; j < ROOMS.length; j++) s += '<i class="' + (j <= i ? "on" : "") + '"></i>'; return '<div class="dots">' + s + "</div>"; }
+
+  function ticket() {
+    var n = el('<section class="screen">' +
+      '<div class="ticket"><div class="admit">Admit one · Golden ticket</div>' +
+      '<h1><span class="name">' + esc(who) + '</span>, you\'re invited to inspect the Ad Factory</h1>' +
+      '<p class="verse"><span>We made you some ads.</span><span>Some with words, some with pictures.</span><span>Now tell us the truth:</span><span>are we candy, or fixtures?</span></p>' +
+      '<div class="fine">Six rooms · about a minute · no Oompa Loompas were harmed</div></div>' +
+      '<button class="btn">Step inside</button>' +
+      '<div class="from">From <b>Sisyphus</b></div></section>');
+    n.querySelector(".btn").onclick = function () { room(0); };
+    show(n);
+  }
+
+  function room(i) {
+    var r = ROOMS[i];
+    var body;
+    if (r.meter) {
+      body = '<div class="meter">' + [1, 2, 3, 4, 5].map(function (v) { return '<button aria-label="' + v + ' of 5">' + v + "</button>"; }).join("") + '</div><div class="meterlabel">&nbsp;</div>';
+    } else if (r.text) {
+      body = '<textarea placeholder="' + esc(r.ph) + '"></textarea><button class="btn">Drop it in</button><button class="skip">Nothing to add</button>';
+    } else {
+      body = '<div class="candies">' + r.options.map(function (o) { return '<button class="candy"><span class="e">' + o[0] + "</span>" + esc(o[1]) + "</button>"; }).join("") + "</div>";
+    }
+    var n = el('<section class="screen room">' + dots(i) + '<div class="sign">' + esc(r.sign) + '</div><div class="prop">' + r.prop + "</div><h2>" + esc(r.title) + '</h2><p class="q">' + esc(r.q) + "</p>" + body + "</section>");
+    var go = function () { setTimeout(function () { i + 1 < ROOMS.length ? room(i + 1) : finish(i + 1); }, 550); };
+    if (r.meter) {
+      var label = n.querySelector(".meterlabel");
+      n.querySelectorAll(".meter button").forEach(function (b, j) {
+        b.onclick = function () {
+          n.querySelectorAll(".meter button").forEach(function (x) { x.classList.remove("picked"); });
+          b.classList.add("picked"); label.textContent = r.labels[j];
+          answers[r.k] = (j + 1) + "/5 · " + r.labels[j];
+          setTimeout(go, 500);
+        };
+      });
+    } else if (r.text) {
+      var ta = n.querySelector("textarea");
+      n.querySelector(".btn").onclick = function () { answers[r.k] = ta.value.trim(); go(); };
+      n.querySelector(".skip").onclick = function () { answers[r.k] = ""; go(); };
+    } else {
+      n.querySelectorAll(".candy").forEach(function (b, j) {
+        b.onclick = function () { b.classList.add("picked"); answers[r.k] = r.options[j][1]; burst(30); go(); };
+      });
+    }
+    show(n);
+  }
+
+  function finish(reached) {
+    burst(160);
+    show(el('<section class="screen"><div class="letter"><h2>Inspection complete</h2>' +
+      "<p>Thanks, " + esc(who) + ". Your answers went straight to the top of the factory, which is a guy behind a bar in Minneapolis.</p>" +
+      "<p>We'll read every word and fix what's broken. Then we'll push the boulder back up the hill, like always.</p>" +
+      '<div class="sig">-Sam</div></div><div class="from">From <b>Sisyphus</b></div></section>'));
+    if (params.has("preview")) return;
+    sb.rpc("comic_feedback_submit", { p_tag: TAG, p_data: answers, p_max_screen: reached }).then(function (res) {
+      if (res.error || !res.data) return;
+      sb.functions.invoke("job-applied", { body: { id: res.data, kind: "comic" } }).catch(function () {});
+    }, function () {});
+  }
+
+  // Confetti in gold, cherry, teal and cream.
+  var cv = document.getElementById("confetti"), cx = cv.getContext("2d"), bits = [], raf = 0;
+  function size() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+  addEventListener("resize", size); size();
+  function burst(count) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var cols = ["#f2c14e", "#e0414b", "#3fb8a8", "#fff7e2"];
+    for (var i = 0; i < count; i++) bits.push({ x: cv.width / 2, y: cv.height * .35, vx: (Math.random() - .5) * 18 * devicePixelRatio, vy: (-Math.random() * 16 - 4) * devicePixelRatio, r: Math.random() * 6 + 3, c: cols[i % 4], a: Math.random() * 6, life: 90 + Math.random() * 40 });
+    if (!raf) tick();
+  }
+  function tick() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    bits = bits.filter(function (b) { return b.life-- > 0; });
+    bits.forEach(function (b) { b.vy += .5 * devicePixelRatio; b.x += b.vx; b.y += b.vy; b.a += .2; cx.save(); cx.translate(b.x, b.y); cx.rotate(b.a); cx.fillStyle = b.c; cx.fillRect(-b.r, -b.r / 2, b.r * 2, b.r); cx.restore(); });
+    raf = bits.length ? requestAnimationFrame(tick) : 0;
+  }
+
+  ticket();
+})();
+</script>
+</body>
+</html>
