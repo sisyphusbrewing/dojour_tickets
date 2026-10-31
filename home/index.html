@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sam's Home Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* Portrait wall screen (Apolosign, 1080x1920). Everything is sized in vw so
+     it scales to whatever the screen is. */
+  :root {
+    --slate: #4f6d8c; --slate-hi: #7f9cbb; --ink: #0f1820; --card: rgba(18, 28, 38, .82);
+    --line: rgba(127, 156, 187, .28); --text: #eef2f6; --muted: #9fb0c1;
+    --go: #6fcf97; --maybe: #f2c94c; --no: #eb6f6f; --sis: #c9a86a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--ink); color: var(--text); overflow: hidden; }
+  body { font-family: "Cormorant Garamond", Georgia, serif; font-size: 2.6vw; display: flex; flex-direction: column; }
+  .band { font-family: Oswald, sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .14em;
+    font-size: 1.7vw; color: #fff; background: var(--slate); display: inline-block; padding: .25vw 1.4vw;
+    transform: rotate(-2deg); margin: 0 0 1vw -.4vw; }
+  .muted { color: var(--muted); }
+  section { padding: 1.6vw 3vw; border-top: 1px solid var(--line); }
+
+  /* Map and clock */
+  #top { position: relative; flex: 0 0 23%; overflow: hidden; background: #123; border: 0; padding: 0; }
+  #top iframe { position: absolute; inset: -6% -2% -2% -2%; width: 104%; height: 108%; border: 0; pointer-events: none; }
+  #top .shade { position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,24,32,.92), rgba(15,24,32,0) 55%); }
+  #clock { position: absolute; left: 3vw; bottom: 2vw; }
+  #clock .t { font-size: 13vw; font-weight: 600; line-height: 1; }
+  #clock .t small { font-size: 4vw; margin-left: 1vw; }
+  #clock .d { font-size: 3.6vw; font-style: italic; margin-top: .6vw; }
+  #home { position: absolute; right: 3vw; bottom: 2.4vw; text-align: right; }
+  #home .temp { font-size: 9vw; font-weight: 600; line-height: 1; margin-bottom: .8vw; }
+  #home .sky { font-size: 2.6vw; }
+
+  /* On the water */
+  #water { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2vw; align-items: end; }
+  #water .band { grid-column: 1 / -1; justify-self: start; }
+  .stat .v { font-size: 7vw; font-weight: 600; line-height: 1; }
+  .stat .v small { font-size: 2.6vw; margin-left: .4vw; }
+  .stat .l { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .12em; font-size: 1.5vw; color: var(--muted); margin-top: .6vw; }
+  .arrow { display: inline-block; font-size: 4.5vw; margin-left: .6vw; transition: transform .6s; }
+
+  /* Sail call */
+  #call { flex: 0 0 auto; }
+  #days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6vw; }
+  .day { background: var(--card); border: 1px solid var(--line); border-left: .8vw solid var(--muted); border-radius: 1vw; padding: 1.2vw 1.6vw; }
+  .day.go { border-left-color: var(--go); } .day.maybe { border-left-color: var(--maybe); } .day.no { border-left-color: var(--no); }
+  .day .n { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .12em; font-size: 1.6vw; color: var(--muted); }
+  .day .verdict { font-family: Oswald, sans-serif; font-weight: 600; font-size: 3.6vw; letter-spacing: .06em; margin: .2vw 0; }
+  .day.go .verdict { color: var(--go); } .day.maybe .verdict { color: var(--maybe); } .day.no .verdict { color: var(--no); }
+  .day .why { font-size: 2.2vw; line-height: 1.15; }
+  .day .quip { font-style: italic; font-size: 2.1vw; color: var(--muted); margin-top: .4vw; line-height: 1.1; }
+  #nws { margin-top: 1.4vw; font-size: 2.3vw; line-height: 1.2; }
+  #nws b { font-family: Oswald, sans-serif; font-weight: 500; letter-spacing: .08em; font-size: 1.7vw; color: var(--slate-hi); margin-right: .6vw; }
+  #warn { display: none; margin-top: 1vw; background: rgba(235,111,111,.18); border: 1px solid var(--no); border-radius: .8vw; padding: .8vw 1.4vw; font-weight: 600; }
+
+  /* Sisyphus */
+  #sis { flex: 1 1 auto; display: grid; grid-template-columns: 38% 1fr; gap: 2.4vw; min-height: 0; }
+  #sis .band { grid-column: 1 / -1; justify-self: start; background: var(--sis); color: var(--ink); margin-bottom: 0; }
+  #next { position: relative; border-radius: 1.2vw; overflow: hidden; background: #000; min-height: 0; }
+  #next img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #next .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 4vw 1.6vw 1.2vw; background: linear-gradient(to top, rgba(0,0,0,.85), transparent); }
+  #next .who { font-size: 4.2vw; font-weight: 700; line-height: 1; }
+  #next .when { font-size: 2.4vw; font-style: italic; }
+  #shows { list-style: none; min-height: 0; overflow: hidden; }
+  #shows li { display: grid; grid-template-columns: 10vw 1fr auto; gap: 1.4vw; align-items: baseline; padding: .55vw 0; border-bottom: 1px solid var(--line); }
+  #shows .dt { font-family: Oswald, sans-serif; text-transform: uppercase; font-size: 1.7vw; letter-spacing: .08em; color: var(--sis); }
+  #shows .nm { font-size: 2.5vw; font-weight: 600; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #shows .tm { font-size: 2.2vw; color: var(--muted); white-space: nowrap; }
+  #shows li.tonight .nm { color: var(--sis); }
+
+  /* Calendar */
+  #cal { flex: 0 0 auto; }
+  #calgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vw; }
+  .cd .h { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .1em; font-size: 1.6vw; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: .4vw; margin-bottom: .6vw; }
+  .cd .h b { font-size: 3.2vw; color: var(--text); margin-right: .6vw; font-weight: 600; }
+  .ev { border-left: .5vw solid var(--slate-hi); padding: .2vw 0 .2vw .8vw; margin-bottom: .6vw; font-size: 2.2vw; line-height: 1.1; }
+  .ev.sis { border-left-color: var(--sis); }
+  .ev i { display: block; font-style: normal; font-family: Oswald, sans-serif; font-size: 1.4vw; letter-spacing: .08em; color: var(--muted); }
+
+  /* Footer */
+  #foot { flex: 0 0 auto; display: grid; grid-template-columns: 1fr; gap: 1vw; padding-bottom: 2vw; }
+  #term .w { font-size: 3.6vw; font-weight: 700; }
+  #term .w em { font-size: 2vw; color: var(--muted); font-weight: 500; margin-left: 1vw; }
+  #term .m { font-size: 2.4vw; line-height: 1.2; }
+  #term .j { font-size: 2.3vw; font-style: italic; color: var(--slate-hi); margin-top: .3vw; }
+  #tap { font-size: 2.2vw; color: var(--muted); white-space: nowrap; overflow: hidden; }
+  #tap b { font-family: Oswald, sans-serif; font-weight: 500; letter-spacing: .12em; font-size: 1.5vw; color: var(--sis); margin-right: 1vw; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<section id="top">
+  <iframe id="map" title="Wind over Lake Superior" loading="lazy"></iframe>
+  <div class="shade"></div>
+  <div id="clock"><div class="t" id="time">--:--</div><div class="d" id="date"></div></div>
+  <div id="home"><div class="temp" id="htemp">--°</div><div class="sky" id="hsky"></div></div>
+</section>
+
+<section id="water">
+  <span class="band">On the water · <span id="spot"></span></span>
+  <div class="stat"><div class="v"><span id="wind">--</span><small>kt</small><span class="arrow" id="warrow">↓</span></div><div class="l" id="windl">Wind</div></div>
+  <div class="stat"><div class="v"><span id="waves">--</span><small>ft</small></div><div class="l">Waves</div></div>
+  <div class="stat"><div class="v" id="sunset">--</div><div class="l" id="sunl">Sunset</div></div>
+  <div class="stat"><div class="v" id="drive">--</div><div class="l" id="drivel">Drive to the boat</div></div>
+</section>
+
+<section id="call">
+  <span class="band">Sail call</span>
+  <div id="days"></div>
+  <div id="warn"></div>
+  <div id="nws"></div>
+</section>
+
+<section id="sis">
+  <span class="band">Next at Sisyphus</span>
+  <div id="next"><img id="nextimg" alt=""><div class="cap"><div class="who" id="nextwho"></div><div class="when" id="nextwhen"></div></div></div>
+  <ul id="shows"></ul>
+</section>
+
+<section id="cal" class="hidden">
+  <span class="band">Coming up</span>
+  <div id="calgrid"></div>
+</section>
+
+<section id="foot">
+  <div id="term"><span class="band">Sailing word of the day</span><div class="w" id="tw"></div><div class="m" id="tm"></div><div class="j" id="tj"></div></div>
+  <div id="tap"></div>
+</section>
+
+<script>
+// ---------- Settings (all can be set in the screen's URL) ----------
+// ?boat=lat,lon   where the boat is (default: Bayfield, WI)
+// ?from=lat,lon   where the drive starts (default: Sisyphus)
+// ?zone=LSZ147    NWS nearshore marine zone (default: Sand Island to Bayfield)
+// ?ical=URL       secret iCal address of a personal calendar (optional)
+// ?home=lat,lon   where the big temperature is for (default: Minneapolis)
+var Q = new URLSearchParams(location.search);
+function ll(s, d) { var p = String(s || '').split(',').map(Number); return p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]) ? p : d; }
+var BOAT = ll(Q.get('boat'), [46.7975, -90.8510]);
+var FROM = ll(Q.get('from'), [44.9706, -93.2862]);
+var HOME = ll(Q.get('home'), [44.9706, -93.2862]);
+var ZONE = Q.get('zone') || 'LSZ147';
+var ICAL = Q.get('ical') || '';
+var SPOT = Q.get('spot') || 'Apostle Islands';
+var TZ = 'America/Chicago';
+var ICAL_PROXY = 'https://idsdwkubqnavkazlteis.supabase.co/functions/v1/ical-proxy?url=';
+var SHOP = 'https://www.sisyphusbrewing.com/products.json?limit=250';
+var MENU = 'https://sisyphusmenu.stharriman.workers.dev/';
+
+function $(id) { return document.getElementById(id); }
+function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function getJSON(u) { return fetch(u, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+function every(fn, minutes) { fn(); setInterval(fn, minutes * 60000); }
+function dayKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function hm(d) { var h = d.getHours() % 12 || 12, m = d.getMinutes(); return h + (m ? ':' + (m < 10 ? '0' : '') + m : '') + (d.getHours() < 12 ? ' am' : ' pm'); }
+var M_TO_FT = 3.28084;
+
+$('spot').textContent = SPOT;
+$('map').src = 'https://earth.nullschool.net/#current/wind/surface/level/orthographic=' + (BOAT[1] + 0.6).toFixed(2) + ',' + (BOAT[0] - 0.1).toFixed(2) + ',5200/loc=' + BOAT[1].toFixed(3) + ',' + BOAT[0].toFixed(3);
+
+// ---------- Clock ----------
+function tick() {
+  var d = new Date(), h = d.getHours() % 12 || 12, m = d.getMinutes();
+  $('time').innerHTML = h + ':' + (m < 10 ? '0' : '') + m + '<small>' + (d.getHours() < 12 ? 'AM' : 'PM') + '</small>';
+  $('date').textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  // Reload once a night so changes to this page reach the screen by themselves.
+  if (d.getHours() === 4 && d.getMinutes() === 0 && d.getSeconds() < 30) location.reload();
+}
+setInterval(tick, 15000); tick();
+
+// ---------- Weather ----------
+var SKY = { 0: ['☀', 'Clear'], 1: ['🌤', 'Mostly clear'], 2: ['⛅', 'Partly cloudy'], 3: ['☁', 'Overcast'], 45: ['🌫', 'Fog'], 48: ['🌫', 'Fog'],
+  51: ['🌦', 'Drizzle'], 53: ['🌦', 'Drizzle'], 55: ['🌧', 'Drizzle'], 61: ['🌧', 'Rain'], 63: ['🌧', 'Rain'], 65: ['🌧', 'Heavy rain'],
+  71: ['🌨', 'Snow'], 73: ['🌨', 'Snow'], 75: ['❄', 'Heavy snow'], 77: ['🌨', 'Snow'], 80: ['🌦', 'Showers'], 81: ['🌧', 'Showers'], 82: ['⛈', 'Downpours'],
+  85: ['🌨', 'Snow showers'], 86: ['❄', 'Snow showers'], 95: ['⛈', 'Thunderstorms'], 96: ['⛈', 'Thunderstorms'], 99: ['⛈', 'Thunderstorms'] };
+function sky(code) { return SKY[code] || ['', '']; }
+
+function loadHome() {
+  getJSON('https://api.open-meteo.com/v1/forecast?latitude=' + HOME[0] + '&longitude=' + HOME[1] +
+    '&current=temperature_2m,apparent_temperature,weather_code&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&temperature_unit=fahrenheit&timezone=' + TZ)
+  .then(function (w) {
+    var s = sky(w.current.weather_code);
+    $('htemp').textContent = Math.round(w.current.temperature_2m) + '°';
+    $('hsky').textContent = s[0] + ' ' + s[1] + ' · ' + Math.round(w.daily.temperature_2m_max[0]) + '° / ' + Math.round(w.daily.temperature_2m_min[0]) + '°';
+  }).catch(function () {});
+}
+
+// Sail call: daytime (9 am to 6 pm) wind, gusts, rain and waves at the boat.
+var QUIPS = {
+  go: ['The lake is in a good mood. Do not mention the Edmund Fitzgerald.', 'Go. Nobody ever said "I wish I had stayed home and answered email."', 'Sailing weather. Call in sick to yourself.', 'Good wind. The boulder can wait.'],
+  calm: ['Drifting weather. Bring a book and a paddle.', 'Not enough wind to blow out a candle. The motor is a sail too, technically.'],
+  maybe: ['Reef early. Brag later.', 'Doable. Pack the good foul-weather gear and lower expectations.', 'Sailable if you like a little drama.'],
+  no: ['The lake wins today. It usually does.', 'Stay ashore. Superior does not do second chances.', 'A fine day to polish brass and talk about sailing.']
+};
+function pick(list, seed) { return list[Math.abs(seed) % list.length]; }
+
+function sailCall(hours, waves, dayIdx) {
+  var wind = 0, gust = 0, rain = 0, temp = 0, n = 0;
+  hours.forEach(function (h) { wind += h.w; gust = Math.max(gust, h.g); rain = Math.max(rain, h.p); temp = Math.max(temp, h.t); n++; });
+  wind = n ? wind / n : 0;
+  var wv = waves * M_TO_FT, kind;
+  if (wind > 22 || gust > 28 || wv > 6 || rain >= 70 || temp < 38) kind = 'no';
+  else if (wind > 17 || gust > 23 || wv > 3.5 || rain >= 45 || temp < 48) kind = 'maybe';
+  else if (wind < 5) kind = 'calm';
+  else kind = 'go';
+  var label = { go: 'Go sail', calm: 'Drifty', maybe: 'Maybe', no: 'Stay in' }[kind];
+  return { cls: kind === 'calm' ? 'maybe' : kind, label: label, wind: Math.round(wind), gust: Math.round(gust), waves: wv, rain: rain, temp: Math.round(temp),
+    quip: pick(QUIPS[kind], new Date().getDate() + dayIdx) };
+}
+
+function loadWater() {
+  var wx = getJSON('https://api.open-meteo.com/v1/forecast?latitude=' + BOAT[0] + '&longitude=' + BOAT[1] +
+    '&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m&hourly=wind_speed_10m,wind_gusts_10m,precipitation_probability,temperature_2m' +
+    '&daily=sunrise,sunset&forecast_days=4&wind_speed_unit=kn&temperature_unit=fahrenheit&timezone=' + TZ);
+  var mar = getJSON('https://marine-api.open-meteo.com/v1/marine?latitude=' + BOAT[0] + '&longitude=' + BOAT[1] +
+    '&current=wave_height&daily=wave_height_max&forecast_days=4&timezone=' + TZ).catch(function () { return null; });
+  Promise.all([wx, mar]).then(function (r) {
+    var w = r[0], m = r[1], c = w.current;
+    $('wind').textContent = Math.round(c.wind_speed_10m);
+    $('windl').textContent = 'Wind · gusts ' + Math.round(c.wind_gusts_10m);
+    $('warrow').style.transform = 'rotate(' + c.wind_direction_10m + 'deg)';   // ↓ points where the wind is going
+    $('waves').textContent = m && m.current && m.current.wave_height != null ? (m.current.wave_height * M_TO_FT).toFixed(1) : '--';
+
+    var now = new Date(), set = new Date(w.daily.sunset[0]), rise = new Date(w.daily.sunrise[1]);
+    if (now < set) { $('sunset').textContent = hm(set).replace(' ', ''); $('sunl').textContent = 'Sunset'; }
+    else { $('sunset').textContent = hm(rise).replace(' ', ''); $('sunl').textContent = 'Sunrise'; }
+
+    var days = [];
+    for (var i = 0; i < 4 && days.length < 3; i++) {
+      var date = w.daily.sunset[i].slice(0, 10), hours = [];
+      w.hourly.time.forEach(function (t, k) {
+        if (t.slice(0, 10) !== date) return;
+        var hr = +t.slice(11, 13);
+        if (hr < 9 || hr > 18) return;
+        if (i === 0 && new Date(t) < now && hr < 17) return;   // today: only what's left of it
+        hours.push({ w: w.hourly.wind_speed_10m[k], g: w.hourly.wind_gusts_10m[k], p: w.hourly.precipitation_probability[k] || 0, t: w.hourly.temperature_2m[k] });
+      });
+      if (!hours.length) continue;
+      var d = new Date(date + 'T12:00:00');
+      var call = sailCall(hours, m && m.daily ? m.daily.wave_height_max[i] || 0 : 0, i);
+      call.name = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DOW[d.getDay()];
+      days.push(call);
+    }
+    $('days').innerHTML = days.map(function (x) {
+      return '<div class="day ' + x.cls + '"><div class="n">' + x.name + '</div><div class="verdict">' + x.label + '</div>' +
+        '<div class="why">' + x.wind + ' kt, gusts ' + x.gust + ' · waves ' + x.waves.toFixed(1) + ' ft · ' + x.temp + '°' + (x.rain >= 30 ? ' · rain ' + x.rain + '%' : '') + '</div>' +
+        '<div class="quip">' + esc(x.quip) + '</div></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+// The National Weather Service nearshore forecast for the boat's zone, plus any advisory.
+function loadNws() {
+  getJSON('https://api.weather.gov/alerts/active?zone=' + ZONE).then(function (a) {
+    var ev = (a.features || []).map(function (f) { return f.properties.event; });
+    $('warn').style.display = ev.length ? 'block' : 'none';
+    $('warn').textContent = '⚠ ' + ev.join(' · ');
+  }).catch(function () {});
+  getJSON('https://api.weather.gov/products/types/NSH/locations/DLH').then(function (list) {
+    return getJSON(list['@graph'][0]['@id']);
+  }).then(function (p) {
+    var t = p.productText, i = t.indexOf('\n' + ZONE);
+    if (i < 0) return;
+    var block = t.slice(i, t.indexOf('$$', i)).replace(/\s+/g, ' ');
+    var parts = block.split(/ \.(?=[A-Z ]+\.\.\.)/).slice(1, 3);
+    $('nws').innerHTML = parts.map(function (s) {
+      var k = s.indexOf('...');
+      var head = s.slice(0, k).toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+      return '<div><b>' + esc(head) + '</b>' + esc(s.slice(k + 3).trim()) + '</div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+// Drive time from the OSRM public router. Its car speeds run slow on this
+// trip (4 h 53 m against Google's 3 h 48 m for Minneapolis to Bayfield,
+// Oct 31 2026), so its time is scaled to match.
+var OSRM_SCALE = 0.78;
+function loadDrive() {
+  getJSON('https://router.project-osrm.org/route/v1/driving/' + FROM[1] + ',' + FROM[0] + ';' + BOAT[1] + ',' + BOAT[0] + '?overview=false')
+  .then(function (r) {
+    var s = r.routes[0].duration * OSRM_SCALE, h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+    $('drive').innerHTML = h + '<small>h</small> ' + m + '<small>m</small>';
+    $('drivel').textContent = 'Drive to the boat · ' + Math.round(r.routes[0].distance / 1609) + ' mi';
+  }).catch(function () {});
+}
+
+// ---------- Sisyphus shows (straight from the store) ----------
+var SHOWS = [];
+function parseShowDate(str) {
+  var md = String(str).match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+  if (!md) return null;
+  var month = MON.map(function (m) { return m.toLowerCase(); }).indexOf(md[1].slice(0, 3).toLowerCase());
+  var day = +md[2], hour = 19, min = 0;
+  var tm = String(str).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (tm) { hour = (+tm[1] % 12) + (tm[3].toLowerCase() === 'pm' ? 12 : 0); min = tm[2] ? +tm[2] : 0; }
+  var ym = String(str).match(/\b(20\d{2})\b/), now = new Date();
+  if (ym) return new Date(+ym[1], month, day, hour, min);
+  var cands = [now.getFullYear(), now.getFullYear() + 1].map(function (y) { return new Date(y, month, day, hour, min); });
+  var wd = String(str).match(/^\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)/i);
+  if (wd) { var t = DOW.map(function (x) { return x.toLowerCase(); }).indexOf(wd[1].slice(0, 3).toLowerCase()); var ok = cands.filter(function (d) { return d.getDay() === t; }); if (ok.length) cands = ok; }
+  var floor = now.getTime() - 86400000;
+  return cands.filter(function (d) { return d.getTime() >= floor; })[0] || null;
+}
+
+function loadShows() {
+  getJSON(SHOP).then(function (j) {
+    var now = Date.now() - 3 * 3600000, out = [];
+    j.products.forEach(function (p) {
+      // A show is any product whose variants read as a date with a clock time
+      // (classes say "Starts Sunday..." and the deposit has no date, so they drop out).
+      var byDate = {};
+      p.variants.forEach(function (v) {
+        var label = v.option1 || v.title;
+        if (!/\d\s*(am|pm)\b/i.test(label)) return;
+        var d = parseShowDate(label);
+        if (d && d.getTime() >= now) byDate[d.getTime()] = d;
+      });
+      // Headliners are ticketed, one-off comedy shows; house nights carry a "recurring:" tag or are free.
+      var headliner = /^(Tickets|Comedy Ticket)$/.test(p.product_type) && !p.tags.some(function (t) { return /^recurring:/i.test(t); });
+      Object.keys(byDate).forEach(function (k) {
+        out.push({ name: p.title, at: byDate[k], img: p.images && p.images[0] ? p.images[0].src : '', headliner: headliner, handle: p.handle });
+      });
+    });
+    out.sort(function (a, b) { return a.at - b.at; });
+    SHOWS = out;
+    renderShows();
+    renderCal();
+  }).catch(function () {});
+}
+
+function showDay(d) {
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  var diff = Math.round((new Date(d).setHours(0, 0, 0, 0) - t) / 86400000);
+  return diff === 0 ? 'Tonight' : diff === 1 ? 'Tmrw' : DOW[d.getDay()] + ' ' + MON[d.getMonth()] + ' ' + d.getDate();
+}
+
+function renderShows() {
+  var next = SHOWS.filter(function (s) { return s.headliner && s.img; })[0];
+  if (next) {
+    var runs = SHOWS.filter(function (s) { return s.handle === next.handle; });
+    $('nextimg').src = next.img.replace(/(\.\w+)(\?|$)/, '_800x$1$2');
+    $('nextwho').textContent = next.name;
+    var dates = [], seen = {};
+    runs.forEach(function (s) { var k = dayKey(s.at); if (!seen[k]) { seen[k] = 1; dates.push(DOW[s.at.getDay()] + ' ' + MON[s.at.getMonth()] + ' ' + s.at.getDate()); } });
+    $('nextwhen').textContent = dates.length > 2 ? dates[0] + ' – ' + dates[dates.length - 1] : dates.join(' · ');
+  }
+  // One line per show night (late shows fold into the same line).
+  var rows = [], idx = {};
+  SHOWS.forEach(function (s) {
+    var k = s.handle + dayKey(s.at);
+    if (idx[k] != null) { rows[idx[k]].times.push(hm(s.at)); return; }
+    idx[k] = rows.length;
+    rows.push({ name: s.name, at: s.at, times: [hm(s.at)] });
+  });
+  $('shows').innerHTML = rows.slice(0, 7).map(function (r) {
+    var when = showDay(r.at);
+    return '<li class="' + (when === 'Tonight' ? 'tonight' : '') + '"><span class="dt">' + when + '</span><span class="nm">' + esc(r.name) + '</span><span class="tm">' + r.times.join(', ') + '</span></li>';
+  }).join('');
+}
+
+// ---------- Personal calendar (optional, ?ical=) ----------
+var EVENTS = [];
+function icsDate(v, params) {
+  var m = v.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?/);
+  if (!m) return null;
+  if (!m[4]) return { d: new Date(+m[1], +m[2] - 1, +m[3]), allDay: true };
+  if (m[7]) return { d: new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])), allDay: false };
+  return { d: new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]), allDay: false };   // TZID times: the screen is in Central too
+}
+
+function parseIcs(text, from, to) {
+  var lines = text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/), out = [], ev = null, recurIds = {};
+  lines.forEach(function (ln) {
+    if (ln === 'BEGIN:VEVENT') { ev = { ex: [] }; return; }
+    if (ln === 'END:VEVENT') { if (ev && ev.start) out.push(ev); ev = null; return; }
+    if (!ev) return;
+    var c = ln.indexOf(':'); if (c < 0) return;
+    var key = ln.slice(0, c).split(';')[0], val = ln.slice(c + 1);
+    if (key === 'DTSTART') ev.start = icsDate(val);
+    else if (key === 'SUMMARY') ev.title = val.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, ' ');
+    else if (key === 'RRULE') ev.rrule = val;
+    else if (key === 'EXDATE') val.split(',').forEach(function (x) { var e = icsDate(x); if (e) ev.ex.push(dayKey(e.d)); });
+    else if (key === 'RECURRENCE-ID') { ev.recurId = icsDate(val); }
+    else if (key === 'UID') ev.uid = val;
+    else if (key === 'STATUS') ev.status = val;
+  });
+  // Moved or cancelled single instances replace that day of the series.
+  out.forEach(function (e) { if (e.recurId) recurIds[e.uid + dayKey(e.recurId.d)] = 1; });
+  var res = [];
+  out.forEach(function (e) {
+    if (e.status === 'CANCELLED') return;
+    var occ = e.rrule ? expand(e, to) : [e.start.d];
+    occ.forEach(function (d) {
+      if (d < from || d >= to) return;
+      if (e.rrule && (e.ex.indexOf(dayKey(d)) !== -1 || recurIds[e.uid + dayKey(d)])) return;
+      res.push({ at: d, allDay: e.start.allDay, title: e.title || '(busy)' });
+    });
+  });
+  return res;
+}
+
+// DAILY / WEEKLY (BYDAY) / MONTHLY / YEARLY with INTERVAL, COUNT and UNTIL: enough for family calendars.
+function expand(e, to) {
+  var r = {}; e.rrule.split(';').forEach(function (p) { var kv = p.split('='); r[kv[0]] = kv[1]; });
+  var step = +(r.INTERVAL || 1), until = r.UNTIL ? icsDate(r.UNTIL).d : null, count = r.COUNT ? +r.COUNT : 1e9;
+  var days = r.BYDAY ? r.BYDAY.split(',').map(function (x) { return ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].indexOf(x.slice(-2)); }) : null;
+  var s = e.start.d, out = [], n = 0, cur = new Date(s);
+  for (var guard = 0; guard < 4000 && cur < to && n < count; guard++) {
+    if (r.FREQ === 'WEEKLY' && days) {
+      var wk = new Date(cur); wk.setDate(wk.getDate() - wk.getDay());
+      for (var k = 0; k < 7; k++) {
+        var d = new Date(wk); d.setDate(wk.getDate() + k); d.setHours(s.getHours(), s.getMinutes());
+        if (days.indexOf(d.getDay()) === -1 || d < s) continue;
+        if ((until && d > until) || n >= count) return out;
+        out.push(d); n++;
+      }
+      cur.setDate(cur.getDate() - cur.getDay() + 7 * step);
+      continue;
+    }
+    if (until && cur > until) break;
+    out.push(new Date(cur)); n++;
+    if (r.FREQ === 'DAILY') cur.setDate(cur.getDate() + step);
+    else if (r.FREQ === 'WEEKLY') cur.setDate(cur.getDate() + 7 * step);
+    else if (r.FREQ === 'MONTHLY') cur.setMonth(cur.getMonth() + step);
+    else if (r.FREQ === 'YEARLY') cur.setFullYear(cur.getFullYear() + step);
+    else break;
+  }
+  return out;
+}
+
+function loadCal() {
+  if (!ICAL) return;
+  fetch(ICAL_PROXY + encodeURIComponent(ICAL), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+  .then(function (text) {
+    var from = new Date(); from.setHours(0, 0, 0, 0);
+    var to = new Date(from); to.setDate(to.getDate() + 4);
+    EVENTS = parseIcs(text, from, to);
+    renderCal();
+  }).catch(function () {});
+}
+
+function renderCal() {
+  if (!ICAL) return;
+  $('cal').classList.remove('hidden');
+  var start = new Date(), html = '';
+  start.setHours(0, 0, 0, 0);
+  for (var i = 0; i < 4; i++) {
+    var d = new Date(start); d.setDate(start.getDate() + i);
+    var k = dayKey(d);
+    var evs = EVENTS.filter(function (e) { return dayKey(e.at) === k; }).map(function (e) { return { at: e.at, allDay: e.allDay, title: e.title, sis: false }; });
+    // Sisyphus shows land on the calendar too, in gold.
+    var seen = {};
+    SHOWS.forEach(function (s) {
+      if (dayKey(s.at) !== k || seen[s.handle]) return;
+      seen[s.handle] = 1;
+      if (evs.some(function (e) { return e.title.toLowerCase().indexOf(s.name.toLowerCase().split(' ')[0]) !== -1; })) return;
+      evs.push({ at: s.at, allDay: false, title: s.name, sis: true });
+    });
+    evs.sort(function (a, b) { return (a.allDay ? 0 : 1) - (b.allDay ? 0 : 1) || a.at - b.at; });
+    html += '<div class="cd"><div class="h"><b>' + d.getDate() + '</b>' + (i === 0 ? 'Today' : DOW[d.getDay()]) + '</div>' +
+      evs.slice(0, 5).map(function (e) {
+        return '<div class="ev' + (e.sis ? ' sis' : '') + '"><i>' + (e.allDay ? 'All day' : hm(e.at)) + '</i>' + esc(e.title) + '</div>';
+      }).join('') + '</div>';
+  }
+  $('calgrid').innerHTML = html;
+}
+
+// ---------- Footer: sailing word of the day, and what's on tap ----------
+var TERMS = [
+  ['Luff', 'noun / verb', 'The front edge of a sail, or the flapping it does when you point too close to the wind.', 'The sail\'s way of saying "I see what you\'re trying to do and no."'],
+  ['Heel', 'verb', 'To lean over sideways under the push of the wind.', 'Normal. The screaming from the guests is also normal.'],
+  ['Tack', 'verb', 'To turn the bow through the wind so it blows on the other side of the boat.', 'Zigzagging on purpose, which is also how most careers work.'],
+  ['Jibe', 'verb', 'To turn the stern through the wind, swinging the boom across.', 'The boom crosses the boat at the speed of regret. Duck.'],
+  ['Boom', 'noun', 'The horizontal pole along the bottom of the mainsail.', 'Named for the sound it makes against a head.'],
+  ['Reef', 'verb', 'To shrink a sail by tying part of it down when the wind picks up.', 'The time to reef is when you first think about reefing.'],
+  ['Halyard', 'noun', 'The line that hoists a sail up the mast.', 'From "haul yard." Sailors named everything by just describing it loudly.'],
+  ['Sheet', 'noun', 'A line that trims a sail in or out. Not a sail, and never a bedsheet.', 'Three sheets to the wind: all your lines loose, the boat staggering. Also a Friday.'],
+  ['Windward', 'adjective', 'The side the wind is blowing from.', 'Spit to leeward. Learn it once.'],
+  ['Leeward', 'adjective', 'The side away from the wind. Said "LOO-urd."', 'Spelled one way, pronounced like a different word, out of spite.'],
+  ['Close-hauled', 'adjective', 'Sailing as close toward the wind as the boat can go.', 'Fast, tilted, and wet. The ambitious point of sail.'],
+  ['Beam reach', 'noun', 'Sailing with the wind coming straight across the side of the boat.', 'The easiest, fastest point of sail. Peak "I could live like this."'],
+  ['Running', 'verb', 'Sailing with the wind directly behind you.', 'Feels calm because you\'re moving with the wind. Then you turn around.'],
+  ['In irons', 'phrase', 'Stuck pointing straight into the wind, sails flapping, going nowhere.', 'Every Monday morning, nautically.'],
+  ['Telltales', 'noun', 'Little ribbons on the sail that show whether the air is flowing smoothly.', 'Snitches. Useful snitches.'],
+  ['Cunningham', 'noun', 'A line that pulls down the front of the mainsail to flatten it in heavy air.', 'Named after a guy. Most of us only get a dirty look named after us.'],
+  ['Vang', 'noun', 'A line or strut that holds the boom down so the sail keeps its shape.', 'The boom wants to rise. The vang says no. Every boat has a vang personality.'],
+  ['Traveler', 'noun', 'A track that lets the mainsheet slide side to side across the boat.', 'The only traveler on the boat that never asks where the bathroom is.'],
+  ['Head', 'noun', 'The bathroom on a boat. Also the top corner of a sail.', 'Ask which head someone means before you climb anything.'],
+  ['Gunwale', 'noun', 'The top edge of the boat\'s side. Said "GUN-ul."', 'Another word sailors refuse to pronounce the way it\'s spelled.'],
+  ['Painter', 'noun', 'The line on the bow of a dinghy used to tie it up.', 'Has never painted anything.'],
+  ['Scope', 'noun', 'How much anchor line you let out compared with the water\'s depth.', 'Seven to one is the rule. Two to one is a story.'],
+  ['Dead reckoning', 'noun', 'Working out where you are from speed, heading and time, without GPS.', 'Confidence, multiplied by time, minus the actual shoreline.'],
+  ['Knot', 'noun', 'One nautical mile per hour, about 1.15 mph.', 'Measured by tossing a knotted rope over the side, the original speedometer.'],
+  ['Fetch', 'noun', 'The distance of open water the wind blows over to build waves.', 'Superior has a lot of fetch. That\'s why it acts like an ocean with a grudge.'],
+  ['Seiche', 'noun', 'A standing wave that sloshes a whole lake back and forth after a storm.', 'Lake Superior does this. It\'s a bathtub the size of South Carolina.'],
+  ['Bowline', 'noun', 'A knot that makes a fixed loop that won\'t slip and still unties easily.', 'The rabbit comes out of the hole, around the tree, back down the hole. Nobody knows why the rabbit does this.'],
+  ['Cleat', 'noun', 'A horn-shaped fitting you tie a line to.', 'Also what you stub your toe on in the dark.'],
+  ['Shackle', 'noun', 'A U-shaped metal link with a pin, for joining things together.', 'The pin will fall overboard. That\'s just its whole thing.'],
+  ['Weather helm', 'noun', 'When the boat keeps trying to turn up into the wind on its own.', 'A gentle nudge to reef. A tiller fighting you is the boat saying it.'],
+  ['Freeboard', 'noun', 'The height of the hull from the water to the deck.', 'The only free thing in sailing.'],
+  ['Wake', 'noun', 'The trail of waves a boat leaves behind.', 'Proof you went somewhere.'],
+  ['Port', 'noun', 'The left side of the boat, looking forward.', 'Port and left both have four letters. That\'s the whole trick.'],
+  ['Starboard', 'noun', 'The right side of the boat, looking forward. From "steer board."', 'Boats on starboard tack have the right of way, and they know it.'],
+  ['Pinching', 'verb', 'Sailing a little too close to the wind and losing speed.', 'Wanting it too much. Back off a hair and you get there faster.'],
+  ['Bilge', 'noun', 'The lowest inside part of the hull, where water collects.', 'Every boat has a bilge. Every bilge has a smell. Respect the bilge.'],
+  ['Lazy jacks', 'noun', 'Lines from the mast that catch the mainsail when you drop it.', 'The laziest thing on the boat, and the most useful.'],
+  ['Mooring', 'noun', 'A permanent anchor and buoy where a boat stays.', 'A parking spot that moves a little.'],
+  ['Shipshape', 'adjective', 'Neat, in order, everything stowed.', 'Aspirational.'],
+  ['Make way', 'verb', 'To move through the water under power or sail.', 'Rolling the boulder, but on water and on purpose.']
+];
+function loadTerm() {
+  var d = new Date(), start = new Date(d.getFullYear(), 0, 0);
+  var t = TERMS[Math.floor((d - start) / 86400000) % TERMS.length];
+  $('tw').innerHTML = esc(t[0]) + '<em>' + esc(t[1]) + '</em>';
+  $('tm').textContent = t[2];
+  $('tj').textContent = t[3];
+}
+
+function loadTap() {
+  getJSON(MENU).then(function (j) {
+    var beer = (j.sections || []).filter(function (s) { return /BEER/i.test(s.category); })[0];
+    if (!beer) return;
+    $('tap').innerHTML = '<b>On tap</b>' + beer.items.map(function (i) { return esc(i.name); }).join(' · ');
+  }).catch(function () {});
+}
+
+every(loadHome, 10);
+every(loadWater, 15);
+every(loadNws, 30);
+every(loadDrive, 30);
+every(loadShows, 30);
+every(loadCal, 10);
+every(loadTerm, 60);
+every(loadTap, 30);
+</script>
+</body>
+</html>
