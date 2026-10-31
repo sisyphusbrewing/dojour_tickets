@@ -15,9 +15,6 @@ from fetch_tickets import get_dojour_token, extract_tickets_count, parse_show_da
 from maintain_shows import Shopify
 
 QUERY = (os.environ.get("SHOW_QUERY") or (sys.argv[1] if len(sys.argv) > 1 else "")).strip()
-if not QUERY:
-    sys.exit("Give a performer/show name, e.g. SHOW_QUERY='Ryan Kahl'.")
-Q = QUERY.lower()
 FEE_HANDLES = {"ticket-fee"}
 
 
@@ -26,12 +23,14 @@ def annotate(msg):
 
 
 # ---------------------------------------------------------------- Shopify
-def shopify_sales():
+def shopify_sales(query=None):
+    query = query or QUERY
+    q = query.lower()
     shop = Shopify()
     found = shop.gql("""query($q: String!) { products(first: 20, query: $q) {
-        nodes { id legacyResourceId title status } } }""", {"q": QUERY})["products"]["nodes"]
-    products = [p for p in found if Q in p["title"].lower()]
-    rows = defaultdict(lambda: {"tickets": 0, "orders": 0, "gross": 0.0, "refunded_tickets": 0})
+        nodes { id legacyResourceId title status } } }""", {"q": query})["products"]["nodes"]
+    products = [p for p in found if q in p["title"].lower()]
+    rows = defaultdict(lambda: {"tickets": 0, "orders": 0, "gross": 0.0, "refunded_tickets": 0, "comps": 0})
     for p in products:
         cursor = None
         while True:
@@ -53,7 +52,10 @@ def shopify_sales():
                     rows[key]["refunded_tickets"] += li["quantity"] - live
                     rows[key]["orders"] += 1
                     if live:
-                        rows[key]["gross"] += float(li["discountedTotalSet"]["shopMoney"]["amount"]) * live / li["quantity"]
+                        paid = float(li["discountedTotalSet"]["shopMoney"]["amount"]) * live / li["quantity"]
+                        rows[key]["gross"] += paid
+                        if paid == 0:
+                            rows[key]["comps"] += live
             if not page["pageInfo"]["hasNextPage"]:
                 break
             cursor = page["pageInfo"]["endCursor"]
@@ -61,7 +63,9 @@ def shopify_sales():
 
 
 # ---------------------------------------------------------------- Dojour
-def dojour_sales():
+def dojour_sales(query=None):
+    query = query or QUERY
+    q = query.lower()
     token = get_dojour_token()
     s = requests.Session()
     s.cookies.set("usertoken", token, domain="dojour.us")
@@ -84,11 +88,11 @@ def dojour_sales():
                 iid = str(item.get("id") or item.get("event_instance_id") or "")
                 if iid:
                     seen[iid] = (str(item.get("start_dt") or ""), f"{item.get('title')} / {opt}")
-                if iid and Q in haystack:
+                if iid and q in haystack:
                     instances[iid] = (title, item.get("start_dt"))
             url = data.get("next") if isinstance(data, dict) else None
 
-    annotate(f"Dojour: searched {len(seen)} shows, {len(instances)} matched '{QUERY}'.")
+    annotate(f"Dojour: searched {len(seen)} shows, {len(instances)} matched '{query}'.")
     rows = {}
     for iid, (title, start) in instances.items():
         r = s.get(f"https://dojour.us/api/event_instances/{iid}/reserve_report/", timeout=30)
@@ -114,6 +118,8 @@ def dojour_sales():
 
 
 def main():
+    if not QUERY:
+        sys.exit("Give a performer/show name, e.g. SHOW_QUERY='Ryan Kahl'.")
     lines = [f"## Ticket sales: {QUERY}", ""]
     total = 0
 

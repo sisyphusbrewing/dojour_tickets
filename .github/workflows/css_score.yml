@@ -5,9 +5,12 @@ name: Comic scores
 # they've done here from show_history) and saves their points to Supabase
 # comic_scores (css_score.py). The page starts this through the
 # "run-workflow" Supabase function when a name is added. Run it by hand with
-# "Re-measure everyone" to refresh every comic's followers and buzz.
+# "Re-measure everyone" to refresh every comic's followers and buzz. On the
+# 1st of each month it re-measures everyone by itself so scores don't go stale.
 
 on:
+  schedule:
+    - cron: '0 8 1 * *'   # 1st of the month, 3 AM Central (CDT)
   workflow_dispatch:
     inputs:
       all:
@@ -33,5 +36,5 @@ jobs:
         env:
           SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SCORE_ALL: ${{ inputs.all && '1' || '' }}
+          SCORE_ALL: ${{ (github.event_name == 'schedule' || inputs.all) && '1' || '' }}
         run: python css_score.py
