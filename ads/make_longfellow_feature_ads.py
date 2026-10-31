@@ -45,7 +45,7 @@ def make(w, h, kicker):
     tx, ty = mx + m.width + 36, my + (30 if tall else 14)
     d.text((tx, ty), "WITH", font=F("JosefinSans-SemiBold", 40 if tall else 32), fill=PALE)
     d.text((tx, ty + (52 if tall else 40)), "MIKE LESTER", font=F("JosefinSans-Bold", 74 if tall else 58), fill=WHITE)
-    d.text((tx, ty + (140 if tall else 108)), "NOV 5–8 · SIX SHOWS", font=F("JosefinSans-Bold", 46 if tall else 36), fill=WHITE)
+    d.text((tx, ty + (140 if tall else 108)), "THU–SUN · NOV 5–8", font=F("JosefinSans-Bold", 46 if tall else 36), fill=WHITE)
     d.text((tx, ty + (200 if tall else 154)), "TICKETS $28", font=F("JosefinSans-SemiBold", 42 if tall else 32), fill=PALE)
     if tall:
         bs = 170
