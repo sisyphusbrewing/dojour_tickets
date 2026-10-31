@@ -11,8 +11,12 @@ out = sys.argv[1]
 from make_michael_longfellow_ads import F, BLUE, DARK, PALE, WHITE, photo, badge, spaced, fit  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-flyer = Image.open(os.path.join(HERE, "michael-longfellow", "mike-lester-venue-flyer.jpg")).convert("RGB")
-mike = flyer.crop((300, 160, 615, 660))  # Mike's head, square-cornered (he asked for no oval)
+# Default: Acme press headshot (sharp, older long-hair look). "flyer" = his current look from the Fargo venue flyer.
+if len(sys.argv) > 2 and sys.argv[2] == "flyer":
+    flyer = Image.open(os.path.join(HERE, "michael-longfellow", "mike-lester-venue-flyer.jpg")).convert("RGB")
+    mike = flyer.crop((300, 160, 615, 660))  # square-cornered (he asked for no oval)
+else:
+    mike = Image.open(os.path.join(HERE, "michael-longfellow", "mike-lester-acme-headshot.png")).convert("RGB").crop((120, 0, 960, 1080))
 
 
 def make(w, h, kicker):
