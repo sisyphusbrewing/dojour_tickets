@@ -16,7 +16,7 @@
 
 const REPO = "sisyphusbrewing/dojour_tickets";
 const WORKFLOW = "exchange_ticket.yml";
-const CUTOFF_HOURS = 2; // same as exchange_ticket.py
+const CUTOFF_HOURS = 48; // same as exchange_ticket.py (Sam, Oct 30 2026)
 const REFRESH_COOLDOWN_MS = 3 * 60 * 1000;
 
 const CORS = {
