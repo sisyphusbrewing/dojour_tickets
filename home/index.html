@@ -74,7 +74,9 @@
 
   /* Calendar */
   #cal { flex: 0 0 auto; }
-  #calgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vw; }
+  #calgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vw; transition: opacity .6s; }
+  #calgrid.fade { opacity: 0; }
+  .band.sisband { background: var(--sis); color: var(--ink); }
   .cd .h { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .1em; font-size: 1.6vw; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: .4vw; margin-bottom: .6vw; }
   .cd .h b { font-size: 3.2vw; color: var(--text); margin-right: .6vw; font-weight: 600; }
   .ev { border-left: .5vw solid var(--slate-hi); padding: .2vw 0 .2vw .8vw; margin-bottom: .6vw; font-size: 2.2vw; line-height: 1.1; }
@@ -123,7 +125,7 @@
 </section>
 
 <section id="cal" class="hidden">
-  <span class="band">Coming up</span>
+  <span class="band sisband" id="calband">Sisyphus calendar</span>
   <div id="calgrid"></div>
 </section>
 
@@ -446,31 +448,59 @@ function loadCal() {
   }).catch(function () {});
 }
 
-function renderCal() {
-  if (!ICAL) return;
-  $('cal').classList.remove('hidden');
-  var start = new Date(), html = '';
-  start.setHours(0, 0, 0, 0);
-  for (var i = 0; i < 4; i++) {
-    var d = new Date(start); d.setDate(start.getDate() + i);
-    var k = dayKey(d);
-    var evs = EVENTS.filter(function (e) { return dayKey(e.at) === k; }).map(function (e) { return { at: e.at, allDay: e.allDay, title: e.title, sis: false }; });
-    // Sisyphus shows land on the calendar too, in gold.
-    var seen = {};
-    SHOWS.forEach(function (s) {
-      if (dayKey(s.at) !== k || seen[s.handle]) return;
-      seen[s.handle] = 1;
-      if (evs.some(function (e) { return e.title.toLowerCase().indexOf(s.name.toLowerCase().split(' ')[0]) !== -1; })) return;
-      evs.push({ at: s.at, allDay: false, title: s.name, sis: true });
-    });
-    evs.sort(function (a, b) { return (a.allDay ? 0 : 1) - (b.allDay ? 0 : 1) || a.at - b.at; });
-    html += '<div class="cd"><div class="h"><b>' + d.getDate() + '</b>' + (i === 0 ? 'Today' : DOW[d.getDay()]) + '</div>' +
+// The calendar rotates between two views: Sisyphus (the next 4 nights with
+// shows) and home (the next 4 days of the personal calendar, when ?ical= is set).
+var CAL_SECONDS = 20, calView = 'sis';
+
+function calColumns(days, evsFor) {
+  var today = dayKey(new Date());
+  return days.map(function (d) {
+    var evs = evsFor(d).sort(function (a, b) { return (a.allDay ? 0 : 1) - (b.allDay ? 0 : 1) || a.at - b.at; });
+    return '<div class="cd"><div class="h"><b>' + d.getDate() + '</b>' + (dayKey(d) === today ? 'Today' : DOW[d.getDay()] + ' ' + MON[d.getMonth()]) + '</div>' +
       evs.slice(0, 5).map(function (e) {
         return '<div class="ev' + (e.sis ? ' sis' : '') + '"><i>' + (e.allDay ? 'All day' : hm(e.at)) + '</i>' + esc(e.title) + '</div>';
       }).join('') + '</div>';
+  }).join('');
+}
+
+function renderCal() {
+  var view = ICAL ? calView : 'sis', days = [], html;
+  if (view === 'sis') {
+    if (!SHOWS.length) return;
+    SHOWS.forEach(function (s) {
+      var d = new Date(s.at); d.setHours(0, 0, 0, 0);
+      if (days.length < 4 && !days.some(function (x) { return +x === +d; })) days.push(d);
+    });
+    html = calColumns(days, function (d) {
+      var k = dayKey(d), seen = {};
+      return SHOWS.filter(function (s) {
+        if (dayKey(s.at) !== k || seen[s.handle]) return false;   // a late show folds into the early one
+        return (seen[s.handle] = true);
+      }).map(function (s) { return { at: s.at, allDay: false, title: s.name, sis: true }; });
+    });
+  } else {
+    var start = new Date(); start.setHours(0, 0, 0, 0);
+    for (var i = 0; i < 4; i++) { var d = new Date(start); d.setDate(start.getDate() + i); days.push(d); }
+    html = calColumns(days, function (d) {
+      var k = dayKey(d);
+      return EVENTS.filter(function (e) { return dayKey(e.at) === k; }).map(function (e) { return { at: e.at, allDay: e.allDay, title: e.title, sis: false }; });
+    });
   }
+  $('cal').classList.remove('hidden');
+  $('calband').textContent = view === 'sis' ? 'Sisyphus calendar' : 'Our calendar';
+  $('calband').classList.toggle('sisband', view === 'sis');
   $('calgrid').innerHTML = html;
 }
+
+setInterval(function () {
+  if (!ICAL) return;
+  $('calgrid').classList.add('fade');
+  setTimeout(function () {
+    calView = calView === 'sis' ? 'home' : 'sis';
+    renderCal();
+    $('calgrid').classList.remove('fade');
+  }, 600);
+}, CAL_SECONDS * 1000);
 
 // ---------- Footer: sailing word of the day, and what's on tap ----------
 var TERMS = [
