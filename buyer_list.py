@@ -30,28 +30,30 @@ def shopify_rows(query):
         nodes { id legacyResourceId title } } }""", {"q": query})["products"]["nodes"]
     products = [p for p in found if query.lower() in p["title"].lower()]
     rows = []
+    # The app has no read_customers scope; the order-level opt-in flag is tried first.
+    consent_field = "customerAcceptsMarketing"
+    try:
+        shop.gql("{ orders(first: 1) { nodes { customerAcceptsMarketing } } }")
+    except Exception as e:
+        print(f"Shopify marketing flag unavailable ({str(e)[:120]}); marketing_ok left unknown")
+        consent_field = ""
     for p in products:
         cursor = None
         while True:
             page = shop.gql("""query($q: String!, $c: String) {
               orders(first: 100, after: $c, query: $q) {
-                nodes { cancelledAt email
-                  customer { firstName lastName email
-                    emailMarketingConsent { marketingState } }
+                nodes { cancelledAt email %s
                   billingAddress { name }
                   lineItems(first: 50) { nodes { product { id } variantTitle currentQuantity } } }
-                pageInfo { hasNextPage endCursor } } }""",
-                            {"q": f"product_id:{p['legacyResourceId']}", "c": cursor})["orders"]
+                pageInfo { hasNextPage endCursor } } }""" % consent_field,
+                             {"q": f"product_id:{p['legacyResourceId']}", "c": cursor})["orders"]
             for o in page["nodes"]:
                 if o["cancelledAt"]:
                     continue
-                c = o.get("customer") or {}
-                email = (c.get("email") or o.get("email") or "").strip()
-                name = " ".join(x for x in (c.get("firstName"), c.get("lastName")) if x) \
-                    or (o.get("billingAddress") or {}).get("name") or ""
-                state = ((c.get("emailMarketingConsent") or {}).get("marketingState") or "").upper()
-                ok = "no" if state in ("UNSUBSCRIBED", "REDACTED", "INVALID") else \
-                    ("yes" if state == "SUBSCRIBED" else "unknown")
+                email = (o.get("email") or "").strip()
+                name = (o.get("billingAddress") or {}).get("name") or ""
+                flag = o.get("customerAcceptsMarketing")
+                ok = "unknown" if flag is None else ("yes" if flag else "no")
                 for li in o["lineItems"]["nodes"]:
                     if (li["product"] or {}).get("id") != p["id"] or not li["currentQuantity"]:
                         continue
