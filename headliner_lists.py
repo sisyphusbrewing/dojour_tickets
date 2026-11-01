@@ -115,15 +115,18 @@ def main():
         last = dates[-1]
         if not ONLY_SHOW and last.date() != yesterday:
             continue
-        # The run = the dates within two weeks of the last show (a repeat headliner's
-        # earlier visits stay out).
-        run = [d for d in dates if d >= last - timedelta(days=14)]
-        first = run[0]
-        rows = [r for r in buyer_list.build(title, since=first.strftime("%Y-%m-%d"))
-                if r["marketing_ok"] == "yes" and r["email"]]
-        # Website rows carry no year; keep only nights in this run.
-        nights = {d.strftime("%b %-d") for d in run}
-        rows = [r for r in rows if any(re.search(rf"\b{n}\b", r["show"].replace(",", "")) for n in nights)]
+        # The run = shows in the two weeks up to the last one (a repeat headliner's
+        # earlier visits stay out). Past dates get trimmed off the product, so the
+        # run is read from the buyers' own show nights, not the product's variants.
+        start = last - timedelta(days=14)
+        rows = []
+        for r in buyer_list.build(title, since=start.strftime("%Y-%m-%d")):
+            d = parse_show_datetime(r["show"], now=last + timedelta(days=1))
+            if d and start <= d <= last + timedelta(hours=6) and r["marketing_ok"] == "yes" and r["email"]:
+                r["show"], r["_d"] = d.strftime("%a, %b %-d • %-I:%M %p"), d
+                rows.append(r)
+        rows.sort(key=lambda r: (r["_d"], r["name"].lower()))
+        first = rows[0]["_d"] if rows else last
         to = OVERRIDE_TO or a["agent_email"]
         if not rows or not to:
             print(f"{title}: nothing to send ({len(rows)} opted-in buyers, to={to!r})")
