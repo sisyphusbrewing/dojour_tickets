@@ -12,7 +12,7 @@
   :root {
     --slate: #4f6d8c; --slate-hi: #7f9cbb; --ink: #0f1820; --card: rgba(18, 28, 38, .82);
     --line: rgba(127, 156, 187, .28); --text: #eef2f6; --muted: #9fb0c1;
-    --go: #6fcf97; --maybe: #f2c94c; --no: #eb6f6f; --sis: #c9a86a;
+    --go: #6fcf97; --maybe: #f2c94c; --no: #eb6f6f; --sis: #d9a441; --sis-band: #a8741a;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: var(--ink); color: var(--text); overflow: hidden; }
@@ -25,7 +25,7 @@
 
   /* Map and clock */
   #top { position: relative; flex: 0 0 23%; overflow: hidden; background: #123; border: 0; padding: 0; }
-  #top iframe { position: absolute; inset: -6% -2% -2% -2%; width: 104%; height: 108%; border: 0; pointer-events: none; }
+  #top iframe { position: absolute; top: -6%; left: -2%; width: 104%; height: 126%; border: 0; pointer-events: none; }
   #top .shade { position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,24,32,.92), rgba(15,24,32,0) 55%); }
   #clock { position: absolute; left: 3vw; bottom: 2vw; }
   #clock .t { font-size: 13vw; font-weight: 600; line-height: 1; }
@@ -59,9 +59,9 @@
 
   /* Sisyphus */
   #sis { flex: 1 1 auto; display: grid; grid-template-columns: 38% 1fr; gap: 2.4vw; min-height: 0; }
-  #sis .band { grid-column: 1 / -1; justify-self: start; background: var(--sis); color: var(--ink); margin-bottom: 0; }
+  #sis .band { grid-column: 1 / -1; justify-self: start; background: var(--sis-band); color: #fff; margin-bottom: 0; }
   #next { position: relative; border-radius: 1.2vw; overflow: hidden; background: #000; min-height: 0; }
-  #next img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #next img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: block; }
   #next .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 4vw 1.6vw 1.2vw; background: linear-gradient(to top, rgba(0,0,0,.85), transparent); }
   #next .who { font-size: 4.2vw; font-weight: 700; line-height: 1; }
   #next .when { font-size: 2.4vw; font-style: italic; }
@@ -76,7 +76,7 @@
   #cal { flex: 0 0 auto; }
   #calgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vw; transition: opacity .6s; }
   #calgrid.fade { opacity: 0; }
-  .band.sisband { background: var(--sis); color: var(--ink); }
+  .band.sisband { background: var(--sis-band); color: #fff; }
   .cd .h { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .1em; font-size: 1.6vw; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: .4vw; margin-bottom: .6vw; }
   .cd .h b { font-size: 3.2vw; color: var(--text); margin-right: .6vw; font-weight: 600; }
   .ev { border-left: .5vw solid var(--slate-hi); padding: .2vw 0 .2vw .8vw; margin-bottom: .6vw; font-size: 2.2vw; line-height: 1.1; }
@@ -168,17 +168,28 @@ function hm(d) { var h = d.getHours() % 12 || 12, m = d.getMinutes(); return h +
 var M_TO_FT = 3.28084;
 
 $('spot').textContent = SPOT;
-$('map').src = 'https://earth.nullschool.net/#current/wind/surface/level/orthographic=' + (BOAT[1] + 0.6).toFixed(2) + ',' + (BOAT[0] - 0.1).toFixed(2) + ',5200/loc=' + BOAT[1].toFixed(3) + ',' + BOAT[0].toFixed(3);
+$('map').src = 'https://earth.nullschool.net/#current/wind/surface/level/orthographic=' + (BOAT[1] + 0.6).toFixed(2) + ',' + (BOAT[0] - 0.1).toFixed(2) + ',5200';
 
 // ---------- Clock ----------
 function tick() {
   var d = new Date(), h = d.getHours() % 12 || 12, m = d.getMinutes();
   $('time').innerHTML = h + ':' + (m < 10 ? '0' : '') + m + '<small>' + (d.getHours() < 12 ? 'AM' : 'PM') + '</small>';
   $('date').textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  // Reload once a night so changes to this page reach the screen by themselves.
+  // Reload once a night as a backstop.
   if (d.getHours() === 4 && d.getMinutes() === 0 && d.getSeconds() < 30) location.reload();
 }
 setInterval(tick, 15000); tick();
+
+// Reload within a few minutes whenever a new version of this page is published.
+var PAGE_VERSION = null;
+setInterval(function () {
+  fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : null; })
+  .then(function (html) {
+    if (!html) return;
+    if (PAGE_VERSION === null) PAGE_VERSION = html;
+    else if (html !== PAGE_VERSION) location.reload();
+  }).catch(function () {});
+}, 5 * 60000);
 
 // ---------- Weather ----------
 var SKY = { 0: ['☀', 'Clear'], 1: ['🌤', 'Mostly clear'], 2: ['⛅', 'Partly cloudy'], 3: ['☁', 'Overcast'], 45: ['🌫', 'Fog'], 48: ['🌫', 'Fog'],
