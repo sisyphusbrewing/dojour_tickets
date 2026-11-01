@@ -3,8 +3,8 @@
 Full-screen portrait dashboard for the Apolosign wall display at Sam's house:
 https://staff.sisyphusbrewing.com/home/
 
-Sailing on top, Sisyphus underneath. Everything updates itself, and the page
-reloads at 4 am so changes merged here reach the wall by morning.
+Sailing on top, Sisyphus underneath. Everything updates itself. The page checks itself every 5 minutes and
+reloads when a new version is published (plus a 4 am reload as a backstop).
 
 - Wind map: earth.nullschool, centered on the boat
 - On the water: wind and gusts (Open-Meteo, knots), waves (Open-Meteo marine), sunset, drive time (OSRM)
