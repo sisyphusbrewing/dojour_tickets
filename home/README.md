@@ -11,7 +11,7 @@ reloads at 4 am so changes merged here reach the wall by morning.
 - Sail call: next 3 daytime windows, Go / Maybe / Drifty / Stay in from wind, gusts, waves, rain and temperature
 - NWS nearshore forecast and active advisories for the marine zone
 - Next at Sisyphus: next headliner and the next shows, from the store's products.json
-- Coming up: 4 days of a personal calendar (optional) with Sisyphus shows mixed in, in gold
+- Calendar: rotates every 20 s between the Sisyphus calendar (next 4 show nights) and the personal calendar (next 4 days, only when `ical=` is set)
 - Sailing word of the day, and what's on tap (GoTab feed)
 
 ## URL options
