@@ -18,9 +18,11 @@ from fetch_tickets import get_dojour_token, extract_tickets_count, parse_show_da
 from maintain_shows import Shopify
 
 QUERY = (os.environ.get("SHOW_QUERY") or (sys.argv[1] if len(sys.argv) > 1 else "")).strip()
+# Optional YYYY-MM-DD: only shows on or after this date (a performer's latest run, not every visit).
+SINCE = (os.environ.get("SINCE") or "").strip()
 FIELDS = ["name", "email", "show", "qty", "source", "marketing_ok"]
 # Dojour field names that look like a marketing opt-in; whichever exists is used.
-DOJOUR_CONSENT_KEYS = ("accepts_marketing", "marketing_opt_in", "opt_in", "email_opt_in",
+DOJOUR_CONSENT_KEYS = ("email_subscription_consent", "accepts_marketing", "marketing_opt_in", "opt_in", "email_opt_in",
                        "subscribe", "subscribed", "newsletter", "mailing_list", "is_subscribed")
 
 
@@ -86,6 +88,9 @@ def dojour_rows(query):
                 ev = item.get("event") if isinstance(item.get("event"), dict) else {}
                 hay = " ".join(str(x) for x in (opt, item.get("title"), item.get("event_title"), ev.get("title"))).lower()
                 iid = str(item.get("id") or item.get("event_instance_id") or "")
+                dt = parse_show_datetime(item.get("start_dt"))
+                if SINCE and dt and dt.strftime("%Y-%m-%d") < SINCE:
+                    continue
                 if iid and q in hay:
                     instances[iid] = item.get("start_dt")
             url = data.get("next") if isinstance(data, dict) else None
