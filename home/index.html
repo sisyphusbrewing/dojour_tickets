@@ -140,6 +140,7 @@
 // ?from=lat,lon   where the drive starts (default: Sisyphus)
 // ?zone=LSZ147    NWS nearshore marine zone (default: Sand Island to Bayfield)
 // ?ical=URL       secret iCal address of a personal calendar (optional, repeat for more)
+// ?k=KEY          short key for calendars saved in the ical-proxy function (boards.ts)
 // ?home=lat,lon   where the big temperature is for (default: Minneapolis)
 var Q = new URLSearchParams(location.search);
 function ll(s, d) { var p = String(s || '').split(',').map(Number); return p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]) ? p : d; }
@@ -148,7 +149,8 @@ var FROM = ll(Q.get('from'), [44.9706, -93.2862]);
 var HOME = ll(Q.get('home'), [44.9706, -93.2862]);
 var ZONE = Q.get('zone') || 'LSZ147';
 var ICALS = Q.getAll('ical').filter(Boolean);
-var ICAL = ICALS.length > 0;
+var BOARD_KEY = Q.get('k') || '';
+var ICAL = ICALS.length > 0 || !!BOARD_KEY;
 var SPOT = Q.get('spot') || 'Apostle Islands';
 var TZ = 'America/Chicago';
 var ICAL_PROXY = 'https://idsdwkubqnavkazlteis.supabase.co/functions/v1/ical-proxy?url=';
@@ -443,8 +445,10 @@ function loadCal() {
   if (!ICAL) return;
   var from = new Date(); from.setHours(0, 0, 0, 0);
   var to = new Date(from); to.setDate(to.getDate() + 4);
-  Promise.all(ICALS.map(function (u) {
-    return fetch(ICAL_PROXY + encodeURIComponent(u), { cache: 'no-store' })
+  var feeds = ICALS.map(function (u) { return ICAL_PROXY + encodeURIComponent(u); });
+  if (BOARD_KEY) feeds.push(ICAL_PROXY.replace('?url=', '?k=') + encodeURIComponent(BOARD_KEY));
+  Promise.all(feeds.map(function (u) {
+    return fetch(u, { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.text() : ''; })
       .then(function (text) { return parseIcs(text, from, to); })
       .catch(function () { return []; });
