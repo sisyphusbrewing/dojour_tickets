@@ -4,3 +4,4 @@ service_account.json
 __pycache__/
 posters/out/
 social/out/
+supabase/functions/ical-proxy/boards.ts

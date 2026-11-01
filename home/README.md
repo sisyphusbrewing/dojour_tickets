@@ -23,4 +23,5 @@ reloads at 4 am so changes merged here reach the wall by morning.
 | `zone=` | `LSZ147` | NWS nearshore zone (LSZ147 Sand Island to Bayfield, LSZ150 Outer Apostles, LSZ121 Chequamegon Bay) |
 | `from=lat,lon` | Sisyphus | where the drive starts |
 | `home=lat,lon` | Minneapolis | where the big temperature is for |
+| `k=` | none | short key for calendars saved in `supabase/functions/ical-proxy/boards.ts` (not committed). Keeps the URL short enough to type on the screen |
 | `ical=` | none | a calendar's secret iCal address, read through the `ical-proxy` edge function. Repeat it to show several calendars together |
