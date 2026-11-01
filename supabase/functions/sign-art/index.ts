@@ -9,7 +9,8 @@
 // POST { redraw: id }         managers: draws that picture again.
 //
 // Art is 32 rows of 32 characters: "." is off, 1-9 and A-F pick palette[1..15].
-// Needs the ANTHROPIC_API_KEY secret.
+// Needs a Claude API key secret: ANTHROPIC_CLIENT_API (what Sam named it in
+// Supabase), or the usual ANTHROPIC_API_KEY.
 
 import Anthropic from "npm:@anthropic-ai/sdk@1.3.0";
 
@@ -86,7 +87,8 @@ function tidy(a: Art): Art {
   return { ok: !!a.ok, reason: String(a.reason ?? ""), caption, palette, rows };
 }
 
-const anthropic = new Anthropic(); // ANTHROPIC_API_KEY
+const API_KEY = Deno.env.get("ANTHROPIC_CLIENT_API") ?? Deno.env.get("ANTHROPIC_CLIENT_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
+const anthropic = new Anthropic({ apiKey: API_KEY });
 
 async function draw(ask: string): Promise<Art> {
   const response = await anthropic.beta.messages.create({
@@ -194,7 +196,7 @@ async function redraw(id: number) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return respond(405, { error: "POST only" });
-  if (!Deno.env.get("ANTHROPIC_API_KEY")) return respond(503, { error: "The sign isn't set up to draw yet." });
+  if (!API_KEY) return respond(503, { error: "The sign isn't set up to draw yet." });
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* bad body */ }

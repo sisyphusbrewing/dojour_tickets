@@ -19,7 +19,7 @@ Claude API (claude-opus-5-5) for 32x32 pixel art as 32 rows of 32 characters
 (`.` off, 1-9 A-F pick palette colors) plus a caption, and saves it in table
 `sign_art` (migration 20261029010000_sign_art.sql). Claude also turns down
 suggestions a bar couldn't show. Customer suggestions are capped at 30 an hour.
-It needs an `ANTHROPIC_API_KEY` secret in Supabase (Edge Functions > Secrets);
+It needs a Claude API key secret in Supabase (Edge Functions > Secrets), named `ANTHROPIC_CLIENT_API` (or `ANTHROPIC_API_KEY`);
 without one the form says the sign isn't set up to draw yet.
 
 ## The board
