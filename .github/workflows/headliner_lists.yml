@@ -1,0 +1,44 @@
+name: Headliner mailing lists
+
+on:
+  schedule:
+    # 15:00 UTC = 9-10 AM Central, the morning after a run ends
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+    inputs:
+      show:
+        description: "Send one show's list now (performer name). Blank = normal daily check"
+        required: false
+      to:
+        description: "Send to this address instead of the show's contact (optional)"
+        required: false
+      dry_run:
+        description: "Dry run: build but don't email"
+        type: boolean
+        default: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email headliners their opted-in buyers
+        env:
+          SHOW_QUERY: ${{ inputs.show }}
+          TO_EMAIL: ${{ inputs.to }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: python headliner_lists.py
