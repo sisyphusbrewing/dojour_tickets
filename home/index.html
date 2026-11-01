@@ -139,7 +139,7 @@
 // ?boat=lat,lon   where the boat is (default: Bayfield, WI)
 // ?from=lat,lon   where the drive starts (default: Sisyphus)
 // ?zone=LSZ147    NWS nearshore marine zone (default: Sand Island to Bayfield)
-// ?ical=URL       secret iCal address of a personal calendar (optional)
+// ?ical=URL       secret iCal address of a personal calendar (optional, repeat for more)
 // ?home=lat,lon   where the big temperature is for (default: Minneapolis)
 var Q = new URLSearchParams(location.search);
 function ll(s, d) { var p = String(s || '').split(',').map(Number); return p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]) ? p : d; }
@@ -147,7 +147,8 @@ var BOAT = ll(Q.get('boat'), [46.7975, -90.8510]);
 var FROM = ll(Q.get('from'), [44.9706, -93.2862]);
 var HOME = ll(Q.get('home'), [44.9706, -93.2862]);
 var ZONE = Q.get('zone') || 'LSZ147';
-var ICAL = Q.get('ical') || '';
+var ICALS = Q.getAll('ical').filter(Boolean);
+var ICAL = ICALS.length > 0;
 var SPOT = Q.get('spot') || 'Apostle Islands';
 var TZ = 'America/Chicago';
 var ICAL_PROXY = 'https://idsdwkubqnavkazlteis.supabase.co/functions/v1/ical-proxy?url=';
@@ -437,15 +438,20 @@ function expand(e, to) {
   return out;
 }
 
+// Several calendars can be shown together: repeat ical= once per calendar.
 function loadCal() {
   if (!ICAL) return;
-  fetch(ICAL_PROXY + encodeURIComponent(ICAL), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
-  .then(function (text) {
-    var from = new Date(); from.setHours(0, 0, 0, 0);
-    var to = new Date(from); to.setDate(to.getDate() + 4);
-    EVENTS = parseIcs(text, from, to);
+  var from = new Date(); from.setHours(0, 0, 0, 0);
+  var to = new Date(from); to.setDate(to.getDate() + 4);
+  Promise.all(ICALS.map(function (u) {
+    return fetch(ICAL_PROXY + encodeURIComponent(u), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (text) { return parseIcs(text, from, to); })
+      .catch(function () { return []; });
+  })).then(function (lists) {
+    EVENTS = [].concat.apply([], lists);
     renderCal();
-  }).catch(function () {});
+  });
 }
 
 // The calendar rotates between two views: Sisyphus (the next 4 nights with
