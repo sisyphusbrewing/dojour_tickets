@@ -6,6 +6,9 @@ on:
       show:
         description: "Performer or show name (e.g. Ali Sultan)"
         required: true
+      since:
+        description: "Only shows on or after this date, YYYY-MM-DD (blank = every show)"
+        required: false
 
 jobs:
   list:
@@ -19,6 +22,7 @@ jobs:
       - name: Build buyer list
         env:
           SHOW_QUERY: ${{ inputs.show }}
+          SINCE: ${{ inputs.since }}
           DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
           SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
           SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
