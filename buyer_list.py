@@ -69,7 +69,8 @@ def shopify_rows(query):
     return rows
 
 
-def dojour_rows(query):
+def dojour_rows(query, since=None):
+    since = SINCE if since is None else since
     token = get_dojour_token()
     s = requests.Session()
     s.cookies.set("usertoken", token, domain="dojour.us")
@@ -89,7 +90,7 @@ def dojour_rows(query):
                 hay = " ".join(str(x) for x in (opt, item.get("title"), item.get("event_title"), ev.get("title"))).lower()
                 iid = str(item.get("id") or item.get("event_instance_id") or "")
                 dt = parse_show_datetime(item.get("start_dt"))
-                if SINCE and dt and dt.strftime("%Y-%m-%d") < SINCE:
+                if since and dt and dt.strftime("%Y-%m-%d") < since:
                     continue
                 if iid and q in hay:
                     instances[iid] = item.get("start_dt")
@@ -125,8 +126,19 @@ def dojour_rows(query):
 def main():
     if not QUERY:
         sys.exit("Give a performer name, e.g. SHOW_QUERY='Ali Sultan'.")
-    rows = shopify_rows(QUERY) + dojour_rows(QUERY)
-    # Merge repeat buyers for the same night (same email + show).
+    out = build(QUERY)
+    buf = to_csv(out)
+    with open("buyer_list.csv", "w", newline="") as f:
+        f.write(buf)
+    emails = {r["email"].lower() for r in out if r["email"]}
+    print(f"{len(out)} rows, {len(emails)} unique emails, {sum(r['qty'] for r in out)} tickets")
+    print("----- buyer_list.csv -----")
+    print(buf)
+
+
+def build(query, since=None):
+    """Every live buyer for the performer, merged per email per night."""
+    rows = shopify_rows(query) + dojour_rows(query, since)
     merged = {}
     for r in rows:
         key = (r["email"].lower() or r["name"].lower(), r["show"])
@@ -136,17 +148,15 @@ def main():
                 merged[key]["marketing_ok"] = "no"
         else:
             merged[key] = dict(r)
-    out = sorted(merged.values(), key=lambda r: (r["show"], r["name"].lower()))
+    return sorted(merged.values(), key=lambda r: (r["show"], r["name"].lower()))
+
+
+def to_csv(rows, fields=FIELDS):
     buf = io.StringIO()
-    w = csv.DictWriter(buf, fieldnames=FIELDS)
+    w = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
     w.writeheader()
-    w.writerows(out)
-    with open("buyer_list.csv", "w", newline="") as f:
-        f.write(buf.getvalue())
-    emails = {r["email"].lower() for r in out if r["email"]}
-    print(f"{len(out)} rows, {len(emails)} unique emails, {sum(r['qty'] for r in out)} tickets")
-    print("----- buyer_list.csv -----")
-    print(buf.getvalue())
+    w.writerows(rows)
+    return buf.getvalue()
 
 
 if __name__ == "__main__":
