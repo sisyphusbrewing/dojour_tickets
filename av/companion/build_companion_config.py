@@ -438,7 +438,7 @@ HOUSE_URL = "http://127.0.0.1:8790/house"
 
 
 def house(path):
-    """full = 100/100, show = Tables 15 / Bar 30 (3 s fade), off = 0/0 (3 s fade),
+    """full = 100/100, off = 0/0 (3 s fade),
     or level?zone=tables|bar&pct=0-100&fade=seconds for one zone."""
     return action(HTTP, "get", url=f"{HOUSE_URL}/{path}", header="",
                   jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
@@ -456,7 +456,7 @@ def hall_keys():
                        + plugs(True) + house_both(17)),  # house 17% (Sam, Nov 2 2026)
         (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)] + [house("full")]),
-        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=[house("show")]),
+        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=house_both(0)),  # house lights off (Sam, Nov 2)
         (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
                        + plugs(False) + [house("off")]),
