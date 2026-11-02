@@ -45,6 +45,11 @@ PLUGS = {
     "Stage wall wash": "07:CF:7C:E8:B1:16:DF:50",
     "Sisyphus Sign": "0E:C4:D4:05:92:D7:D4:8C",
 }
+# Poster lamp + shuffleboard plugs (H5083): ON with DAYTIME and PRE-SHOW, OFF with ALL OFF (Sam, Nov 2 2026).
+DAY_PLUGS = {
+    "Poster Lamp": "13:BA:7C:E8:B1:07:95:64",
+    "Shuffleboard": "09:CF:7C:E8:B1:04:45:40",
+}
 # Sam's pre-show look, read off the bulbs Oct 19 2026: (brightness %, RGB colour or white in K)
 HALL_PRESHOW = {
     "Hallway 1": (100, {"rgb": 0x0000FF}),
@@ -428,8 +433,8 @@ def hall_look(look, bulb):
     return [govee(bulb, "on_off", "powerSwitch", 1), colour_cmd, govee(bulb, "range", "brightness", level)]
 
 
-def plugs(on):
-    return [govee(None, "on_off", "powerSwitch", 1 if on else 0, sku="H5083", device=d) for d in PLUGS.values()]
+def plugs(on, which=PLUGS):
+    return [govee(None, "on_off", "powerSwitch", 1 if on else 0, sku="H5083", device=d) for d in which.values()]
 
 
 # House lights: two Lutron Caséta dimmers (Tables, Bar) on a standard Smart Bridge. A small local
@@ -453,13 +458,14 @@ def hall_keys():
     return {
         (0, 3): button("PRE-SHOW", bgcolor=0x7A5A00, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-                       + plugs(True) + house_both(17)),  # house 17% (Sam, Nov 2 2026)
+                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(17)),  # house 17% (Sam, Nov 2 2026)
         (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)] + [house("full")]),
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
+                       + plugs(True, DAY_PLUGS) + [house("full")]),
         (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=house_both(0)),  # house lights off (Sam, Nov 2)
         (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-                       + plugs(False) + [house("off")]),
+                       + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")]),
     }
 
 
