@@ -20,6 +20,14 @@ fi
 
 echo "Companion Satellite"
 if [ ! -d /opt/companion-satellite ]; then
+  # Pi OS Trixie mounts /tmp as a small RAM disk (450 MB on a 1 GB Pi 3B+), and the Satellite
+  # download overflows it (Nov 2 2026). Put /tmp back on the SD card first.
+  if findmnt -n -t tmpfs /tmp >/dev/null 2>&1; then
+    systemctl mask tmp.mount
+    echo "/tmp was a RAM disk; masked tmp.mount. Rebooting once; run this script again after." >&2
+    reboot
+    exit 0
+  fi
   curl -sSL https://raw.githubusercontent.com/bitfocus/companion-satellite/main/pi-image/install.sh | bash
 fi
 # Satellite imports this file at startup (Bookworm keeps the boot partition at /boot/firmware)
