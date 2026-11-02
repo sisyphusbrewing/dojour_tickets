@@ -419,12 +419,6 @@ def govee(bulb, kind, instance, value, sku="R14C0", device=None):
 
 # Daytime: all three soft warm white. Sam asked for 2600K; 2700K is the bulbs' warmest (Oct 20 2026).
 HALL_DAYTIME = {bulb: (60, {"kelvin": 2700}) for bulb in HALL_BULBS}
-# Sunset: red, orange, purple down the hallway (Sam, Oct 20 2026).
-HALL_SUNSET = {
-    "Hallway 1": (70, {"rgb": 0xFF2000}),
-    "Middle hallway": (70, {"rgb": 0xFF6A00}),
-    "Hallway 2": (70, {"rgb": 0x8A2BE2}),
-}
 
 
 def hall_look(look, bulb):
@@ -438,16 +432,34 @@ def plugs(on):
     return [govee(None, "on_off", "powerSwitch", 1 if on else 0, sku="H5083", device=d) for d in PLUGS.values()]
 
 
+# House lights: two Lutron Caséta dimmers (Tables, Bar) on a standard Smart Bridge. A small local
+# service on the office PC (C:\\Users\\Sam\\sisyphus-av\\house-lights, LEAP, no cloud) takes plain GETs.
+HOUSE_URL = "http://127.0.0.1:8790/house"
+
+
+def house(path):
+    """full = 100/100, show = Tables 15 / Bar 30 (3 s fade), off = 0/0 (3 s fade),
+    or level?zone=tables|bar&pct=0-100&fade=seconds for one zone."""
+    return action(HTTP, "get", url=f"{HOUSE_URL}/{path}", header="",
+                  jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
+
+
+def house_both(pct, fade=3):
+    return [house(f"level?zone={z}&pct={pct}&fade={fade}") for z in ("tables", "bar")]
+
+
 def hall_keys():
+    """Room-wide looks: each key sets the hallway and the house lights together (Sam, Nov 2 2026)."""
     return {
-        (0, 3): button("HALL LIGHTS\\nPRE-SHOW\\nlook", bgcolor=0x7A5A00, size="14",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)] + plugs(True)),
-        (1, 0): button("HALL LIGHTS\\nDAYTIME", bgcolor=0x6A5A30, size="14",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]),
-        (1, 1): button("HALL LIGHTS\\nSUNSET", bgcolor=0x8A2A3A, size="14",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_SUNSET, bulb)]),
-        (1, 2): button("HALL LIGHTS\\nOFF", bgcolor=DARK, size="14",
-                       press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS] + plugs(False)),
+        (0, 3): button("PRE-SHOW", bgcolor=0x7A5A00, size="18",
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
+                       + plugs(True) + house_both(17)),  # house 17% (Sam, Nov 2 2026)
+        (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)] + [house("full")]),
+        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=[house("show")]),
+        (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
+                       press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
+                       + plugs(False) + [house("off")]),
     }
 
 
