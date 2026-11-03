@@ -552,7 +552,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0079",
+                "id": "f0082",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -580,7 +580,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0078",
+                      "id": "a0081",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -629,7 +629,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0084",
+                "id": "f0087",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -657,7 +657,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0083",
+                      "id": "a0086",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -706,7 +706,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0089",
+                "id": "f0092",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -734,7 +734,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0088",
+                      "id": "a0091",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -783,7 +783,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0094",
+                "id": "f0097",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -811,7 +811,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0093",
+                      "id": "a0096",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -866,7 +866,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0082",
+                      "id": "a0085",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -890,7 +890,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0081",
+                      "id": "a0084",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -921,7 +921,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0080",
+                      "id": "a0083",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -981,7 +981,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0087",
+                      "id": "a0090",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1005,7 +1005,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0086",
+                      "id": "a0089",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1036,7 +1036,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0085",
+                      "id": "a0088",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1096,7 +1096,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0092",
+                      "id": "a0095",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1120,7 +1120,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0091",
+                      "id": "a0094",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1151,7 +1151,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0090",
+                      "id": "a0093",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1211,7 +1211,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0097",
+                      "id": "a0100",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1235,7 +1235,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0096",
+                      "id": "a0099",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1266,7 +1266,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0095",
+                      "id": "a0098",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -2938,6 +2938,89 @@
               }
             },
             "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "ALARM\\n$(custom:alarm_state)",
+              "textExpression": false,
+              "size": "18",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0056",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:alarm_state) == 'AWAY' || $(custom:alarm_state) == 'HOME'",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 1990186,
+                  "color": 16777215
+                }
+              },
+              {
+                "type": "feedback",
+                "id": "f0057",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:alarm_state) == 'ARMING' || $(custom:alarm_state) == 'DOOR OPEN' || $(custom:alarm_state) == 'ALARM!' || $(custom:alarm_state) == 'ERROR'",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 11558912,
+                  "color": 16777215
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0055",
+                      "connectionId": "internal",
+                      "definitionId": "set_page",
+                      "options": {
+                        "surfaceId": {
+                          "value": "self",
+                          "isExpression": false
+                        },
+                        "page": {
+                          "value": 7,
+                          "isExpression": false
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           }
         },
         "2": {
@@ -2961,7 +3044,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0099",
+                "id": "f0102",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -2989,7 +3072,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0098",
+                      "id": "a0101",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3038,7 +3121,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0104",
+                "id": "f0107",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3066,7 +3149,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0103",
+                      "id": "a0106",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3115,7 +3198,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0109",
+                "id": "f0112",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3143,7 +3226,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0108",
+                      "id": "a0111",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3192,7 +3275,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0114",
+                "id": "f0117",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3220,7 +3303,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0113",
+                      "id": "a0116",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3275,7 +3358,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0102",
+                      "id": "a0105",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3299,7 +3382,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0101",
+                      "id": "a0104",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3330,7 +3413,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0100",
+                      "id": "a0103",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3390,7 +3473,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0107",
+                      "id": "a0110",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3414,7 +3497,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0106",
+                      "id": "a0109",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3445,7 +3528,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0105",
+                      "id": "a0108",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3505,7 +3588,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0112",
+                      "id": "a0115",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3529,7 +3612,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0111",
+                      "id": "a0114",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3560,7 +3643,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0110",
+                      "id": "a0113",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3620,7 +3703,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0117",
+                      "id": "a0120",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3644,7 +3727,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0116",
+                      "id": "a0119",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3675,7 +3758,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0115",
+                      "id": "a0118",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3748,7 +3831,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0055",
+                      "id": "a0058",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -3792,7 +3875,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0056",
+                "id": "f0059",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -3845,7 +3928,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0057",
+                      "id": "a0060",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3882,7 +3965,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0058",
+                      "id": "a0061",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -3898,7 +3981,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0059",
+                      "id": "a0062",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -3914,7 +3997,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0060",
+                      "id": "a0063",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -3962,7 +4045,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0061",
+                      "id": "a0064",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3999,7 +4082,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0062",
+                      "id": "a0065",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4015,7 +4098,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0063",
+                      "id": "a0066",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4031,7 +4114,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0064",
+                      "id": "a0067",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4081,7 +4164,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0065",
+                      "id": "a0068",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -4118,7 +4201,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0066",
+                      "id": "a0069",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4134,7 +4217,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0067",
+                      "id": "a0070",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4150,7 +4233,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0068",
+                      "id": "a0071",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4198,7 +4281,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0069",
+                      "id": "a0072",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -4235,7 +4318,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0070",
+                      "id": "a0073",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4251,7 +4334,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0071",
+                      "id": "a0074",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4267,7 +4350,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0072",
+                      "id": "a0075",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4315,7 +4398,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0073",
+                      "id": "a0076",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -4352,7 +4435,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0074",
+                      "id": "a0077",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4368,7 +4451,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0075",
+                      "id": "a0078",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4416,7 +4499,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0076",
+                      "id": "a0079",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -4453,7 +4536,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0077",
+                      "id": "a0080",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4499,7 +4582,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0119",
+                "id": "f0122",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -4527,7 +4610,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0118",
+                      "id": "a0121",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4576,7 +4659,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0124",
+                "id": "f0127",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -4604,7 +4687,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0123",
+                      "id": "a0126",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4653,7 +4736,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0129",
+                "id": "f0132",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -4681,7 +4764,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0128",
+                      "id": "a0131",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4734,7 +4817,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0138",
+                      "id": "a0141",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -4771,7 +4854,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0139",
+                      "id": "a0142",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4787,7 +4870,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0140",
+                      "id": "a0143",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4837,7 +4920,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0122",
+                      "id": "a0125",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4861,7 +4944,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0121",
+                      "id": "a0124",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4892,7 +4975,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0120",
+                      "id": "a0123",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4952,7 +5035,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0127",
+                      "id": "a0130",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4976,7 +5059,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0126",
+                      "id": "a0129",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -5007,7 +5090,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0125",
+                      "id": "a0128",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -5067,7 +5150,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0132",
+                      "id": "a0135",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5091,7 +5174,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0131",
+                      "id": "a0134",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -5122,7 +5205,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0130",
+                      "id": "a0133",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -5182,7 +5265,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0147",
+                      "id": "a0150",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -5219,7 +5302,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0148",
+                      "id": "a0151",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5235,7 +5318,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0149",
+                      "id": "a0152",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5254,7 +5337,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0144",
+                      "id": "a0147",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -5291,7 +5374,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0145",
+                      "id": "a0148",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5307,7 +5390,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0146",
+                      "id": "a0149",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5325,7 +5408,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0141",
+                      "id": "a0144",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -5362,7 +5445,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0142",
+                      "id": "a0145",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5378,7 +5461,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0143",
+                      "id": "a0146",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5438,7 +5521,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0150",
+                      "id": "a0153",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -5482,7 +5565,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0152",
+                "id": "f0155",
                 "connectionId": "obs",
                 "definitionId": "recording",
                 "options": {},
@@ -5495,7 +5578,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0153",
+                "id": "f0156",
                 "connectionId": "obs",
                 "definitionId": "recordingPaused",
                 "options": {},
@@ -5513,7 +5596,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0151",
+                      "id": "a0154",
                       "connectionId": "obs",
                       "definitionId": "recording",
                       "options": {
@@ -5558,7 +5641,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0154",
+                      "id": "a0157",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -5606,7 +5689,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0155",
+                      "id": "a0158",
                       "connectionId": "xair",
                       "definitionId": "load_snap",
                       "options": {
@@ -5649,7 +5732,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0157",
+                "id": "f0160",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5677,7 +5760,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0156",
+                      "id": "a0159",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5726,7 +5809,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0159",
+                "id": "f0162",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5754,7 +5837,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0158",
+                      "id": "a0161",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5803,7 +5886,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0161",
+                "id": "f0164",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5831,7 +5914,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0160",
+                      "id": "a0163",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5880,7 +5963,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0163",
+                "id": "f0166",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5908,7 +5991,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0162",
+                      "id": "a0165",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5959,7 +6042,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0228",
+                "id": "f0234",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5987,7 +6070,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0227",
+                      "id": "a0233",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6036,7 +6119,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0233",
+                "id": "f0239",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6064,7 +6147,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0232",
+                      "id": "a0238",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6113,7 +6196,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0238",
+                "id": "f0244",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6141,7 +6224,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0237",
+                      "id": "a0243",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6190,7 +6273,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0243",
+                "id": "f0249",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6218,7 +6301,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0242",
+                      "id": "a0248",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6273,7 +6356,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0231",
+                      "id": "a0237",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6297,7 +6380,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0230",
+                      "id": "a0236",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6328,7 +6411,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0229",
+                      "id": "a0235",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6388,7 +6471,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0236",
+                      "id": "a0242",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6412,7 +6495,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0235",
+                      "id": "a0241",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6443,7 +6526,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0234",
+                      "id": "a0240",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6503,7 +6586,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0241",
+                      "id": "a0247",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6527,7 +6610,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0240",
+                      "id": "a0246",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6558,7 +6641,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0239",
+                      "id": "a0245",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6618,7 +6701,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0246",
+                      "id": "a0252",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6642,7 +6725,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0245",
+                      "id": "a0251",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6673,7 +6756,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0244",
+                      "id": "a0250",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6746,7 +6829,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0164",
+                      "id": "a0167",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -6794,7 +6877,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0165",
+                      "id": "a0168",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -6863,7 +6946,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0166",
+                      "id": "a0169",
                       "connectionId": "internal",
                       "definitionId": "exec",
                       "options": {
@@ -6919,7 +7002,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0168",
+                      "id": "a0171",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -6956,7 +7039,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0167",
+                      "id": "a0170",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -6993,7 +7076,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0169",
+                      "id": "a0172",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7030,7 +7113,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0171",
+                      "id": "a0174",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7067,7 +7150,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0170",
+                      "id": "a0173",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7104,7 +7187,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0172",
+                      "id": "a0175",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7141,7 +7224,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0174",
+                      "id": "a0177",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7178,7 +7261,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0173",
+                      "id": "a0176",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7215,7 +7298,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0175",
+                      "id": "a0178",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7252,7 +7335,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0176",
+                      "id": "a0179",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7289,7 +7372,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0177",
+                      "id": "a0180",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7326,7 +7409,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0178",
+                      "id": "a0181",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7363,7 +7446,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0179",
+                      "id": "a0182",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7400,7 +7483,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0180",
+                      "id": "a0183",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -7429,7 +7512,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0181",
+                      "id": "a0184",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -7492,7 +7575,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0183",
+                      "id": "a0186",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7529,7 +7612,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0182",
+                      "id": "a0185",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7566,7 +7649,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0184",
+                      "id": "a0187",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7603,7 +7686,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0186",
+                      "id": "a0189",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7640,7 +7723,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0185",
+                      "id": "a0188",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7677,7 +7760,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0187",
+                      "id": "a0190",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7714,7 +7797,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0189",
+                      "id": "a0192",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7751,7 +7834,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0188",
+                      "id": "a0191",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7788,7 +7871,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0190",
+                      "id": "a0193",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7825,7 +7908,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0191",
+                      "id": "a0194",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7862,7 +7945,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0192",
+                      "id": "a0195",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7899,7 +7982,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0193",
+                      "id": "a0196",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -7960,7 +8043,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0194",
+                      "id": "a0197",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -7989,7 +8072,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0195",
+                      "id": "a0198",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -8050,7 +8133,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0196",
+                      "id": "a0199",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8087,7 +8170,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0197",
+                      "id": "a0200",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8124,7 +8207,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0198",
+                      "id": "a0201",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8161,7 +8244,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0199",
+                      "id": "a0202",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8198,7 +8281,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0200",
+                      "id": "a0203",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8235,7 +8318,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0201",
+                      "id": "a0204",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8272,7 +8355,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0202",
+                      "id": "a0205",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8309,7 +8392,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0203",
+                      "id": "a0206",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -8345,6 +8428,89 @@
               }
             },
             "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "ALARM\\n$(custom:alarm_state)",
+              "textExpression": false,
+              "size": "18",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0208",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:alarm_state) == 'AWAY' || $(custom:alarm_state) == 'HOME'",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 1990186,
+                  "color": 16777215
+                }
+              },
+              {
+                "type": "feedback",
+                "id": "f0209",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:alarm_state) == 'ARMING' || $(custom:alarm_state) == 'DOOR OPEN' || $(custom:alarm_state) == 'ALARM!' || $(custom:alarm_state) == 'ERROR'",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 11558912,
+                  "color": 16777215
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0207",
+                      "connectionId": "internal",
+                      "definitionId": "set_page",
+                      "options": {
+                        "surfaceId": {
+                          "value": "self",
+                          "isExpression": false
+                        },
+                        "page": {
+                          "value": 7,
+                          "isExpression": false
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
           }
         },
         "2": {
@@ -8368,7 +8534,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0248",
+                "id": "f0254",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8396,7 +8562,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0247",
+                      "id": "a0253",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8445,7 +8611,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0253",
+                "id": "f0259",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8473,7 +8639,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0252",
+                      "id": "a0258",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8522,7 +8688,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0258",
+                "id": "f0264",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8550,7 +8716,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0257",
+                      "id": "a0263",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8599,7 +8765,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0263",
+                "id": "f0269",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8627,7 +8793,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0262",
+                      "id": "a0268",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8682,7 +8848,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0251",
+                      "id": "a0257",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8706,7 +8872,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0250",
+                      "id": "a0256",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8737,7 +8903,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0249",
+                      "id": "a0255",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8797,7 +8963,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0256",
+                      "id": "a0262",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8821,7 +8987,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0255",
+                      "id": "a0261",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8852,7 +9018,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0254",
+                      "id": "a0260",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8912,7 +9078,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0261",
+                      "id": "a0267",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8936,7 +9102,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0260",
+                      "id": "a0266",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8967,7 +9133,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0259",
+                      "id": "a0265",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9027,7 +9193,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0266",
+                      "id": "a0272",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -9051,7 +9217,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0265",
+                      "id": "a0271",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9082,7 +9248,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0264",
+                      "id": "a0270",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9155,7 +9321,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0204",
+                      "id": "a0210",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -9199,7 +9365,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0205",
+                "id": "f0211",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -9252,7 +9418,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0206",
+                      "id": "a0212",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9289,7 +9455,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0207",
+                      "id": "a0213",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9305,7 +9471,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0208",
+                      "id": "a0214",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9321,7 +9487,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0209",
+                      "id": "a0215",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9369,7 +9535,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0210",
+                      "id": "a0216",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9406,7 +9572,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0211",
+                      "id": "a0217",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9422,7 +9588,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0212",
+                      "id": "a0218",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9438,7 +9604,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0213",
+                      "id": "a0219",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9488,7 +9654,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0214",
+                      "id": "a0220",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9525,7 +9691,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0215",
+                      "id": "a0221",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9541,7 +9707,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0216",
+                      "id": "a0222",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9557,7 +9723,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0217",
+                      "id": "a0223",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9605,7 +9771,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0218",
+                      "id": "a0224",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9642,7 +9808,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0219",
+                      "id": "a0225",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9658,7 +9824,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0220",
+                      "id": "a0226",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9674,7 +9840,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0221",
+                      "id": "a0227",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9722,7 +9888,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0222",
+                      "id": "a0228",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9759,7 +9925,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0223",
+                      "id": "a0229",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9775,7 +9941,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0224",
+                      "id": "a0230",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9823,7 +9989,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0225",
+                      "id": "a0231",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9860,7 +10026,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0226",
+                      "id": "a0232",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9906,7 +10072,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0268",
+                "id": "f0274",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -9934,7 +10100,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0267",
+                      "id": "a0273",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -9983,7 +10149,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0273",
+                "id": "f0279",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10011,7 +10177,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0272",
+                      "id": "a0278",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10060,7 +10226,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0278",
+                "id": "f0284",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10088,7 +10254,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0277",
+                      "id": "a0283",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10137,7 +10303,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0283",
+                "id": "f0289",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10165,7 +10331,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0282",
+                      "id": "a0288",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10220,7 +10386,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0271",
+                      "id": "a0277",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10244,7 +10410,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0270",
+                      "id": "a0276",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10275,7 +10441,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0269",
+                      "id": "a0275",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10335,7 +10501,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0276",
+                      "id": "a0282",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10359,7 +10525,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0275",
+                      "id": "a0281",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10390,7 +10556,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0274",
+                      "id": "a0280",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10450,7 +10616,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0281",
+                      "id": "a0287",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10474,7 +10640,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0280",
+                      "id": "a0286",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10505,7 +10671,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0279",
+                      "id": "a0285",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10565,7 +10731,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0286",
+                      "id": "a0292",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10589,7 +10755,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0285",
+                      "id": "a0291",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10620,7 +10786,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0284",
+                      "id": "a0290",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10642,6 +10808,1057 @@
                         },
                         "num": {
                           "value": 10,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        }
+      },
+      "gridSize": {
+        "minColumn": 0,
+        "maxColumn": 3,
+        "minRow": 0,
+        "maxRow": 3
+      }
+    },
+    "7": {
+      "name": "ALARM",
+      "controls": {
+        "0": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "BACK",
+              "textExpression": false,
+              "size": "24",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 9051164,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0293",
+                      "connectionId": "internal",
+                      "definitionId": "set_page",
+                      "options": {
+                        "surfaceId": {
+                          "value": "self",
+                          "isExpression": false
+                        },
+                        "page": {
+                          "value": "back",
+                          "isExpression": false
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "ALARM\\n$(custom:alarm_state)",
+              "textExpression": false,
+              "size": "18",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0295",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:alarm_state) == 'AWAY' || $(custom:alarm_state) == 'HOME'",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 1990186,
+                  "color": 16777215
+                }
+              },
+              {
+                "type": "feedback",
+                "id": "f0296",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:alarm_state) == 'ARMING' || $(custom:alarm_state) == 'DOOR OPEN' || $(custom:alarm_state) == 'ALARM!' || $(custom:alarm_state) == 'ERROR'",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 11558912,
+                  "color": 16777215
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0294",
+                      "connectionId": "http",
+                      "definitionId": "get",
+                      "options": {
+                        "url": {
+                          "value": "http://127.0.0.1:8791/alarm/status",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "ARM\\nAWAY\\nclosing",
+              "textExpression": false,
+              "size": "18",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 9051164,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0297",
+                      "connectionId": "http",
+                      "definitionId": "get",
+                      "options": {
+                        "url": {
+                          "value": "http://127.0.0.1:8791/alarm/away",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "ARM\\nHOME\\nstaying",
+              "textExpression": false,
+              "size": "18",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 6961690,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0298",
+                      "connectionId": "http",
+                      "definitionId": "get",
+                      "options": {
+                        "url": {
+                          "value": "http://127.0.0.1:8791/alarm/home",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "2": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 1\\n$(xair:f_ch1_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0300",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 1,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 1\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0299",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MIC 2\\n$(xair:f_ch2_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0305",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 2,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MIC 2\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0304",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "MUSIC\\n$(xair:f_ch3_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0310",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 3,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "MUSIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0309",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 3,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "GOD MIC\\n$(xair:f_ch5_d) dB\\nturn knob",
+              "textExpression": false,
+              "size": "14",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2105376,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0315",
+                "connectionId": "xair",
+                "definitionId": "ch",
+                "options": {
+                  "state": {
+                    "value": "1",
+                    "isExpression": false
+                  },
+                  "theChannel": {
+                    "value": 5,
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "upgradeIndex": 5,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215,
+                  "text": "GOD MIC\\nMUTED\\ntap to unmute"
+                }
+              }
+            ],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0314",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "3": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0303",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0302",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0301",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 1,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0308",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0307",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0306",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 2,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "2": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0313",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 3,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0312",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 3,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0311",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 3,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ]
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "3": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": true
+            },
+            "style": {
+              "text": "",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 0,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0318",
+                      "connectionId": "xair",
+                      "definitionId": "mute",
+                      "options": {
+                        "mute": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "up": [],
+                  "rotate_left": [
+                    {
+                      "type": "action",
+                      "id": "a0317",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "-2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 5
+                    }
+                  ],
+                  "rotate_right": [
+                    {
+                      "type": "action",
+                      "id": "a0316",
+                      "connectionId": "xair",
+                      "definitionId": "fad_a",
+                      "options": {
+                        "ticks": {
+                          "value": "2",
+                          "isExpression": false
+                        },
+                        "duration": {
+                          "value": 0,
+                          "isExpression": false
+                        },
+                        "faderLim": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "type": {
+                          "value": "/ch/",
+                          "isExpression": false
+                        },
+                        "num": {
+                          "value": 5,
                           "isExpression": false
                         }
                       },
@@ -10724,6 +11941,12 @@
       "defaultValue": 0,
       "persistCurrentValue": false,
       "sortOrder": 2
+    },
+    "alarm_state": {
+      "description": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 3
     }
   }
 }
