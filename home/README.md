@@ -8,7 +8,7 @@ reloads when a new version is published (plus a 4 am reload as a backstop).
 
 - Wind map: earth.nullschool, centered on the boat
 - On the water: wind and gusts (Open-Meteo, knots), waves (Open-Meteo marine), sunset, drive time (OSRM)
-- Sail call: next 3 daytime windows, Go / Maybe / Drifty / Stay in from wind, gusts, waves, rain and temperature
+- Sail call: next 3 daytime windows (9 am to 6 pm), judged on the strongest hour of wind. Sam's crew wants 15 kt+: under 8 Too light, 8-14 Light air, 15-25 Go sail, 26-30 (or gusts to 35, waves over 5 ft) Big day, over 30 (or gusts over 35, waves over 8 ft, thunderstorms) Stay in. Rain and cold are shown as notes, never the verdict. Cutoffs are the `SAIL` object in index.html
 - NWS nearshore forecast and active advisories for the marine zone
 - Next at Sisyphus: next headliner and the next shows, from the store's products.json
 - Calendar: rotates every 20 s between the Sisyphus calendar (next 4 show nights) and the personal calendar (next 4 days, only when `ical=` is set)

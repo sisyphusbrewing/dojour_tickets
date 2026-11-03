@@ -208,32 +208,50 @@ function loadHome() {
   }).catch(function () {});
 }
 
-// Sail call: daytime (9 am to 6 pm) wind, gusts, rain and waves at the boat.
+// Sail call: the daytime (9 am to 6 pm) window at the boat. Wind decides it,
+// and Sam's crew wants 15 kt or more; rain and cold are shown but never decide.
+//   under 8 kt          Too light   (no)
+//   8 to 14 kt          Light air   (maybe)
+//   15 to 25 kt         Go sail     (go)
+//   26 to 30 kt, gusts to 35, or waves over 5 ft    Big day, reef early  (maybe)
+//   over 30 kt, gusts over 35, waves over 8 ft, or thunderstorms   Stay in  (no)
+// "Wind" is the strongest hour of the window, since one good afternoon is a sail.
+var SAIL = { light: 8, go: 15, big: 26, stay: 31, bigGust: 35, bigWaves: 5, stayWaves: 8 };
 var QUIPS = {
-  go: ['The lake is in a good mood. Do not mention the Edmund Fitzgerald.', 'Go. Nobody ever said "I wish I had stayed home and answered email."', 'Sailing weather. Call in sick to yourself.', 'Good wind. The boulder can wait.'],
-  calm: ['Drifting weather. Bring a book and a paddle.', 'Not enough wind to blow out a candle. The motor is a sail too, technically.'],
-  maybe: ['Reef early. Brag later.', 'Doable. Pack the good foul-weather gear and lower expectations.', 'Sailable if you like a little drama.'],
-  no: ['The lake wins today. It usually does.', 'Stay ashore. Superior does not do second chances.', 'A fine day to polish brass and talk about sailing.']
+  light: ['Too light. The boat will sit there like it\'s waiting for a table.', 'Not enough wind to blow out a candle. The motor is a sail too, technically.', 'Glassy. Pretty to look at, useless to sail.'],
+  meh: ['Light air. Sailable, if you like patience as a sport.', 'It\'ll move. Slowly. Bring snacks.', 'Fine for a beer on the water. Not for bragging.'],
+  go: ['Good wind. The boulder can wait.', 'Go. Nobody ever said "I wish I had stayed home and answered email."', 'Real wind. Call in sick to yourself.', 'Rail-in-the-water weather. The good kind of wet.'],
+  big: ['Big day. Reef early, brag later.', 'Plenty of wind. Tie everything down twice.', 'Sporty. Superior is showing off.'],
+  no: ['Stay ashore. Superior does not do second chances.', 'The lake wins today. It usually does.', 'Too much lake. Polish brass and talk about sailing.']
 };
 function pick(list, seed) { return list[Math.abs(seed) % list.length]; }
 
 function sailCall(hours, waves, dayIdx) {
-  var wind = 0, gust = 0, rain = 0, temp = 0, n = 0;
-  hours.forEach(function (h) { wind += h.w; gust = Math.max(gust, h.g); rain = Math.max(rain, h.p); temp = Math.max(temp, h.t); n++; });
-  wind = n ? wind / n : 0;
-  var wv = waves * M_TO_FT, kind;
-  if (wind > 22 || gust > 28 || wv > 6 || rain >= 70 || temp < 38) kind = 'no';
-  else if (wind > 17 || gust > 23 || wv > 3.5 || rain >= 45 || temp < 48) kind = 'maybe';
-  else if (wind < 5) kind = 'calm';
-  else kind = 'go';
-  var label = { go: 'Go sail', calm: 'Drifty', maybe: 'Maybe', no: 'Stay in' }[kind];
-  return { cls: kind === 'calm' ? 'maybe' : kind, label: label, wind: Math.round(wind), gust: Math.round(gust), waves: wv, rain: rain, temp: Math.round(temp),
-    quip: pick(QUIPS[kind], new Date().getDate() + dayIdx) };
+  var wind = 0, low = 99, gust = 0, rain = 0, temp = 0, storm = false;
+  hours.forEach(function (h) {
+    wind = Math.max(wind, h.w); low = Math.min(low, h.w); gust = Math.max(gust, h.g);
+    rain = Math.max(rain, h.p); temp = Math.max(temp, h.t); if (h.c >= 95) storm = true;
+  });
+  var wv = waves * M_TO_FT, kind, reason;
+  if (wind >= SAIL.stay || gust > SAIL.bigGust || wv > SAIL.stayWaves || storm) {
+    kind = 'no';
+    reason = storm ? 'thunderstorms' : wv > SAIL.stayWaves ? 'waves ' + wv.toFixed(0) + ' ft' : 'too much wind';
+  } else if (wind >= SAIL.big || gust > SAIL.bigGust - 5 || wv > SAIL.bigWaves) kind = 'big';
+  else if (wind >= SAIL.go) kind = 'go';
+  else if (wind >= SAIL.light) kind = 'meh';
+  else kind = 'light';
+  var label = { light: 'Too light', meh: 'Light air', go: 'Go sail', big: 'Big day', no: 'Stay in' }[kind];
+  var cls = { light: 'no', meh: 'maybe', go: 'go', big: 'maybe', no: 'no' }[kind];
+  var notes = [];
+  if (rain >= 50) notes.push('rain ' + rain + '%');
+  if (temp < 45) notes.push('cold');
+  return { cls: cls, label: label, low: Math.round(low), wind: Math.round(wind), gust: Math.round(gust), waves: wv, temp: Math.round(temp),
+    notes: notes, reason: reason, quip: pick(QUIPS[kind], new Date().getDate() + dayIdx) };
 }
 
 function loadWater() {
   var wx = getJSON('https://api.open-meteo.com/v1/forecast?latitude=' + BOAT[0] + '&longitude=' + BOAT[1] +
-    '&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m&hourly=wind_speed_10m,wind_gusts_10m,precipitation_probability,temperature_2m' +
+    '&current=wind_speed_10m,wind_gusts_10m,wind_direction_10m&hourly=wind_speed_10m,wind_gusts_10m,precipitation_probability,temperature_2m,weather_code' +
     '&daily=sunrise,sunset&forecast_days=4&wind_speed_unit=kn&temperature_unit=fahrenheit&timezone=' + TZ);
   var mar = getJSON('https://marine-api.open-meteo.com/v1/marine?latitude=' + BOAT[0] + '&longitude=' + BOAT[1] +
     '&current=wave_height&daily=wave_height_max&forecast_days=4&timezone=' + TZ).catch(function () { return null; });
@@ -256,7 +274,7 @@ function loadWater() {
         var hr = +t.slice(11, 13);
         if (hr < 9 || hr > 18) return;
         if (i === 0 && new Date(t) < now && hr < 17) return;   // today: only what's left of it
-        hours.push({ w: w.hourly.wind_speed_10m[k], g: w.hourly.wind_gusts_10m[k], p: w.hourly.precipitation_probability[k] || 0, t: w.hourly.temperature_2m[k] });
+        hours.push({ w: w.hourly.wind_speed_10m[k], g: w.hourly.wind_gusts_10m[k], p: w.hourly.precipitation_probability[k] || 0, t: w.hourly.temperature_2m[k], c: w.hourly.weather_code[k] || 0 });
       });
       if (!hours.length) continue;
       var d = new Date(date + 'T12:00:00');
@@ -266,7 +284,8 @@ function loadWater() {
     }
     $('days').innerHTML = days.map(function (x) {
       return '<div class="day ' + x.cls + '"><div class="n">' + x.name + '</div><div class="verdict">' + x.label + '</div>' +
-        '<div class="why">' + x.wind + ' kt, gusts ' + x.gust + ' · waves ' + x.waves.toFixed(1) + ' ft · ' + x.temp + '°' + (x.rain >= 30 ? ' · rain ' + x.rain + '%' : '') + '</div>' +
+        '<div class="why">' + (x.low < x.wind ? x.low + '–' : '') + x.wind + ' kt, gusts ' + x.gust + ' · waves ' + x.waves.toFixed(1) + ' ft · ' + x.temp + '°' +
+        (x.reason ? ' · ' + x.reason : '') + (x.notes.length ? ' · ' + x.notes.join(', ') : '') + '</div>' +
         '<div class="quip">' + esc(x.quip) + '</div></div>';
     }).join('');
   }).catch(function () {});
