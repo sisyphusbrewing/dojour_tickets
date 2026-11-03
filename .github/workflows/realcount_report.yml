@@ -1,0 +1,57 @@
+name: RealCount Daily Ticket Counts
+
+on:
+  schedule:
+    # Every day at 8:30 AM Central during CDT (7:30 AM CST), after the morning
+    # Dojour sync. Agencies' RealCount stops chasing us once these arrive.
+    - cron: '30 13 * * *'
+  workflow_dispatch:
+    inputs:
+      to:
+        description: 'Send to this address instead (testing). Blank = ticketcounts@realcount.pro'
+        required: false
+        type: string
+      dry_run:
+        description: 'Print the report, send nothing'
+        type: boolean
+        default: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests
+
+      # Live website sales so the numbers are current; Dojour comes from the 4-hourly sync.
+      - name: Pull live Shopify sales
+        continue-on-error: true
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python fetch_tickets.py --shopify-only
+
+      - name: Send RealCount report
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          REALCOUNT_TO: ${{ inputs.to }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python realcount_report.py

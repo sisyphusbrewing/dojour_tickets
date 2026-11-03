@@ -310,21 +310,9 @@ def send_email(to_email, subject, html_content, text_content=""):
         print(f"❌ Unexpected SMTP Error on Port 465: {e}")
         raise e
 
-def main():
-    print("=" * 60)
-    print("SISYPHUS BREWING • WEEKLY AGENT TICKET REPORT DISPATCHER")
-    print("=" * 60)
-
-    # 1. Fetch agent directory
-    agent_records = fetch_supabase("show_agents?select=*")
-    if AGENT_TOKEN:
-        agent_records = [r for r in agent_records if r.get("token") == AGENT_TOKEN]
-        print(f"On-demand report for one agent ({len(agent_records)} record).")
-    token_map = {r["show_title"].strip(): r.get("token") or "" for r in agent_records}
-    agent_map = {r["show_title"].strip(): r["agent_email"].strip() for r in agent_records if r.get("agent_email")}
-    print(f"Loaded {len(agent_map)} agent email assignment(s) from Supabase.")
-
-    # 2. Fetch all ticket sales
+def collect_shows(titles):
+    """{(title, show_date): counts} for every upcoming showtime: website, Dojour and
+    comp tickets from Supabase, plus unsold website showtimes at zero."""
     tickets = fetch_supabase("tickets?select=show_date,show_title,tickets,source")
     if not tickets:
         print("No ticket data found.")
@@ -367,7 +355,7 @@ def main():
             shows_map[key]["dojour_tickets"] += count
 
     # Showtimes nobody has bought yet have no ticket rows; add them at zero.
-    for title_str, dates in website_showtimes(agent_map.keys()).items():
+    for title_str, dates in website_showtimes(titles).items():
         for date_str in dates:
             key = (title_str, date_str)
             ts = parse_date_to_timestamp(date_str)
@@ -375,6 +363,25 @@ def main():
                 continue
             shows_map[key] = {"show_title": title_str, "show_date": date_str, "timestamp": ts,
                               "website_tickets": 0, "dojour_tickets": 0, "comp_tickets": 0, "total": 0}
+    return shows_map
+
+
+def main():
+    print("=" * 60)
+    print("SISYPHUS BREWING • WEEKLY AGENT TICKET REPORT DISPATCHER")
+    print("=" * 60)
+
+    # 1. Fetch agent directory
+    agent_records = fetch_supabase("show_agents?select=*")
+    if AGENT_TOKEN:
+        agent_records = [r for r in agent_records if r.get("token") == AGENT_TOKEN]
+        print(f"On-demand report for one agent ({len(agent_records)} record).")
+    token_map = {r["show_title"].strip(): r.get("token") or "" for r in agent_records}
+    agent_map = {r["show_title"].strip(): r["agent_email"].strip() for r in agent_records if r.get("agent_email")}
+    print(f"Loaded {len(agent_map)} agent email assignment(s) from Supabase.")
+
+    # 2. Ticket sales per upcoming showtime
+    shows_map = collect_shows(agent_map.keys())
 
     # 3. Consolidate by Agent -> Comedian -> Shows
     consolidated = defaultdict(lambda: defaultdict(list))
