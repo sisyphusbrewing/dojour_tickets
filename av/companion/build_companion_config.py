@@ -371,6 +371,7 @@ CUSTOM_VARIABLES = {
     "timer_t0": "Stage timer: unix time the set started on the deck (0 = stopped)",
     "timer_len": "Stage timer: set length in seconds",
     "timer_wrap": "Stage timer: 1 while WRAP IT UP is on",
+    "alarm_state": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
 }
 
 
@@ -469,6 +470,48 @@ def hall_keys():
     }
 
 
+# SimpliSafe alarm (Sam, Nov 3 2026): a local service on the office PC (av/simplisafe/alarm.py,
+# C:\\Users\\Sam\\sisyphus-av\\simplisafe) arms it and writes the state to custom variable alarm_state.
+# No DISARM key: the deck sits on the bar, where anyone could press it.
+ALARM_URL = "http://127.0.0.1:8791/alarm"
+ALARM_PAGE = 7
+ALARM_COLOR = 0x8A1C1C
+ALARM_ON = "$(custom:alarm_state) == 'AWAY' || $(custom:alarm_state) == 'HOME'"
+ALARM_BUSY = "$(custom:alarm_state) == 'ARMING' || $(custom:alarm_state) == 'DOOR OPEN' || $(custom:alarm_state) == 'ALARM!' || $(custom:alarm_state) == 'ERROR'"
+
+
+def alarm(path):
+    return action(HTTP, "get", url=f"{ALARM_URL}/{path}", header="",
+                  jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
+
+
+def alarm_status_feedbacks():
+    return [feedback(INTERNAL, "check_expression", style={"bgcolor": 0x1E5E2A, "color": WHITE}, expression=ALARM_ON),
+            feedback(INTERNAL, "check_expression", style={"bgcolor": 0xB06000, "color": WHITE}, expression=ALARM_BUSY)]
+
+
+def alarm_key():
+    """BAR page: shows the alarm state (green when armed); press for the ALARM page."""
+    return button("ALARM\\n$(custom:alarm_state)", bgcolor=DARK, size="18",
+                  press=[action(INTERNAL, "set_page", surfaceId="self", page=ALARM_PAGE)],
+                  feedbacks=alarm_status_feedbacks())
+
+
+def alarm_page():
+    return {
+        "name": "ALARM",
+        "controls": {
+            (0, 0): button("BACK", bgcolor=ALARM_COLOR, size="24",
+                           press=[action(INTERNAL, "set_page", surfaceId="self", page="back")]),
+            (0, 1): button("ALARM\\n$(custom:alarm_state)", bgcolor=DARK, size="18",
+                           press=[alarm("status")], feedbacks=alarm_status_feedbacks()),
+            (0, 2): button("ARM\\nAWAY\\nclosing", bgcolor=ALARM_COLOR, size="18", press=[alarm("away")]),
+            (0, 3): button("ARM\\nHOME\\nstaying", bgcolor=0x6A3A1A, size="18", press=[alarm("home")]),
+            **sound_controls(SOURCES_2),
+        },
+    }
+
+
 def record_key():
     """Starts/stops OBS recording; red with the running time while recording."""
     return button(
@@ -518,6 +561,7 @@ def layout(sources, first, mics, other_first):
                 (0, 1): menu_refresh_key(),
                 (0, 2): print_menu_key(),
                 **hall_keys(),
+                (1, 3): alarm_key(),
             },
         },
         timer: {
@@ -550,7 +594,7 @@ def mics_key(mics, other_first):
                   press=[action(INTERNAL, "set_page", surfaceId="self", page=other_first)])
 
 
-PAGES = {**layout(SOURCES_2, 1, 2, 4), **layout(SOURCES_4, 4, 4, 1)}
+PAGES = {**layout(SOURCES_2, 1, 2, 4), **layout(SOURCES_4, 4, 4, 1), ALARM_PAGE: alarm_page()}
 
 
 GRID = {"minColumn": 0, "maxColumn": 3, "minRow": 0, "maxRow": 3}
