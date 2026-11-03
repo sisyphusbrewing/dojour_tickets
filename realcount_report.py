@@ -37,7 +37,7 @@ ONLY = [t.strip() for t in (os.environ.get("REALCOUNT_SHOWS") or "").split(",") 
 # The name agencies list us under in RealCount.
 VENUE = "Sisyphus Brewing & Comedy"
 CITY = "Minneapolis, MN"
-CAPACITY = 90
+DEFAULT_CAPACITY = 90   # the showroom; used only when Shopify can't be read
 
 PERSONAL_DOMAINS = {"gmail.com", "googlemail.com", "yahoo.com", "icloud.com", "me.com", "mac.com",
                     "hotmail.com", "outlook.com", "live.com", "aol.com", "msn.com", "proton.me",
@@ -57,12 +57,44 @@ def agency_titles():
     return [r["show_title"].strip() for r in rows if is_agency(r.get("agent_email") or "")]
 
 
+def seats_left(titles):
+    """{(title, show_date): seats still for sale on the website}. The inventory
+    mirror takes Dojour sales out of these, so sold + comps + this = capacity,
+    which follows a show into the bigger room. Empty if Shopify is unreachable."""
+    try:
+        from maintain_shows import Shopify, fetch_active_products, date_text, skip_reason
+        from fetch_tickets import clean_show_title, format_show_date
+        from show_dates import parse_show_datetime
+        products = fetch_active_products(Shopify())
+    except (Exception, SystemExit) as e:
+        print(f"Notice: could not read Shopify inventory ({e}); capacity falls back to {DEFAULT_CAPACITY}.")
+        return {}
+    wanted = {t.lower(): t for t in titles}
+    left = {}
+    for p in products:
+        title = wanted.get(clean_show_title(p["title"]).lower())
+        if not title or skip_reason(p):
+            continue
+        for v in p["variants"]["nodes"]:
+            date_str = format_show_date(parse_show_datetime(date_text(v), require_time=True))
+            if date_str:
+                key = (title, date_str)
+                left[key] = left.get(key, 0) + max(int(v.get("inventoryQuantity") or 0), 0)
+    return left
+
+
 def report_rows(titles):
     rows = []
-    for (title, _), s in collect_shows(titles).items():
+    left = seats_left(titles)
+    for (title, date_str), s in collect_shows(titles).items():
         if title not in titles or not s["timestamp"]:
             continue
         dt = datetime.fromtimestamp(s["timestamp"], CENTRAL_TZ)
+        used = s["total"] + s["comp_tickets"]
+        remaining = left.get((title, date_str))
+        if remaining is None:
+            remaining = max(DEFAULT_CAPACITY - used, 0)
+        capacity = used + remaining
         rows.append({
             "Event": f"{title} @ {VENUE}",
             "Artist": title,
@@ -71,10 +103,10 @@ def report_rows(titles):
             "Date": dt.strftime("%Y-%m-%d"),
             "Day": dt.strftime("%a %d %b %Y"),
             "Time": dt.strftime("%-I:%M %p"),
-            "Capacity": CAPACITY,
+            "Capacity": capacity,
             "Sold": s["total"],
             "Comps": s["comp_tickets"],
-            "Remaining": max(CAPACITY - s["total"] - s["comp_tickets"], 0),
+            "Remaining": remaining,
             "_ts": s["timestamp"],
         })
     rows.sort(key=lambda r: (r["_ts"], r["Artist"]))
