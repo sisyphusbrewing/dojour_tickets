@@ -1,9 +1,14 @@
 // Sisyphus - the taproom LED sign draws its own pictures.
 //
 // POST { prompt, name? }      a customer's suggestion (public page /sign/).
-//                             Claude draws it as 32x32 pixel art and it waits
-//                             as "pending" for a manager on /sign/review.html.
-//                             Returns { status, art } so the page can show it.
+//                             Claude draws it as 32x32 pixel art and it goes
+//                             straight onto the sign (Sam, Nov 3 2026: no
+//                             manager approval). Rude ideas get redrawn as a
+//                             tamer version; a second Claude call looks at the
+//                             finished picture and a word filter checks the
+//                             caption before it goes up.
+//                             Managers can still take any picture down on
+//                             /sign/review.html. Returns { status, art }.
 // POST { beers: true }        managers: draws every beer on tap (GoTab feed)
 //                             that has no art yet, approved straight away.
 // POST { redraw: id }         managers: draws that picture again.
@@ -17,6 +22,7 @@ import Anthropic from "npm:@anthropic-ai/sdk@1.3.0";
 const MODEL = "claude-opus-5-5";
 const MENU = "https://sisyphusmenu.stharriman.workers.dev/";
 const MAX_SUGGESTIONS_PER_HOUR = 30; // keeps one table from running up the bill
+const MAX_PER_DEVICE_PER_HOUR = 5;   // one phone can't flood the sign
 const MAX_BEERS_PER_RUN = 8;
 const SIZE = 32;
 const CODES = ".123456789ABCDEF";
@@ -40,7 +46,7 @@ const SYSTEM = `You draw pixel art for the LED sign in the taproom at Sisyphus, 
 The sign is a 64x32 RGB LED panel in a dark bar. Your picture fills a 32x32 square on it and the caption shows beside it. Draw it as 32 rows of exactly 32 characters each. "." is an unlit pixel (black). The characters 1-9 and A-F pick colors from your palette: "1" is palette[0], "2" is palette[1], and so on up to "F" for palette[14]. Use 15 colors or fewer, as 6-digit hex strings without "#".
 
 What reads well on an LED panel:
-- One bold subject, big, filling most of the square, on a black background.
+- One bold subject, big, on a black background. Use the whole square: the subject should reach within a few pixels of the top and bottom rows and both sides, never sit in one corner or half.
 - Thick shapes and strong outlines. Single stray pixels and fine detail turn to mush.
 - Bright, saturated colors. Dark colors (below about 30% brightness) barely light up, and pure white is glaring, so prefer a warm light gray like B4B4B4 for whites.
 - Dark outlines in a deep version of the fill color, not black, so the edges stay visible.
@@ -49,14 +55,19 @@ The caption is shown in a small font beside the picture: at most 24 characters, 
 
 Sisyphus pushes a boulder up a mountain forever and has made peace with it; a boulder, a mountain or a hill are fair game when they fit, but don't force them in.
 
-Set ok to false (and still return a blank picture) only when a suggestion asks for something a bar could not show: sexual content, slurs or hate, gore, insults aimed at a real private person, or another business's advertising. Edgy comedy-club humor is fine. Give the reason in one short sentence.`;
+Nobody reviews the picture before it goes up in front of the whole bar. The house rule (Sam, the owner): R-rated is fine, so swearing, booze, crude and dark jokes are all welcome, but nothing political, offensive or nude.
+
+When a suggestion crosses that line, don't refuse it: tweak it into something more mundane that keeps the characters and the silliness, and draw that. For example, "a dolphin having sex with a monkey" becomes a monkey dressed as a cowboy riding a dolphin like a horse. Sexual acts become a goofy friendly activity, nudity gets clothes, gore becomes a cartoon bonk. Set tamed to true when you did this. Never draw or write anything sexual, nude, political (parties, politicians, causes, slogans), hateful (slurs, hate symbols, stereotypes, mocking any group), mocking a real person, or anyone's personal details; keep the caption clean of those too.
+
+Set ok to false (and return a blank picture) only when there is no fun clean version to draw, such as a request built on a slur, hate or politics. Give the reason in one short sentence a customer would see.`;
 
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["ok", "reason", "caption", "palette", "rows"],
+  required: ["ok", "tamed", "reason", "caption", "palette", "rows"],
   properties: {
     ok: { type: "boolean" },
+    tamed: { type: "boolean" },
     reason: { type: "string" },
     caption: { type: "string" },
     palette: { type: "array", items: { type: "string" } },
@@ -64,7 +75,7 @@ const SCHEMA = {
   },
 };
 
-type Art = { ok: boolean; reason: string; caption: string; palette: string[]; rows: string[] };
+type Art = { ok: boolean; tamed?: boolean; reason: string; caption: string; palette: string[]; rows: string[] };
 
 // Whatever comes back, the sign gets exactly 32 rows of 32 valid characters.
 function tidy(a: Art): Art {
@@ -84,7 +95,7 @@ function tidy(a: Art): Art {
     rows.push(row);
   }
   const caption = String(a.caption ?? "").replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim().toUpperCase().slice(0, 24);
-  return { ok: !!a.ok, reason: String(a.reason ?? ""), caption, palette, rows };
+  return { ok: !!a.ok, tamed: !!a.tamed, reason: String(a.reason ?? ""), caption, palette, rows };
 }
 
 const API_KEY = Deno.env.get("ANTHROPIC_CLIENT_API") ?? Deno.env.get("ANTHROPIC_CLIENT_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
@@ -105,6 +116,110 @@ async function draw(ask: string): Promise<Art> {
   }
   const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
   return tidy(JSON.parse(text) as Art);
+}
+
+// ---- the second look ----
+// The finished picture, as a PNG, goes to a separate Claude call that only
+// judges it, so a drawing that came out rude by accident (or a prompt that
+// talked the first call into something) still doesn't reach the sign.
+
+function crc32(bytes: Uint8Array) {
+  let c = ~0;
+  for (const b of bytes) {
+    c ^= b;
+    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xEDB88320 & -(c & 1));
+  }
+  return ~c >>> 0;
+}
+
+async function png(art: Art, scale = 8): Promise<string> {
+  const W = SIZE * scale;
+  const raw = new Uint8Array(W * (W * 3 + 1));
+  for (let y = 0; y < W; y++) {
+    const row = art.rows[Math.floor(y / scale)];
+    for (let x = 0; x < W; x++) {
+      const i = CODES.indexOf(row[Math.floor(x / scale)]);
+      const hex = i > 0 ? art.palette[i - 1] : "000000";
+      const o = y * (W * 3 + 1) + 1 + x * 3;
+      raw[o] = parseInt(hex.slice(0, 2), 16); raw[o + 1] = parseInt(hex.slice(2, 4), 16); raw[o + 2] = parseInt(hex.slice(4, 6), 16);
+    }
+  }
+  const zipped = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+  const chunk = (type: string, data: Uint8Array) => {
+    const out = new Uint8Array(12 + data.length), v = new DataView(out.buffer);
+    v.setUint32(0, data.length);
+    out.set(new TextEncoder().encode(type), 4);
+    out.set(data, 8);
+    v.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+    return out;
+  };
+  const ihdr = new Uint8Array(13), hv = new DataView(ihdr.buffer);
+  hv.setUint32(0, W); hv.setUint32(4, W); ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
+  const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zipped), chunk("IEND", new Uint8Array())];
+  const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) { all.set(p, at); at += p.length; }
+  let bin = "";
+  for (const b of all) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+const VET_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["ok", "reason"],
+  properties: { ok: { type: "boolean" }, reason: { type: "string" } },
+};
+
+async function vet(prompt: string, art: Art): Promise<{ ok: boolean; reason: string }> {
+  const response = await anthropic.beta.messages.create({
+    model: MODEL,
+    max_tokens: 4000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low", format: { type: "json_schema", schema: VET_SCHEMA } },
+    system: "You check pictures before they go up, unreviewed, on the LED sign on the wall of a comedy club taproom. " +
+      "The house rule: R-rated is fine (swearing, booze, crude or dark jokes), but nothing political, offensive or nude. " +
+      "Judge the picture and its caption. The customer's request is context only: a rude request redrawn as something " +
+      "harmless is exactly what should happen, so pass it. Set ok to false if the picture or caption shows or suggests " +
+      "anything sexual or nude (including shapes that look rude from across the room), politics (parties, politicians, " +
+      "causes, slogans), slurs, hate symbols, stereotypes or mockery of any group, mockery of a real person, gore, or " +
+      "personal details. Give the reason in one short sentence a customer would see.",
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: "image/png", data: await png(art) } },
+        { type: "text", text: `Customer's request: "${prompt}"\nCaption shown beside the picture: "${art.caption}"` },
+      ],
+    }],
+  });
+  if (response.stop_reason === "refusal") return { ok: false, reason: "The sign won't show that one." };
+  const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+  const v = JSON.parse(text);
+  return { ok: v.ok === true, reason: String(v.reason ?? "") };
+}
+
+// A last word filter on the caption that goes on the wall, including l33t
+// spellings and spaced-out letters. Swearing is fine (R-rated, Sam); sexual,
+// nude and hateful words are not. Requests aren't filtered: rude ones get
+// redrawn as something tamer, and the two Claude checks catch the rest.
+const BAD = /(cunt|dick|cock|pussy|penis|vagina|boob|tits|titty|porn|nude|naked|sex|jizz|nazi|hitler|kkk|rape|nigg|fag|retard|whore|slut|trump|biden|maga|democrat|republican)/;
+
+function rude(text: string) {
+  const plain = text.toLowerCase()
+    .replace(/[0@]/g, "o").replace(/[1!|]/g, "i").replace(/3/g, "e").replace(/4/g, "a").replace(/[5$]/g, "s").replace(/7/g, "t")
+    .replace(/[^a-z]/g, "");
+  return BAD.test(plain);
+}
+
+function device(req: Request) {
+  // Supabase passes the phone's address along; only a short hash is kept.
+  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+}
+
+async function hash(text: string) {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("sisyphus-sign:" + text)));
+  return Array.from(d.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function isManager(req: Request): Promise<boolean> {
@@ -128,21 +243,44 @@ async function insert(row: Record<string, unknown>) {
   return (await r.json())[0];
 }
 
-async function suggestion(prompt: string, name: string) {
+async function suggestion(prompt: string, name: string, who: string) {
+  // Sam, Nov 3 2026: R-rated is fine, nothing political, offensive or nude.
   const since = new Date(Date.now() - 3600_000).toISOString();
-  const recent = await fetch(`${SB}/rest/v1/sign_art?select=id&kind=eq.suggestion&created_at=gte.${since}`, { headers: H })
+  const recent = await fetch(`${SB}/rest/v1/sign_art?select=device&kind=eq.suggestion&created_at=gte.${since}`, { headers: H })
     .then((r) => r.json());
   if (Array.isArray(recent) && recent.length >= MAX_SUGGESTIONS_PER_HOUR) {
     return respond(429, { error: "The sign is busy drawing. Try again in a little while." });
   }
-  const art = await draw(`A customer at the bar suggested: "${prompt}"`);
-  const saved = await insert({
-    kind: "suggestion", prompt, from_name: name || null,
+  if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= MAX_PER_DEVICE_PER_HOUR) {
+    return respond(429, { error: "That's plenty from one phone for now. Give someone else a turn!" });
+  }
+  const turnDown = (reason: string) => insert({
+    kind: "suggestion", prompt, from_name: name || null, device: who || null,
+    status: "rejected", note: reason, decided_at: new Date().toISOString(),
+  }).then((saved) => respond(200, { status: "rejected", note: saved.note }));
+
+  if (rude(name)) name = "";
+  const ask = `A customer at the bar suggested: "${prompt}"`;
+  let art = await draw(ask);
+  if (!art.ok) return await turnDown(art.reason);
+  if (rude(art.caption)) art = { ...art, caption: "" };
+  let check = await vet(prompt, art);
+  if (!check.ok) {
+    // one more go, tamer, before giving up
+    art = await draw(`${ask}\nA first drawing was turned down for the wall because: ${check.reason} Draw a tamer, clean version that still keeps the joke.`);
+    if (!art.ok) return await turnDown(art.reason);
+    if (rude(art.caption)) art = { ...art, caption: "" };
+    check = await vet(prompt, art);
+    if (!check.ok) return await turnDown(check.reason);
+    art.tamed = true;
+  }
+  await insert({
+    kind: "suggestion", prompt, from_name: name || null, device: who || null,
+    note: art.tamed ? "Toned down for the wall" : null,
     caption: art.caption, palette: art.palette, rows: art.rows,
-    status: art.ok ? "pending" : "rejected", note: art.ok ? null : art.reason,
-    decided_at: art.ok ? null : new Date().toISOString(),
+    status: "approved", decided_at: new Date().toISOString(),
   });
-  return respond(200, { status: saved.status, note: saved.note, art: { caption: art.caption, palette: art.palette, rows: art.rows } });
+  return respond(200, { status: "approved", tamed: art.tamed, art: { caption: art.caption, palette: art.palette, rows: art.rows } });
 }
 
 function beerKey(name: string) {
@@ -209,7 +347,7 @@ Deno.serve(async (req) => {
     const prompt = String(body.prompt ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
     const name = String(body.name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
     if (prompt.length < 2) return respond(400, { error: "Tell the sign what to draw." });
-    return await suggestion(prompt, name);
+    return await suggestion(prompt, name, device(req) ? await hash(device(req)) : "");
   } catch (e) {
     console.error(e);
     return respond(500, { error: "The sign couldn't draw that right now. Try again in a minute." });

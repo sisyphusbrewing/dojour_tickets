@@ -39,7 +39,7 @@
   <main class="wrap">
     <section class="post">
       <h1>Draw on the sign</h1>
-      <p>Tell the sign what to draw. It draws it right here, the bar gives it a look, and then it goes up in the taproom.</p>
+      <p>Tell the sign what to draw. It draws it right here and puts it up on the sign in the taproom. Keep it fun: nothing political or nude.</p>
     </section>
 
     <form class="card" id="form">
@@ -49,7 +49,7 @@
       </div>
       <div class="ideas" id="ideas"></div>
       <div class="field">
-        <label for="name">Your name <span class="help">(optional, so staff know who to thank)</span></label>
+        <label for="name">Your name <span class="help">(optional)</span></label>
         <input class="input" id="name" maxlength="40" autocomplete="given-name">
       </div>
       <div class="err hidden" id="err" style="margin-top:10px"></div>
@@ -97,7 +97,9 @@
         } else {
           $('art').classList.remove('hidden');
           drawSignArt($('art'), data.art, 64);
-          $('msg').textContent = "Here's your picture. Staff will give it a look, then it goes up on the sign in the taproom.";
+          $('msg').textContent = data.tamed
+            ? "Here's your picture, toned down a touch for the wall. Look for it on the sign in the taproom."
+            : "Here's your picture. Look for it on the sign in the taproom.";
         }
       } catch (err) {
         $('err').textContent = err.message || 'Could not reach the sign. Try again in a minute.';

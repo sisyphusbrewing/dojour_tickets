@@ -69,8 +69,8 @@
     var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
     var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     var $ = function (id) { return document.getElementById(id); };
-    var FILTERS = [['pending', 'Waiting'], ['approved', 'On the sign'], ['rejected', 'Turned down']];
-    var items = [], filter = 'pending';
+    var FILTERS = [['approved', 'On the sign'], ['rejected', 'Turned down'], ['pending', 'Waiting']];
+    var items = [], filter = 'approved';
 
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     function toast(m) { var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200); }
