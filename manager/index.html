@@ -98,6 +98,13 @@
           <div class="count" style="text-align:left"><b id="countIn">–</b><small>checked in</small></div>
           <button class="btn btn-primary" id="compToggle" onclick="toggleComp(true)">+ Add a comp</button>
         </div>
+        <div id="vipCard" class="card hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <div><div class="lbl">★ VIP tables</div><div id="vipSummary" style="margin-top:4px"></div></div>
+            <a class="btn" id="tentsBtn" target="_blank" rel="noopener">Print table tents</a>
+          </div>
+          <div id="vipSnacks" class="g-sub" style="word-break:normal;margin-top:8px;font-size:14px"></div>
+        </div>
         <form id="compForm" class="card stack hidden">
           <div class="lbl">Comp for <span id="compShow" style="color:#fff"></span></div>
           <div class="grid2">
@@ -278,8 +285,39 @@
       var res = await sb.from('tickets').select('*').eq('show_date', s.show_date).eq('show_title', s.show_title).order('guest_name');
       if (res.error) { toast('Couldn’t load the list: ' + res.error.message, true); return; }
       guests = res.data || [];
+      await mergeVip(s);
       $('compShow').textContent = s.label;
       render();
+    }
+
+    // VIP answers from the pre-show form (vip/), shown on each guest and summed for the snack run.
+    async function mergeVip(s) {
+      var res = await sb.from('vip_prefs').select('unique_id, tent_name, occasion, seat_pref, snack')
+        .eq('show_date', s.show_date).eq('show_title', s.show_title);
+      var by = {};
+      (res.data || []).forEach(function (p) { by[p.unique_id] = p; });
+      guests.forEach(function (g) {
+        var p = by[g.unique_id];
+        if (p) { g.vip_tent = p.tent_name; g.vip_occasion = p.occasion; g.vip_seat = p.seat_pref; g.vip_snack = p.snack; }
+      });
+      var vips = guests.filter(isVipRow);
+      $('vipCard').classList.toggle('hidden', !vips.length);
+      if (!vips.length) return;
+      var seats = 0, answered = 0, salty = 0, sweet = 0, unknown = 0;
+      vips.forEach(function (g) {
+        var n = g.tickets || 1; seats += n;
+        if (g.vip_snack || g.vip_tent) answered++;
+        if (g.vip_snack === 'salty' || g.vip_snack === 'both') salty += n;
+        if (g.vip_snack === 'sweet' || g.vip_snack === 'both') sweet += n;
+        if (!g.vip_snack) unknown += n;
+      });
+      $('vipSummary').textContent = seats + ' seats in ' + vips.length + ' orders · ' + answered + ' answered';
+      $('vipSnacks').textContent = 'Snack run (one per seat): ' + salty + ' salty, ' + sweet + ' sweet' +
+        (unknown ? ', plus ' + unknown + ' seats that haven\u2019t answered yet' : '');
+      $('tentsBtn').href = 'tents.html?date=' + encodeURIComponent(s.show_date) + '&title=' + encodeURIComponent(s.show_title);
+    }
+    function isVipRow(g) {
+      return /vip|premium|reserved/i.test(g.ticket_type || '') && !/^shopify sales/i.test(g.guest_name || '');
     }
 
     function render() {
