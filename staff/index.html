@@ -28,6 +28,18 @@
     .tile b { display: block; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 14px; padding-top: 3px; }
     .tile span { display: block; color: var(--muted); font-size: 14px; margin-top: 4px; line-height: 1.35; }
     .foot { color: var(--gray); font-size: 14px; margin-top: 30px; text-align: center; }
+    /* What's new: updates this login hasn't tapped "Got it" on. */
+    .news { display: grid; gap: 10px; }
+    .note { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--slate); border-radius: 12px; padding: 14px 16px; }
+    .note.read { border-left-color: var(--line); opacity: .85; }
+    .note h3 { margin: 0; font-family: var(--head); font-size: 16px; letter-spacing: .04em; }
+    .note .when { color: var(--gray); font-size: 13px; margin-top: 2px; }
+    .note p { margin: 8px 0 0; color: var(--muted); line-height: 1.45; white-space: pre-line; }
+    .note .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+    .note .seen { color: var(--gray); font-size: 13px; }
+    .all-caught { color: var(--gray); margin: 0; }
+    #postForm textarea { min-height: 110px; resize: vertical; font: inherit; }
+    #postForm select { font: inherit; }
   </style>
 </head>
 <body>
@@ -65,6 +77,22 @@
 
   <main class="wrap hidden" id="hub">
     <p class="intro">Pick a job, push a button. The boulder does not push itself.</p>
+
+    <section id="newsSection" data-roles="events comedy bar">
+      <div class="band-row"><span class="band">What's new</span>
+        <span><button class="btn-link hidden" id="postToggle">+ Post an update</button></span></div>
+      <form id="postForm" class="card stack hidden">
+        <div class="field"><label for="upTitle">Headline</label><input class="input" id="upTitle" required maxlength="120" placeholder="New button on the Stream Deck"></div>
+        <div class="field"><label for="upBody">What changed and what to do</label><textarea class="input" id="upBody" required></textarea></div>
+        <div class="field"><label for="upLink">Link (optional)</label><input class="input" id="upLink" placeholder="stream-deck.html or https://…"></div>
+        <div class="field"><label for="upRole">Who sees it</label>
+          <select class="input" id="upRole"><option value="door">Everyone</option><option value="staff">Staff and up</option><option value="manager">Managers only</option></select></div>
+        <div class="acts" style="display:flex;gap:8px"><button class="btn btn-primary" type="submit" id="postBtn">Post it</button><button class="btn btn-ghost" type="button" id="postCancel">Cancel</button></div>
+      </form>
+      <div class="news" id="news"><p class="all-caught">Loading…</p></div>
+      <p style="margin:8px 0 0"><button class="btn-link hidden" id="olderToggle">Earlier updates</button></p>
+      <div class="news hidden" id="older"></div>
+    </section>
 
     <!-- data-roles says who sees a section when a role chip is picked. -->
     <section data-roles="events comedy bar">
@@ -111,6 +139,7 @@
     <p class="foot"><span id="whoami"></span> · <button class="btn-link" onclick="signOut()">Sign out</button><br>
       Where a page asks for an email, type your username followed by @sisyphusbrewing.com.<br>Forgot a password? A manager can set a new one under Manager › Staff logins.</p>
   </main>
+  <div class="toast hidden" id="toast"></div>
 
   <script>
     // Only the tiles this login can open are shown. Role chips then filter
@@ -122,12 +151,88 @@
         if (!roleAtLeast(role, t.dataset.min)) t.remove();
       });
       document.querySelectorAll('main section').forEach(function (s) {
-        if (!s.querySelector('.tile')) s.remove();
+        if (s.id !== 'newsSection' && !s.querySelector('.tile')) s.remove();
       });
       $('roles').classList.toggle('hidden', !roleAtLeast(role, 'manager'));
       $('hub').classList.remove('hidden');
       startChips(roleAtLeast(role, 'manager'));
+      startNews(role, u);
     });
+
+    // What's new. Unread updates sit on top until this login taps "Got it";
+    // read ones fold under "Earlier updates". Managers post and see who read.
+    var newsRole, newsUser;
+    function fmtWhen(ts) {
+      return new Date(ts).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+    }
+    function noteHtml(n, read) {
+      var link = n.link ? '<a class="btn btn-sm" href="' + escapeHtml(n.link) + '">Show me</a>' : '';
+      var got = read ? '' : '<button class="btn btn-sm btn-primary" onclick="gotIt(' + n.id + ', this)">Got it</button>';
+      var mgr = roleAtLeast(newsRole, 'manager')
+        ? '<span class="seen" id="seen' + n.id + '"></span><button class="btn-link" onclick="removeUpdate(' + n.id + ')">Remove</button>' : '';
+      return '<article class="note' + (read ? ' read' : '') + '" id="note' + n.id + '"><h3>' + escapeHtml(n.title) + '</h3>' +
+        '<div class="when">' + fmtWhen(n.created_at) + (n.posted_by ? ' · ' + escapeHtml(n.posted_by) : '') + '</div>' +
+        (n.body ? '<p>' + escapeHtml(n.body) + '</p>' : '') +
+        '<div class="acts">' + got + link + mgr + '</div></article>';
+    }
+    async function loadNews() {
+      var ups = await sb.from('staff_updates').select('*').order('created_at', { ascending: false }).limit(60);
+      var reads = await sb.from('staff_update_reads').select('update_id').eq('user_id', newsUser.id);
+      if (ups.error) { $('news').innerHTML = '<p class="all-caught">Could not load updates.</p>'; return; }
+      var seen = {};
+      (reads.data || []).forEach(function (r) { seen[r.update_id] = true; });
+      var unread = ups.data.filter(function (n) { return !seen[n.id]; });
+      var read = ups.data.filter(function (n) { return seen[n.id]; });
+      $('news').innerHTML = unread.length ? unread.map(function (n) { return noteHtml(n, false); }).join('')
+        : '<p class="all-caught">You’re all caught up.</p>';
+      $('older').innerHTML = read.map(function (n) { return noteHtml(n, true); }).join('');
+      $('olderToggle').classList.toggle('hidden', !read.length);
+      $('olderToggle').textContent = 'Earlier updates (' + read.length + ')';
+      if (roleAtLeast(newsRole, 'manager')) ups.data.forEach(function (n) { loadSeen(n.id); });
+    }
+    async function loadSeen(id) {
+      var r = await sb.rpc('staff_update_readers', { p_update: id });
+      var el = $('seen' + id);
+      if (!el || r.error) return;
+      var names = (r.data || []).map(function (x) { return x.username; });
+      el.textContent = names.length ? 'Seen by ' + names.join(', ') : 'Nobody has seen it yet';
+    }
+    async function gotIt(id, btn) {
+      btn.disabled = true;
+      var r = await sb.from('staff_update_reads').insert({ update_id: id });
+      if (r.error && r.error.code !== '23505') { btn.disabled = false; toast('Could not save that. Try again.', true); return; }
+      loadNews();
+    }
+    async function removeUpdate(id) {
+      if (!confirm('Take this update down for everyone?')) return;
+      var r = await sb.from('staff_updates').delete().eq('id', id);
+      if (r.error) { toast('Could not remove it.', true); return; }
+      loadNews();
+    }
+    function startNews(role, user) {
+      newsRole = role; newsUser = user;
+      $('olderToggle').addEventListener('click', function () { $('older').classList.toggle('hidden'); });
+      if (roleAtLeast(role, 'manager')) {
+        $('postToggle').classList.remove('hidden');
+        $('postToggle').addEventListener('click', function () { $('postForm').classList.toggle('hidden'); });
+        $('postCancel').addEventListener('click', function () { $('postForm').classList.add('hidden'); });
+        $('postForm').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          $('postBtn').disabled = true;
+          var r = await sb.from('staff_updates').insert({
+            title: $('upTitle').value.trim(), body: $('upBody').value.trim(),
+            link: $('upLink').value.trim() || null, min_role: $('upRole').value,
+            posted_by: user.email.replace('@' + LOGIN_DOMAIN, '')
+          });
+          $('postBtn').disabled = false;
+          if (r.error) { toast('Could not post it.', true); return; }
+          $('postForm').reset(); $('postForm').classList.add('hidden');
+          toast('Posted. Everyone sees it next time they sign in.');
+          loadNews();
+        });
+      }
+      loadNews();
+    }
     function startChips(useChips) {
       var chips = document.querySelectorAll('#roles .chip');
       var sections = document.querySelectorAll('main section');
