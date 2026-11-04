@@ -81,8 +81,8 @@ if __name__ == "__main__":
     out = sys.argv[1]
     TIMES, PRICE = "THU 8 · FRI 7 & 9 · SAT 7 & 9 · SUN 6", "TICKETS $28"
     ADS = (
-        ("tickets", "THREE SEASONS OF SNL. ONE BREWERY.", "NOV 5–8 · SIX SHOWS"),
-        ("remarketing", "STILL THINKING ABOUT IT?", "FROM SNL · NOV 5–8 · SIX SHOWS"),
+        ("tickets", "THREE SEASONS OF SNL. ONE COMEDY CLUB.", "NOV 5–8 · THU–SUN"),
+        ("remarketing", "STILL THINKING ABOUT IT?", "FROM SNL · NOV 5–8 · THU–SUN"),
         ("room", "THESE THREE STILL HAVE ROOM.", "FRI 9PM · SAT 9PM · SUN 6PM"),
     )
     for kind, kicker, big in ADS:
