@@ -371,6 +371,8 @@ CUSTOM_VARIABLES = {
     "timer_t0": "Stage timer: unix time the set started on the deck (0 = stopped)",
     "timer_len": "Stage timer: set length in seconds",
     "timer_wrap": "Stage timer: 1 while WRAP IT UP is on",
+    "house_tables": "House lights Tables level %, written by the house-lights service",
+    "house_bar": "House lights Bar level %, written by the house-lights service",
     "alarm_state": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
 }
 
@@ -452,6 +454,43 @@ def house(path):
 
 def house_both(pct, fade=3):
     return [house(f"level?zone={z}&pct={pct}&fade={fade}") for z in ("tables", "bar")]
+
+
+# House-light dimmer knobs on the BAR pages (Sam, Nov 4 2026): knob 1 = TABLES, knob 2 = BAR.
+# Turn = 5% per click, push (or tap the strip) = on/off. The house-lights service does the
+# maths (/house/step, /house/toggle) and writes each zone's level into custom variables
+# house_tables / house_bar so the strip shows it, including changes from the wall or the app.
+DIM_STEP = 5
+
+
+def dimmer_knob(zone):
+    return button(
+        "",
+        turn_right=[house(f"step?zone={zone}&delta={DIM_STEP}")],
+        turn_left=[house(f"step?zone={zone}&delta=-{DIM_STEP}")],
+        press=[house(f"toggle?zone={zone}")],
+    )
+
+
+def dimmer_strip(zone, name):
+    var = f"$(custom:house_{zone})"
+    return button(
+        f"{name}\\nLIGHTS {var}%\\nturn knob",
+        press=[house(f"toggle?zone={zone}")],
+        feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": 0x6A5A30, "color": WHITE},
+                            expression=f"{var} > 0")],
+        bgcolor=DARK,
+        size="14",
+    )
+
+
+def bar_knobs():
+    """BAR pages: two light dimmers, then MUSIC and GOD MIC as on the 2-mic pages."""
+    controls = sound_controls(SOURCES_2)
+    for col, (zone, name) in enumerate((("tables", "TABLES"), ("bar", "BAR"))):
+        controls[(2, col)] = dimmer_strip(zone, name)
+        controls[(3, col)] = dimmer_knob(zone)
+    return controls
 
 
 def hall_keys():
@@ -582,6 +621,7 @@ def layout(sources, first, mics, other_first):
     }
     for page in pages.values():
         page["controls"].update(sound_controls(sources))
+    pages[bar]["controls"].update(bar_knobs())
     if mics == 2:  # with 4 mics every knob is a mic, so TIMER 4 keeps them
         pages[timer]["controls"].update({(2, 3): time_strip(), (3, 3): time_knob()})
     return pages

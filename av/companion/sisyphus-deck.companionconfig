@@ -3031,7 +3031,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MIC 1\\n$(xair:f_ch1_d) dB\\nturn knob",
+              "text": "TABLES\\nLIGHTS $(custom:house_tables)%\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -3044,25 +3044,19 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0102",
-                "connectionId": "xair",
-                "definitionId": "ch",
+                "id": "f0162",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
                 "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 1,
+                  "expression": {
+                    "value": "$(custom:house_tables) > 0",
                     "isExpression": false
                   }
                 },
                 "isInverted": false,
-                "upgradeIndex": 5,
                 "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215,
-                  "text": "MIC 1\\nMUTED\\ntap to unmute"
+                  "bgcolor": 6969904,
+                  "color": 16777215
                 }
               }
             ],
@@ -3072,24 +3066,32 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0101",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0161",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=tables",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 1,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -3108,7 +3110,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MIC 2\\n$(xair:f_ch2_d) dB\\nturn knob",
+              "text": "BAR\\nLIGHTS $(custom:house_bar)%\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -3121,25 +3123,19 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0107",
-                "connectionId": "xair",
-                "definitionId": "ch",
+                "id": "f0167",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
                 "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 2,
+                  "expression": {
+                    "value": "$(custom:house_bar) > 0",
                     "isExpression": false
                   }
                 },
                 "isInverted": false,
-                "upgradeIndex": 5,
                 "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215,
-                  "text": "MIC 2\\nMUTED\\ntap to unmute"
+                  "bgcolor": 6969904,
+                  "color": 16777215
                 }
               }
             ],
@@ -3149,24 +3145,32 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0106",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0166",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=bar",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 2,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -3198,7 +3202,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0112",
+                "id": "f0152",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3226,7 +3230,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0111",
+                      "id": "a0151",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3275,7 +3279,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0117",
+                "id": "f0157",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3303,7 +3307,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0116",
+                      "id": "a0156",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3358,87 +3362,95 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0105",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0165",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=tables",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 1,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": [],
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0104",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0164",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "-2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=tables&delta=-5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 1,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0103",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0163",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=tables&delta=5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 1,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ]
                 },
@@ -3473,87 +3485,95 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0110",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0170",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=bar",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 2,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": [],
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0109",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0169",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "-2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=bar&delta=-5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 2,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0108",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0168",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=bar&delta=5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 2,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ]
                 },
@@ -3588,7 +3608,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0115",
+                      "id": "a0155",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3612,7 +3632,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0114",
+                      "id": "a0154",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3643,7 +3663,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0113",
+                      "id": "a0153",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3703,7 +3723,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0120",
+                      "id": "a0160",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3727,7 +3747,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0119",
+                      "id": "a0159",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -3758,7 +3778,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0118",
+                      "id": "a0158",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4817,7 +4837,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0141",
+                      "id": "a0171",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -4854,7 +4874,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0142",
+                      "id": "a0172",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -4870,7 +4890,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0143",
+                      "id": "a0173",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5265,7 +5285,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0150",
+                      "id": "a0180",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -5302,7 +5322,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0151",
+                      "id": "a0181",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5318,7 +5338,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0152",
+                      "id": "a0182",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5337,7 +5357,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0147",
+                      "id": "a0177",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -5374,7 +5394,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0148",
+                      "id": "a0178",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5390,7 +5410,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0149",
+                      "id": "a0179",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5408,7 +5428,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0144",
+                      "id": "a0174",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -5445,7 +5465,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0145",
+                      "id": "a0175",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5461,7 +5481,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0146",
+                      "id": "a0176",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -5521,7 +5541,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0153",
+                      "id": "a0183",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -5565,7 +5585,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0155",
+                "id": "f0185",
                 "connectionId": "obs",
                 "definitionId": "recording",
                 "options": {},
@@ -5578,7 +5598,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0156",
+                "id": "f0186",
                 "connectionId": "obs",
                 "definitionId": "recordingPaused",
                 "options": {},
@@ -5596,7 +5616,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0154",
+                      "id": "a0184",
                       "connectionId": "obs",
                       "definitionId": "recording",
                       "options": {
@@ -5641,7 +5661,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0157",
+                      "id": "a0187",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -5689,7 +5709,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0158",
+                      "id": "a0188",
                       "connectionId": "xair",
                       "definitionId": "load_snap",
                       "options": {
@@ -5732,7 +5752,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0160",
+                "id": "f0190",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5760,7 +5780,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0159",
+                      "id": "a0189",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5809,7 +5829,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0162",
+                "id": "f0192",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5837,7 +5857,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0161",
+                      "id": "a0191",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5886,7 +5906,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0164",
+                "id": "f0194",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5914,7 +5934,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0163",
+                      "id": "a0193",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5963,7 +5983,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0166",
+                "id": "f0196",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5991,7 +6011,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0165",
+                      "id": "a0195",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6042,7 +6062,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0234",
+                "id": "f0264",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6070,7 +6090,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0233",
+                      "id": "a0263",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6119,7 +6139,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0239",
+                "id": "f0269",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6147,7 +6167,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0238",
+                      "id": "a0268",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6196,7 +6216,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0244",
+                "id": "f0274",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6224,7 +6244,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0243",
+                      "id": "a0273",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6273,7 +6293,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0249",
+                "id": "f0279",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6301,7 +6321,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0248",
+                      "id": "a0278",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6356,7 +6376,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0237",
+                      "id": "a0267",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6380,7 +6400,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0236",
+                      "id": "a0266",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6411,7 +6431,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0235",
+                      "id": "a0265",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6471,7 +6491,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0242",
+                      "id": "a0272",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6495,7 +6515,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0241",
+                      "id": "a0271",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6526,7 +6546,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0240",
+                      "id": "a0270",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6586,7 +6606,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0247",
+                      "id": "a0277",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6610,7 +6630,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0246",
+                      "id": "a0276",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6641,7 +6661,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0245",
+                      "id": "a0275",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6701,7 +6721,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0252",
+                      "id": "a0282",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6725,7 +6745,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0251",
+                      "id": "a0281",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6756,7 +6776,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0250",
+                      "id": "a0280",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6829,7 +6849,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0167",
+                      "id": "a0197",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -6877,7 +6897,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0168",
+                      "id": "a0198",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -6946,7 +6966,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0169",
+                      "id": "a0199",
                       "connectionId": "internal",
                       "definitionId": "exec",
                       "options": {
@@ -7002,7 +7022,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0171",
+                      "id": "a0201",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7039,7 +7059,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0170",
+                      "id": "a0200",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7076,7 +7096,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0172",
+                      "id": "a0202",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7113,7 +7133,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0174",
+                      "id": "a0204",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7150,7 +7170,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0173",
+                      "id": "a0203",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7187,7 +7207,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0175",
+                      "id": "a0205",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7224,7 +7244,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0177",
+                      "id": "a0207",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7261,7 +7281,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0176",
+                      "id": "a0206",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7298,7 +7318,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0178",
+                      "id": "a0208",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7335,7 +7355,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0179",
+                      "id": "a0209",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7372,7 +7392,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0180",
+                      "id": "a0210",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7409,7 +7429,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0181",
+                      "id": "a0211",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7446,7 +7466,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0182",
+                      "id": "a0212",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7483,7 +7503,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0183",
+                      "id": "a0213",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -7512,7 +7532,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0184",
+                      "id": "a0214",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -7575,7 +7595,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0186",
+                      "id": "a0216",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7612,7 +7632,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0185",
+                      "id": "a0215",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7649,7 +7669,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0187",
+                      "id": "a0217",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7686,7 +7706,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0189",
+                      "id": "a0219",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7723,7 +7743,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0188",
+                      "id": "a0218",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7760,7 +7780,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0190",
+                      "id": "a0220",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7797,7 +7817,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0192",
+                      "id": "a0222",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7834,7 +7854,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0191",
+                      "id": "a0221",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7871,7 +7891,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0193",
+                      "id": "a0223",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7908,7 +7928,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0194",
+                      "id": "a0224",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7945,7 +7965,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0195",
+                      "id": "a0225",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7982,7 +8002,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0196",
+                      "id": "a0226",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -8043,7 +8063,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0197",
+                      "id": "a0227",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -8072,7 +8092,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0198",
+                      "id": "a0228",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -8133,7 +8153,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0199",
+                      "id": "a0229",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8170,7 +8190,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0200",
+                      "id": "a0230",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8207,7 +8227,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0201",
+                      "id": "a0231",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8244,7 +8264,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0202",
+                      "id": "a0232",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8281,7 +8301,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0203",
+                      "id": "a0233",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8318,7 +8338,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0204",
+                      "id": "a0234",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8355,7 +8375,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0205",
+                      "id": "a0235",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -8392,7 +8412,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0206",
+                      "id": "a0236",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -8449,7 +8469,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0208",
+                "id": "f0238",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -8466,7 +8486,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0209",
+                "id": "f0239",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -8488,7 +8508,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0207",
+                      "id": "a0237",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -8521,7 +8541,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MIC 1\\n$(xair:f_ch1_d) dB\\nturn knob",
+              "text": "TABLES\\nLIGHTS $(custom:house_tables)%\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -8534,25 +8554,19 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0254",
-                "connectionId": "xair",
-                "definitionId": "ch",
+                "id": "f0344",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
                 "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 1,
+                  "expression": {
+                    "value": "$(custom:house_tables) > 0",
                     "isExpression": false
                   }
                 },
                 "isInverted": false,
-                "upgradeIndex": 5,
                 "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215,
-                  "text": "MIC 1\\nMUTED\\ntap to unmute"
+                  "bgcolor": 6969904,
+                  "color": 16777215
                 }
               }
             ],
@@ -8562,24 +8576,32 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0253",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0343",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=tables",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 1,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -8598,7 +8620,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MIC 2\\n$(xair:f_ch2_d) dB\\nturn knob",
+              "text": "BAR\\nLIGHTS $(custom:house_bar)%\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -8611,25 +8633,19 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0259",
-                "connectionId": "xair",
-                "definitionId": "ch",
+                "id": "f0349",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
                 "options": {
-                  "state": {
-                    "value": "1",
-                    "isExpression": false
-                  },
-                  "theChannel": {
-                    "value": 2,
+                  "expression": {
+                    "value": "$(custom:house_bar) > 0",
                     "isExpression": false
                   }
                 },
                 "isInverted": false,
-                "upgradeIndex": 5,
                 "style": {
-                  "bgcolor": 12582912,
-                  "color": 16777215,
-                  "text": "MIC 2\\nMUTED\\ntap to unmute"
+                  "bgcolor": 6969904,
+                  "color": 16777215
                 }
               }
             ],
@@ -8639,24 +8655,32 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0258",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0348",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=bar",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 2,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": []
@@ -8675,7 +8699,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MIC 3\\n$(xair:f_ch9_d) dB\\nturn knob",
+              "text": "MUSIC\\n$(xair:f_ch3_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -8688,7 +8712,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0264",
+                "id": "f0334",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8697,7 +8721,7 @@
                     "isExpression": false
                   },
                   "theChannel": {
-                    "value": 9,
+                    "value": 3,
                     "isExpression": false
                   }
                 },
@@ -8706,7 +8730,7 @@
                 "style": {
                   "bgcolor": 12582912,
                   "color": 16777215,
-                  "text": "MIC 3\\nMUTED\\ntap to unmute"
+                  "text": "MUSIC\\nMUTED\\ntap to unmute"
                 }
               }
             ],
@@ -8716,7 +8740,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0263",
+                      "id": "a0333",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8729,7 +8753,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 9,
+                          "value": 3,
                           "isExpression": false
                         }
                       },
@@ -8752,7 +8776,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "MIC 4\\n$(xair:f_ch10_d) dB\\nturn knob",
+              "text": "GOD MIC\\n$(xair:f_ch5_d) dB\\nturn knob",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -8765,7 +8789,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0269",
+                "id": "f0339",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8774,7 +8798,7 @@
                     "isExpression": false
                   },
                   "theChannel": {
-                    "value": 10,
+                    "value": 5,
                     "isExpression": false
                   }
                 },
@@ -8783,7 +8807,7 @@
                 "style": {
                   "bgcolor": 12582912,
                   "color": 16777215,
-                  "text": "MIC 4\\nMUTED\\ntap to unmute"
+                  "text": "GOD MIC\\nMUTED\\ntap to unmute"
                 }
               }
             ],
@@ -8793,7 +8817,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0268",
+                      "id": "a0338",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8806,7 +8830,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 10,
+                          "value": 5,
                           "isExpression": false
                         }
                       },
@@ -8848,87 +8872,95 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0257",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0347",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=tables",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 1,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": [],
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0256",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0346",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "-2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=tables&delta=-5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 1,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0255",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0345",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=tables&delta=5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 1,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ]
                 },
@@ -8963,87 +8995,95 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0262",
-                      "connectionId": "xair",
-                      "definitionId": "mute",
+                      "id": "a0352",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "mute": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/toggle?zone=bar",
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "num": {
-                          "value": 2,
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "up": [],
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0261",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0351",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "-2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=bar&delta=-5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 2,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ],
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0260",
-                      "connectionId": "xair",
-                      "definitionId": "fad_a",
+                      "id": "a0350",
+                      "connectionId": "http",
+                      "definitionId": "get",
                       "options": {
-                        "ticks": {
-                          "value": "2",
+                        "url": {
+                          "value": "http://127.0.0.1:8790/house/step?zone=bar&delta=5",
                           "isExpression": false
                         },
-                        "duration": {
-                          "value": 0,
+                        "header": {
+                          "value": "",
                           "isExpression": false
                         },
-                        "faderLim": {
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
                           "value": true,
                           "isExpression": false
                         },
-                        "type": {
-                          "value": "/ch/",
-                          "isExpression": false
-                        },
-                        "num": {
-                          "value": 2,
+                        "statusCodeVariable": {
+                          "value": "",
                           "isExpression": false
                         }
                       },
-                      "upgradeIndex": 5
+                      "upgradeIndex": 3
                     }
                   ]
                 },
@@ -9078,7 +9118,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0267",
+                      "id": "a0337",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -9091,7 +9131,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 9,
+                          "value": 3,
                           "isExpression": false
                         }
                       },
@@ -9102,7 +9142,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0266",
+                      "id": "a0336",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9123,7 +9163,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 9,
+                          "value": 3,
                           "isExpression": false
                         }
                       },
@@ -9133,7 +9173,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0265",
+                      "id": "a0335",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9154,7 +9194,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 9,
+                          "value": 3,
                           "isExpression": false
                         }
                       },
@@ -9193,7 +9233,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0272",
+                      "id": "a0342",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -9206,7 +9246,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 10,
+                          "value": 5,
                           "isExpression": false
                         }
                       },
@@ -9217,7 +9257,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0271",
+                      "id": "a0341",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9238,7 +9278,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 10,
+                          "value": 5,
                           "isExpression": false
                         }
                       },
@@ -9248,7 +9288,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0270",
+                      "id": "a0340",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9269,7 +9309,7 @@
                           "isExpression": false
                         },
                         "num": {
-                          "value": 10,
+                          "value": 5,
                           "isExpression": false
                         }
                       },
@@ -9321,7 +9361,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0210",
+                      "id": "a0240",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -9365,7 +9405,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0211",
+                "id": "f0241",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -9418,7 +9458,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0212",
+                      "id": "a0242",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9455,7 +9495,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0213",
+                      "id": "a0243",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9471,7 +9511,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0214",
+                      "id": "a0244",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9487,7 +9527,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0215",
+                      "id": "a0245",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9535,7 +9575,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0216",
+                      "id": "a0246",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9572,7 +9612,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0217",
+                      "id": "a0247",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9588,7 +9628,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0218",
+                      "id": "a0248",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9604,7 +9644,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0219",
+                      "id": "a0249",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9654,7 +9694,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0220",
+                      "id": "a0250",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9691,7 +9731,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0221",
+                      "id": "a0251",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9707,7 +9747,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0222",
+                      "id": "a0252",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9723,7 +9763,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0223",
+                      "id": "a0253",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9771,7 +9811,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0224",
+                      "id": "a0254",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9808,7 +9848,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0225",
+                      "id": "a0255",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9824,7 +9864,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0226",
+                      "id": "a0256",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9840,7 +9880,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0227",
+                      "id": "a0257",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9888,7 +9928,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0228",
+                      "id": "a0258",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9925,7 +9965,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0229",
+                      "id": "a0259",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9941,7 +9981,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0230",
+                      "id": "a0260",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -9989,7 +10029,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0231",
+                      "id": "a0261",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10026,7 +10066,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0232",
+                      "id": "a0262",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -10072,7 +10112,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0274",
+                "id": "f0304",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10100,7 +10140,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0273",
+                      "id": "a0303",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10149,7 +10189,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0279",
+                "id": "f0309",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10177,7 +10217,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0278",
+                      "id": "a0308",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10226,7 +10266,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0284",
+                "id": "f0314",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10254,7 +10294,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0283",
+                      "id": "a0313",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10303,7 +10343,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0289",
+                "id": "f0319",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -10331,7 +10371,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0288",
+                      "id": "a0318",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10386,7 +10426,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0277",
+                      "id": "a0307",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10410,7 +10450,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0276",
+                      "id": "a0306",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10441,7 +10481,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0275",
+                      "id": "a0305",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10501,7 +10541,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0282",
+                      "id": "a0312",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10525,7 +10565,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0281",
+                      "id": "a0311",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10556,7 +10596,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0280",
+                      "id": "a0310",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10616,7 +10656,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0287",
+                      "id": "a0317",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10640,7 +10680,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0286",
+                      "id": "a0316",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10671,7 +10711,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0285",
+                      "id": "a0315",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10731,7 +10771,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0292",
+                      "id": "a0322",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -10755,7 +10795,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0291",
+                      "id": "a0321",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10786,7 +10826,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0290",
+                      "id": "a0320",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -10859,7 +10899,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0293",
+                      "id": "a0353",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -10903,7 +10943,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0295",
+                "id": "f0355",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -10920,7 +10960,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0296",
+                "id": "f0356",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -10942,7 +10982,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0294",
+                      "id": "a0354",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11003,7 +11043,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0297",
+                      "id": "a0357",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11064,7 +11104,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0298",
+                      "id": "a0358",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11123,7 +11163,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0300",
+                "id": "f0360",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -11151,7 +11191,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0299",
+                      "id": "a0359",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11200,7 +11240,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0305",
+                "id": "f0365",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -11228,7 +11268,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0304",
+                      "id": "a0364",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11277,7 +11317,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0310",
+                "id": "f0370",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -11305,7 +11345,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0309",
+                      "id": "a0369",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11354,7 +11394,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0315",
+                "id": "f0375",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -11382,7 +11422,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0314",
+                      "id": "a0374",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11437,7 +11477,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0303",
+                      "id": "a0363",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11461,7 +11501,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0302",
+                      "id": "a0362",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11492,7 +11532,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0301",
+                      "id": "a0361",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11552,7 +11592,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0308",
+                      "id": "a0368",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11576,7 +11616,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0307",
+                      "id": "a0367",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11607,7 +11647,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0306",
+                      "id": "a0366",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11667,7 +11707,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0313",
+                      "id": "a0373",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11691,7 +11731,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0312",
+                      "id": "a0372",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11722,7 +11762,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0311",
+                      "id": "a0371",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11782,7 +11822,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0318",
+                      "id": "a0378",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11806,7 +11846,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0317",
+                      "id": "a0377",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11837,7 +11877,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0316",
+                      "id": "a0376",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -11942,11 +11982,23 @@
       "persistCurrentValue": false,
       "sortOrder": 2
     },
+    "house_tables": {
+      "description": "House lights Tables level %, written by the house-lights service",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 3
+    },
+    "house_bar": {
+      "description": "House lights Bar level %, written by the house-lights service",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 4
+    },
     "alarm_state": {
       "description": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
       "defaultValue": 0,
       "persistCurrentValue": false,
-      "sortOrder": 3
+      "sortOrder": 5
     }
   }
 }
