@@ -46,11 +46,13 @@ def main():
         sys.exit(f"No pay request with id {REQUEST_ID}")
     q = rows[0]
 
-    show = q["show_name"] + (f" ({q['show_dates']})" if q.get("show_dates") else "")
-    lines = [f"{q['name']} wants to be paid for {show}.", "",
-             f"  Did: {q['role']}",
-             f"  Told: {money(q['amount'])}" if q.get("amount") else "  Told: (didn't say)",
-             f"  Venmo: {q['handle']}"]
+    show = (q.get("show_name") or "") + (f" ({q['show_dates']})" if q.get("show_dates") else "")
+    lines = [f"{q['name']} wants to be paid for {show}." if show else f"{q['name']} left their Venmo.", ""]
+    if q.get("role"):
+        lines.append(f"  Did: {q['role']}")
+    if q.get("amount"):
+        lines.append(f"  Told: {money(q['amount'])}")
+    lines.append(f"  Venmo: {q['handle']}")
     if q.get("phone"):
         lines.append(f"  Phone: {q['phone']}")
     if q.get("email"):
@@ -61,7 +63,7 @@ def main():
               "Sisyphus · 712 Ontario Ave W, Minneapolis"]
 
     msg = EmailMessage()
-    msg["Subject"] = f"Pay request: {q['name']} · {q['show_name']}" + (f" · {money(q['amount'])}" if q.get("amount") else "")
+    msg["Subject"] = f"Pay request: {q['name']}" + (f" · {q['show_name']}" if q.get("show_name") else "") + (f" · {money(q['amount'])}" if q.get("amount") else "")
     msg["From"] = f"Sisyphus <{FROM_EMAIL}>"
     msg["To"] = ", ".join(TO)
     if q.get("email"):
