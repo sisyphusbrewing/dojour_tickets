@@ -108,7 +108,7 @@ function guestCard(t, opts) {
   var id = jsArg(t.unique_id);
   var type = (t.ticket_type || '').trim();
   var lower = type.toLowerCase();
-  var vip = /vip|premium|reserved/.test(lower);
+  var vip = /vip|premium|reserved/.test(lower) && !/^shopify sales/i.test(t.guest_name || '');
   var vipLabel = lower.indexOf('vip') !== -1 ? 'VIP' : (lower.indexOf('premium') !== -1 ? 'Premium' : 'Reserved');
 
   var act;
@@ -128,6 +128,14 @@ function guestCard(t, opts) {
   else if (type && lower !== 'general admission') tags += '<span class="tag">' + escapeHtml(type) + '</span>';
   if (isComp) tags += '<span class="tag comp">Comp</span>';
 
+  // VIP answers from the pre-show form (vip/): tent name, occasion, seat, snack.
+  var vipBits = [];
+  if (t.vip_tent) vipBits.push('Tent: ' + escapeHtml(t.vip_tent));
+  if (t.vip_occasion) vipBits.push('🎉 ' + escapeHtml(t.vip_occasion));
+  if (t.vip_seat) vipBits.push({ front: 'Front row', safe: 'Out of the splash zone', any: 'Any seat' }[t.vip_seat] || '');
+  if (t.vip_snack) vipBits.push({ salty: 'Salty snacks', sweet: 'Sweet snacks', both: 'Salty + sweet', none: 'No snacks' }[t.vip_snack] || '');
+  var vipLine = vipBits.length ? '<div class="g-vip">' + vipBits.filter(Boolean).join(' · ') + '</div>' : '';
+
   var sub = '';
   if (isComp) {
     var note = String(t.email || '').replace(/^Comp:?\s*/, '');
@@ -140,6 +148,7 @@ function guestCard(t, opts) {
     '<div class="g-main">' +
       '<div class="g-name">' + (done ? '<span class="tick">✓</span>' : '') + escapeHtml(t.guest_name || 'No name') + '</div>' +
       (sub ? '<div class="g-sub">' + sub + '</div>' : '') +
+      vipLine +
       '<div class="g-meta">' + tags +
         '<span>' + tickets + ' ticket' + (tickets > 1 ? 's' : '') + (isComp ? '' : ' · ' + escapeHtml(t.source || '')) + '</span>' +
         (isComp && opts.removeComps ? '<button class="btn-link" onclick="removeComp(' + id + ')">Remove</button>' : '') +

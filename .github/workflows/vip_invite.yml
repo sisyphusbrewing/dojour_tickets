@@ -1,0 +1,47 @@
+name: VIP Table Emails
+
+# Emails each VIP / Reserved Seating buyer the table form (vip/), and a
+# show-morning reminder if they haven't answered. Customers only get email
+# when the repo variable VIP_EMAILS_LIVE is "on"; until then every run is a
+# dry run that prints who would get what.
+
+on:
+  schedule:
+    # Hourly, 15 minutes after the hour (8 AM to 11 PM Central).
+    - cron: '15 0-4,13-23 * * *'
+  workflow_dispatch:
+    inputs:
+      preview_to:
+        description: 'Send one sample invite + reminder to this address only (no customers)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Print who would get what, send nothing'
+        type: boolean
+        default: false
+
+concurrency:
+  group: vip-invite
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Send VIP table emails
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          VIP_EMAILS_LIVE: ${{ vars.VIP_EMAILS_LIVE }}
+          PREVIEW_TO: ${{ inputs.preview_to }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python vip_invite.py

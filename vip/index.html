@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your VIP Table · Sisyphus</title>
+  <meta name="theme-color" content="#2b2929">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../advance/advance.css">
+  <style>
+    .small { color: var(--gray); font-size: 14px; margin: 8px 0 0; }
+    .q { margin-top: 22px; }
+    .q:first-child { margin-top: 0; }
+    .q-title { font-weight: 700; font-size: 17px; margin: 0 0 2px; }
+    .q-help { color: var(--gray); font-size: 14px; margin: 0 0 10px; }
+    .opts { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    @media (min-width: 520px) { .opts.two { grid-template-columns: 1fr 1fr; } }
+    .opt { display: block; width: 100%; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+           padding: 12px 14px; color: var(--white); font: inherit; cursor: pointer; min-height: 44px; }
+    .opt:hover, .opt:focus-visible { border-color: var(--slate-light); outline: none; }
+    .opt.sel { border-color: var(--slate-light); background: var(--slate-dark); }
+    .opt b { display: block; font-size: 16px; }
+    .opt small { display: block; color: var(--gray); font-size: 13px; margin-top: 2px; }
+    .opt.sel small { color: #d6e2ec; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .chip { background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; color: var(--white);
+            font: inherit; font-size: 15px; cursor: pointer; min-height: 40px; }
+    .chip.sel { border-color: var(--slate-light); background: var(--slate-dark); }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+    .tent { margin: 16px auto 0; max-width: 340px; background: #fff; color: #2b2929; border-radius: 6px; padding: 18px 14px 14px;
+            text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+    .tent .t-eyebrow { font-family: var(--head); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #4a6c86; }
+    .tent .t-name { font-family: var(--head); font-weight: 700; font-size: 26px; line-height: 1.1; margin: 6px 0 4px; word-break: break-word; }
+    .tent .t-occ { font-size: 14px; color: #5a5757; min-height: 18px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" href="https://sisyphusbrewing.com" style="text-decoration:none;color:inherit">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Your VIP table<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewLoading"><div class="card"><p class="small" style="margin:0">Finding your table…</p></div></section>
+
+    <section id="viewBad" class="hidden">
+      <div class="card">
+        <div class="show-name" style="font-size:22px">We can't find that link</div>
+        <p class="small" style="font-size:16px">Open it straight from the email we sent, or write <a href="mailto:ticketing@sisyphusbrewing.com">ticketing@sisyphusbrewing.com</a> and a human will sort it out.</p>
+      </div>
+    </section>
+
+    <section id="viewForm" class="hidden">
+      <div class="show-card">
+        <div class="show-eyebrow">VIP · Reserved seating</div>
+        <div class="show-name" id="showName"></div>
+        <div class="show-when" id="showWhen"></div>
+      </div>
+
+      <p id="hello" style="font-size:17px;line-height:1.5;margin:18px 0 0"></p>
+
+      <form class="card" id="form" style="margin-top:14px">
+        <div class="q">
+          <p class="q-title"><label for="tent">What name goes on your table?</label></p>
+          <p class="q-help">It goes on a little table tent at your seats. Spelled right, which is more than the DMV does for you.</p>
+          <input class="input" id="tent" maxlength="40" autocomplete="name" placeholder="The Andersons">
+        </div>
+
+        <div class="q">
+          <p class="q-title">Celebrating anything?</p>
+          <p class="q-help">We'll put it on the tent. Optional, and "surviving the week" counts.</p>
+          <div class="chips" id="occChips"></div>
+          <input class="input" id="occ" maxlength="60" placeholder="Or type your own">
+        </div>
+
+        <div class="q">
+          <p class="q-title">Where do you want to be?</p>
+          <p class="q-help">VIP seats are the good ones either way. This is just about how brave you are.</p>
+          <div class="opts" id="seatOpts">
+            <button type="button" class="opt" data-v="front"><b>Front row</b><small>Eye contact with the comedian. They may talk to you. You may become a bit.</small></button>
+            <button type="button" class="opt" data-v="safe"><b>Close, but out of the splash zone</b><small>Great view, lower odds of being asked what you do for a living.</small></button>
+            <button type="button" class="opt" data-v="any"><b>Surprise me</b><small>You trust us. That's nice. We'll try not to make it weird.</small></button>
+          </div>
+        </div>
+
+        <div class="q">
+          <p class="q-title">Snacks on the table: salty or sweet?</p>
+          <p class="q-help">There'll be a little something waiting at your seats. Nothing fancy. We're a brewery, not a bistro.</p>
+          <div class="opts two" id="snackOpts">
+            <button type="button" class="opt" data-v="salty"><b>Salty</b><small>Chips and their relatives.</small></button>
+            <button type="button" class="opt" data-v="sweet"><b>Sweet</b><small>Candy, cookies, regret later.</small></button>
+            <button type="button" class="opt" data-v="both"><b>Both</b><small>Correct answer.</small></button>
+            <button type="button" class="opt" data-v="none"><b>No thanks</b><small>Just the beer and the jokes.</small></button>
+          </div>
+        </div>
+
+        <div class="tent" aria-label="Preview of your table tent">
+          <div class="t-eyebrow">Reserved for</div>
+          <div class="t-name" id="tName">Your name here</div>
+          <div class="t-occ" id="tOcc"></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-big btn-primary" type="submit" id="saveBtn">Save my table</button>
+          <div id="saveMsg" class="small" style="text-align:center"></div>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="card" style="text-align:center">
+        <div class="show-name" style="font-size:24px">You're all set</div>
+        <p class="small" style="font-size:16px;line-height:1.5" id="doneMsg"></p>
+        <div class="actions"><button class="btn" type="button" id="editBtn">Change my answers</button></div>
+      </div>
+    </section>
+  </main>
+  <footer class="wrap foot">Sisyphus · 712 Ontario Ave W, Minneapolis · Questions: <a href="mailto:ticketing@sisyphusbrewing.com">ticketing@sisyphusbrewing.com</a></footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var token = new URLSearchParams(location.search).get('t') || '';
+    var OCCASIONS = ['Birthday', 'Anniversary', 'Date night', 'First date', 'Bachelorette', 'Night off from the kids'];
+    var seat = null, snack = null;
+
+    function view(id) { ['viewLoading', 'viewBad', 'viewForm', 'viewDone'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); }); window.scrollTo(0, 0); }
+
+    function pickOpt(groupId, value) {
+      $(groupId).querySelectorAll('.opt').forEach(function (b) { b.classList.toggle('sel', b.dataset.v === value); });
+    }
+    function bindOpts(groupId, set) {
+      $(groupId).querySelectorAll('.opt').forEach(function (b) {
+        b.addEventListener('click', function () { set(b.dataset.v); pickOpt(groupId, b.dataset.v); });
+      });
+    }
+    bindOpts('seatOpts', function (v) { seat = v; });
+    bindOpts('snackOpts', function (v) { snack = v; });
+
+    $('occChips').innerHTML = OCCASIONS.map(function (o) { return '<button type="button" class="chip">' + o + '</button>'; }).join('');
+    $('occChips').querySelectorAll('.chip').forEach(function (c) {
+      c.addEventListener('click', function () {
+        var on = !c.classList.contains('sel');
+        $('occChips').querySelectorAll('.chip').forEach(function (x) { x.classList.remove('sel'); });
+        if (on) c.classList.add('sel');
+        $('occ').value = on ? c.textContent : '';
+        preview();
+      });
+    });
+    $('occ').addEventListener('input', function () {
+      $('occChips').querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('sel', x.textContent === $('occ').value); });
+      preview();
+    });
+    $('tent').addEventListener('input', preview);
+    function preview() {
+      $('tName').textContent = $('tent').value.trim() || 'Your name here';
+      $('tOcc').textContent = $('occ').value.trim() ? 'Happy ' + $('occ').value.trim().replace(/^happy\s+/i, '') : '';
+    }
+
+    function doneText() {
+      var bits = [];
+      bits.push('Your table tent will say <b>' + escapeHtml($('tent').value.trim() || 'your name') + '</b>.');
+      if (seat === 'front') bits.push("Front row it is. Bring your A material, just in case.");
+      else if (seat === 'safe') bits.push("Close, but safe. Your secrets are mostly secure.");
+      else bits.push("We'll pick somewhere good.");
+      if (snack && snack !== 'none') bits.push('Snacks will be waiting.');
+      bits.push('Tell the door your name and someone will walk you to your seats. See you soon.');
+      return bits.join(' ');
+    }
+    function escapeHtml(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    async function load() {
+      if (token.length < 20) { view('viewBad'); return; }
+      var res = await sb.rpc('vip_form_get', { p_token: token });
+      var row = res.data && res.data[0];
+      if (res.error || !row) { view('viewBad'); return; }
+      $('showName').textContent = row.show_title;
+      $('showWhen').textContent = row.show_date + ' · ' + row.tickets + ' seat' + (row.tickets > 1 ? 's' : '');
+      var name = (row.first_name || '').trim();
+      $('hello').textContent = (name ? 'Hi ' + name + '. ' : '') +
+        'You bought VIP, so we want to get your night right. Four quick questions, about 20 seconds, and it saves us from guessing.';
+      $('tent').value = row.tent_name || '';
+      $('occ').value = row.occasion || '';
+      seat = row.seat_pref; snack = row.snack;
+      if (seat) pickOpt('seatOpts', seat);
+      if (snack) pickOpt('snackOpts', snack);
+      $('occChips').querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('sel', x.textContent === $('occ').value); });
+      preview();
+      if (row.answered) { $('doneMsg').innerHTML = doneText(); view('viewDone'); } else view('viewForm');
+    }
+
+    $('form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('saveBtn'), msg = $('saveMsg');
+      if (!$('tent').value.trim()) { msg.textContent = 'Give us a name for the table tent.'; $('tent').focus(); return; }
+      btn.disabled = true; btn.textContent = 'Saving…'; msg.textContent = '';
+      var res = await sb.rpc('vip_form_save', { p_token: token, p_tent_name: $('tent').value, p_occasion: $('occ').value,
+                                                p_seat_pref: seat || 'any', p_snack: snack || '' });
+      btn.disabled = false; btn.textContent = 'Save my table';
+      if (res.error || !res.data) { msg.textContent = "That didn't save. Try again in a second."; return; }
+      if (!seat) { seat = 'any'; pickOpt('seatOpts', 'any'); }
+      $('doneMsg').innerHTML = doneText();
+      view('viewDone');
+    });
+    $('editBtn').addEventListener('click', function () { view('viewForm'); });
+
+    load().catch(function () { view('viewBad'); });
+  </script>
+</body>
+</html>

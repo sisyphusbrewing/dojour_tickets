@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP Table Tents · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* One tent per letter page, landscape. Fold along the dashed line; both halves read right side up
+       once it stands. Mostly white with light ink, for the thin office paper. */
+    @page { size: letter landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Assistant', sans-serif; color: #2b2929; background: #e9e7e7; }
+    .bar { position: sticky; top: 0; background: #2b2929; color: #fff; padding: 12px 16px; display: flex; gap: 12px; align-items: center;
+           flex-wrap: wrap; justify-content: space-between; z-index: 2; }
+    .bar b { font-family: 'Josefin Sans', sans-serif; letter-spacing: .04em; }
+    .bar button { font: inherit; font-weight: 700; background: #4a6c86; color: #fff; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; }
+    .bar small { color: #c9c6c6; display: block; }
+    .msg { max-width: 640px; margin: 40px auto; padding: 0 16px; font-size: 17px; }
+    .page { width: 11in; height: 8.5in; background: #fff; margin: 24px auto; position: relative; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+    .half { position: absolute; left: 0; right: 0; height: 4.25in; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: .35in .6in; }
+    .half.top { top: 0; transform: rotate(180deg); }
+    .half.bottom { bottom: 0; }
+    .fold { position: absolute; left: .3in; right: .3in; top: 4.25in; border-top: 1px dashed #bbb; }
+    .eyebrow { font-family: 'Josefin Sans', sans-serif; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; font-size: 16px; color: #4a6c86; }
+    .name { font-family: 'Josefin Sans', sans-serif; font-weight: 700; line-height: 1.05; margin: 10px 0 8px; color: #2b2929; word-break: break-word; }
+    .occ { font-size: 24px; color: #4a6c86; font-weight: 600; min-height: 30px; }
+    .show { margin-top: 14px; font-size: 15px; color: #918f90; letter-spacing: .04em; }
+    .show b { font-family: 'Josefin Sans', sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #4a6c86; }
+    @media print {
+      body { background: #fff; }
+      .bar, .msg { display: none; }
+      .page { margin: 0; box-shadow: none; page-break-after: always; break-after: page; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div><b id="title">VIP table tents</b><small id="sub">Loading…</small></div>
+    <button onclick="window.print()">Print</button>
+  </div>
+  <div class="msg" id="msg"></div>
+  <div id="pages"></div>
+  <script>
+    var sb = window.supabase.createClient('https://idsdwkubqnavkazlteis.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ');
+    var q = new URLSearchParams(location.search), DATE = q.get('date') || '', TITLE = q.get('title') || '';
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+    function fitSize(name) { var n = name.length; return n <= 10 ? 96 : n <= 16 ? 78 : n <= 24 ? 60 : 46; }
+    function occasionLine(o) {
+      if (!o) return '';
+      return /^(birthday|anniversary|bachelorette|retirement|graduation)/i.test(o) ? 'Happy ' + o : o;
+    }
+    function tentHalf(cls, t) {
+      return '<div class="half ' + cls + '"><div class="eyebrow">Reserved for</div>' +
+        '<div class="name" style="font-size:' + fitSize(t.name) + 'px">' + esc(t.name) + '</div>' +
+        '<div class="occ">' + esc(occasionLine(t.occasion)) + '</div>' +
+        '<div class="show"><b>Sisyphus</b> &nbsp;·&nbsp; ' + esc(TITLE) + ' &nbsp;·&nbsp; ' + esc(DATE) + '</div></div>';
+    }
+
+    async function load() {
+      var session = (await sb.auth.getSession()).data.session;
+      if (!session) { $('sub').textContent = ''; $('msg').innerHTML = 'Sign in on the <a href="./">Manager page</a> first, then come back.'; return; }
+      $('title').textContent = 'VIP table tents · ' + TITLE;
+      var res = await Promise.all([
+        sb.from('tickets').select('unique_id, guest_name, tickets, ticket_type').eq('show_date', DATE).eq('show_title', TITLE),
+        sb.from('vip_prefs').select('unique_id, tent_name, occasion').eq('show_date', DATE).eq('show_title', TITLE)
+      ]);
+      if (res[0].error) { $('msg').textContent = 'Couldn’t load the list: ' + res[0].error.message; return; }
+      var prefs = {};
+      (res[1].data || []).forEach(function (p) { prefs[p.unique_id] = p; });
+      var tents = (res[0].data || []).filter(function (g) {
+        return /vip|premium|reserved/i.test(g.ticket_type || '') && !/^shopify sales/i.test(g.guest_name || '');
+      }).map(function (g) {
+        var p = prefs[g.unique_id] || {};
+        return { name: p.tent_name || g.guest_name || 'VIP', occasion: p.occasion || '', seats: g.tickets || 1, answered: !!p.tent_name };
+      }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      if (!tents.length) { $('sub').textContent = DATE; $('msg').textContent = 'No VIP orders on this show.'; return; }
+      var answered = tents.filter(function (t) { return t.answered; }).length;
+      $('sub').textContent = DATE + ' · ' + tents.length + ' tents (' + answered + ' named by the guest, the rest use the name on the order)';
+      $('msg').textContent = 'Fold each page in half along the dashed line so it stands up. One tent per order.';
+      $('pages').innerHTML = tents.map(function (t) {
+        return '<div class="page">' + tentHalf('top', t) + '<div class="fold"></div>' + tentHalf('bottom', t) + '</div>';
+      }).join('');
+    }
+    load().catch(function (e) { $('msg').textContent = 'Something went wrong: ' + e.message; });
+  </script>
+</body>
+</html>
