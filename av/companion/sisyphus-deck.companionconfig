@@ -1998,7 +1998,7 @@
                       "definitionId": "get",
                       "options": {
                         "url": {
-                          "value": "http://127.0.0.1:8790/house/level?zone=tables&pct=17&fade=3",
+                          "value": "http://127.0.0.1:8790/house/level?zone=tables&pct=20&fade=3",
                           "isExpression": false
                         },
                         "header": {
@@ -2027,7 +2027,7 @@
                       "definitionId": "get",
                       "options": {
                         "url": {
-                          "value": "http://127.0.0.1:8790/house/level?zone=bar&pct=17&fade=3",
+                          "value": "http://127.0.0.1:8790/house/level?zone=bar&pct=20&fade=3",
                           "isExpression": false
                         },
                         "header": {
@@ -9349,7 +9349,7 @@
                       "definitionId": "get",
                       "options": {
                         "url": {
-                          "value": "http://127.0.0.1:8790/house/level?zone=tables&pct=17&fade=3",
+                          "value": "http://127.0.0.1:8790/house/level?zone=tables&pct=20&fade=3",
                           "isExpression": false
                         },
                         "header": {
@@ -9378,7 +9378,7 @@
                       "definitionId": "get",
                       "options": {
                         "url": {
-                          "value": "http://127.0.0.1:8790/house/level?zone=bar&pct=17&fade=3",
+                          "value": "http://127.0.0.1:8790/house/level?zone=bar&pct=20&fade=3",
                           "isExpression": false
                         },
                         "header": {

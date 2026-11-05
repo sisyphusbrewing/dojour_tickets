@@ -590,8 +590,8 @@ def hall_keys():
     return {
         (0, 3): button("PRE-SHOW", bgcolor=0x7A5A00, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(17) + candles(True)
-                       + [stage(STAGE_PRESHOW)]),  # house 17% (Sam, Nov 2 2026)
+                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)
+                       + [stage(STAGE_PRESHOW)]),  # house 20% (Sam, Nov 5 2026; was 17%)
         (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
                        + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)),
