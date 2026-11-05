@@ -461,7 +461,7 @@ def house_both(pct, fade=3):
 # "Candles IR" at 192.168.86.27 (Sam, Nov 5 2026). Codes learned off the candle remote:
 # NEC 32-bit. Repeat 1 sends each press twice so candles at the edge of the beam still catch it.
 # ON with PRE-SHOW, stay on through SHOW, OFF with DAYTIME and ALL OFF.
-CANDLE_BLASTERS = ["192.168.86.27"]
+CANDLE_BLASTERS = ["192.168.86.27", "192.168.86.45"]  # Candles IR, Candles IR 2
 CANDLE_CODES = {True: "0x10ED00FF", False: "0x10ED40BF"}
 
 
