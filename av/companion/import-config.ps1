@@ -3,7 +3,8 @@
 #   powershell -ExecutionPolicy Bypass -File import-config.ps1          # back up, merge main, import, verify
 #   powershell -ExecutionPolicy Bypass -File import-config.ps1 -DryRun  # same, but stop before importing
 #
-# It replaces only the buttons. Connections, surfaces, custom variables (govee_key) and
+# It replaces only the buttons, and creates any custom variable the deck needs that is missing.
+# Connections, surfaces, existing custom variables (govee_key) and
 # user settings stay as they are, so the deck never disconnects and no secret is rewritten.
 # Importing does not press any key. Roll back with -File <a companion-backup-*.companionconfig>.
 param(
@@ -143,6 +144,17 @@ async function main() {
 		console.log('Dry run: nothing imported.')
 		rpc.ws.close()
 		return
+	}
+
+	// New custom variables the deck needs (e.g. stage_look, Nov 5 2026). The import leaves custom
+	// variables alone so govee_key is never touched, so create only the missing ones here.
+	const deckVars = JSON.parse(fs.readFileSync(deckPath, 'utf8')).custom_variables || {}
+	for (const [name, v] of Object.entries(deckVars)) {
+		if (live.custom_variables[name]) continue
+		const why = await rpc.mutate('customVariables.create', { name, defaultVal: String(v.defaultValue ?? '') })
+		if (why) fail(`could not create custom variable ${name}: ${why}`)
+		if (v.description) await rpc.mutate('customVariables.setDescription', { name, description: v.description })
+		console.log(`Created custom variable ${name}`)
 	}
 
 	let task

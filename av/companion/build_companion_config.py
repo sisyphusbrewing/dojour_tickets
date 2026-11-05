@@ -375,6 +375,7 @@ CUSTOM_VARIABLES = {
     "house_tables": "House lights Tables level %, written by the house-lights service",
     "house_bar": "House lights Bar level %, written by the house-lights service",
     "alarm_state": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
+    "stage_look": "Stage lights look, written by the stage-lights service (wash, show, warm, blue, ... off)",
 }
 
 
@@ -525,19 +526,80 @@ def bar_knobs():
     return controls
 
 
+# Stage lights (Nov 5 2026): the 4 ADJ 12P Hex over a PKnight Art-Net node, driven by a small
+# local service on the office PC. GET /stage/<look>?fade=seconds; it writes the look it is on
+# into custom variable stage_look so the deck can light up the matching key.
+STAGE_URL = "http://127.0.0.1:8792/stage"
+STAGE_FADE = 2  # seconds
+STAGE_COLOR = 0x2A3F6A
+# PRE-SHOW = blue wash, SHOW = warm all around (Sam, Nov 5 2026)
+STAGE_PRESHOW = "blue"
+STAGE_SHOW = "show"  # white + warm + some amber; "warm" is the deeper amber mood look
+
+
+def stage(look, fade=STAGE_FADE):
+    return action(HTTP, "get", url=f"{STAGE_URL}/{look}?fade={fade}", header="",
+                  jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
+
+
+def stage_on(look):
+    return f"$(custom:stage_look) == '{look}'"
+
+
+# Look keys: (label, look, colour the key turns while that look is on)
+STAGE_LOOKS = [
+    ("WASH", "wash", 0x7A6A50),
+    ("SHOW", "show", SHOW_COLOR),
+    ("WARM", "warm", 0xB06000),
+    ("WHITE", "white", 0x9A9A9A),
+    ("UV", "uv", 0x4B1E8A),
+]
+# One COLOR key steps through these, one per press
+STAGE_COLORS = [("PINK", "pink", 0xC0307A), ("BLUE", "blue", 0x1F4FC0),
+                ("RED", "red", 0xC00000), ("PURPLE", "purple", 0x6A2AA0)]
+
+
+def stage_look_key(label, look, lit):
+    return button(f"STAGE\\n{label}", bgcolor=DARK, size="18", press=[stage(look)],
+                  feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": lit, "color": WHITE},
+                                      expression=stage_on(look))])
+
+
+def stage_color_key():
+    """Each press moves to the next colour (pink, blue, red, purple); lit in the colour that's on."""
+    key = button("STAGE\\nCOLOR\\ntap to step", bgcolor=DARK, size="18", press=[stage(STAGE_COLORS[0][1])],
+                 feedbacks=[feedback(INTERNAL, "check_expression",
+                                     style={"bgcolor": lit, "color": WHITE, "text": f"STAGE\\n{label}\\ntap for next"},
+                                     expression=stage_on(look)) for label, look, lit in STAGE_COLORS])
+    for i, (_, look, _) in enumerate(STAGE_COLORS[1:], start=1):
+        key["steps"][str(i)] = {"action_sets": {"down": [stage(look)], "up": []}, "options": {"runWhileHeld": []}}
+    return key
+
+
+def stage_keys():
+    keys = [stage_look_key(*look) for look in STAGE_LOOKS] + [stage_color_key()]
+    keys.append(button("STAGE\\nOFF", bgcolor=DARK, size="18", press=[stage("off")],
+                       feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
+                                           expression=stage_on("off"))]))
+    spots = [(0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    return dict(zip(spots, keys))
+
+
 def hall_keys():
     """Room-wide looks: each key sets the hallway and the house lights together (Sam, Nov 2 2026)."""
     return {
         (0, 3): button("PRE-SHOW", bgcolor=0x7A5A00, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(17) + candles(True)),  # house 17% (Sam, Nov 2 2026)
+                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(17) + candles(True)
+                       + [stage(STAGE_PRESHOW)]),  # house 17% (Sam, Nov 2 2026)
         (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
                        + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)),
-        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=house_both(0)),  # house lights off (Sam, Nov 2)
+        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=house_both(0) + [stage(STAGE_SHOW)]),  # house lights off (Sam, Nov 2)
         (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-                       + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)),
+                       + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
+                       + [stage("off")]),
     }
 
 
@@ -611,8 +673,9 @@ def reset_sound_key():
 # sound_controls(): rows 2-3, the touch strip labels and the four knobs.
 # --------------------------------------------------------------------------
 
-def layout(sources, first, mics, other_first):
-    """SHOW, BAR and TIMER pages for one mic layout, numbered from `first`."""
+def layout(sources, first, mics, other_first, stage_page):
+    """SHOW, BAR, STAGE and TIMER pages for one mic layout. SHOW/BAR/TIMER are numbered from
+    `first`; STAGE came later (Nov 5 2026), so it takes page `stage_page` to keep the old numbers."""
     show, bar, timer = first, first + 1, first + 2
     tag = "" if mics == 2 else " 4"  # page names: SHOW / SHOW 4 ...
     pages = {
@@ -629,11 +692,18 @@ def layout(sources, first, mics, other_first):
         bar: {
             "name": f"BAR{tag}",
             "controls": {
-                (0, 0): page_key(f"BAR{tag}", "TIMER", timer, BAR_COLOR),
+                (0, 0): page_key(f"BAR{tag}", "STAGE", stage_page, BAR_COLOR),
                 (0, 1): menu_refresh_key(),
                 (0, 2): print_menu_key(),
                 **hall_keys(),
                 (1, 3): alarm_key(),
+            },
+        },
+        stage_page: {
+            "name": f"STAGE{tag}",
+            "controls": {
+                (0, 0): page_key(f"STAGE{tag}", "TIMER", timer, STAGE_COLOR),
+                **stage_keys(),
             },
         },
         timer: {
@@ -655,6 +725,7 @@ def layout(sources, first, mics, other_first):
     for page in pages.values():
         page["controls"].update(sound_controls(sources))
     pages[bar]["controls"].update(bar_knobs())
+    pages[stage_page]["controls"].update(bar_knobs())  # house dimmers here too: it's a lights page
     if mics == 2:  # with 4 mics every knob is a mic, so TIMER 4 keeps them
         pages[timer]["controls"].update({(2, 3): time_strip(), (3, 3): time_knob()})
     return pages
@@ -667,7 +738,9 @@ def mics_key(mics, other_first):
                   press=[action(INTERNAL, "set_page", surfaceId="self", page=other_first)])
 
 
-PAGES = {**layout(SOURCES_2, 1, 2, 4), **layout(SOURCES_4, 4, 4, 1), ALARM_PAGE: alarm_page()}
+STAGE_PAGE, STAGE_PAGE_4 = 8, 9
+PAGES = {**layout(SOURCES_2, 1, 2, 4, STAGE_PAGE), **layout(SOURCES_4, 4, 4, 1, STAGE_PAGE_4),
+         ALARM_PAGE: alarm_page()}
 
 
 GRID = {"minColumn": 0, "maxColumn": 3, "minRow": 0, "maxRow": 3}
