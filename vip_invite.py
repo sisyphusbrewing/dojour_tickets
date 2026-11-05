@@ -100,12 +100,12 @@ def build_email(kind, name, show_title, show_date, seats, token):
         + '<p style="margin:22px 0 24px"><a href="' + link + '" style="background:#4a6c86;color:#ffffff;text-decoration:none;'
         'font-weight:bold;font-size:16px;padding:14px 24px;border-radius:10px;display:inline-block">' + button + "</a></p>"
         + p + after + "</p>"
-        + p + "See you soon.<br>-Sam<br>Sisyphus</p>"
+        + p + "See you soon.<br>Sisyphus</p>"
         + '<p style="margin:24px 0 0;font-size:13px;color:#918f90">Sisyphus · 712 Ontario Ave W, Minneapolis · '
         'Questions? Just reply to this email.</p></div>'
     )
     text = "\n\n".join(x.replace("<b>", "").replace("</b>", "") for x in paras)
-    text += f"\n\n{button}: {link}\n\n{after}\n\nSee you soon.\n-Sam\nSisyphus\n"
+    text += f"\n\n{button}: {link}\n\n{after}\n\nSee you soon.\nSisyphus\n"
     return subject, text, html
 
 
@@ -183,6 +183,9 @@ def upcoming(rows):
 def main():
     if not SUPABASE_KEY:
         sys.exit("SUPABASE_SERVICE_ROLE_KEY missing.")
+    # Sam (Nov 5 2026): VIP emails come from the box office, never sam@.
+    if FROM_EMAIL.lower() != "ticketing@sisyphusbrewing.com" and not DRY_RUN:
+        sys.exit(f"Sender is {FROM_EMAIL}, not ticketing@sisyphusbrewing.com; not sending.")
     if PREVIEW_TO:
         if "@" not in PREVIEW_TO:
             sys.exit("PREVIEW_TO is not an email address.")
