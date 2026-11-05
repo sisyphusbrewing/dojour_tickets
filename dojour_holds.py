@@ -172,11 +172,17 @@ def main():
         dt = parse_show_datetime(item.get("start_dt"))
         if not dt or is_past_event(dt):
             continue
+        report = dj.get(f"event_instances/{inst}/reserve_report/")
+        # Same title rule as fetch_tickets.py, so it matches the Supabase rows.
         opt_title = ((item.get("option_set") or [{}])[0] or {}).get("title", "")
         title = clean_show_title(opt_title or item.get("title", ""))
+        if not title:
+            title = next((clean_show_title(r["event_title"]) for r in report.get("reservation_set") or []
+                          if r.get("event_title")), "")
+        if not title and report.get("option_set"):
+            title = clean_show_title(report["option_set"][0].get("title", ""))
         date_str = format_show_date(dt)
         web = web_counts.get((title.lower(), date_str), {"ga": 0, "vip": 0})
-        report = dj.get(f"event_instances/{inst}/reserve_report/")
         payload, line = plan_for(report, title, date_str, web)
         print(f"{inst} {title} | {date_str}: {line}")
         if ONLY:
