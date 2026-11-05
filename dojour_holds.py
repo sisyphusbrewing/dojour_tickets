@@ -18,7 +18,6 @@ Env: DOJOUR_STATE (or DOJOUR_TOKEN), SUPABASE_URL, SUPABASE_KEY.
   APPLY=1            actually create holds (default: print the plan only)
   INSTANCE_IDS=a,b   only these Dojour showtimes
 """
-import json
 import os
 import re
 import sys
@@ -32,7 +31,7 @@ from fetch_tickets import (clean_show_title, format_show_date, get_dojour_token,
 API = "https://dojour.us/api/"
 APPLY = os.environ.get("APPLY", "").strip().lower() in ("1", "true", "yes")
 ONLY = {x.strip() for x in (os.environ.get("INSTANCE_IDS") or "").split(",") if x.strip()}
-HOLD_FIRST, HOLD_LAST = "Website", "Hold"
+HOLD_FIRST = HOLD_LAST = "Website Hold"   # same as Sam's own holds
 
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co").replace("/rest/v1", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -84,39 +83,19 @@ class Dojour:
             url = data.get("next") if isinstance(data, dict) else None
         return out
 
-    def browser_cookies(self):
-        """All cookies from the saved Dojour login (session + CSRF), like the dashboard sends."""
-        raw = os.environ.get("DOJOUR_STATE", "")
-        try:
-            state = json.load(open(raw)) if raw and os.path.exists(raw) else json.loads(raw or "{}")
-        except Exception:
-            state = {}
-        return [c for c in state.get("cookies", []) if "dojour" in (c.get("domain") or "")]
-
     def manual_create(self, payload):
-        """The dashboard's "Add reservation" call. It is session + CSRF authenticated, so try
-        the token first and then the browser way; stop at the first answer that isn't a refusal."""
-        cookies = self.browser_cookies()
-        print("   login cookies:", sorted(c.get("name") for c in cookies))
-        csrf = next((c.get("value") for c in cookies if c.get("name") == "csrftoken"), "")
-        browser = requests.Session()
-        for c in cookies:
-            browser.cookies.set(c["name"], c["value"], domain=c.get("domain") or "dojour.us", path=c.get("path") or "/")
-        browser_h = {"Accept": "application/json", "User-Agent": "Mozilla/5.0", "Referer": "https://dojour.us/",
-                     "Origin": "https://dojour.us", "X-CSRFToken": csrf}
-        r = None
-        for label, sess, extra in (("token", self.s, {}),
-                                   ("browser+token", browser, dict(browser_h, Authorization=self.s.headers["Authorization"])),
-                                   ("browser", browser, browser_h)):
-            for path in ("reservations/manual_create/", "reservations/manual_create"):
-                r = sess.post(API + path, json=payload, headers=extra, timeout=30)
-                if r.status_code == 404:
-                    continue
-                print(f"   {label} {path} -> {r.status_code}")
-                if r.status_code in (200, 201) or "permission" not in r.text.lower():
-                    return r
-                break
-        return r
+        """The dashboard's Add Reservation call, exactly as recorded from Sam's browser
+        (Nov 5 2026): token auth, no CSRF, Origin + admin-tools Referer."""
+        h = {"Content-Type": "application/json;charset=UTF-8", "Origin": "https://dojour.us",
+             "Referer": f"https://dojour.us/admin-tools/reservations/s/{payload['showing']}/add"}
+        try:
+            key = self.s.post(API + "sessions/current/", json={"referrer_link": "", "referrer": "dojour.us"},
+                              timeout=20).json().get("session_key")
+            if key:
+                h["Dojour-Session"] = f"Key {key}"
+        except Exception:
+            pass
+        return self.s.post(API + "reservations/manual_create/", json=payload, headers=h, timeout=30)
 
 
 def venue_holds(report):
@@ -188,14 +167,18 @@ def plan_for(report, title, date_str, web):
         o2["count"] = counts.get(oid(o), 0)
         payload_opts.append(o2)
     payload = {"showing": report.get("id"), "option_set": payload_opts, "upgrade_set": report.get("upgrade_set") or [],
-               "form_response": None, "send_email": False, "first_name": HOLD_FIRST, "last_name": HOLD_LAST,
-               "notes": "Seats sold on the website (automatic)"}
+               "form_response": None, "send_email": False, "first_name": HOLD_FIRST, "last_name": HOLD_LAST}
     detail = ", ".join(f"{counts[oid(o)]} {o.get('title', '').split(' - ')[0]}" for o in options if counts.get(oid(o)))
     return payload, f"BLOCK {blocked} ({detail}); website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip"
 
 
 def main():
     dj = Dojour()
+    try:
+        # Holds must be made by the Sisyphus business login (user 320), the one Sam uses.
+        print("Dojour login: user", dj.get("account/current/").get("id"))
+    except Exception as e:
+        print("Could not read the Dojour login:", e)
     web_counts = website_counts()
     made, failures = 0, []
     for item in dj.showings():
