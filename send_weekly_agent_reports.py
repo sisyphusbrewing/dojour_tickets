@@ -310,10 +310,19 @@ def send_email(to_email, subject, html_content, text_content=""):
         print(f"❌ Unexpected SMTP Error on Port 465: {e}")
         raise e
 
+def is_placeholder(row):
+    """Dojour reservations the venue makes itself to block seats, not sales:
+    "Hold", "Shopify Sales" (seats already sold on the website, entered so Dojour
+    can't resell them) and the like. Real Dojour buyers always have an email; these
+    never do. Counting them would report those seats twice."""
+    return row.get("source") == "Dojour" and not (row.get("email") or "").strip()
+
+
 def collect_shows(titles):
     """{(title, show_date): counts} for every upcoming showtime: website, Dojour and
     comp tickets from Supabase, plus unsold website showtimes at zero."""
-    tickets = fetch_supabase("tickets?select=show_date,show_title,tickets,source")
+    tickets = fetch_supabase("tickets?select=show_date,show_title,tickets,source,guest_name,email")
+    tickets = [t for t in tickets if not is_placeholder(t)]
     if not tickets:
         print("No ticket data found.")
 
