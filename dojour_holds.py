@@ -18,6 +18,7 @@ Env: DOJOUR_STATE (or DOJOUR_TOKEN), SUPABASE_URL, SUPABASE_KEY.
   APPLY=1            actually create holds (default: print the plan only)
   INSTANCE_IDS=a,b   only these Dojour showtimes
 """
+import json
 import os
 import re
 import sys
@@ -83,11 +84,38 @@ class Dojour:
             url = data.get("next") if isinstance(data, dict) else None
         return out
 
+    def browser_cookies(self):
+        """All cookies from the saved Dojour login (session + CSRF), like the dashboard sends."""
+        raw = os.environ.get("DOJOUR_STATE", "")
+        try:
+            state = json.load(open(raw)) if raw and os.path.exists(raw) else json.loads(raw or "{}")
+        except Exception:
+            state = {}
+        return [c for c in state.get("cookies", []) if "dojour" in (c.get("domain") or "")]
+
     def manual_create(self, payload):
-        for path in ("reservations/manual_create/", "reservations/manual_create"):
-            r = self.s.post(API + path, json=payload, timeout=30)
-            if r.status_code != 404:
-                return r
+        """The dashboard's "Add reservation" call. It is session + CSRF authenticated, so try
+        the token first and then the browser way; stop at the first answer that isn't a refusal."""
+        cookies = self.browser_cookies()
+        print("   login cookies:", sorted(c.get("name") for c in cookies))
+        csrf = next((c.get("value") for c in cookies if c.get("name") == "csrftoken"), "")
+        browser = requests.Session()
+        for c in cookies:
+            browser.cookies.set(c["name"], c["value"], domain=c.get("domain") or "dojour.us", path=c.get("path") or "/")
+        browser_h = {"Accept": "application/json", "User-Agent": "Mozilla/5.0", "Referer": "https://dojour.us/",
+                     "Origin": "https://dojour.us", "X-CSRFToken": csrf}
+        r = None
+        for label, sess, extra in (("token", self.s, {}),
+                                   ("browser+token", browser, dict(browser_h, Authorization=self.s.headers["Authorization"])),
+                                   ("browser", browser, browser_h)):
+            for path in ("reservations/manual_create/", "reservations/manual_create"):
+                r = sess.post(API + path, json=payload, headers=extra, timeout=30)
+                if r.status_code == 404:
+                    continue
+                print(f"   {label} {path} -> {r.status_code}")
+                if r.status_code in (200, 201) or "permission" not in r.text.lower():
+                    return r
+                break
         return r
 
 
