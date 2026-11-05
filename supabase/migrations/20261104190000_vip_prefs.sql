@@ -8,7 +8,7 @@
 --                 and answers must survive that.
 --   vip_form_get / vip_form_save   anon RPCs the form uses; the token is the
 --                 only key, so a guest only ever sees their own order.
---   door_guests   now also returns the answers, so the door list shows them
+--   door_vip      the answers for one show, so the door list shows them
 --                 next to the VIP star.
 
 create table if not exists public.vip_prefs (
@@ -69,21 +69,14 @@ revoke all on function public.vip_form_save(text, text, text, text, text) from p
 grant execute on function public.vip_form_get(text) to anon, authenticated;
 grant execute on function public.vip_form_save(text, text, text, text, text) to anon, authenticated;
 
--- Door list: same as before plus the VIP answers.
-drop function if exists public.door_guests(text, text);
-create function public.door_guests(p_show_date text, p_show_title text)
-returns table (unique_id text, guest_name text, email text, tickets int,
-               checked_in_count int, ticket_type text, source text,
-               vip_tent text, vip_occasion text, vip_seat text, vip_snack text)
+-- Door list: the VIP answers for one show, merged into door_guests' rows on the
+-- page (door logins can't read vip_prefs directly). door_guests is unchanged.
+create or replace function public.door_vip(p_show_date text, p_show_title text)
+returns table (unique_id text, vip_tent text, vip_occasion text, vip_seat text, vip_snack text)
 language sql stable security definer set search_path = public as $$
-  select t.unique_id, t.guest_name, t.email, t.tickets, t.checked_in_count, t.ticket_type, t.source,
-         p.tent_name, p.occasion, p.seat_pref, p.snack
-  from public.tickets t
-  left join public.vip_prefs p on p.unique_id = t.unique_id
-  where auth.uid() is not null
-    and t.show_date = p_show_date and t.show_title = p_show_title
-    and public.door_is_tonight(t.show_date)
-  order by t.guest_name;
+  select p.unique_id, p.tent_name, p.occasion, p.seat_pref, p.snack
+  from public.vip_prefs p
+  where auth.uid() is not null and p.show_date = p_show_date and p.show_title = p_show_title;
 $$;
-revoke all on function public.door_guests(text, text) from public;
-grant execute on function public.door_guests(text, text) to authenticated, service_role;
+revoke all on function public.door_vip(text, text) from public;
+grant execute on function public.door_vip(text, text) to authenticated, service_role;

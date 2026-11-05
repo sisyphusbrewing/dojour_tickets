@@ -131,6 +131,13 @@
       if (res.error) { toast('Couldn’t load the list: ' + res.error.message, true); return; }
       if (showKey(s) !== currentKey) return;   // switched shows while loading
       guests = res.data || [];
+      // VIP answers from the pre-show form; the list still works if this fails.
+      try {
+        var v = await sb.rpc('door_vip', { p_show_date: s.show_date, p_show_title: s.show_title });
+        var by = {};
+        (v.data || []).forEach(function (p) { by[p.unique_id] = p; });
+        guests.forEach(function (g) { var p = by[g.unique_id]; if (p) Object.assign(g, p, { unique_id: g.unique_id }); });
+      } catch (e) {}
       render();
     }
 
