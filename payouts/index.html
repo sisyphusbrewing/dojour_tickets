@@ -244,7 +244,8 @@
     function firstWord(n) { return String(n || '').trim().split(/\s+/)[0].toLowerCase(); }
     function reqMatch(q) {
       return lines.find(function (l) {
-        if (l.status !== 'owed' || l.show_name.toLowerCase() !== q.show_name.toLowerCase()) return false;
+        // A Venmo-only request (no show) matches any owed line for that person.
+        if (l.status !== 'owed' || (q.show_name && l.show_name.toLowerCase() !== q.show_name.toLowerCase())) return false;
         var p = payeeOf(l);
         return (p.handle && bare(p.handle) === bare(q.handle)) || String(p.name).toLowerCase() === q.name.toLowerCase() ||
           (p.name && p.name.trim().indexOf(' ') === -1 && firstWord(p.name) === firstWord(q.name));
@@ -260,8 +261,7 @@
             : '<span class="warn">Not on the sheet yet</span>';
           return '<div class="line req" data-req="' + q.id + '"><div class="l-main">' +
             '<div class="l-name">' + escapeHtml(q.name) + '<span class="amt">' + (q.amount ? money(q.amount) : '$?') + '</span></div>' +
-            '<div class="l-sub">' + escapeHtml(q.show_name) + (q.show_dates ? ' · ' + escapeHtml(q.show_dates) : '') + ' · ' + escapeHtml(q.role) +
-            ' · Venmo ' + escapeHtml(q.handle) + '</div>' +
+            '<div class="l-sub">' + [q.show_name + (q.show_dates ? ' · ' + q.show_dates : ''), q.role, 'Venmo ' + q.handle].filter(Boolean).map(escapeHtml).join(' · ') + '</div>' +
             '<div class="l-sub">' + [q.phone, q.email].filter(Boolean).map(escapeHtml).join(' · ') + (q.note ? '<br>“' + escapeHtml(q.note) + '”' : '') + '</div>' +
             '<div class="l-sub">' + match + '</div></div>' +
             '<div class="l-act"><button class="btn btn-sm btn-primary" type="button" data-act="approve">Approve</button>' +
@@ -275,11 +275,13 @@
         if (m) {
           p = payeeOf(m); line = m;
         } else {
-          var amt = Number(prompt('Pay ' + q.name + ' how much for ' + q.show_name + '?', q.amount ? Number(q.amount) : ''));
+          var show = q.show_name || prompt('Which show is ' + q.name + ' getting paid for?', '');
+          if (!show) return;
+          var amt = Number(prompt('Pay ' + q.name + ' how much for ' + show + '?', q.amount ? Number(q.amount) : ''));
           if (!(amt > 0)) return;
           p = payees.find(function (x) { return x.handle && bare(x.handle) === bare(q.handle); }) || await payeeByName(q.name);
-          var ins = await sb.from('payouts').insert({ payee_id: p.id, show_name: q.show_name, show_end: q.show_end,
-            role: q.role, amount: amt, memo: q.show_dates ? q.role + ' · ' + q.show_dates : null, receipt_wanted: false }).select().single();
+          var ins = await sb.from('payouts').insert({ payee_id: p.id, show_name: show, show_end: q.show_end,
+            role: q.role || 'Other', amount: amt, memo: q.show_dates ? q.role + ' · ' + q.show_dates : null, receipt_wanted: false }).select().single();
           if (ins.error) throw ins.error;
           line = ins.data; lines.push(line);
         }
@@ -299,7 +301,7 @@
       } catch (ex) { toast('Approve failed: ' + ex.message, true); }
     }
     async function dismissReq(q) {
-      if (!confirm('Dismiss ' + q.name + '’s request for ' + q.show_name + '? Nothing gets paid.')) return;
+      if (!confirm('Dismiss ' + q.name + '’s request' + (q.show_name ? ' for ' + q.show_name : '') + '? Nothing gets paid.')) return;
       var res = await sb.from('pay_requests').update({ status: 'dismissed', handled_by: me, handled_at: new Date().toISOString() }).eq('id', q.id);
       if (res.error) { toast(res.error.message, true); return; }
       reqs = reqs.filter(function (x) { return x !== q; });
