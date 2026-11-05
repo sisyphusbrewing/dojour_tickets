@@ -31,7 +31,15 @@ def show(method, path):
     except Exception:
         print(r.text[:300])
 
-for m, p in [("GET", f"event_instances/{INST}/"), ("OPTIONS", f"event_instances/{INST}/"),
+EV = os.environ.get("EVENT_ID", "90886")
+OPT = os.environ.get("OPTION_ID", "5831")
+for m, p in [("GET", f"offers/{EV}/"), ("OPTIONS", f"offers/{EV}/"), ("OPTIONS", f"offer_options/{OPT}/"),
+             ("OPTIONS", f"events/{EV}/"), ("OPTIONS", f"event_instances/{INST}/offer/"),
+             ("OPTIONS", "offers/"), ("OPTIONS", "offer_options/"), ("OPTIONS", "comps/"),
+             ("OPTIONS", f"event_instances/{INST}/comp/"), ("OPTIONS", "guest_list/")]:
+    show(m, p)
+
+for m, p in [] and [("GET", f"event_instances/{INST}/"), ("OPTIONS", f"event_instances/{INST}/"),
              ("OPTIONS", "reservations/"), ("OPTIONS", f"event_instances/{INST}/reservations/"),
              ("OPTIONS", "reserves/"), ("OPTIONS", "options/"), ("OPTIONS", "option_sets/"),
              ("GET", "")]:
