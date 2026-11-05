@@ -6,7 +6,7 @@ on:
       instance_id:
         description: 'Dojour event instance id'
         required: false
-        default: '86822'
+        default: '86823,86825'
 
 jobs:
   probe:
