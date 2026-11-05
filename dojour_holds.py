@@ -126,9 +126,12 @@ def oid(opt):
 
 
 def option_remaining(opt):
+    """Seats this ticket type can still take: Dojour's own count, else limit minus sold."""
     for k in ("remaining_count", "remaining"):
         if opt.get(k) is not None:
             return max(int(opt[k]), 0)
+    if opt.get("limit") is not None:
+        return max(int(opt["limit"]) - int(opt.get("active_count") or 0), 0)
     return None
 
 
@@ -146,6 +149,10 @@ def plan_for(report, title, date_str, web):
     # Held seats count against the total even when bought in the other tier.
     extra_held = max(held_ga - web["ga"], 0) + max(held_vip - web["vip"], 0)
     total_need = max(need["ga"] + need["vip"] - extra_held, 0)
+    # Dojour refuses a hold bigger than the showing has left (it answers "You do not
+    # have permission"), so never ask for more than its remaining count.
+    if report.get("remaining_count") is not None:
+        total_need = min(total_need, max(int(report["remaining_count"]), 0))
     if total_need == 0:
         return None, f"ok (website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip)"
 
