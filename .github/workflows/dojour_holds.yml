@@ -10,6 +10,10 @@ on:
         description: 'Create the holds (unchecked = show the plan only)'
         type: boolean
         default: false
+      max_hold:
+        description: 'Testing: cap each hold at this many seats (blank = no cap)'
+        required: false
+        type: string
       instance_ids:
         description: 'Only these Dojour showtime ids (comma separated, blank = all)'
         required: false
@@ -44,4 +48,5 @@ jobs:
           # Scheduled runs only plan until the first live test is confirmed.
           APPLY: ${{ inputs.apply && '1' || '' }}
           INSTANCE_IDS: ${{ inputs.instance_ids }}
+          MAX_HOLD: ${{ inputs.max_hold }}
         run: python dojour_holds.py

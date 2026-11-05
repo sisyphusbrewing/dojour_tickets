@@ -30,6 +30,7 @@ from fetch_tickets import (clean_show_title, format_show_date, get_dojour_token,
 
 API = "https://dojour.us/api/"
 APPLY = os.environ.get("APPLY", "").strip().lower() in ("1", "true", "yes")
+MAX_HOLD = int(os.environ.get("MAX_HOLD") or 0)   # testing: cap each hold at this many seats
 ONLY = {x.strip() for x in (os.environ.get("INSTANCE_IDS") or "").split(",") if x.strip()}
 HOLD_FIRST = HOLD_LAST = "Website Hold"   # same as Sam's own holds
 
@@ -153,6 +154,8 @@ def plan_for(report, title, date_str, web):
     # have permission"), so never ask for more than its remaining count.
     if report.get("remaining_count") is not None:
         total_need = min(total_need, max(int(report["remaining_count"]), 0))
+    if MAX_HOLD:
+        total_need = min(total_need, MAX_HOLD)
     if total_need == 0:
         return None, f"ok (website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip)"
 
@@ -217,7 +220,9 @@ def main():
         payload, line = plan_for(report, title, date_str, web)
         print(f"{inst} {title} | {date_str}: {line}")
         if ONLY:
-            print("   options:", [(oid(o), sorted(o.keys()), o.get("title", "")[:30], o.get("limit"),
+            print("   remaining:", report.get("remaining_count"), "limit:", report.get("limit"),
+                  "complete:", report.get("complete_count"), "active:", report.get("active_count"))
+            print("   options:", [(oid(o), o.get("active_count"), o.get("complete_count"), o.get("title", "")[:30], o.get("limit"),
                                   o.get("remaining_count")) for o in report.get("option_set") or []])
         if not payload or not APPLY:
             continue
