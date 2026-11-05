@@ -2,15 +2,16 @@
 VIP welcome emails: every VIP / Reserved Seating buyer gets a link to the
 four-question table form (staff.sisyphusbrewing.com/vip/?t=<token>).
 
-  invite    once, as soon as the sale is on the door list (runs hourly)
+  invite    the day before the show, from 10 AM Central (or as soon as the
+            sale is on the door list if they buy after that; runs hourly)
   reminder  the morning of the show (after 9 AM Central), only if they
             haven't answered and the invite went out before today
 
 Answers land in public.vip_prefs and show on the door list, the manager
 page's VIP card (snack totals) and manager/tents.html (table tents).
 
-Customers are only emailed when VIP_EMAILS_LIVE=on (repo variable, set once
-Sam OKs it). Otherwise it is a dry run that prints who would get what.
+Live since Sam's OK on Nov 5 2026; the repo variable VIP_EMAILS_LIVE=off
+turns it back into a dry run that prints who would get what.
 PREVIEW_TO=<address> sends one sample invite (with a working test link) to
 that address and nobody else.
 """
@@ -35,7 +36,8 @@ SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
 SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
 FROM_NAME = "Sisyphus Box Office"
-LIVE = (os.environ.get("VIP_EMAILS_LIVE") or "").strip().lower() == "on"
+# On since Nov 5 2026 (Sam). Set the repo variable VIP_EMAILS_LIVE to "off" to pause.
+LIVE = (os.environ.get("VIP_EMAILS_LIVE") or "").strip().lower() != "off"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes") or not LIVE
 PREVIEW_TO = (os.environ.get("PREVIEW_TO") or "").strip()
 FORM_URL = "https://staff.sisyphusbrewing.com/vip/?t="
@@ -223,7 +225,10 @@ def main():
         show_day = g["when"].date() == now.date()
 
         kind = None
-        if not invited and not answered and g["when"] - now > timedelta(hours=2):
+        # Invite the day before the show (from 10 AM Central), or right away if they buy later than that.
+        days_out = (g["when"].date() - now.date()).days
+        if (not invited and not answered and g["when"] - now > timedelta(hours=2)
+                and (days_out <= 0 or (days_out == 1 and now.hour >= 10))):
             kind = "invite"
         elif (invited and not answered and show_day and now.hour >= 9
               and not any(p.get("reminded_at") for p in ps)

@@ -1,9 +1,8 @@
 name: VIP Table Emails
 
 # Emails each VIP / Reserved Seating buyer the table form (vip/), and a
-# show-morning reminder if they haven't answered. Customers only get email
-# when the repo variable VIP_EMAILS_LIVE is "on"; until then every run is a
-# dry run that prints who would get what.
+# show-morning reminder if they haven't answered. Invites go out the day
+# before the show. Set the repo variable VIP_EMAILS_LIVE to "off" to pause.
 
 on:
   schedule:
