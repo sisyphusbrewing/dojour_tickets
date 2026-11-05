@@ -105,6 +105,11 @@ def venue_holds(report):
     return held
 
 
+def oid(opt):
+    """Dojour's report calls an option's id offer_option_id; the offer itself calls it id."""
+    return opt.get("offer_option_id") or opt.get("id")
+
+
 def option_remaining(opt):
     for k in ("remaining_count", "remaining"):
         if opt.get(k) is not None:
@@ -120,8 +125,8 @@ def plan_for(report, title, date_str, web):
     held = venue_holds(report)
     ga = [o for o in options if not is_vip(o.get("title"))]
     vip = [o for o in options if is_vip(o.get("title"))]
-    held_ga = sum(held.get(o.get("offer_option_id", o.get("id")), 0) for o in ga)
-    held_vip = sum(held.get(o.get("offer_option_id", o.get("id")), 0) for o in vip)
+    held_ga = sum(held.get(oid(o), 0) for o in ga)
+    held_vip = sum(held.get(oid(o), 0) for o in vip)
     need = {"ga": max(web["ga"] - held_ga, 0), "vip": max(web["vip"] - held_vip, 0)}
     # Held seats count against the total even when bought in the other tier.
     extra_held = max(held_ga - web["ga"], 0) + max(held_vip - web["vip"], 0)
@@ -138,12 +143,12 @@ def plan_for(report, title, date_str, web):
         for o in opts:
             if want <= 0:
                 break
-            oid = o.get("id")
+            k = oid(o)
             room = option_remaining(o)
-            room = want if room is None else room - counts.get(oid, 0)
+            room = want if room is None else room - counts.get(k, 0)
             take = max(min(want, room), 0)
             if take:
-                counts[oid] = counts.get(oid, 0) + take
+                counts[k] = counts.get(k, 0) + take
                 want -= take
                 left -= take
     blocked = sum(counts.values())
@@ -152,12 +157,12 @@ def plan_for(report, title, date_str, web):
     payload_opts = []
     for o in options:
         o2 = dict(o)
-        o2["count"] = counts.get(o.get("id"), 0)
+        o2["count"] = counts.get(oid(o), 0)
         payload_opts.append(o2)
     payload = {"showing": report.get("id"), "option_set": payload_opts, "upgrade_set": report.get("upgrade_set") or [],
                "form_response": None, "send_email": False, "first_name": HOLD_FIRST, "last_name": HOLD_LAST,
                "notes": "Seats sold on the website (automatic)"}
-    detail = ", ".join(f"{counts[o['id']]} {o.get('title', '').split(' - ')[0]}" for o in options if counts.get(o.get("id")))
+    detail = ", ".join(f"{counts[oid(o)]} {o.get('title', '').split(' - ')[0]}" for o in options if counts.get(oid(o)))
     return payload, f"BLOCK {blocked} ({detail}); website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip"
 
 
@@ -186,7 +191,7 @@ def main():
         payload, line = plan_for(report, title, date_str, web)
         print(f"{inst} {title} | {date_str}: {line}")
         if ONLY:
-            print("   options:", [(o.get("id"), o.get("offer_option_id"), o.get("title", "")[:30], o.get("limit"),
+            print("   options:", [(oid(o), sorted(o.keys()), o.get("title", "")[:30], o.get("limit"),
                                   o.get("remaining_count")) for o in report.get("option_set") or []])
         if not payload or not APPLY:
             continue
