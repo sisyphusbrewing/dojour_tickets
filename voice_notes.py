@@ -74,7 +74,8 @@ def list_parts(note_id):
                       json={"prefix": f"{note_id}/", "limit": 1000, "sortBy": {"column": "name", "order": "asc"}},
                       timeout=30)
     r.raise_for_status()
-    return sorted(o["name"] for o in r.json() if o.get("name") and o.get("id"))
+    # Storage lists names relative to the folder; return full paths.
+    return sorted(f"{note_id}/{o['name']}" for o in r.json() if o.get("name") and o.get("id"))
 
 
 def download(path, dest):
@@ -89,7 +90,7 @@ def delete_audio(note_id):
     names = list_parts(note_id)
     if names:
         requests.delete(f"{SUPABASE_URL}/storage/v1/object/{BUCKET}", headers=H,
-                        json={"prefixes": [f"{note_id}/{n}" for n in names]}, timeout=30).raise_for_status()
+                        json={"prefixes": names}, timeout=30).raise_for_status()
 
 
 # ---------- Audio ----------
