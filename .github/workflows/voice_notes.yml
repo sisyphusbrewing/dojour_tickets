@@ -21,6 +21,10 @@ on:
         required: false
         type: boolean
         default: false
+      test_as:
+        description: "Test note belongs to this voice user (e.g. Lindsey)"
+        required: false
+        type: string
   schedule:
     - cron: '17 */6 * * *'
 
@@ -54,4 +58,5 @@ jobs:
           NOTE_ID: ${{ inputs.note_id }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
           TEST_SPEECH: ${{ inputs.test && '1' || '' }}
+          TEST_AS: ${{ inputs.test_as }}
         run: python voice_notes.py

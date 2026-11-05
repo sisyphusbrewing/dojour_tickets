@@ -9,7 +9,8 @@ bucket and starts the "Voice notes" action, which runs this:
      free, nothing leaves GitHub but the text),
   2. asks the voice-summary edge function to have Claude write a title,
      summary, decisions and to-dos,
-  3. emails sam@ the notes with the full transcript attached.
+  3. emails the notes, with the full transcript attached, to whoever recorded
+     it (the email on their voice_users row; Sam's go to sam@).
 
 The notes and transcript stay on the /voice/ page. The audio is deleted after
 KEEP_AUDIO_DAYS. A recording whose phone died mid-way (still "recording" after
@@ -44,7 +45,10 @@ SMTP_HOST = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
 SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
 SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
-TO = [a.strip() for a in (os.environ.get("VOICE_NOTES_TO") or "sam@sisyphusbrewing.com").split(",") if a.strip()]
+# Each person's notes go to the email on their voice_users row (Sam: sam@,
+# Lindsey: her own; Sam, Nov 5 2026). VOICE_NOTES_TO overrides it for testing.
+TO_OVERRIDE = [a.strip() for a in (os.environ.get("VOICE_NOTES_TO") or "").split(",") if a.strip()]
+FALLBACK_TO = ["sam@sisyphusbrewing.com"]
 NOTE_ID = (os.environ.get("NOTE_ID") or "").strip()
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 MODEL = os.environ.get("WHISPER_MODEL") or "small.en"
@@ -211,11 +215,22 @@ def email_html(note, s):
     return ("<div style='font:15px/1.5 Arial,sans-serif;color:#222;max-width:640px'>" + "".join(parts) + "</div>")
 
 
-def send(subject, body_html, attachment=None):
+def recipients(note):
+    if TO_OVERRIDE:
+        return TO_OVERRIDE
+    if note.get("created_by"):
+        found = requests.get(f"{SUPABASE_URL}/rest/v1/voice_users", headers=H, timeout=30,
+                             params={"user_id": f"eq.{note['created_by']}", "select": "email"})
+        if found.ok and found.json():
+            return [found.json()[0]["email"]]
+    return FALLBACK_TO
+
+
+def send(to, subject, body_html, attachment=None):
     msg = MIMEMultipart()
     msg["Subject"] = subject
     msg["From"] = f"Sisyphus Voice Notes <{FROM_EMAIL}>"
-    msg["To"] = ", ".join(TO)
+    msg["To"] = ", ".join(to)
     msg.attach(MIMEText(body_html, "html"))
     if attachment:
         name, text = attachment
@@ -223,11 +238,11 @@ def send(subject, body_html, attachment=None):
         part["Content-Disposition"] = f'attachment; filename="{name}"'
         msg.attach(part)
     if DRY_RUN:
-        print(f"  DRY RUN: would email {TO}: {subject}")
+        print(f"  DRY RUN: would email {to}: {subject}")
         return
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
         server.login(SMTP_USER, SMTP_PASS)
-        server.sendmail(FROM_EMAIL, TO, msg.as_string())
+        server.sendmail(FROM_EMAIL, to, msg.as_string())
 
 
 # ---------- Test ----------
@@ -239,6 +254,17 @@ TEST_LINES = [
     ("en-us+f3", "Got it. Can you send me the new door schedule by Friday? Morgan asked for Saturdays off in December."),
     ("en-us", "Yes, I will send it Thursday night. And let's move the staff meeting to Tuesday at four."),
 ]
+
+
+def test_owner():
+    """TEST_AS=Lindsey makes the test note hers (pair it with DRY_RUN so she gets no robot email)."""
+    name = (os.environ.get("TEST_AS") or "").strip()
+    if not name:
+        return None
+    r = requests.get(f"{SUPABASE_URL}/rest/v1/voice_users", headers=H, timeout=30,
+                     params={"name": f"ilike.{name}", "select": "user_id"})
+    r.raise_for_status()
+    return r.json()[0]["user_id"] if r.json() else None
 
 
 def make_test_note():
@@ -255,7 +281,8 @@ def make_test_note():
                         "-ac", "1", "-c:a", "aac", "-b:a", "48k", m4a], check=True)
         r = requests.post(f"{SUPABASE_URL}/rest/v1/voice_notes", headers={**H, "Content-Type": "application/json",
                           "Prefer": "return=representation"},
-                          json={"label": "Test recording", "ext": "m4a", "status": "recording", "parts": 1}, timeout=30)
+                          json={"label": "Test recording", "ext": "m4a", "status": "recording", "parts": 1,
+                                "created_by": test_owner()}, timeout=30)
         r.raise_for_status()
         note = r.json()[0]
         with open(m4a, "rb") as f:
@@ -287,7 +314,7 @@ def process(note):
     note = {**note, "duration_s": secs}
     s = summarize(nid)
     when = datetime.fromisoformat(note["created_at"].replace("Z", "+00:00")).astimezone(CHICAGO)
-    send(f"🎙️ {s.get('title') or 'Voice note'}", email_html(note, s),
+    send(recipients(note), f"🎙️ {s.get('title') or 'Voice note'}", email_html(note, s),
          (f"transcript-{when:%Y-%m-%d-%H%M}.txt", f"{s.get('title', '')}\n{when:%A, %B %-d %Y, %-I:%M %p}\n\n{text}\n"))
     update(nid, status="done", **({} if DRY_RUN else {"emailed_at": datetime.now(timezone.utc).isoformat()}))
 
@@ -312,7 +339,7 @@ def main():
             traceback.print_exc()
             update(note["id"], status="error", error=str(ex)[:500])
             try:
-                send("🎙️ A voice note didn't go through",
+                send(recipients(note), "🎙️ A voice note didn't go through",
                      f"<p style='font:15px Arial'>The recording from "
                      f"{datetime.fromisoformat(note['created_at'].replace('Z', '+00:00')).astimezone(CHICAGO):%a %b %-d, %-I:%M %p}"
                      f" hit a snag: {html.escape(str(ex)[:300])}</p><p style='font:15px Arial'>The audio is still saved. "

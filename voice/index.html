@@ -96,6 +96,7 @@
         <div class="state" id="state">Tap to record.</div>
         <div class="alt">Already recorded it in Voice Memos? <label for="file">Upload the file</label>
           <input type="file" id="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.caf,.ogg,.webm" hidden></div>
+        <p class="tip" id="sendTo"></p>
         <p class="tip">Keep this page open while it records; the screen stays awake on its own, so lay the phone face down. It saves every minute as it goes, so a dead battery only loses the last minute. Notes land in your email a few minutes after you stop.</p>
       </section>
 
@@ -364,8 +365,35 @@
     $('bigBtn').addEventListener('click', function () { if (rec) stopRecording(); else startRecording(); });
     $('file').addEventListener('change', function (e) { uploadFile(e.target.files[0]); e.target.value = ''; });
 
-    setupSignIn(function (role) {
-      if (!roleAtLeast(role, 'owner')) { showNoAccess('owner'); return; }
+    // Who can record: anyone on voice_users (Sam, Lindsey). Each person sees
+    // only their own notes, emailed to the address on their row.
+    var me = null;
+    function showSendTo() {
+      $('sendTo').innerHTML = me && me.email
+        ? 'Notes go to <b>' + escapeHtml(me.email) + '</b>. <a href="#" onclick="changeEmail(); return false;">Change</a>'
+        : '';
+    }
+    async function changeEmail() {
+      var v = prompt('Email your notes to:', me.email || '');
+      if (v == null) return;
+      v = v.trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { toast('That doesn’t look like an email', true); return; }
+      var res = await sb.from('voice_users').update({ email: v }).eq('user_id', me.user_id);
+      if (res.error) { toast(res.error.message, true); return; }
+      me.email = v; showSendTo(); toast('Saved');
+    }
+
+    setupSignIn(async function (role) {
+      var ok = (await sb.rpc('can_voice')).data === true;
+      if (!ok) {
+        var el = $('notManager');
+        el.innerHTML = '<b>Not set up for voice notes</b>Ask Sam to turn it on for this login. <a href="/staff/">Back to the staff page</a>.';
+        el.classList.remove('hidden');
+        return;
+      }
+      var mine = await sb.from('voice_users').select('*').limit(1);
+      me = (mine.data && mine.data[0]) || null;
+      showSendTo();
       if (!window.MediaRecorder) setState('This browser can’t record. Use Safari on the iPhone, or upload a file.', true);
       $('app').classList.remove('hidden');
       loadNotes();
