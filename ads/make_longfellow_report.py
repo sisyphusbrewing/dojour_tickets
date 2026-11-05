@@ -93,8 +93,7 @@ notes = [
     "  don't say which app. Mike Lester photo + video ads, poster v2 and a new remarketing ad are live.",
     f"Reddit: {REDDIT['impr']:,} views, {REDDIT['clicks']} clicks, still no sales. Clicks are cheap but nobody buys.",
     "Sat 7 PM is sold out. Fri 7 PM and Thu are nearly full; Fri 9, Sat 9 and Sun are about 70% full.",
-    "Website counts only sales traced straight to an ad, so Meta's real effect is likely bigger.",
-    "Meta ads end Sun Nov 8, 5:30 PM.",
+    "Only sales traced straight to an ad count, so Meta's real effect is bigger. Ads end Sun 5:30 PM.",
 ]
 for ln in notes:
     d.text((M, y), ln, font=F("Assistant-Regular", 34), fill=INK)
