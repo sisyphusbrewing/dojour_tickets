@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Voice Notes</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Voice">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* Voice notes: Sam's Pocket-style recorder. Record here, Claude emails the notes. */
+    .rec { text-align: center; padding: 26px 0 8px; }
+    .rec-label { max-width: 420px; margin: 0 auto 22px; }
+    .big { width: 168px; height: 168px; border-radius: 50%; border: 6px solid var(--line); background: var(--card);
+           display: grid; place-items: center; margin: 0 auto; cursor: pointer; position: relative; transition: transform .1s; -webkit-tap-highlight-color: transparent; }
+    .big:active { transform: scale(.97); }
+    .big .dot { width: 72px; height: 72px; border-radius: 50%; background: var(--danger); transition: all .2s; }
+    .big.on { border-color: var(--danger); box-shadow: 0 0 0 calc(var(--lvl, 0) * 26px) rgba(201,106,90,.25); }
+    .big.on .dot { width: 54px; height: 54px; border-radius: 10px; }
+    .big:disabled { opacity: .5; cursor: default; }
+    .clock { font-family: var(--head); font-weight: 700; font-size: 44px; letter-spacing: .04em; margin: 20px 0 2px; font-variant-numeric: tabular-nums; }
+    .state { color: var(--muted); min-height: 22px; }
+    .state.bad { color: #f0b7ac; }
+    .alt { margin-top: 18px; color: var(--gray); font-size: 14px; }
+    .alt label { color: var(--slate-light); text-decoration: underline; cursor: pointer; }
+    .tip { color: var(--gray); font-size: 13px; max-width: 460px; margin: 14px auto 0; line-height: 1.45; }
+    h2.sec { font-family: var(--head); text-transform: uppercase; letter-spacing: .12em; font-size: 15px; margin: 34px 0 10px; color: var(--muted); }
+    .note { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
+    .n-head { padding: 12px 14px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+    .n-title { font-family: var(--head); font-weight: 700; font-size: 17px; letter-spacing: .02em; line-height: 1.2; padding-top: 2px; }
+    .n-sub { color: var(--gray); font-size: 13px; margin-top: 3px; }
+    .pill { flex: 0 0 auto; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--line); color: var(--muted); white-space: nowrap; }
+    .pill.work { background: var(--slate); color: #fff; }
+    .pill.err { background: var(--danger); color: #fff; }
+    .n-body { padding: 0 14px 14px; border-top: 1px solid var(--line); }
+    .n-body h4 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 12px; color: var(--slate-light); margin: 16px 0 6px; }
+    .n-body ul { margin: 0; padding-left: 20px; }
+    .n-body li { margin-bottom: 4px; }
+    .n-body p { margin: 0 0 8px; }
+    .gist { font-weight: 600; margin-top: 12px !important; }
+    .when { color: var(--gray); }
+    .transcript { white-space: pre-wrap; font-size: 14px; color: var(--muted); max-height: 420px; overflow: auto; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+    .n-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    audio { width: 100%; margin-top: 12px; }
+    details summary { cursor: pointer; color: var(--slate-light); margin-top: 14px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Voice notes</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Voice notes<small>Record it. Claude takes the notes.</small></div>
+        </a>
+        <div class="hdr-right">
+          <button class="btn btn-sm" type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="notManager" class="hidden empty"></div>
+    <div id="app" class="hidden">
+      <section class="rec">
+        <input class="input rec-label" id="label" maxlength="80" placeholder="What is this? (optional, e.g. Grace meeting)">
+        <button class="big" id="bigBtn" type="button" aria-label="Record"><span class="dot"></span></button>
+        <div class="clock" id="clock">0:00</div>
+        <div class="state" id="state">Tap to record.</div>
+        <div class="alt">Already recorded it in Voice Memos? <label for="file">Upload the file</label>
+          <input type="file" id="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.caf,.ogg,.webm" hidden></div>
+        <p class="tip">Keep this page open while it records; the screen stays awake on its own, so lay the phone face down. It saves every minute as it goes, so a dead battery only loses the last minute. Notes land in your email a few minutes after you stop.</p>
+      </section>
+
+      <h2 class="sec">Notes</h2>
+      <div id="list"><div class="empty">Loading…</div></div>
+    </div>
+  </main>
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var BUCKET = 'voice-notes';
+    var notes = [], open = {}, refreshTimer = null;
+    var rec = null;   // the recording in progress
+
+    function pad(n, w) { n = String(n); while (n.length < w) n = '0' + n; return n; }
+    function fmtClock(s) { s = Math.floor(s); var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+      return (h ? h + ':' + pad(m, 2) : m) + ':' + pad(x, 2); }
+    function setState(msg, bad) { var el = $('state'); el.textContent = msg; el.classList.toggle('bad', !!bad); }
+
+    function pickType() {
+      var options = [['audio/mp4', 'm4a'], ['audio/webm;codecs=opus', 'webm'], ['audio/webm', 'webm'], ['audio/ogg;codecs=opus', 'ogg']];
+      for (var i = 0; i < options.length; i++) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(options[i][0])) return { mime: options[i][0], ext: options[i][1] };
+      }
+      return { mime: '', ext: 'm4a' };
+    }
+
+    // ---------- Recording ----------
+    async function startRecording() {
+      var btn = $('bigBtn');
+      btn.disabled = true;
+      setState('Asking for the microphone…');
+      var stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+      } catch (e) {
+        btn.disabled = false;
+        setState('The microphone is blocked. In Settings > Safari > Microphone, allow it, then reload.', true);
+        return;
+      }
+      var type = pickType();
+      var ins = await sb.from('voice_notes').insert({ label: $('label').value.trim() || null, ext: type.ext, status: 'recording' }).select('id, created_at').single();
+      if (ins.error) {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        btn.disabled = false;
+        setState('Could not start: ' + ins.error.message, true);
+        return;
+      }
+      var opts = { audioBitsPerSecond: 48000 };
+      if (type.mime) opts.mimeType = type.mime;
+      var mr = new MediaRecorder(stream, opts);
+      rec = { id: ins.data.id, ext: type.ext, mime: (mr.mimeType || type.mime || 'audio/mp4').split(';')[0],
+              mr: mr, stream: stream, n: 0, uploads: [], started: Date.now(), failed: 0, stopping: false };
+      mr.ondataavailable = function (ev) { if (ev.data && ev.data.size) queuePart(ev.data); };
+      mr.onstop = finishRecording;
+      stream.getAudioTracks()[0].onended = function () { if (rec && !rec.stopping) stopRecording('The microphone was interrupted, so I saved what was recorded.'); };
+      mr.start(60000);   // a piece every minute
+      startMeter(stream);
+      keepAwake();
+      btn.classList.add('on');
+      btn.setAttribute('aria-label', 'Stop');
+      btn.disabled = false;
+      $('label').disabled = true;
+      setState('Recording. Tap to stop.');
+      rec.tick = setInterval(function () { $('clock').textContent = fmtClock((Date.now() - rec.started) / 1000); }, 500);
+    }
+
+    function queuePart(blob) {
+      var r = rec, i = r.n++;
+      var path = r.id + '/part-' + pad(i, 4) + '.' + r.ext;
+      r.uploads.push(uploadWithRetry(path, blob, r.mime).then(function (ok) {
+        if (!ok) { r.failed++; return; }
+        return sb.from('voice_notes').update({ parts: i + 1 }).eq('id', r.id);
+      }));
+    }
+
+    async function uploadWithRetry(path, blob, mime) {
+      for (var tries = 0; tries < 8; tries++) {
+        var res = await sb.storage.from(BUCKET).upload(path, blob, { contentType: mime, upsert: true });
+        if (!res.error) return true;
+        await new Promise(function (ok) { setTimeout(ok, Math.min(30000, 1500 * Math.pow(2, tries))); });
+      }
+      return false;
+    }
+
+    function stopRecording(why) {
+      if (!rec || rec.stopping) return;
+      rec.stopping = true;
+      rec.why = why || '';
+      $('bigBtn').disabled = true;
+      setState('Saving…');
+      try { rec.mr.stop(); } catch (e) { finishRecording(); }
+    }
+
+    async function finishRecording() {
+      var r = rec;
+      if (!r || r.finished) return;
+      r.finished = true;
+      clearInterval(r.tick);
+      r.stream.getTracks().forEach(function (t) { t.stop(); });
+      stopMeter(); letSleep();
+      var secs = Math.round((Date.now() - r.started) / 1000);
+      setState('Uploading the last piece…');
+      await Promise.all(r.uploads);
+      await sb.from('voice_notes').update({ status: 'uploaded', duration_s: secs, parts: r.n }).eq('id', r.id);
+      var go = await runWorkflow('voice_notes.yml', {});
+      rec = null;
+      $('bigBtn').classList.remove('on');
+      $('bigBtn').setAttribute('aria-label', 'Record');
+      $('bigBtn').disabled = false;
+      $('label').disabled = false; $('label').value = '';
+      $('clock').textContent = '0:00';
+      $('bigBtn').style.setProperty('--lvl', 0);
+      var msg = (r.why ? r.why + ' ' : '') + 'Saved ' + fmtClock(secs) + '. Notes in your email in about ' + etaMinutes(secs) + ' minutes.';
+      if (r.failed) msg += ' (' + r.failed + ' minute' + (r.failed > 1 ? 's' : '') + ' didn’t upload; weak signal.)';
+      if (!go.ok) msg = 'Saved, but couldn’t start the notes (' + go.error + '). They’ll run on their own within 6 hours.';
+      setState(msg, !go.ok);
+      chime(true);
+      loadNotes();
+    }
+
+    function etaMinutes(secs) { return Math.max(3, Math.round(4 + secs / 60 * 0.4)); }
+
+    // A little ring that grows with the sound, so you can see it's hearing.
+    var meter = null;
+    function startMeter(stream) {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var an = ctx.createAnalyser(); an.fftSize = 512;
+        ctx.createMediaStreamSource(stream).connect(an);
+        var buf = new Uint8Array(an.fftSize);
+        meter = { ctx: ctx, raf: 0 };
+        (function loop() {
+          an.getByteTimeDomainData(buf);
+          var peak = 0; for (var i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
+          $('bigBtn').style.setProperty('--lvl', Math.min(1, peak / 64).toFixed(2));
+          meter.raf = requestAnimationFrame(loop);
+        })();
+      } catch (e) {}
+    }
+    function stopMeter() { if (meter) { cancelAnimationFrame(meter.raf); try { meter.ctx.close(); } catch (e) {} meter = null; } }
+
+    var wake = null;
+    async function keepAwake() { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+    function letSleep() { try { if (wake) wake.release(); } catch (e) {} wake = null; }
+    document.addEventListener('visibilitychange', function () { if (rec && document.visibilityState === 'visible') keepAwake(); });
+    window.addEventListener('beforeunload', function (e) { if (rec) { e.preventDefault(); e.returnValue = ''; } });
+
+    // ---------- Uploading a file from Voice Memos ----------
+    async function uploadFile(file) {
+      if (!file) return;
+      if (file.size > 50 * 1024 * 1024) { setState('That file is over 50 MB. In Voice Memos, set Audio Quality to Compressed.', true); return; }
+      var ext = ((file.name.match(/\.([a-z0-9]+)$/i) || [])[1] || 'm4a').toLowerCase();
+      setState('Uploading ' + file.name + '…');
+      var label = $('label').value.trim() || file.name.replace(/\.[^.]+$/, '');
+      var ins = await sb.from('voice_notes').insert({ label: label, ext: ext, status: 'recording' }).select('id').single();
+      if (ins.error) { setState('Could not upload: ' + ins.error.message, true); return; }
+      var ok = await uploadWithRetry(ins.data.id + '/part-0000.' + ext, file, file.type || 'audio/mp4');
+      if (!ok) { setState('The upload failed. Check the signal and try again.', true); await sb.from('voice_notes').delete().eq('id', ins.data.id); return; }
+      await sb.from('voice_notes').update({ status: 'uploaded', parts: 1 }).eq('id', ins.data.id);
+      var go = await runWorkflow('voice_notes.yml', {});
+      $('label').value = '';
+      setState(go.ok ? 'Uploaded. Notes in your email in a few minutes.' : 'Uploaded; the notes will run on their own within 6 hours.', !go.ok);
+      loadNotes();
+    }
+
+    // ---------- The list ----------
+    var STATUS = { recording: ['Recording', 'work'], uploaded: ['Waiting', 'work'], transcribing: ['Transcribing', 'work'],
+                   summarizing: ['Writing notes', 'work'], done: ['', ''], error: ['Didn’t work', 'err'] };
+
+    async function loadNotes() {
+      var res = await sb.from('voice_notes').select('*').order('created_at', { ascending: false }).limit(60);
+      if (res.error) { $('list').innerHTML = '<div class="empty">Couldn’t load notes: ' + escapeHtml(res.error.message) + '</div>'; return; }
+      notes = res.data || [];
+      render();
+      clearTimeout(refreshTimer);
+      if (notes.some(function (n) { return n.status !== 'done' && n.status !== 'error' && !(rec && rec.id === n.id); }))
+        refreshTimer = setTimeout(loadNotes, 15000);
+    }
+
+    function when(n) {
+      return new Date(n.created_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    function list(items, fn) { return '<ul>' + items.map(function (x) { return '<li>' + fn(x) + '</li>'; }).join('') + '</ul>'; }
+
+    function render() {
+      if (!notes.length) { $('list').innerHTML = '<div class="empty"><b>Nothing yet</b>Your first recording will show up here.</div>'; return; }
+      $('list').innerHTML = notes.map(function (n) {
+        var st = STATUS[n.status] || ['', ''];
+        var title = (n.summary && n.summary.title) || n.title || n.label || 'Recording';
+        var sub = when(n) + (n.duration_s ? ' · ' + Math.max(1, Math.round(n.duration_s / 60)) + ' min' : '') + (n.label && n.title ? ' · ' + n.label : '');
+        var h = '<div class="note"><div class="n-head" onclick="toggle(' + jsArg(n.id) + ')"><div><div class="n-title">' + escapeHtml(title) +
+          '</div><div class="n-sub">' + escapeHtml(sub) + '</div></div>' + (st[0] ? '<span class="pill ' + st[1] + '">' + st[0] + '</span>' : '') + '</div>';
+        if (open[n.id]) h += '<div class="n-body">' + body(n) + '</div>';
+        return h + '</div>';
+      }).join('');
+      Object.keys(open).forEach(function (id) { if (open[id] === 'audio') loadAudio(id); });
+    }
+
+    function body(n) {
+      var s = n.summary || {}, e = escapeHtml, h = '';
+      if (n.status === 'error') h += '<p class="gist" style="color:#f0b7ac">' + e(n.error || 'Something went wrong.') + '</p>';
+      else if (!n.summary) h += '<p class="gist when">' + (STATUS[n.status] || [''])[0] + '… this page updates on its own.</p>';
+      if (s.gist) h += '<p class="gist">' + e(s.gist) + '</p>';
+      if (s.todos_sam && s.todos_sam.length) h += '<h4>Your to-dos</h4>' + list(s.todos_sam, function (t) { return e(t.task) + (t.when ? ' <span class="when">(' + e(t.when) + ')</span>' : ''); });
+      if (s.todos_others && s.todos_others.length) h += '<h4>Other people’s to-dos</h4>' + list(s.todos_others, function (t) { return '<b>' + e(t.who) + '</b>: ' + e(t.task) + (t.when ? ' <span class="when">(' + e(t.when) + ')</span>' : ''); });
+      if (s.decisions && s.decisions.length) h += '<h4>Decided</h4>' + list(s.decisions, e);
+      if (s.key_details && s.key_details.length) h += '<h4>Worth keeping</h4>' + list(s.key_details, e);
+      if (s.summary) h += '<h4>Summary</h4>' + s.summary.split(/\n\s*\n/).map(function (p) { return '<p>' + e(p) + '</p>'; }).join('');
+      if (n.transcript) h += '<details><summary>Full transcript</summary><div class="transcript">' + e(n.transcript) + '</div></details>';
+      if (!n.audio_deleted_at && n.parts > 0) h += '<div id="aud-' + n.id + '"></div>';
+      h += '<div class="n-actions">';
+      if (n.summary) h += '<button class="btn btn-sm" type="button" onclick="copyNotes(' + jsArg(n.id) + ')">Copy notes</button>';
+      if (n.status === 'error' || n.status === 'done') h += '<button class="btn btn-sm" type="button" onclick="retry(' + jsArg(n.id) + ')">' + (n.status === 'error' ? 'Try again' : 'Redo notes') + '</button>';
+      h += '<button class="btn btn-sm btn-danger" type="button" onclick="removeNote(' + jsArg(n.id) + ')">Delete</button></div>';
+      return h;
+    }
+
+    function toggle(id) {
+      if (open[id]) delete open[id]; else open[id] = 'audio';
+      render();
+    }
+
+    // Plays the recording back (only when it's a single piece; long recordings
+    // were cut into minutes, so the first minute plays as a sound check).
+    async function loadAudio(id) {
+      var n = notes.find(function (x) { return x.id === id; });
+      var el = $('aud-' + id);
+      if (!n || !el || el.dataset.done) return;
+      el.dataset.done = '1';
+      var res = await sb.storage.from(BUCKET).createSignedUrl(id + '/part-0000.' + n.ext, 3600);
+      if (res.data && res.data.signedUrl) el.innerHTML = '<audio controls preload="none" src="' + escapeHtml(res.data.signedUrl) + '"></audio>' +
+        (n.parts > 1 ? '<div class="n-sub">Plays the first minute. The full recording is kept for 30 days.</div>' : '');
+    }
+
+    function copyNotes(id) {
+      var n = notes.find(function (x) { return x.id === id; }), s = n.summary || {}, out = [(s.title || '') + '\n' + when(n), s.gist || ''];
+      if ((s.todos_sam || []).length) out.push('Your to-dos:\n' + s.todos_sam.map(function (t) { return '- ' + t.task + (t.when ? ' (' + t.when + ')' : ''); }).join('\n'));
+      if ((s.todos_others || []).length) out.push('Other people:\n' + s.todos_others.map(function (t) { return '- ' + t.who + ': ' + t.task + (t.when ? ' (' + t.when + ')' : ''); }).join('\n'));
+      if ((s.decisions || []).length) out.push('Decided:\n' + s.decisions.map(function (d) { return '- ' + d; }).join('\n'));
+      if ((s.key_details || []).length) out.push('Worth keeping:\n' + s.key_details.map(function (d) { return '- ' + d; }).join('\n'));
+      if (s.summary) out.push(s.summary);
+      navigator.clipboard.writeText(out.join('\n\n')).then(function () { toast('Copied'); }, function () { toast('Couldn’t copy', true); });
+    }
+
+    async function retry(id) {
+      await sb.from('voice_notes').update({ status: 'uploaded', error: null }).eq('id', id);
+      var go = await runWorkflow('voice_notes.yml', { note_id: id });
+      toast(go.ok ? 'Running it again' : 'Couldn’t start: ' + go.error, !go.ok);
+      loadNotes();
+    }
+
+    async function removeNote(id) {
+      if (!confirm('Delete this recording, its transcript and notes?')) return;
+      var n = notes.find(function (x) { return x.id === id; });
+      var paths = [];
+      for (var i = 0; i < Math.max(1, n.parts || 0); i++) paths.push(id + '/part-' + pad(i, 4) + '.' + n.ext);
+      await sb.storage.from(BUCKET).remove(paths);
+      var res = await sb.from('voice_notes').delete().eq('id', id);
+      if (res.error) { toast(res.error.message, true); return; }
+      delete open[id];
+      loadNotes();
+    }
+
+    $('bigBtn').addEventListener('click', function () { if (rec) stopRecording(); else startRecording(); });
+    $('file').addEventListener('change', function (e) { uploadFile(e.target.files[0]); e.target.value = ''; });
+
+    setupSignIn(function (role) {
+      if (!roleAtLeast(role, 'owner')) { showNoAccess('owner'); return; }
+      if (!window.MediaRecorder) setState('This browser can’t record. Use Safari on the iPhone, or upload a file.', true);
+      $('app').classList.remove('hidden');
+      loadNotes();
+    });
+  </script>
+</body>
+</html>

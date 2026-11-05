@@ -19,6 +19,7 @@ const ALLOWED_WORKFLOWS = new Set([
   "supply_notify.yml",
   "payout_mail.yml",
   "css_score.yml",
+  "voice_notes.yml",
 ]);
 const DOOR_WORKFLOWS = new Set(["daily_sync.yml"]);
 
