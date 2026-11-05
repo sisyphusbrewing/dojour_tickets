@@ -6,14 +6,14 @@
 // title, a summary, decisions and to-dos; this saves them on the row and
 // returns them so the action can email sam@.
 //
-// Only the service role key can call it (the action). Needs the Claude API key
+// It reads and writes the row with the caller's own key, so only the action
+// (service role) or Sam's owner login can use it; anyone else sees no row. Needs the Claude API key
 // secret that sign-art already uses: ANTHROPIC_CLIENT_API (or ANTHROPIC_API_KEY).
 
 import Anthropic from "npm:@anthropic-ai/sdk@1.3.0";
 
 const MODEL = "claude-opus-5-5";
 const SB = Deno.env.get("SUPABASE_URL") ?? "";
-const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const API_KEY = Deno.env.get("ANTHROPIC_CLIENT_API") ?? Deno.env.get("ANTHROPIC_CLIENT_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
 const anthropic = new Anthropic({ apiKey: API_KEY });
 
@@ -57,16 +57,17 @@ function respond(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-async function db(path: string, init: RequestInit = {}) {
+async function db(caller: Request, path: string, init: RequestInit = {}) {
+  const auth = caller.headers.get("authorization") ?? "";
+  const apikey = caller.headers.get("apikey") ?? auth.replace(/^Bearer\s+/i, "");
   return await fetch(`${SB}/rest/v1/${path}`, {
     ...init,
-    headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+    headers: { apikey, Authorization: auth, "Content-Type": "application/json", ...(init.headers ?? {}) },
   });
 }
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return respond(405, { error: "POST only" });
-  if ((req.headers.get("authorization") ?? "") !== `Bearer ${KEY}`) return respond(401, { error: "Not allowed" });
   if (!API_KEY) return respond(503, { error: "No Claude API key secret is set." });
 
   let id = "", effort = "medium";
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
     return respond(400, { error: "Bad request" });
   }
 
-  const r = await db(`voice_notes?id=eq.${encodeURIComponent(id)}&select=id,label,created_at,duration_s,transcript`);
+  const r = await db(req, `voice_notes?id=eq.${encodeURIComponent(id)}&select=id,label,created_at,duration_s,transcript`);
   const rows = r.ok ? await r.json() : [];
   if (!rows.length) return respond(404, { error: "No such note" });
   const note = rows[0];
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
     return respond(502, { error: `Summary was not JSON (stop: ${response.stop_reason})` });
   }
 
-  await db(`voice_notes?id=eq.${encodeURIComponent(id)}`, {
+  await db(req, `voice_notes?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify({ title: summary.title, summary }),
