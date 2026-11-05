@@ -94,7 +94,10 @@ def report_rows(titles):
         remaining = left.get((title, date_str))
         if remaining is None:
             remaining = max(DEFAULT_CAPACITY - used, 0)
-        capacity = used + remaining
+        # Seats the venue blocked in Dojour leave the website at 0 without being
+        # sold, so never report a room smaller than the showroom.
+        capacity = max(used + remaining, DEFAULT_CAPACITY)
+        remaining = capacity - used
         rows.append({
             "Event": f"{title} @ {VENUE}",
             "Artist": title,

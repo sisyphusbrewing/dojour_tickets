@@ -1,0 +1,40 @@
+name: Recording links
+
+# Every morning: headliners get a link to last night's video (recording_mail.py).
+# The office PC cuts and uploads the clips at 4 AM (av/recordings/split_and_share.py).
+
+on:
+  schedule:
+    - cron: '0 15 * * *'   # 9 AM Central (10 AM in summer)
+  workflow_dispatch:
+    inputs:
+      preview_to:
+        description: 'Send everything to this address instead (marks nothing)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Only print what would be sent'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email headliners their recordings
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          PREVIEW_TO: ${{ inputs.preview_to }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python recording_mail.py

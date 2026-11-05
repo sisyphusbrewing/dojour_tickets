@@ -1,0 +1,62 @@
+name: Voice notes
+
+# Sam's recorder (voice/index.html): transcribe new recordings, have Claude
+# summarize them, email sam@ (voice_notes.py). The page starts this the moment
+# a recording finishes uploading; the schedule is a backstop.
+
+on:
+  workflow_dispatch:
+    inputs:
+      note_id:
+        description: 'Redo one note (its id); blank = everything waiting'
+        required: false
+        type: string
+      dry_run:
+        description: "Transcribe and summarize, but don't email"
+        required: false
+        type: boolean
+        default: false
+      test:
+        description: 'Make a short spoken test meeting and run it through'
+        required: false
+        type: boolean
+        default: false
+      test_as:
+        description: "Test note belongs to this voice user (e.g. Lindsey)"
+        required: false
+        type: string
+  schedule:
+    - cron: '17 */6 * * *'
+
+concurrency:
+  group: voice-notes
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-en-v1
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg ${{ inputs.test && 'espeak-ng' || '' }}
+      - run: pip install requests "faster-whisper==1.2.1" "av<16"
+      - name: Transcribe, summarize, email
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          NOTE_ID: ${{ inputs.note_id }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          TEST_SPEECH: ${{ inputs.test && '1' || '' }}
+          TEST_AS: ${{ inputs.test_as }}
+        run: python voice_notes.py

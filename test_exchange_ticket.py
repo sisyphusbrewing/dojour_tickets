@@ -1,11 +1,21 @@
 """Quick checks for exchange_ticket's swap logic with a fake Shopify and Supabase (python -m unittest)."""
 import unittest
+from datetime import datetime, timedelta
 from unittest import mock
 
 import exchange_ticket as ex
 
 LINE_ID, ORDER_ID = 111, 999
-OLD = "Fri, Nov 6 • 7:00 PM / General Admission"
+# Show dates are always a couple of weeks out, so the 48-hour swap cutoff
+# never trips just because the calendar caught up with a hardcoded date.
+def _show(days, time):
+    d = datetime.now() + timedelta(days=days)
+    return f"{d:%a}, {d:%b} {d.day} • {time}"
+
+
+OLD_DATE = _show(14, "7:00 PM")
+NEW_DATE = _show(15, "9:00 PM")
+OLD = f"{OLD_DATE} / General Admission"
 
 
 def order(qty=2, price="28.0", paid=None, email="Fan@Example.com", new_line=None):
@@ -20,7 +30,7 @@ def order(qty=2, price="28.0", paid=None, email="Fan@Example.com", new_line=None
                                   "lineItems": {"nodes": lines}}]}}
 
 
-def variant(price="28.00", date="Sat, Nov 7 • 9:00 PM", seats=20, product=5):
+def variant(price="28.00", date=NEW_DATE, seats=20, product=5):
     return {"productVariant": {"id": "gid://shopify/ProductVariant/2", "title": f"{date} / General Admission",
                                "price": price, "inventoryQuantity": seats, "inventoryItem": {"tracked": True},
                                "selectedOptions": [{"name": "Date & Time", "value": date},
@@ -85,7 +95,7 @@ class SwapTest(unittest.TestCase):
         self.assertEqual(set_qty["qty"], 0)
         post = next(c for c in self.sb_calls if c[0] == "POST")[2][0]
         self.assertEqual(post["unique_id"], f"shopify_{ORDER_ID}_333")
-        self.assertEqual(post["show_date"], "Sat, Nov 7 • 9:00 PM")
+        self.assertEqual(post["show_date"], NEW_DATE)
         self.assertEqual(post["guest_name"], "Pat Fan")
         self.assertIn(("DELETE", f"tickets?unique_id=eq.{REQ['from_unique_id']}", None), self.sb_calls)
 

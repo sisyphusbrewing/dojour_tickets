@@ -106,6 +106,13 @@
       </div>
     </section>
 
+    <section data-roles="events comedy bar">
+      <div class="band-row"><span class="band">Just for you</span></div>
+      <div class="tiles">
+        <a class="tile" data-min="door" data-voice href="../voice/"><div class="ico">🎙️</div><div><b>Voice notes</b><span>Record a meeting or a thought. Claude emails you the summary and to-dos.</span></div></a>
+      </div>
+    </section>
+
     <section data-roles="events">
       <div class="band-row"><span class="band">Events</span></div>
       <div class="tiles">
@@ -147,8 +154,10 @@
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       $('whoami').textContent = (u ? u.email.replace('@' + LOGIN_DOMAIN, '') + ' · ' : '') + ROLE_LABEL[role] + ' login';
+      // The voice recorder is for the people on voice_users (Sam, Lindsey), not by role.
+      var voice = (await sb.rpc('can_voice')).data === true;
       document.querySelectorAll('.tile').forEach(function (t) {
-        if (!roleAtLeast(role, t.dataset.min)) t.remove();
+        if (!roleAtLeast(role, t.dataset.min) || (t.hasAttribute('data-voice') && !voice)) t.remove();
       });
       document.querySelectorAll('main section').forEach(function (s) {
         if (s.id !== 'newsSection' && !s.querySelector('.tile')) s.remove();

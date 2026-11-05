@@ -22,6 +22,7 @@ Stream Deck + grid in Companion (4 columns):
 
 import json
 import pathlib
+from urllib.parse import quote
 
 OUT = pathlib.Path(__file__).with_name("sisyphus-deck.companionconfig")
 
@@ -371,6 +372,8 @@ CUSTOM_VARIABLES = {
     "timer_t0": "Stage timer: unix time the set started on the deck (0 = stopped)",
     "timer_len": "Stage timer: set length in seconds",
     "timer_wrap": "Stage timer: 1 while WRAP IT UP is on",
+    "house_tables": "House lights Tables level %, written by the house-lights service",
+    "house_bar": "House lights Bar level %, written by the house-lights service",
     "alarm_state": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
 }
 
@@ -454,19 +457,87 @@ def house_both(pct, fade=3):
     return [house(f"level?zone={z}&pct={pct}&fade={fade}") for z in ("tables", "bar")]
 
 
+# Table candles (flameless LED, IR remote) through an Athom Tasmota IR blaster on the Wi-Fi,
+# "Candles IR" at 192.168.86.27 (Sam, Nov 5 2026). Codes learned off the candle remote:
+# NEC 32-bit. Repeat 1 sends each press twice so candles at the edge of the beam still catch it.
+# ON with PRE-SHOW, stay on through SHOW, OFF with DAYTIME and ALL OFF.
+CANDLE_BLASTERS = ["192.168.86.27", "192.168.86.45"]  # Candles IR, Candles IR 2
+CANDLE_CODES = {True: "0x10ED00FF", False: "0x10ED40BF"}
+
+
+def candles(on):
+    body = quote(json.dumps({"Protocol": "NEC", "Bits": 32, "Data": CANDLE_CODES[on], "Repeat": 1},
+                            separators=(",", ":")))
+    return [action(HTTP, "get", url=f"http://{ip}/cm?cmnd=IRsend%20{body}", header="",
+                   jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
+            for ip in CANDLE_BLASTERS]
+
+
+CANDLE_COLOR = 0xB06000
+
+
+def candles_key():
+    """Test key (Sam, Nov 5 2026): each press flips the candles. IR can't report back, so the key
+    keeps its own state in two steps: step 1 sends ON, step 2 sends OFF; amber while it thinks they're on."""
+    key = button("CANDLES\\nOFF\\ntap for on", bgcolor=DARK, size="18", press=candles(True),
+                 feedbacks=[feedback(INTERNAL, "check_expression",
+                                     style={"bgcolor": CANDLE_COLOR, "color": WHITE,
+                                            "text": "CANDLES\\nON\\ntap for off"},
+                                     expression="$(this:step) == 2")])
+    key["steps"]["1"] = {"action_sets": {"down": candles(False), "up": []}, "options": {"runWhileHeld": []}}
+    return key
+
+
+# House-light dimmer knobs on the BAR pages (Sam, Nov 4 2026): knob 1 = TABLES, knob 2 = BAR.
+# Turn = 5% per click, push (or tap the strip) = on/off. The house-lights service does the
+# maths (/house/step, /house/toggle) and writes each zone's level into custom variables
+# house_tables / house_bar so the strip shows it, including changes from the wall or the app.
+DIM_STEP = 5
+
+
+def dimmer_knob(zone):
+    return button(
+        "",
+        turn_right=[house(f"step?zone={zone}&delta={DIM_STEP}")],
+        turn_left=[house(f"step?zone={zone}&delta=-{DIM_STEP}")],
+        press=[house(f"toggle?zone={zone}")],
+    )
+
+
+def dimmer_strip(zone, name):
+    var = f"$(custom:house_{zone})"
+    return button(
+        f"{name}\\nLIGHTS {var}%\\nturn knob",
+        press=[house(f"toggle?zone={zone}")],
+        feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": 0x6A5A30, "color": WHITE},
+                            expression=f"{var} > 0")],
+        bgcolor=DARK,
+        size="14",
+    )
+
+
+def bar_knobs():
+    """BAR pages: two light dimmers, then MUSIC and GOD MIC as on the 2-mic pages."""
+    controls = sound_controls(SOURCES_2)
+    for col, (zone, name) in enumerate((("tables", "TABLES"), ("bar", "BAR"))):
+        controls[(2, col)] = dimmer_strip(zone, name)
+        controls[(3, col)] = dimmer_knob(zone)
+    return controls
+
+
 def hall_keys():
     """Room-wide looks: each key sets the hallway and the house lights together (Sam, Nov 2 2026)."""
     return {
         (0, 3): button("PRE-SHOW", bgcolor=0x7A5A00, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(17)),  # house 17% (Sam, Nov 2 2026)
+                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(17) + candles(True)),  # house 17% (Sam, Nov 2 2026)
         (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-                       + plugs(True, DAY_PLUGS) + [house("full")]),
+                       + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)),
         (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=house_both(0)),  # house lights off (Sam, Nov 2)
         (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-                       + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")]),
+                       + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)),
     }
 
 
@@ -507,6 +578,7 @@ def alarm_page():
                            press=[alarm("status")], feedbacks=alarm_status_feedbacks()),
             (0, 2): button("ARM\\nAWAY\\nclosing", bgcolor=ALARM_COLOR, size="18", press=[alarm("away")]),
             (0, 3): button("ARM\\nHOME\\nstaying", bgcolor=0x6A3A1A, size="18", press=[alarm("home")]),
+            (1, 0): candles_key(),  # for testing the IR blaster; no free key on BAR yet
             **sound_controls(SOURCES_2),
         },
     }
@@ -582,6 +654,7 @@ def layout(sources, first, mics, other_first):
     }
     for page in pages.values():
         page["controls"].update(sound_controls(sources))
+    pages[bar]["controls"].update(bar_knobs())
     if mics == 2:  # with 4 mics every knob is a mic, so TIMER 4 keeps them
         pages[timer]["controls"].update({(2, 3): time_strip(), (3, 3): time_knob()})
     return pages

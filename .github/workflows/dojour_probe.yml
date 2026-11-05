@@ -1,0 +1,23 @@
+name: Dojour API probe (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      instance_id:
+        description: 'Dojour event instance id'
+        required: false
+        default: '86823,86825'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - env:
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          INSTANCE_ID: ${{ inputs.instance_id }}
+        run: python tools/dojour_probe.py

@@ -22,6 +22,27 @@ suggestions a bar couldn't show. Customer suggestions are capped at 30 an hour.
 It needs a Claude API key secret in Supabase (Edge Functions > Secrets), named `ANTHROPIC_CLIENT_API` (or `ANTHROPIC_API_KEY`);
 without one the form says the sign isn't set up to draw yet.
 
+## The front bar square (Nov 2026)
+
+Four Adafruit 64x64 3mm panels (4732) in a 2x2 grid, 15" square, 128x128, on
+one Matrix Portal S3 (the uFL version, 6475, with the little stick-on antenna).
+Add `SIGN_HEIGHT = 128` to `settings.toml` and the same `code.py` switches to
+the square layout: the picture big at the top (32x32 art drawn at twice the
+size), the caption under it, and for beers the ABV and price from the GoTab
+menu feed.
+
+Wiring: the Matrix Portal plugs onto the first panel's INPUT header, and each
+panel's OUTPUT ribbon goes to the next panel's INPUT. At power-up the sign shows
+1 2 / 3 4 in the four panels for a few seconds; if they're in the wrong places,
+`SERPENTINE` and `ROTATION` at the top of `code.py` fix it, and the sign picks
+up the change by itself. Adafruit's 64x64 panels use address pin E on 8, which
+is the Matrix Portal S3's default, so there's nothing to solder.
+
+Power: one 5V 10A supply through a 2.1mm jack-to-screw-terminal adapter, all
+four panel power leads on its + and - terminals; the Matrix Portal runs off its
+own USB-C charger. Pictures only cover a quarter of the square, so the sign
+draws far less than 10 A, and `POWER_MA` dims any picture that would go over.
+
 ## The board
 
 Same hardware as the stage clock (timer/led/README.md): an Adafruit Matrix
