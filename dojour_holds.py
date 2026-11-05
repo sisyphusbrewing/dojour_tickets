@@ -84,18 +84,26 @@ class Dojour:
         return out
 
     def manual_create(self, payload):
-        """The dashboard's Add Reservation call, exactly as recorded from Sam's browser
-        (Nov 5 2026): token auth, no CSRF, Origin + admin-tools Referer."""
-        h = {"Content-Type": "application/json;charset=UTF-8", "Origin": "https://dojour.us",
-             "Referer": f"https://dojour.us/admin-tools/reservations/s/{payload['showing']}/add"}
+        """The dashboard's Add Reservation call, as recorded from Sam's browser (Nov 5 2026):
+        token auth, no CSRF, Origin + admin-tools Referer, a Dojour-Session key, browser UA."""
+        ua = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+        base = {"Content-Type": "application/json;charset=UTF-8", "Accept": "application/json, text/plain, */*",
+                "Origin": "https://dojour.us", "User-Agent": ua,
+                "Referer": f"https://dojour.us/admin-tools/reservations/s/{payload['showing']}/add",
+                "Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Site": "same-origin"}
         try:
-            key = self.s.post(API + "sessions/current/", json={"referrer_link": "", "referrer": "dojour.us"},
-                              timeout=20).json().get("session_key")
+            r = self.s.post(API + "sessions/current/", headers={"User-Agent": ua, "Origin": "https://dojour.us"},
+                            json={"referrer_link": "", "referrer": "dojour.us", "user_agent": ua}, timeout=20)
+            key = (r.json() or {}).get("session_key")
+            print(f"   session ping -> {r.status_code}, key {'yes' if key else 'no'}")
             if key:
-                h["Dojour-Session"] = f"Key {key}"
-        except Exception:
-            pass
-        return self.s.post(API + "reservations/manual_create/", json=payload, headers=h, timeout=30)
+                base["Dojour-Session"] = f"Key {key}"
+        except Exception as e:
+            print("   session ping failed:", e)
+        tok = self.s.headers["Authorization"].split()[-1]
+        print(f"   token {tok[:4]}...{tok[-4:]}")
+        return self.s.post(API + "reservations/manual_create/", json=payload, headers=base, timeout=30)
 
 
 def venue_holds(report):
