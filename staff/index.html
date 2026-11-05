@@ -106,6 +106,13 @@
       </div>
     </section>
 
+    <section data-roles="events comedy bar">
+      <div class="band-row"><span class="band">Just for you</span></div>
+      <div class="tiles">
+        <a class="tile" data-min="door" data-voice href="../voice/"><div class="ico">🎙️</div><div><b>Voice notes</b><span>Record a meeting or a thought. Claude emails you the summary and to-dos.</span></div></a>
+      </div>
+    </section>
+
     <section data-roles="events">
       <div class="band-row"><span class="band">Events</span></div>
       <div class="tiles">
@@ -120,7 +127,6 @@
         <a class="tile" data-min="manager" href="../advance/booking.html"><div class="ico">🎤</div><div><b>Booking desk</b><span>Comedian advances: who's booked, what they sent, what's missing.</span></div></a>
         <a class="tile" data-min="owner" href="../payouts/"><div class="ico">💸</div><div><b>Pay comics</b><span>Who we owe. Tap Pay, send it, tap Paid.</span></div></a>
         <a class="tile" data-min="manager" href="../payme/"><div class="ico">🙋</div><div><b>Comic pay request form</b><span>Send this to a comic who needs paying. Their request shows up on Pay comics.</span></div></a>
-        <a class="tile" data-min="owner" href="../voice/"><div class="ico">🎙️</div><div><b>Voice notes</b><span>Record a meeting or a thought. Claude emails you the summary and to-dos.</span></div></a>
         <a class="tile" data-min="owner" href="https://claude.ai/artifact/LFjnAQcjgGrr1QghpTvj3C" target="_blank" rel="noopener"><div class="ico">🪨</div><div><b>Boulder Inbox</b><span>Sam's email game. One email at a time: archive, reply, or send to booking@.</span></div></a>
         <a class="tile" data-min="owner" href="../css/"><div class="ico">📊</div><div><b>CSS</b><span>Comic Scoring System. Grades, house stars, the face, and notes on every comic.</span></div></a>
         <a class="tile" data-min="manager" href="../sign/review.html"><div class="ico">🖼️</div><div><b>Sign pictures</b><span>What customers drew on the taproom LED sign. Take any down.</span></div></a>
@@ -148,8 +154,10 @@
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       $('whoami').textContent = (u ? u.email.replace('@' + LOGIN_DOMAIN, '') + ' · ' : '') + ROLE_LABEL[role] + ' login';
+      // The voice recorder is for the people on voice_users (Sam, Lindsey), not by role.
+      var voice = (await sb.rpc('can_voice')).data === true;
       document.querySelectorAll('.tile').forEach(function (t) {
-        if (!roleAtLeast(role, t.dataset.min)) t.remove();
+        if (!roleAtLeast(role, t.dataset.min) || (t.hasAttribute('data-voice') && !voice)) t.remove();
       });
       document.querySelectorAll('main section').forEach(function (s) {
         if (s.id !== 'newsSection' && !s.querySelector('.tile')) s.remove();

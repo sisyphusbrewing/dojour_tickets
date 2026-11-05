@@ -1,0 +1,48 @@
+name: Add a staff login
+
+# Run by hand (or by a Claude session) to add a login: staff_login.py.
+
+on:
+  workflow_dispatch:
+    inputs:
+      login:
+        description: 'Username, e.g. lziegahn'
+        required: true
+        type: string
+      role:
+        description: 'door, staff or manager'
+        required: false
+        default: 'door'
+        type: string
+      voice_name:
+        description: 'Voice recorder: their first name (blank = no recorder)'
+        required: false
+        type: string
+      voice_email:
+        description: 'Voice recorder: where their notes are emailed'
+        required: false
+        type: string
+      voice_context:
+        description: 'Voice recorder: one line about them for Claude'
+        required: false
+        type: string
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Add the login
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LOGIN: ${{ inputs.login }}
+          ROLE: ${{ inputs.role }}
+          VOICE_NAME: ${{ inputs.voice_name }}
+          VOICE_EMAIL: ${{ inputs.voice_email }}
+          VOICE_CONTEXT: ${{ inputs.voice_context }}
+        run: python staff_login.py
