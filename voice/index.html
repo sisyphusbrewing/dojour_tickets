@@ -173,10 +173,18 @@
       }));
     }
 
+    // Storage only takes direct uploads from managers, so the voice-audio
+    // function checks this is your note and hands back a one-time upload token.
+    async function uploadOnce(path, blob, mime) {
+      var res = await sb.functions.invoke('voice-audio', { body: { action: 'sign', path: path } });
+      if (res.error || !res.data || !res.data.token) return false;
+      var up = await sb.storage.from(BUCKET).uploadToSignedUrl(path, res.data.token, blob, { contentType: mime, upsert: true });
+      return !up.error;
+    }
+
     async function uploadWithRetry(path, blob, mime) {
       for (var tries = 0; tries < 8; tries++) {
-        var res = await sb.storage.from(BUCKET).upload(path, blob, { contentType: mime, upsert: true });
-        if (!res.error) return true;
+        try { if (await uploadOnce(path, blob, mime)) return true; } catch (e) {}
         await new Promise(function (ok) { setTimeout(ok, Math.min(30000, 1500 * Math.pow(2, tries))); });
       }
       return false;
@@ -352,10 +360,7 @@
 
     async function removeNote(id) {
       if (!confirm('Delete this recording, its transcript and notes?')) return;
-      var n = notes.find(function (x) { return x.id === id; });
-      var paths = [];
-      for (var i = 0; i < Math.max(1, n.parts || 0); i++) paths.push(id + '/part-' + pad(i, 4) + '.' + n.ext);
-      await sb.storage.from(BUCKET).remove(paths);
+      await sb.functions.invoke('voice-audio', { body: { action: 'delete', note_id: id } });
       var res = await sb.from('voice_notes').delete().eq('id', id);
       if (res.error) { toast(res.error.message, true); return; }
       delete open[id];
