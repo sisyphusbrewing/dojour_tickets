@@ -116,7 +116,8 @@ def send(to, subject, text, html):
     msg["Subject"] = subject
     msg["From"] = formataddr((FROM_NAME, FROM_EMAIL))
     msg["To"] = to
-    msg["Reply-To"] = FROM_EMAIL
+    # Guest replies go to Grace at booking@, who runs the VIP tables (Sam, Nov 5 2026).
+    msg["Reply-To"] = "booking@sisyphusbrewing.com"
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(FROM_EMAIL, [to], msg.as_string())
