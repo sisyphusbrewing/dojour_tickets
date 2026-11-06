@@ -6,8 +6,10 @@ name: VIP Table Emails
 
 on:
   schedule:
-    # Hourly, 15 minutes after the hour (8 AM to 11 PM Central).
-    - cron: '15 0-4,13-23 * * *'
+    # Every 20 minutes at odd minutes, 8 AM to 11 PM Central. GitHub skipped most
+    # of the hourly :15 runs on Nov 5-6 2026 (busy top-of-hour slots), so this runs
+    # more often off the busy minutes; the script never emails anyone twice.
+    - cron: '7,27,47 0-4,13-23 * * *'
   workflow_dispatch:
     inputs:
       preview_to:
