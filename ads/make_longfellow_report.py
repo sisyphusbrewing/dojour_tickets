@@ -12,13 +12,13 @@ P = os.path.join(HERE, "..", "posters")
 F = lambda name, size: ImageFont.truetype(f"{P}/fonts/{name}.ttf", size)
 BLUE, DARK, PALE, WHITE, GRAY, INK, LINE = (74, 107, 138), (40, 39, 40), (160, 185, 210), (255, 255, 255), (110, 114, 120), (30, 30, 32), (215, 220, 228)
 
-AS_OF = "Nov 4, 2026, 7:30 PM CT"
-SHOWS = [("Thu 8 PM", 56, 25, 4), ("Fri 7 PM", 61, 25, 0), ("Fri 9 PM", 52, 7, 0), ("Sat 7 PM", 56, 33, 1), ("Sat 9 PM", 56, 9, 0), ("Sun 6 PM", 57, 6, 0)]  # website, Dojour, comps
+AS_OF = "Nov 5, 2026, 8:30 PM CT"
+SHOWS = [("Thu 8 PM", 63, 27, 4), ("Fri 7 PM", 61, 25, 0), ("Fri 9 PM", 79, 10, 0), ("Sat 7 PM", 56, 33, 1), ("Sat 9 PM", 75, 13, 0), ("Sun 6 PM", 79, 6, 0)]  # website, Dojour, comps
 CAP = 90
-META = dict(spend=143.66, tix=69, sales=2291.69, ig=21, fb=19)
-REDDIT = dict(spend=66.18, impr=5321, clicks=91, tix=0)
-SOURCES = [("Google search", 126), ("Facebook/Instagram ads", 69), ("Direct / typed in", 65), ("Sisyphus website", 51),
-           ("Other (DDG, Linktree, social posts)", 27)]
+META = dict(spend=161.72, tix=80, sales=2714.73, ig=24, fb=23)
+REDDIT = dict(spend=73.98, impr=5885, clicks=102, tix=0)
+SOURCES = [("Google search", 146), ("Direct / typed in", 94), ("Facebook/Instagram ads", 80), ("Sisyphus website", 62),
+           ("Other (DDG, Linktree, social posts)", 31)]
 
 W, H = 1700, 2200
 img = Image.new("RGB", (W, H), WHITE)
@@ -90,15 +90,15 @@ y += 34
 h("What to know")
 notes = [
     f"Meta: about {META['ig']} traced tickets came through Instagram and {META['fb']} through Facebook; the rest",
-    "  don't say which app. Mike Lester photo + video ads, poster v2 and a new remarketing ad are live.",
+    "  don't say which app. Meta's own tally is higher; we only count what Shopify can trace.",
     f"Reddit: {REDDIT['impr']:,} views, {REDDIT['clicks']} clicks, still no sales. Clicks are cheap but nobody buys.",
-    "Sat 7 PM is sold out. Fri 7 PM and Thu are nearly full; Fri 9, Sat 9 and Sun are about 70% full.",
+    "Thu (94 with comps) and Sat 7 PM are full. The rest are 94%+ full, with 12 seats left Fri–Sun.",
     "Only sales traced straight to an ad count, so Meta's real effect is bigger. Ads end Sun 5:30 PM.",
 ]
 for ln in notes:
     d.text((M, y), ln, font=F("Assistant-Regular", 34), fill=INK)
     y += 50
-d.text((M, H - 60), "Sources: Meta Ads (thru Nov 4, Blingo excluded), Reddit Ads, Shopify UTM orders, Dojour via the tickets table.", font=F("Assistant-Regular", 28), fill=GRAY)
+d.text((M, H - 60), "Sources: Meta Ads (thru Nov 5, Blingo excluded), Reddit Ads, Shopify UTM orders, Dojour via the tickets table.", font=F("Assistant-Regular", 28), fill=GRAY)
 out = sys.argv[1]
 img.save(out + ".png")
 img.save(out + ".pdf", resolution=200)
