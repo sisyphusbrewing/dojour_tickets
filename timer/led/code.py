@@ -30,6 +30,8 @@ POLL = 1.0  # seconds between checks; a deck press shows up within about a secon
 # New versions load by themselves: while the clock is stopped (never mid-set), every
 # couple of minutes it compares its files with the site and, if one changed, restarts
 # so boot.py swaps it in. No RESET needed (Sam, Oct 29 2026).
+# Any change here is also a remote RESET: the clock restarts within a few minutes
+# of the site updating (used Nov 6 2026 when Sam asked to reset it from afar).
 SITE = "https://staff.sisyphusbrewing.com/timer/led/"
 UPDATE_EVERY = 120
 
