@@ -595,7 +595,10 @@ def hall_keys():
         (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
                        press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
                        + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)),
-        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18", press=house_both(0) + [stage(STAGE_SHOW)]),  # house lights off (Sam, Nov 2)
+        # house lights off (Sam, Nov 2); hallway same as PRE-SHOW (Sam, Nov 5 2026)
+        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18",
+                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
+                       + house_both(0) + [stage(STAGE_SHOW)]),
         (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
                        press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
                        + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
