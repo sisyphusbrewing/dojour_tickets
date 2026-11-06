@@ -124,7 +124,7 @@
       if (!state) return;
       var cls, text, label = '';
       if (!state.started_at) {
-        cls = 'idle'; text = fmt(state.set_seconds);
+        cls = 'idle'; text = 'Ready';  // not the set length, which reads as "you have 10 minutes"
         if (state.light_now) { cls = 'light words'; label = text; text = WRAP; }
       } else {
         // counts up from 0:00 (a countdown makes comics panic, Sam, Oct 28 2026)

@@ -471,7 +471,9 @@ while True:
         if state["light_now"]:
             show(fmt(state["set_seconds"]), RED, "WRAP IT UP", RED)
         else:
-            show(fmt(state["set_seconds"]), IDLE)
+            # waiting for a start key: READY, not the set length, which comics
+            # read as "you have 10 minutes" (Sam, Nov 6 2026)
+            show("READY", DIM)
     else:
         # counts up from 0:00 (a countdown makes comics panic, Sam, Oct 28 2026)
         elapsed = elapsed_at_fetch + time.monotonic() - fetched
