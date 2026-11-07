@@ -47,7 +47,7 @@ PREVIEW_ID = "preview_vip_form"
 def is_vip_row(row):
     import re
     return (re.search(r"vip|premium|reserved", row.get("ticket_type") or "", re.I)
-            and not re.match(r"shopify sales", row.get("guest_name") or "", re.I)
+            and not re.match(r"shopify sales|website hold", row.get("guest_name") or "", re.I)
             and "@" in (row.get("email") or ""))
 
 

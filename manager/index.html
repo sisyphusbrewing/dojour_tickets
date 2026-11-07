@@ -317,7 +317,7 @@
       $('tentsBtn').href = 'tents.html?date=' + encodeURIComponent(s.show_date) + '&title=' + encodeURIComponent(s.show_title);
     }
     function isVipRow(g) {
-      return /vip|premium|reserved/i.test(g.ticket_type || '') && !/^shopify sales/i.test(g.guest_name || '');
+      return /vip|premium|reserved/i.test(g.ticket_type || '') && !/^(shopify sales|website hold)/i.test(g.guest_name || '');
     }
 
     function render() {

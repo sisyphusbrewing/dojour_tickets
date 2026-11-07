@@ -75,7 +75,7 @@
       var prefs = {};
       (res[1].data || []).forEach(function (p) { prefs[p.unique_id] = p; });
       var tents = (res[0].data || []).filter(function (g) {
-        return /vip|premium|reserved/i.test(g.ticket_type || '') && !/^shopify sales/i.test(g.guest_name || '');
+        return /vip|premium|reserved/i.test(g.ticket_type || '') && !/^(shopify sales|website hold)/i.test(g.guest_name || '');
       }).map(function (g) {
         var p = prefs[g.unique_id] || {};
         return { name: p.tent_name || g.guest_name || 'VIP', occasion: p.occasion || '', seats: g.tickets || 1, answered: !!p.tent_name };
