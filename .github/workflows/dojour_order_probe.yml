@@ -1,0 +1,32 @@
+name: Dojour buyer order lookup (read-only)
+
+# Finds one buyer's Dojour reservation for a show and prints what they paid and
+# which refund options Dojour's API offers. Changes nothing. (Nov 7 2026)
+on:
+  workflow_dispatch:
+    inputs:
+      show:
+        description: 'Show or performer name (e.g. Sam Jay)'
+        required: true
+      buyer:
+        description: 'Part of the buyer name (e.g. Kisling)'
+        required: true
+      since:
+        description: 'Only shows on or after YYYY-MM-DD'
+        required: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - env:
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          SHOW_QUERY: ${{ inputs.show }}
+          BUYER: ${{ inputs.buyer }}
+          SINCE: ${{ inputs.since }}
+        run: python tools/dojour_order_probe.py
