@@ -108,7 +108,7 @@ function guestCard(t, opts) {
   var id = jsArg(t.unique_id);
   var type = (t.ticket_type || '').trim();
   var lower = type.toLowerCase();
-  var vip = /vip|premium|reserved/.test(lower) && !/^shopify sales/i.test(t.guest_name || '');
+  var vip = /vip|premium|reserved/.test(lower) && !/^(shopify sales|website hold)/i.test(t.guest_name || '');
   var vipLabel = lower.indexOf('vip') !== -1 ? 'VIP' : (lower.indexOf('premium') !== -1 ? 'Premium' : 'Reserved');
 
   var act;
