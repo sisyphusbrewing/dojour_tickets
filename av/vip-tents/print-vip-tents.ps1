@@ -36,7 +36,8 @@ function Esc($s) { [System.Net.WebUtility]::HtmlEncode([string]$s) }
 $key = (Get-Content (Join-Path $Dir 'key.txt') -Raw).Trim()
 $us  = [Globalization.CultureInfo]::GetCultureInfo('en-US')
 $now = Get-Date
-# Shows after midnight still belong to the night before (e.g. a 12:30 AM late show).
+# Looks up today's shows by the PC's date. A show starting after midnight would
+# need its own handling; Sisyphus has none as of Nov 2026.
 $day = $now.ToString('ddd, MMM d', $us)
 $rows = @(Rpc 'vip_tents_for_day' @{ p_key = $key; p_day = $day })
 
