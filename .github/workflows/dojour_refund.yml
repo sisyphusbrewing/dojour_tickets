@@ -1,0 +1,34 @@
+name: Dojour partial refund
+
+# Gives a Dojour buyer a flat amount back without cancelling their tickets, e.g.
+# the VIP-minus-GA difference when VIP wasn't honored (Sam, Nov 7 2026).
+# Leave apply off to see the plan first. Run by hand only.
+on:
+  workflow_dispatch:
+    inputs:
+      reservation:
+        description: "Dojour reservation id (13 characters, from the reservation's page)"
+        required: true
+      amount:
+        description: 'Dollars to give back, e.g. 21.94'
+        required: true
+      apply:
+        description: 'Really refund (off = dry run)'
+        type: boolean
+        default: false
+
+jobs:
+  refund:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - env:
+          DOJOUR_STATE: ${{ secrets.DOJOUR_STATE }}
+          RESERVATION: ${{ inputs.reservation }}
+          AMOUNT: ${{ inputs.amount }}
+          APPLY: ${{ inputs.apply }}
+        run: python dojour_refund.py
