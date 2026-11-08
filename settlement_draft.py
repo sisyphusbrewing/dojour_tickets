@@ -122,9 +122,9 @@ def draft(title):
     ]
     tail = [
         "",
-        "Still to add by hand: walk-ups, door comps, the lineup per night, and any",
-        "Dojour holds (a hold shows as tickets with no money). Card fees and sales",
-        "tax are not taken out. Reply with changes and Claude will build the",
+        "Still to add by hand: walk-ups, door comps and the lineup per night.",
+        "Dojour holds (rows with no buyer email) are already left out. Card fees",
+        "and sales tax are not taken out. Reply with changes and Claude will build the",
         "artist copy.",
         "",
         "Pay sheet: https://staff.sisyphusbrewing.com/payouts/",

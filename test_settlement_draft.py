@@ -28,7 +28,17 @@ def test_dojour_down_still_drafts():
     assert "Dojour couldn't be read" in body and "Tickets: 0" in body
 
 
+def test_venue_holds_are_not_sales():
+    # Sam's "Shopify Sales" / "Website Hold" rows have no buyer email (Nov 8 2026).
+    import sales_report as sr
+    assert sr.is_venue_row({"first_name": "Shopify", "last_name": "Sales", "email": ""})
+    assert sr.is_venue_row({"first_name": "Website", "last_name": "Hold"})
+    assert not sr.is_venue_row({"first_name": "Pat", "email": "pat@example.com"})
+    assert not sr.is_venue_row({"user": {"email": "pat@example.com"}})
+
+
 if __name__ == "__main__":
     test_door_and_pool()
     test_dojour_down_still_drafts()
+    test_venue_holds_are_not_sales()
     print("ok")
