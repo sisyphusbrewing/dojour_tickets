@@ -107,7 +107,8 @@ def draft(title):
     for (_, night), r in by_night(dj):
         d = r["revenue"] - FEE * r["tickets"]
         tickets += r["tickets"]; door += d; pool_tix += r["tickets"]
-        lines.append(f"  {night}: {r['tickets']} tickets, door {money(d)}")
+        held = f" ({r['holds']} held seats left out)" if r.get("holds") else ""
+        lines.append(f"  {night}: {r['tickets']} tickets, door {money(d)}{held}")
     if not dj:
         lines.append(f"  {dj_note or 'none'}")
 
