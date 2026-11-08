@@ -63,6 +63,15 @@ def shopify_sales(query=None):
 
 
 # ---------------------------------------------------------------- Dojour
+def is_venue_row(res):
+    """Sam's own Dojour rows ("Shopify Sales", "Website Hold", "Hold") are seat
+    blocks, not sales: they have no buyer email and no money. Leave them out of
+    every count, since agents and settlements read the number as paid tickets
+    (found settling Michael Longfellow, Nov 8 2026)."""
+    user = res.get("user") if isinstance(res.get("user"), dict) else {}
+    return not (res.get("email") or user.get("email") or "").strip()
+
+
 def dojour_sales(query=None):
     query = query or QUERY
     q = query.lower()
@@ -99,7 +108,7 @@ def dojour_sales(query=None):
         if r.status_code != 200:
             continue
         rep = r.json()
-        tickets = orders = vip = 0
+        tickets = orders = vip = holds = 0
         # Dojour report totals are in cents. Revenue is ticket price only; buyer fees sit on top.
         revenue = (rep.get("total_revenue") or 0) / 100 if isinstance(rep, dict) else 0
         for res in rep.get("reservation_set", []):
@@ -107,13 +116,16 @@ def dojour_sales(query=None):
                     or res.get("is_on_waitlist") or res.get("checkout_complete") is False:
                 continue
             n = extract_tickets_count(res)
+            if is_venue_row(res):
+                holds += n
+                continue
             tickets += n
             orders += 1
             if dojour_ticket_type(res):
                 vip += n
         dt = parse_show_datetime(start)
         rows[(title, dt.strftime("%a, %b %-d %Y • %-I:%M %p") if dt else start or "?")] = {"tickets": tickets, "orders": orders,
-                                                                                     "vip": vip, "revenue": revenue}
+                                                                                     "vip": vip, "revenue": revenue, "holds": holds}
     return rows
 
 
@@ -142,7 +154,9 @@ def main():
             total += r["tickets"]
         if not dj_rows:
             lines.append("| none found | | | | |")
-        lines.append("\n*Ticket price only, before Dojour's buyer fees and sales tax. Holds count as tickets but carry no revenue.\n")
+        held = sum(r.get("holds", 0) for r in dj_rows.values())
+        lines.append("\n*Ticket price only, before Dojour's buyer fees and sales tax. "
+                     f"Venue holds (rows with no buyer email, {held} seats) are not counted.\n")
         dj_total = sum(r["tickets"] for r in dj_rows.values())
     except Exception as e:
         lines.append(f"\n**Dojour couldn't be read:** {e}")
