@@ -14,7 +14,7 @@
   .scroll-trigger { transform: none !important; opacity: 1 !important; animation: none !important; }
   body { background: #e9e7e7 !important; }
 
-  .pm-bar { max-width: 8.5in; margin: 24px auto 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; font-family: var(--body); }
+  .pm-bar { background: #fff; padding: 10px 16px; border-radius: 8px; box-sizing: border-box; max-width: 8.5in; margin: 24px auto 14px; display: flex; gap: 12px; align-items: center; justify-content: space-between; font-family: var(--body); }
   .pm-bar p { margin: 0; font-size: 15px; color: #393636 !important; }
   .pm-bar button { font: 700 15px var(--body); letter-spacing: .1em; text-transform: uppercase; background: #4a6c86; color: #fff !important;
                    border: 0; border-radius: 6px; padding: 12px 26px; cursor: pointer; }
@@ -26,7 +26,8 @@
   #pm::after { content: ""; position: absolute; inset: .3in; border: 1px solid var(--ink); opacity: .35; border-radius: 3px; pointer-events: none; }
   #pm * { box-sizing: border-box; }
 
-  #pm header { display: grid; grid-template-columns: auto 1fr; gap: 0 .28in; align-items: center; padding: 0 .05in .08in; }
+  /* The theme paints every <header> dark; keep the menu's header on white paper (Nov 9 2026). */
+  #pm header { background: transparent !important; color: var(--ink) !important; display: grid; grid-template-columns: auto 1fr; gap: 0 .28in; align-items: center; padding: 0 .05in .08in; }
   #pm header img { width: 1.3in; height: auto; display: block; }
   #pm h1 { margin: 0; font: 700 calc(46pt * var(--k)) / .95 var(--display) !important; letter-spacing: .1em; text-transform: uppercase; color: var(--ink) !important; }
   #pm .motto { margin: 8px 0 0; padding: 1px 0 1px 12px; border-left: 3px solid var(--slate); }
