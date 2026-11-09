@@ -113,8 +113,6 @@ class Dojour:
                 base["Dojour-Session"] = f"Key {key}"
         except Exception as e:
             print("   session ping failed:", e)
-        tok = self.s.headers["Authorization"].split()[-1]
-        print(f"   token {tok[:4]}...{tok[-4:]}")
         return self.s.post(API + "reservations/manual_create/", json=payload, headers=base, timeout=30)
 
 
