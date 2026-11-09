@@ -8,8 +8,11 @@ this: each headliner gets one email from Sam with a view-only link to their
 set(s) and the full show, sent to the email on their advance, Bcc booking@.
 Links stop working after 60 days, when the PC deletes the files.
 
-A show where nobody pressed the stage timer only has an "unsorted" full
-recording; booking@ gets that link instead so someone can trim it.
+A show where nobody pressed the stage timer is split from the host's intros
+on the PC; only if that finds nothing is there just an "unsorted" full
+recording, and booking@ gets that link instead so someone can trim it. A show
+whose picture failed the PC's camera check (a CAMERA note: nearly black, or
+not the stage) goes to booking@ too, so a headliner never gets a black video.
 
     python recording_mail.py
     PREVIEW_TO=someone@example.com ...  send everything to this address, mark nothing
@@ -128,6 +131,9 @@ def main():
     for (title, starts), parts in by_show.items():
         day = ts(starts).astimezone(CHICAGO).date()
         names = {p["part"] for p in parts}
+        if any((p.get("note") or "").startswith("CAMERA") for p in parts):
+            batches[(BOOKING, "", f"camera|{title}|{day}")].extend(parts)
+            continue
         if "unsorted" in names:
             batches[(BOOKING, "", f"unsorted|{title}|{day}")].extend(parts)
             continue
@@ -151,6 +157,17 @@ def main():
                     f"by comic. Full show:</p><ul>{links}</ul><p>Trim the headliner's set and send it to them, "
                     f"and remind whoever ran the deck: START for every comic.</p>")
             text = f"Nobody pressed the stage timer during {title}. Full show: " + ", ".join(p["link"] for p in parts)
+            bcc = []
+        elif key.startswith("camera"):
+            subject = f"Recording needs a look: {title}"
+            notes = sorted({p["note"] for p in parts if p.get("note")})
+            links = "".join(f'<li><a href="{html.escape(p["link"])}">{html.escape(p["part"])}, '
+                            f'{html.escape(show_label(p))}</a></li>' for p in parts)
+            body = (f"<p>The camera check flagged {html.escape(title)}:</p><ul>"
+                    + "".join(f"<li>{html.escape(n)}</li>" for n in notes)
+                    + f"</ul><p>So the headliner wasn't sent anything. The recordings:</p><ul>{links}</ul>"
+                    f"<p>If the sound is fine, send them on yourself. Then check the camera is on the stage preset.</p>")
+            text = f"The camera check flagged {title}: " + " ".join(notes) + " Recordings: " + ", ".join(p["link"] for p in parts)
             bcc = []
         elif key.startswith("noemail"):
             subject = f"Recording ready, no email for the headliner: {title}"
