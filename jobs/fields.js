@@ -1,6 +1,7 @@
 // Sisyphus job application: the questions. The form (jobs/index.html) and the
 // email (job_notify.py) both read this list. The list after the "=" is plain
 // JSON so Python can read it too.
+// "Why Sisyphus" and "beer and/or comedy" added at Sam's ask (Sam, Nov 9 2026).
 var JOB_SECTIONS = [
   {
     "title": "Apply",
@@ -27,6 +28,8 @@ var JOB_SECTIONS = [
   {
     "title": "The important part",
     "fields": [
+      {"k": "why", "label": "Why do you want to work at Sisyphus?", "type": "textarea", "req": true, "full": true},
+      {"k": "likes", "label": "What do you like about craft beer and/or comedy?", "type": "textarea", "req": true, "full": true},
       {"k": "beer", "label": "Favorite beer", "full": true, "placeholder": "Any brewery. We won't be hurt. Much."},
       {"k": "joke", "label": "The worst joke you know", "type": "textarea", "full": true},
       {"k": "else", "label": "Anything else?", "type": "textarea", "full": true}
