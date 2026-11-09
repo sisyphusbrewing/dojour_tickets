@@ -33,6 +33,12 @@ SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
 SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
 FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
 BOOKING = "booking@sisyphusbrewing.com"
+# The address comedians see the welcome come from. booking@ is the comedy
+# inbox Grace runs, so the email reads as coming from the club's booking desk
+# and replies land there (Sam, Nov 9 2026). The SMTP login stays the ticketing
+# account; Gmail only shows booking@ once it is a "Send mail as" address on
+# that account, otherwise Gmail quietly shows the login address instead.
+WELCOME_FROM = (os.environ.get("WELCOME_FROM") or BOOKING).strip()
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 
 TRIP_URL = "https://www.sisyphusbrewing.com/pages/advance?s="
@@ -194,7 +200,7 @@ def main():
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Sam at Sisyphus <{FROM_EMAIL}>"
+    msg["From"] = f"Sam at Sisyphus <{WELCOME_FROM}>"
     msg["To"] = ", ".join(recipients)
     msg["Reply-To"] = BOOKING
     msg.attach(MIMEText(text, "plain"))
