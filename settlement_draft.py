@@ -9,8 +9,9 @@ so nobody has to build the numbers by hand. It's a starting point, not the
 artist copy: walk-ups, comps at the door and the lineup still get added.
 
 Money rules (Sam, Oct 2026): comedians get 100% of the door. Every paid
-ticket puts $3 in the host/feature pool ($1 host, $2 feature), Dojour
-tickets too; free comp-code tickets add $0. Website prices include the $3
+website ticket puts $3 in the host/feature pool ($1 host, $2 feature); free
+comp-code tickets add $0. Dojour tickets never charged the $3, so they go to
+the door in full and add nothing to the pool (Sam, Nov 8 2026). Website prices include the $3
 since Oct 10. Card processing and sales tax are not taken out.
 
 Skipped: recurring house shows (tagged "recurring: ...") and shows tagged
@@ -105,8 +106,10 @@ def draft(title):
         lines.append("  none")
     lines.append("DOJOUR")
     for (_, night), r in by_night(dj):
-        d = r["revenue"] - FEE * r["tickets"]
-        tickets += r["tickets"]; door += d; pool_tix += r["tickets"]
+        # Dojour never charged the $3, so its tickets keep their full price for
+        # the headliner and add nothing to the pool (Sam, Nov 8 2026).
+        d = r["revenue"]
+        tickets += r["tickets"]; door += d
         held = f" ({r['holds']} held seats left out)" if r.get("holds") else ""
         lines.append(f"  {night}: {r['tickets']} tickets, door {money(d)}{held}")
     if not dj:
