@@ -14,7 +14,9 @@ foreach ($pkg in @('Gyan.FFmpeg', 'Rclone.Rclone')) {
     winget install -e --id $pkg --accept-package-agreements --accept-source-agreements --silent
 }
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-py -3 -m pip install --quiet --upgrade requests
+# tzdata: Windows has no time zone database, so Python can't read
+# America/Chicago without it and the script crashes (found Nov 9 2026).
+py -3 -m pip install --quiet --upgrade requests tzdata
 
 # Google Drive remote "gdrive" (full drive scope so it can make share links and delete old files).
 if (-not ((rclone listremotes) -match '^gdrive:')) {
