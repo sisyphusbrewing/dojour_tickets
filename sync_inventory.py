@@ -28,12 +28,17 @@ Safety: DRY_RUN=1 prints what would happen without changing anything.
 import os
 import re
 import sys
+import uuid
 from collections import defaultdict
 
 import requests
 
 from show_dates import parse_show_datetime
 from maintain_shows import Shopify, skip_reason
+
+# Newer API version just for the stock write: from 2026-04 Shopify requires
+# changeFromQuantity and an idempotency key on inventorySetQuantities.
+STOCK_API_VERSION = "2026-04"
 
 NAMESPACE, KEY = "custom", "external_tickets"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
@@ -204,15 +209,22 @@ def location_id(shop):
 def set_stock(shop, loc, changes):
     if not changes:
         return
+    # changeFromQuantity is the website count we just read. Shopify only writes
+    # the new number if the count is still the same, so a ticket bought in the
+    # few seconds between our read and this write is never overwritten. If that
+    # happens the run stops before recording anything, and the next run (4 h
+    # later) redoes it with fresh numbers. Passing null here to skip the check is
+    # what Shopify flagged as deprecated on the Ticketk Sync app (Sam, Nov 9 2026).
     quantities = [{"inventoryItemId": c["variant"]["inventoryItem"]["id"], "locationId": loc,
-                   "quantity": c["after"], "changeFromQuantity": None} for c in changes]
-    # changeFromQuantity: null skips the compare check (replaces the deprecated
-    # ignoreCompareQuantity); it needs API 2026-01 or later.
+                   "quantity": c["after"], "changeFromQuantity": c["before"]} for c in changes]
     result = shop.gql("""
-      mutation SetStock($input: InventorySetQuantitiesInput!) {
-        inventorySetQuantities(input: $input) { userErrors { field message } }
-      }""", {"input": {"name": "available", "reason": "other", "quantities": quantities}},
-        version="2026-01")
+      mutation SetStock($input: InventorySetQuantitiesInput!, $key: String!) {
+        inventorySetQuantities(input: $input) @idempotent(key: $key) {
+          userErrors { code field message }
+        }
+      }""", {"input": {"name": "available", "reason": "other", "quantities": quantities},
+             "key": str(uuid.uuid4())},
+        version=STOCK_API_VERSION)
     errors = result["inventorySetQuantities"]["userErrors"]
     if errors:
         raise RuntimeError(f"inventorySetQuantities: {errors}")

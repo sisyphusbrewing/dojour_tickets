@@ -1,7 +1,7 @@
 """Quick checks for sync_inventory's matching and planning (python -m unittest)."""
 import unittest
 
-from sync_inventory import build_external_counts, plan_changes
+from sync_inventory import build_external_counts, plan_changes, set_stock, STOCK_API_VERSION
 
 
 def variant(vid, date, kind, qty, recorded=None):
@@ -77,6 +77,42 @@ class PlanTest(unittest.TestCase):
         products = [product("Ticket Fee", [variant("fee", "Fri, Oct 16 • 7:00 PM", "Fee", 999)], handle="ticket-fee")]
         changes, baselines, _ = plan_changes(products, build_external_counts(ROWS))
         self.assertEqual((changes, baselines), ([], []))
+
+
+
+class FakeShop:
+    def __init__(self, errors=()):
+        self.calls, self.errors = [], list(errors)
+
+    def gql(self, query, variables=None, version=None):
+        self.calls.append((query, variables, version))
+        return {"inventorySetQuantities": {"userErrors": self.errors}}
+
+
+class SetStockTest(unittest.TestCase):
+    def change(self, before, after):
+        return {"variant": {"inventoryItem": {"id": "gid://shopify/InventoryItem/1"}},
+                "before": before, "after": after}
+
+    def test_passes_the_count_we_read_so_a_new_sale_is_never_overwritten(self):
+        shop = FakeShop()
+        set_stock(shop, "gid://shopify/Location/9", [self.change(40, 37)])
+        query, variables, version = shop.calls[0]
+        q = variables["input"]["quantities"][0]
+        self.assertEqual((q["quantity"], q["changeFromQuantity"]), (37, 40))
+        self.assertIn("@idempotent", query)
+        self.assertTrue(variables["key"])
+        self.assertEqual(version, STOCK_API_VERSION)
+
+    def test_stale_count_stops_the_run(self):
+        shop = FakeShop(errors=[{"code": "CHANGE_FROM_QUANTITY_STALE", "field": None, "message": "stale"}])
+        with self.assertRaises(RuntimeError):
+            set_stock(shop, "loc", [self.change(40, 37)])
+
+    def test_nothing_to_change_makes_no_call(self):
+        shop = FakeShop()
+        set_stock(shop, "loc", [])
+        self.assertEqual(shop.calls, [])
 
 
 if __name__ == "__main__":
