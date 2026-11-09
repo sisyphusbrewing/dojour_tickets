@@ -172,9 +172,12 @@ def format_show_date(dt: datetime | None) -> str:
     if not dt:
         return ""
     now = datetime.now(CENTRAL_TZ)
+    # Built by hand: "%-d" / "%-I" only work on Linux, and the Dojour hold job
+    # runs on the office PC (Windows) because Dojour refuses GitHub's servers.
+    day = f"{dt:%a}, {dt:%b} {dt.day}"
     if dt.year != now.year:
-        return dt.strftime("%a, %b %-d, %Y • %-I:%M %p")
-    return dt.strftime("%a, %b %-d • %-I:%M %p")
+        day += f", {dt.year}"
+    return f"{day} • {dt.hour % 12 or 12}:{dt:%M %p}"
 
 
 def is_past_event(dt: datetime | None) -> bool:

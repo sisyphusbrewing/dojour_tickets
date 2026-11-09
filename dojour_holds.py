@@ -163,12 +163,18 @@ def plan_for(report, title, date_str, web):
     total_need = max(need["ga"] + need["vip"] - extra_held, 0)
     # Dojour refuses a hold bigger than the showing has left (it answers "You do not
     # have permission"), so never ask for more than its remaining count.
-    if report.get("remaining_count") is not None:
-        total_need = min(total_need, max(int(report["remaining_count"]), 0))
+    wanted = total_need
+    open_left = report.get("remaining_count")
+    if open_left is not None:
+        total_need = min(total_need, max(int(open_left), 0))
     if MAX_HOLD:
         total_need = min(total_need, MAX_HOLD)
+    counts_line = f"website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip"
     if total_need == 0:
-        return None, f"ok (website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip)"
+        if wanted:
+            # Dojour can't sell what it doesn't have, so this showing is safe as is.
+            return None, f"ok, Dojour has {open_left} open so nothing to block ({counts_line})"
+        return None, f"ok ({counts_line})"
 
     counts = {}
     order = [("ga", ga), ("vip", vip)] if need["ga"] >= need["vip"] else [("vip", vip), ("ga", ga)]
@@ -198,7 +204,7 @@ def plan_for(report, title, date_str, web):
     payload = {"showing": report.get("id"), "option_set": payload_opts, "upgrade_set": report.get("upgrade_set") or [],
                "form_response": None, "send_email": False, "first_name": HOLD_FIRST, "last_name": HOLD_LAST}
     detail = ", ".join(f"{counts[oid(o)]} {o.get('title', '').split(' - ')[0]}" for o in options if counts.get(oid(o)))
-    return payload, f"BLOCK {blocked} ({detail}); website {web['ga']}+{web['vip']} vip, held {held_ga}+{held_vip} vip"
+    return payload, f"BLOCK {blocked} ({detail}); {counts_line}"
 
 
 def main():
