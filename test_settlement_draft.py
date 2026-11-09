@@ -11,11 +11,11 @@ def test_door_and_pool():
     })
     sd.dojour_sales = lambda t: {(t, "Sat, Nov 7 2026 • 7:00 PM"): {"tickets": 10, "orders": 5, "vip": 0, "revenue": 250.0}}
     body = sd.draft("Test Comic")
-    # web: 48 paid x $25 door = 1200; dojour 250 - 30 = 220
+    # web: 48 paid x $25 door = 1200; Dojour keeps its full 250 (no $3 taken, Sam Nov 8 2026)
     assert "Tickets: 60" in body
-    assert "Door to the headliner: $1,420.00" in body
-    # pool: (48 + 10) x $3 = 174, host 58, feature 116
-    assert "Host/feature pool: $174.00 (host $58.00, feature $116.00)" in body
+    assert "Door to the headliner: $1,450.00" in body
+    # pool: website only, 48 x $3 = 144, host 48, feature 96
+    assert "Host/feature pool: $144.00 (host $48.00, feature $96.00)" in body
     assert "2 free" in body
 
 
