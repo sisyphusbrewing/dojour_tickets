@@ -14,7 +14,8 @@ blocked, which is the safe side).
 "Website Hold" has no email and "hold" in its name, so the inventory mirror,
 the door list counts and every agent report treat it as a block, not a sale.
 
-Env: DOJOUR_STATE (or DOJOUR_TOKEN), SUPABASE_URL, SUPABASE_KEY.
+Env: DOJOUR_STATE (JSON or a file path) or DOJOUR_TOKEN. SUPABASE_KEY is optional:
+  without it the counts come from the public website_hold_counts() feed.
   APPLY=1            actually create holds (default: print the plan only)
   INSTANCE_IDS=a,b   only these Dojour showtimes
 """
@@ -36,6 +37,9 @@ HOLD_FIRST = HOLD_LAST = "Website Hold"   # same as Sam's own holds
 
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co").replace("/rest/v1", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+# Public key (safe to share). With it the job reads only the website_hold_counts()
+# totals, so a computer at the venue can run it without the secret database key.
+PUBLISHABLE_KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 
 
 def is_vip(title):
@@ -44,17 +48,24 @@ def is_vip(title):
 
 def website_counts():
     """{(title lower, show_date): {"ga": n, "vip": n}} for Website and Comp rows."""
-    h = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-    rows, offset = [], 0
-    while True:
-        r = requests.get(f"{SUPABASE_URL}/rest/v1/tickets?select=show_title,show_date,tickets,source,ticket_type"
-                         f"&source=in.(Website,Comp)&limit=1000&offset={offset}", headers=h, timeout=30)
+    key = SUPABASE_KEY or PUBLISHABLE_KEY
+    h = {"apikey": key, "Authorization": f"Bearer {key}"}
+    if SUPABASE_KEY:
+        rows, offset = [], 0
+        while True:
+            r = requests.get(f"{SUPABASE_URL}/rest/v1/tickets?select=show_title,show_date,tickets,source,ticket_type"
+                             f"&source=in.(Website,Comp)&limit=1000&offset={offset}", headers=h, timeout=30)
+            r.raise_for_status()
+            page = r.json()
+            rows += page
+            if len(page) < 1000:
+                break
+            offset += 1000
+    else:
+        # Totals only (no names or emails), one row per show, date, source and ticket type.
+        r = requests.post(f"{SUPABASE_URL}/rest/v1/rpc/website_hold_counts", headers=h, json={}, timeout=30)
         r.raise_for_status()
-        page = r.json()
-        rows += page
-        if len(page) < 1000:
-            break
-        offset += 1000
+        rows = r.json()
     out = defaultdict(lambda: {"ga": 0, "vip": 0})
     for row in rows:
         key = ((row.get("show_title") or "").strip().lower(), (row.get("show_date") or "").strip())
