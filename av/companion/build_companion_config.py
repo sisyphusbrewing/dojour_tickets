@@ -649,17 +649,33 @@ def alarm_page():
     }
 
 
+CAMERA_URL = "http://192.168.86.31/camera/sdk"  # OBSBOT Tail 2 stage camera
+RECORD_HOLD_MS = 3000
+
+
 def record_key():
-    """Starts/stops OBS recording; red with the running time while recording."""
-    return button(
+    """Press: start OBS recording and point the camera at its Stage preset (preset 1, id 0).
+    Pressing again does nothing; hold 3 s to stop. Red with the running time while recording.
+
+    It was a toggle until Nov 9 2026: double taps at every intro split each show into pieces, and
+    one tap without the second lost a whole set. The camera call also undoes AI tracking drift
+    (on Nov 8 it followed someone at a front table all show)."""
+    key = button(
         "RECORD\\nVIDEO\\n$(obs:recording_timecode)",
-        # OBS module v4 "Recording - Controls: Toggle"; page imports don't run the module's upgrade
-        # scripts, so older ids (StartStopRecording, toggle_recording) import as dead actions
-        press=[action(OBS, "recording", action="toggle")],
+        # OBS module v4 "Recording - Controls" (start/stop); page imports don't run the module's
+        # upgrade scripts, so older ids (StartStopRecording, toggle_recording) import as dead actions
+        press=[action(OBS, "recording", action="start"),
+               action(HTTP, "put", url=f"{CAMERA_URL}/ptz/preset", body='{"operation":"call","id":0}', header="",
+                      contenttype="application/json", jsonResultDataVariable="", result_stringify=True,
+                      statusCodeVariable="")],
         feedbacks=[feedback(OBS, "recording", style={"color": WHITE, "bgcolor": RED}),
                    feedback(OBS, "recordingPaused", style={"color": WHITE, "bgcolor": 0xFF8800})],
         bgcolor=DARK,
     )
+    step = key["steps"]["0"]
+    step["action_sets"][str(RECORD_HOLD_MS)] = [action(OBS, "recording", action="stop")]
+    step["options"]["runWhileHeld"] = [RECORD_HOLD_MS]
+    return key
 
 
 def reset_sound_key():

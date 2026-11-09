@@ -3,7 +3,7 @@
 # Installs ffmpeg + rclone, signs rclone in to Google Drive as sam@ (a browser opens; Sam clicks Allow),
 # saves the settings to %USERPROFILE%\.sisyphus\recordings.env, copies split_and_share.py from main and
 # adds a 4 AM daily Task Scheduler task "Sisyphus recordings". Safe to run again.
-param([Parameter(Mandatory = $true)][string]$RecorderPassword, [string]$ObsDir = "$env:USERPROFILE\Videos")
+param([Parameter(Mandatory = $true)][string]$RecorderPassword, [string]$ObsDir = "$env:USERPROFILE\Videos", [string]$StageFrame)
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $dir = "$env:USERPROFILE\sisyphus-av\recordings"
@@ -16,7 +16,9 @@ foreach ($pkg in @('Gyan.FFmpeg', 'Rclone.Rclone')) {
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 # tzdata: Windows has no time zone database, so Python can't read
 # America/Chicago without it and the script crashes (found Nov 9 2026).
-py -3 -m pip install --quiet --upgrade requests tzdata
+# faster-whisper (+ the CUDA wheels for the RTX 3070) finds the sets from the host's intros when nobody
+# pressed the stage timer.
+py -3 -m pip install --quiet --upgrade requests tzdata faster-whisper nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"
 
 # Google Drive remote "gdrive" (full drive scope so it can make share links and delete old files).
 if (-not ((rclone listremotes) -match '^gdrive:')) {
@@ -26,6 +28,12 @@ rclone mkdir "gdrive:Sisyphus Recordings"
 
 Set-Content -Path "$state\recordings.env" -Value @("RECORDER_PASSWORD=$RecorderPassword", "OBS_DIR=$ObsDir")
 Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/sisyphusbrewing/dojour_tickets/main/av/recordings/split_and_share.py' -OutFile "$dir\split_and_share.py"
+
+# The camera check compares each show 5 minutes in against a known-good stage frame. Re-run with -StageFrame
+# <a recording where the camera was on the stage> after moving the camera.
+if ($StageFrame) {
+    ffmpeg -v error -y -ss 300 -i $StageFrame -frames:v 1 -vf 'scale=320:180,format=gray' "$state\stage-reference.png"
+}
 
 # Every morning at 4 AM, pulling the newest script first so fixes land without another setup.
 $run = "Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/sisyphusbrewing/dojour_tickets/main/av/recordings/split_and_share.py' -OutFile '$dir\split_and_share.py' -ErrorAction SilentlyContinue; " +
