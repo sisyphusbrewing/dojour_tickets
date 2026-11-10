@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Sales by Day</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* Sales by day (Sam, Nov 9 2026): how many tickets sell each day on the website
+       vs Dojour, and which shows still pull Dojour buyers (usually a comic posting
+       the old Dojour link instead of ours). Filled by every ticket sync. */
+    :root { --web: var(--slate); --dj: #c9a46a; }
+    .intro { color: var(--muted); margin: 18px 0 0; }
+    .h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .12em; font-size: 14px; color: var(--muted); margin: 26px 0 10px; }
+    .sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+    .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+    .stat b { display: block; font-family: var(--head); font-size: 26px; padding-top: 4px; }
+    .stat span { color: var(--gray); font-size: 13px; }
+    .stat.web b { color: #9fc1dc; } .stat.dj b { color: var(--dj); }
+    .key { display: flex; gap: 14px; color: var(--gray); font-size: 13px; margin-top: 10px; }
+    .key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+    .row { display: grid; grid-template-columns: 92px 1fr 70px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); }
+    .row .d { color: var(--muted); font-size: 14px; }
+    .row .n { text-align: right; font-size: 14px; color: var(--muted); white-space: nowrap; }
+    .bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: transparent; }
+    .bar .w { background: var(--web); } .bar .j { background: var(--dj); }
+    .show { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 12px 14px; border-radius: 14px;
+            background: var(--card); border: 1px solid var(--line); cursor: pointer; }
+    .show + .show { margin-top: 8px; }
+    .show.on { border-color: var(--slate); border-left: 4px solid var(--slate); }
+    .show .t { font-family: var(--head); font-weight: 700; font-size: 16px; letter-spacing: .02em; padding-top: 2px; word-break: break-word; }
+    .show .s { color: var(--gray); font-size: 13px; }
+    .show .c { text-align: right; font-size: 14px; white-space: nowrap; }
+    .show .c .jn { color: var(--dj); font-weight: 700; }
+    .show .bar { grid-column: 1 / -1; height: 8px; margin-top: 4px; }
+    .muted { color: var(--gray); }
+    @media (max-width: 420px) { .row { grid-template-columns: 78px 1fr 62px; } .stat b { font-size: 22px; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Sales by day</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Sales by day<small id="summary">Website vs Dojour</small></div>
+        </a>
+        <div class="hdr-right">
+          <button class="btn btn-sm" type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+      <div class="hdr-tools">
+        <div class="chips tabs" id="periods"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="notManager" class="hidden empty"></div>
+    <div id="sheet">
+      <p class="intro">Every ticket bought, by the day it was bought. Dojour buyers mostly come from comics posting their old Dojour link, so a show that keeps selling on Dojour is a comic to send our link to.</p>
+      <div class="sum" id="sum"></div>
+      <div class="key"><span><i style="background:var(--web)"></i>Website</span><span><i style="background:var(--dj)"></i>Dojour</span></div>
+
+      <div class="h2" id="daysHead">By day</div>
+      <div id="days"><div class="empty">Loading…</div></div>
+
+      <div class="h2">By show <span class="muted" style="text-transform:none;letter-spacing:0">(tap one to see its days)</span></div>
+      <div id="shows"></div>
+    </div>
+  </main>
+
+  <script>
+    var ROWS = [], PERIOD = 30, SHOW = null;
+    var PERIODS = [[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'All']];
+
+    function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function since() {
+      if (!PERIOD) return '0000-00-00';
+      var d = new Date(); d.setDate(d.getDate() - PERIOD + 1); return isoDay(d);
+    }
+    function dayLabel(iso) {
+      var p = iso.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]);
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+    function bar(w, j, max) {
+      var pw = max ? (w / max * 100) : 0, pj = max ? (j / max * 100) : 0;
+      return '<div class="bar"><div class="w" style="width:' + pw + '%"></div><div class="j" style="width:' + pj + '%"></div></div>';
+    }
+    function pct(j, total) { return total ? Math.round(j / total * 100) + '%' : '–'; }
+
+    function render() {
+      $('periods').innerHTML = PERIODS.map(function (p) {
+        return '<button type="button" class="chip' + (p[0] === PERIOD ? ' on' : '') + '" onclick="PERIOD=' + p[0] + ';render()">' + p[1] + '</button>';
+      }).join('');
+      var from = since();
+      var inPeriod = ROWS.filter(function (r) { return r.sale_date >= from; });
+      var mine = SHOW ? inPeriod.filter(function (r) { return r.show_title === SHOW; }) : inPeriod;
+
+      var w = 0, j = 0;
+      mine.forEach(function (r) { if (r.source === 'Dojour') j += r.tickets; else w += r.tickets; });
+      $('sum').innerHTML =
+        '<div class="stat web"><span>Website</span><b>' + w + '</b></div>' +
+        '<div class="stat dj"><span>Dojour</span><b>' + j + '</b></div>' +
+        '<div class="stat"><span>Dojour share</span><b>' + pct(j, w + j) + '</b></div>';
+      $('summary').textContent = SHOW ? SHOW : 'Website vs Dojour';
+
+      // By day, newest first. Days with no sales at all are left out.
+      var byDay = {};
+      mine.forEach(function (r) {
+        var d = byDay[r.sale_date] || (byDay[r.sale_date] = { w: 0, j: 0 });
+        if (r.source === 'Dojour') d.j += r.tickets; else d.w += r.tickets;
+      });
+      var days = Object.keys(byDay).sort().reverse();
+      var maxDay = days.reduce(function (m, k) { return Math.max(m, byDay[k].w + byDay[k].j); }, 0);
+      $('daysHead').textContent = SHOW ? 'By day: ' + SHOW : 'By day';
+      $('days').innerHTML = days.length ? days.map(function (k) {
+        var d = byDay[k];
+        return '<div class="row"><div class="d">' + dayLabel(k) + '</div>' + bar(d.w, d.j, maxDay) +
+               '<div class="n">' + d.w + ' · <span style="color:var(--dj)">' + d.j + '</span></div></div>';
+      }).join('') : '<div class="empty">No tickets sold in this stretch.</div>';
+
+      // By show (all showtimes of a run together), most Dojour tickets first.
+      var byShow = {};
+      inPeriod.forEach(function (r) {
+        var s = byShow[r.show_title] || (byShow[r.show_title] = { w: 0, j: 0, dates: {} });
+        if (r.source === 'Dojour') s.j += r.tickets; else s.w += r.tickets;
+        s.dates[r.show_date] = 1;
+      });
+      var shows = Object.keys(byShow).sort(function (a, b) {
+        return (byShow[b].j - byShow[a].j) || ((byShow[b].w + byShow[b].j) - (byShow[a].w + byShow[a].j)) || a.localeCompare(b);
+      });
+      var maxShow = shows.reduce(function (m, k) { return Math.max(m, byShow[k].w + byShow[k].j); }, 0);
+      $('shows').innerHTML = shows.length ? shows.map(function (k) {
+        var s = byShow[k], dates = Object.keys(s.dates).sort(function (a, b) { return parseShowDateToMillis(a) - parseShowDateToMillis(b); });
+        var first = dates[0] ? dates[0].split(' • ')[0] : '';
+        return '<div class="show' + (k === SHOW ? ' on' : '') + '" onclick="pick(' + jsArg(k) + ')">' +
+               '<div><div class="t">' + escapeHtml(k) + '</div><div class="s">' + escapeHtml(first) +
+               (dates.length > 1 ? ' + ' + (dates.length - 1) + ' more' : '') + '</div></div>' +
+               '<div class="c">' + s.w + ' web · <span class="jn">' + s.j + ' Dojour</span><div class="s">' + pct(s.j, s.w + s.j) + ' Dojour</div></div>' +
+               bar(s.w, s.j, maxShow) + '</div>';
+      }).join('') : '<div class="empty">Nothing yet.</div>';
+    }
+    function pick(title) { SHOW = SHOW === title ? null : title; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    async function load() {
+      var all = [], from = 0;
+      while (true) {
+        var res = await sb.from('ticket_sales_daily').select('sale_date,show_title,show_date,source,tickets').range(from, from + 999);
+        if (res.error) { $('days').innerHTML = '<div class="empty">Could not load: ' + escapeHtml(res.error.message) + '</div>'; return; }
+        all = all.concat(res.data || []);
+        if (!res.data || res.data.length < 1000) break;
+        from += 1000;
+      }
+      ROWS = all;
+      render();
+    }
+
+    setupSignIn(function (role) {
+      if (!roleAtLeast(role, 'manager')) { showNoAccess('manager', ['sheet', 'periods']); return; }
+      load();
+    });
+  </script>
+</body>
+</html>

@@ -244,6 +244,40 @@ def dojour_ticket_type(res: dict):
 # 2. Dojour Ticket Fetcher
 # ==============================================================================
 
+def dojour_purchase_time(res: dict):
+    """When a Dojour buyer placed the order (the reservation's "timestamp"), as
+    Dojour sends it, e.g. "2026-10-03T21:07:22+0000". Feeds the sales-by-day page,
+    which shows how many tickets still sell on Dojour each day (Sam, Nov 9 2026)."""
+    ts = res.get("timestamp") or res.get("created") or res.get("created_at")
+    if not ts or not isinstance(ts, str):
+        return None
+    try:
+        return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S%z").isoformat()
+    except ValueError:
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).isoformat()
+        except ValueError:
+            return None
+
+
+def refresh_sales_by_day():
+    """Copy today's ticket rows into the per-day totals (ticket_sales_daily). The
+    tickets table forgets a show once it's over; the daily totals keep it."""
+    url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY")
+    if not url or not key:
+        return
+    try:
+        r = requests.post(f"{url.rstrip('/')}/rest/v1/rpc/refresh_ticket_sales_daily",
+                          headers={"apikey": key, "Authorization": f"Bearer {key}",
+                                   "Content-Type": "application/json"}, json={}, timeout=30)
+        if r.status_code == 200:
+            print(f"Sales by day updated ({r.text} show/day/source rows).")
+        else:
+            print(f"Notice: sales by day not updated ({r.status_code}): {r.text[:200]}")
+    except Exception as e:
+        print(f"Notice: sales by day not updated: {e}")
+
+
 def get_dojour_token() -> str:
     token = os.environ.get("DOJOUR_TOKEN")
     if token:
@@ -406,6 +440,7 @@ def fetch_dojour_tickets():
                 "email": email,
                 "tickets": tickets,
                 "source": "Dojour",
+                "purchased_at": dojour_purchase_time(res),
                 "_sort_dt": r_dt or detected_dt
             }
             # Only send a ticket type when Dojour names a VIP tier, so a VIP tag set by hand
@@ -595,6 +630,7 @@ def fetch_shopify_tickets() -> list:
                         "source": "Website",
                         "order_name": order.get("name"),
                         "variant_id": item.get("variant_id"),
+                        "purchased_at": order_created_str or None,
                         "_product_id": item.get("product_id"),
                         "_sort_dt": show_dt
                     })
@@ -854,6 +890,7 @@ def refresh_shopify_only():
         t.pop("_sort_dt", None)
     if tickets:
         sync_to_supabase(tickets)
+        refresh_sales_by_day()
     print(f"Live Shopify refresh: {len(tickets)} upcoming website tickets.")
 
 
@@ -902,6 +939,7 @@ def main():
 
     # Purge any shows that have ended from Supabase
     cleanup_past_shows_from_supabase(all_tickets, sources_ok=sources_ok)
+    refresh_sales_by_day()
     print("Database and Sheet sync complete!")
 
 
