@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tuesday Open Mic Sign-Up · Sisyphus</title>
+  <meta name="description" content="Sign up for the free Tuesday open mic at Sisyphus, the comedy club and brewery in Minneapolis. 7 PM in the main taproom.">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Tuesday open mic sign-up (Sam, Nov 9 2026). Comics put their name in
+       for the next Tuesday; staff draw names on mic/host.html. Embedded on
+       sisyphusbrewing.com/pages/open-mic. */
+    html.framed header, html.framed .foot { display: none; }
+    main { padding-top: 18px; padding-bottom: 32px; }
+    h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 34px; line-height: 1.05; margin: 4px 0 10px; }
+    .eyebrow { color: var(--slate-light); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+    .lead { color: #fff; font-size: 19px; line-height: 1.4; margin: 0 0 10px; }
+    p { color: #d9d6d6; font-size: 16px; line-height: 1.5; margin: 0 0 10px; }
+    .check { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; color: #fff; cursor: pointer; }
+    .check input { width: 22px; height: 22px; margin-top: 1px; accent-color: var(--slate); }
+    .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+    .done-big { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 28px; color: #fff; margin: 8px 0 10px; }
+    .camus { color: var(--gray); font-style: italic; margin-top: 18px; }
+    .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 18px 16px 28px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr" style="padding:12px 16px">
+      <a class="hdr-brand" href="https://www.sisyphusbrewing.com/pages/open-mic">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Open Mic<small>Sisyphus · Minneapolis</small></div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewForm">
+      <div class="eyebrow">Free · 7 PM · Main taproom</div>
+      <h1>Tuesday Open Mic</h1>
+      <p class="lead">Put your name in for <b id="micDate">next Tuesday</b>.</p>
+      <p>A few spots are booked ahead. The rest are drawn at random from this list before the mic starts at 7, so be in the taproom to hear your name. If it doesn't get called, you're still in a bar. There are worse outcomes.</p>
+
+      <form id="micForm" class="card stack" style="margin-top:16px" novalidate>
+        <div class="field"><label for="f_name">Your name (the one we say on the mic)</label>
+          <input class="input" id="f_name" required maxlength="80" autocomplete="name"></div>
+        <div class="field"><label for="f_email">Email</label>
+          <input class="input" id="f_email" type="email" required maxlength="200" autocomplete="email"></div>
+        <div class="field"><label for="f_phone">Phone (optional)</label>
+          <input class="input" id="f_phone" type="tel" maxlength="40" autocomplete="tel"></div>
+        <label class="check"><input type="checkbox" id="f_first"> <span>This is my first time doing stand-up</span></label>
+        <div class="trap" aria-hidden="true"><label>Website <input id="website" tabindex="-1" autocomplete="off"></label></div>
+        <div class="err hidden" id="formError"></div>
+        <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Put my name in</button>
+      </form>
+      <p style="margin-top:14px;font-size:14px;color:var(--gray)">One sign-up per person per week. Sign-ups for a Tuesday close at 5 PM that day; after that you're in for the week after. Must be 18+.</p>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="eyebrow">Tuesday Open Mic</div>
+      <p class="done-big" id="doneTitle">You're in.</p>
+      <p id="doneText"></p>
+      <p>7 PM, main taproom, 712 Ontario Ave W. Names get drawn before the mic starts.</p>
+      <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+    </section>
+  </main>
+
+  <footer class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+
+    // Embedded on sisyphusbrewing.com/pages/open-mic: tell the page how tall we are.
+    var framed = window.parent !== window;
+    if (framed) {
+      document.documentElement.classList.add('framed');
+      var tell = function () { try { parent.postMessage({ micHeight: Math.ceil(document.body.getBoundingClientRect().height) }, '*'); } catch (e) {} };
+      if (window.ResizeObserver) new ResizeObserver(tell).observe(document.body); else setInterval(tell, 500);
+      window.addEventListener('load', tell);
+    }
+
+    function niceDate(iso) {
+      var p = iso.split('-').map(Number);
+      return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+    sb.rpc('mic_next_date').then(function (r) { if (r.data) $('micDate').textContent = niceDate(r.data); });
+
+    try { var saved = JSON.parse(localStorage.getItem('mic-me') || 'null'); if (saved) { $('f_name').value = saved.name || ''; $('f_email').value = saved.email || ''; $('f_phone').value = saved.phone || ''; } } catch (e) {}
+
+    $('micForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = $('formError'), btn = $('sendBtn');
+      function fail(m) { err.textContent = m; err.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Put my name in'; }
+      err.classList.add('hidden');
+      var name = $('f_name').value.trim(), email = $('f_email').value.trim(), phone = $('f_phone').value.trim();
+      if (!name) { $('f_name').focus(); return fail('We need a name to put in the hat.'); }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { $('f_email').focus(); return fail("That email doesn't look right."); }
+      if ($('website').value) { $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden'); return; }  // bots
+      btn.disabled = true; btn.textContent = 'Putting it in…';
+      try {
+        var res = await sb.rpc('mic_signup', { p_name: name, p_email: email, p_phone: phone || null, p_first_time: $('f_first').checked });
+        if (res.error) throw res.error;
+        try { localStorage.setItem('mic-me', JSON.stringify({ name: name, email: email, phone: phone })); } catch (e2) {}
+        var when = niceDate(res.data.mic_date);
+        $('doneTitle').textContent = res.data.already ? "You're already in." : "You're in.";
+        $('doneText').textContent = (res.data.already ? 'Your name was already in for ' : 'Your name is in for ') + when + '. See you there.';
+        $('viewForm').classList.add('hidden'); $('viewDone').classList.remove('hidden');
+        if (!framed) window.scrollTo(0, 0);
+      } catch (ex) {
+        fail((ex && ex.message) || 'Something broke. Try again in a minute.');
+      }
+    });
+  </script>
+</body>
+</html>
