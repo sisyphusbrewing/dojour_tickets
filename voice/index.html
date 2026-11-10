@@ -97,7 +97,7 @@
         <div class="alt">Already recorded it in Voice Memos? <label for="file">Upload the file</label>
           <input type="file" id="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.caf,.ogg,.webm" hidden></div>
         <p class="tip" id="sendTo"></p>
-        <p class="tip">Keep this page open while it records; the screen stays awake on its own, so lay the phone face down. It saves every minute as it goes, so a dead battery only loses the last minute. Notes land in your email a few minutes after you stop.</p>
+        <p class="tip">Keep this page open while it records; the screen stays awake on its own, so lay the phone face down. It saves every minute as it goes and tells you right away if it can’t hear you, so a dead battery only loses the last minute. Notes land in your email a few minutes after you stop.</p>
       </section>
 
       <h2 class="sec">Notes</h2>
@@ -125,13 +125,38 @@
     }
 
     // ---------- Recording ----------
+    // Rewritten Nov 9 2026 after a 15-minute recording came out completely
+    // empty: the iPhone gave the page no sound, and the page still said
+    // "Saved". Now:
+    //  - every minute is its own complete little audio file, so one bad
+    //    piece can't spoil the rest;
+    //  - the first piece is only 15 seconds, so within 15 seconds the page
+    //    knows whether it's really hearing you, and says so loudly if not;
+    //  - if the phone cuts the microphone off (screen locked, another app, a
+    //    call), it picks the mic back up as soon as it can;
+    //  - each piece is kept on the phone until it has uploaded, and anything
+    //    left over goes up the next time the page opens;
+    //  - a short log of what happened is saved on the note, so a failure can
+    //    be diagnosed from the data instead of guessed at.
+    var FIRST_PIECE_MS = 15000, PIECE_MS = 60000, MIN_PIECE_BYTES = 400;
+
+    function note(r, what) {
+      r.log.push([Math.round((Date.now() - r.started) / 1000), what]);
+      if (r.log.length > 400) r.log.splice(40, 1);
+    }
+    function saveLog(r) { return sb.from('voice_notes').update({ debug: { log: r.log, ua: navigator.userAgent, mime: r.mime } }).eq('id', r.id); }
+
+    function getMic() {
+      return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+    }
+
     async function startRecording() {
       var btn = $('bigBtn');
       btn.disabled = true;
       setState('Asking for the microphone…');
       var stream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+        stream = await getMic();
       } catch (e) {
         btn.disabled = false;
         setState('The microphone is blocked. In Settings > Safari > Microphone, allow it, then reload.', true);
@@ -145,32 +170,121 @@
         setState('Could not start: ' + ins.error.message, true);
         return;
       }
-      var opts = { audioBitsPerSecond: 48000 };
-      if (type.mime) opts.mimeType = type.mime;
-      var mr = new MediaRecorder(stream, opts);
-      rec = { id: ins.data.id, ext: type.ext, mime: (mr.mimeType || type.mime || 'audio/mp4').split(';')[0],
-              mr: mr, stream: stream, n: 0, uploads: [], started: Date.now(), failed: 0, stopping: false };
-      mr.ondataavailable = function (ev) { if (ev.data && ev.data.size) queuePart(ev.data); };
-      mr.onstop = finishRecording;
-      stream.getAudioTracks()[0].onended = function () { if (rec && !rec.stopping) stopRecording('The microphone was interrupted, so I saved what was recorded.'); };
-      mr.start(60000);   // a piece every minute
+      rec = { id: ins.data.id, ext: type.ext, askMime: type.mime, mime: '', stream: stream, mr: null, n: 0, uploads: [],
+              started: Date.now(), failed: 0, bytes: 0, empty: 0, emptyRun: 0, stopping: false, log: [] };
+      note(rec, 'start, asked for ' + (type.mime || 'the default format'));
+      watchMic(rec);
+      if (!startPiece(rec, FIRST_PIECE_MS)) return;
       startMeter(stream);
       keepAwake();
       btn.classList.add('on');
       btn.setAttribute('aria-label', 'Stop');
       btn.disabled = false;
       $('label').disabled = true;
-      setState('Recording. Tap to stop.');
+      setState('Recording. Checking the microphone…');
       rec.tick = setInterval(function () { $('clock').textContent = fmtClock((Date.now() - rec.started) / 1000); }, 500);
     }
 
-    function queuePart(blob) {
-      var r = rec, i = r.n++;
+    function watchMic(r) {
+      var t = r.stream.getAudioTracks()[0];
+      t.onmute = function () { note(r, 'phone paused the mic'); showHealth(r); };
+      t.onunmute = function () { note(r, 'mic back'); showHealth(r); };
+      // When the mic ends, the recorder stops on its own; make sure of it.
+      t.onended = function () { note(r, 'mic ended'); if (r.mr && r.mr.state !== 'inactive') try { r.mr.stop(); } catch (e) {} };
+    }
+
+    // Records one piece, start to finish, as its own file.
+    function startPiece(r, ms) {
+      var opts = { audioBitsPerSecond: 48000 };
+      if (r.askMime) opts.mimeType = r.askMime;
+      var mr, chunks = [];
+      try { mr = new MediaRecorder(r.stream, opts); mr.start(); }
+      catch (e) { note(r, 'recorder would not start: ' + e.name); stopRecording('The phone wouldn’t start the recorder.'); return false; }
+      r.mr = mr;
+      if (!r.mime) {
+        r.mime = (mr.mimeType || r.askMime || 'audio/mp4').split(';')[0];
+        var ext = /webm/.test(r.mime) ? 'webm' : /ogg/.test(r.mime) ? 'ogg' : 'm4a';
+        if (ext !== r.ext) { r.ext = ext; sb.from('voice_notes').update({ ext: ext }).eq('id', r.id); }
+        note(r, 'recording as ' + r.mime);
+      }
+      mr.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
+      mr.onerror = function (ev) { note(r, 'recorder error: ' + ((ev.error && ev.error.name) || 'unknown')); };
+      mr.onstop = function () {
+        clearTimeout(r.cut);
+        // Some browsers hand over the last bit of sound just after "stop".
+        setTimeout(function () { pieceDone(r, chunks); }, 60);
+      };
+      r.pieceEnds = Date.now() + ms;
+      r.cut = setTimeout(function () { if (mr.state !== 'inactive') try { mr.stop(); } catch (e) {} }, ms);
+      return true;
+    }
+
+    function pieceDone(r, chunks) {
+      var blob = chunks.length ? new Blob(chunks, { type: r.mime }) : null;
+      var size = blob ? blob.size : 0;
+      note(r, 'piece: ' + size + ' bytes');
+      if (size >= MIN_PIECE_BYTES) { r.bytes += size; r.emptyRun = 0; queuePart(r, blob); }
+      else { r.empty++; r.emptyRun++; }
+      if (r.stopping) { finishRecording(); return; }
+      showHealth(r);
+      var t = r.stream.getAudioTracks()[0];
+      // A dead mic, or a piece with no sound in it: get a fresh microphone.
+      if (t.readyState !== 'live' || r.emptyRun === 1) reviveMic(r);
+      else startPiece(r, r.emptyRun ? FIRST_PIECE_MS : PIECE_MS);
+    }
+
+    async function reviveMic(r) {
+      if (r.stopping || rec !== r) return;
+      if (document.visibilityState !== 'visible') {
+        // The phone won't hand over the mic while the page is in the background.
+        r.waiting = true;
+        note(r, 'waiting for the page to come back');
+        showHealth(r);
+        return;
+      }
+      r.waiting = false;
+      try {
+        var s = await getMic();
+        r.stream.getTracks().forEach(function (t) { t.stop(); });
+        r.stream = s;
+        watchMic(r);
+        stopMeter(); startMeter(s);
+        note(r, 'got a fresh mic');
+      } catch (e) {
+        note(r, 'could not get the mic back: ' + e.name);
+        stopRecording('The phone took the microphone away, so I saved what was recorded.');
+        return;
+      }
+      startPiece(r, FIRST_PIECE_MS);
+    }
+
+    function showHealth(r) {
+      if (r.stopping || rec !== r) return;
+      var mins = Math.round(r.bytes / 360000);   // about 360 KB a minute
+      var t = r.stream.getAudioTracks()[0];
+      if (r.waiting) {
+        setState('The phone paused the microphone. Come back to this page to keep recording.', true);
+      } else if (r.emptyRun >= 2 || (r.emptyRun && !r.bytes && r.empty >= 2)) {
+        setState('I’m not getting any sound from the microphone, so nothing is being saved. Stop and use Voice Memos instead (upload it below).', true);
+        if (!r.alarmed) { r.alarmed = true; chime(false); try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) {} }
+      } else if (t.muted) {
+        setState('The phone paused the microphone. Keep this page open and the screen on.', true);
+      } else if (r.bytes) {
+        r.alarmed = false;
+        setState('Recording, and it’s saving' + (mins >= 1 ? ' (' + mins + ' min so far)' : '') + '. Tap to stop.');
+      }
+    }
+
+    function queuePart(r, blob) {
+      var i = r.n++;
       var path = r.id + '/part-' + pad(i, 4) + '.' + r.ext;
+      keepPiece(path, blob, r.mime, r.id);
       r.uploads.push(uploadWithRetry(path, blob, r.mime).then(function (ok) {
-        if (!ok) { r.failed++; return; }
+        if (!ok) { r.failed++; note(r, 'piece ' + i + ' did not upload; kept on the phone'); return; }
+        dropPiece(path);
         return sb.from('voice_notes').update({ parts: i + 1 }).eq('id', r.id);
       }));
+      if (i % 5 === 0) saveLog(r);
     }
 
     // Storage only takes direct uploads from managers, so the voice-audio
@@ -196,7 +310,9 @@
       rec.why = why || '';
       $('bigBtn').disabled = true;
       setState('Saving…');
-      try { rec.mr.stop(); } catch (e) { finishRecording(); }
+      note(rec, 'stop' + (why ? ': ' + why : ''));
+      if (rec.mr && rec.mr.state !== 'inactive') { try { rec.mr.stop(); return; } catch (e) {} }
+      finishRecording();
     }
 
     async function finishRecording() {
@@ -204,13 +320,38 @@
       if (!r || r.finished) return;
       r.finished = true;
       clearInterval(r.tick);
+      clearTimeout(r.cut);
       r.stream.getTracks().forEach(function (t) { t.stop(); });
       stopMeter(); letSleep();
       var secs = Math.round((Date.now() - r.started) / 1000);
       setState('Uploading the last piece…');
       await Promise.all(r.uploads);
-      await sb.from('voice_notes').update({ status: 'uploaded', duration_s: secs, parts: r.n }).eq('id', r.id);
-      var go = await runWorkflow('voice_notes.yml', {});
+      note(r, 'done: ' + r.n + ' pieces, ' + r.bytes + ' bytes, ' + r.failed + ' not uploaded');
+      var msg, bad = false;
+      if (!r.bytes) {
+        // Nothing to transcribe. Say so plainly instead of "Saved".
+        await sb.from('voice_notes').update({ status: 'error', duration_s: secs, parts: 0,
+          error: 'The phone didn’t give the page any sound, so nothing was recorded.',
+          debug: { log: r.log, ua: navigator.userAgent, mime: r.mime } }).eq('id', r.id);
+        msg = 'Nothing was recorded: the phone didn’t give the page any sound. Sorry. For now, use Voice Memos and upload the file below.';
+        bad = true;
+        chime(false);
+      } else if (r.failed === r.n) {
+        // Nothing got through (no signal). It's all saved on the phone; the
+        // next visit to this page sends it and starts the notes.
+        await sb.from('voice_notes').update({ duration_s: secs, debug: { log: r.log, ua: navigator.userAgent, mime: r.mime } }).eq('id', r.id);
+        msg = 'Saved ' + fmtClock(secs) + ' on this phone, but there’s no signal to upload it. Open this page again when you have signal and it goes up on its own.';
+        bad = true;
+      } else {
+        await sb.from('voice_notes').update({ status: 'uploaded', duration_s: secs, parts: r.n,
+          debug: { log: r.log, ua: navigator.userAgent, mime: r.mime } }).eq('id', r.id);
+        var go = await runWorkflow('voice_notes.yml', {});
+        msg = (r.why ? r.why + ' ' : '') + 'Saved ' + fmtClock(secs) + '. Notes in your email in about ' + etaMinutes(secs) + ' minutes.';
+        if (r.empty) msg += ' (About ' + r.empty + ' minute' + (r.empty > 1 ? 's' : '') + ' had no sound from the mic.)';
+        if (r.failed) msg += ' (' + r.failed + ' piece' + (r.failed > 1 ? 's' : '') + ' didn’t upload yet; they’re saved on this phone and go up next time you open this page.)';
+        if (!go.ok) { msg = 'Saved, but couldn’t start the notes (' + go.error + '). They’ll run on their own within 6 hours.'; bad = true; }
+        else chime(true);
+      }
       rec = null;
       $('bigBtn').classList.remove('on');
       $('bigBtn').setAttribute('aria-label', 'Record');
@@ -218,12 +359,48 @@
       $('label').disabled = false; $('label').value = '';
       $('clock').textContent = '0:00';
       $('bigBtn').style.setProperty('--lvl', 0);
-      var msg = (r.why ? r.why + ' ' : '') + 'Saved ' + fmtClock(secs) + '. Notes in your email in about ' + etaMinutes(secs) + ' minutes.';
-      if (r.failed) msg += ' (' + r.failed + ' minute' + (r.failed > 1 ? 's' : '') + ' didn’t upload; weak signal.)';
-      if (!go.ok) msg = 'Saved, but couldn’t start the notes (' + go.error + '). They’ll run on their own within 6 hours.';
-      setState(msg, !go.ok);
-      chime(true);
+      setState(msg, bad);
       loadNotes();
+    }
+
+    // ---------- A backup of each piece on the phone ----------
+    // Kept in the browser's own storage until the piece has uploaded, so a
+    // weak signal or a closed tab doesn't lose it.
+    var backupDb = null;
+    function openBackup() {
+      if (!backupDb) backupDb = new Promise(function (ok, no) {
+        var q = indexedDB.open('voice-backup', 1);
+        q.onupgradeneeded = function () { q.result.createObjectStore('pieces'); };
+        q.onsuccess = function () { ok(q.result); };
+        q.onerror = function () { no(q.error); };
+      });
+      return backupDb;
+    }
+    async function backup(mode, fn) {
+      var d = await openBackup();
+      return new Promise(function (ok, no) {
+        var t = d.transaction('pieces', mode), out = fn(t.objectStore('pieces'));
+        t.oncomplete = function () { ok(out && out.result); };
+        t.onerror = function () { no(t.error); };
+      });
+    }
+    function keepPiece(path, blob, mime, id) { return backup('readwrite', function (s) { return s.put({ blob: blob, mime: mime, id: id }, path); }).catch(function () {}); }
+    function dropPiece(path) { return backup('readwrite', function (s) { return s.delete(path); }).catch(function () {}); }
+
+    async function sendLeftovers() {
+      var keys;
+      try { keys = await backup('readonly', function (s) { return s.getAllKeys(); }); } catch (e) { return; }
+      if (!keys || !keys.length) return;
+      var done = {}, sent = 0;
+      for (var i = 0; i < keys.length; i++) {
+        var item = await backup('readonly', function (s) { return s.get(keys[i]); }).catch(function () { return null; });
+        if (!item || !item.blob) { dropPiece(keys[i]); continue; }
+        if (await uploadWithRetry(keys[i], item.blob, item.mime)) { dropPiece(keys[i]); done[item.id] = true; sent++; }
+      }
+      var ids = Object.keys(done);
+      for (var j = 0; j < ids.length; j++)
+        await sb.from('voice_notes').update({ status: 'uploaded', error: null }).eq('id', ids[j]).neq('status', 'done');
+      if (ids.length) { await runWorkflow('voice_notes.yml', {}); toast('Uploaded ' + sent + ' saved piece' + (sent > 1 ? 's' : '') + ' from this phone'); loadNotes(); }
     }
 
     function etaMinutes(secs) { return Math.max(3, Math.round(4 + secs / 60 * 0.4)); }
@@ -250,7 +427,16 @@
     var wake = null;
     async function keepAwake() { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
     function letSleep() { try { if (wake) wake.release(); } catch (e) {} wake = null; }
-    document.addEventListener('visibilitychange', function () { if (rec && document.visibilityState === 'visible') keepAwake(); });
+    document.addEventListener('visibilitychange', function () {
+      if (!rec) return;
+      note(rec, 'page ' + document.visibilityState);
+      if (document.visibilityState === 'visible') {
+        keepAwake();
+        if (rec.waiting) reviveMic(rec);
+        // A piece whose timer was frozen in the background: close it now.
+        else if (rec.mr && rec.mr.state !== 'inactive' && rec.pieceEnds && Date.now() > rec.pieceEnds) try { rec.mr.stop(); } catch (e) {}
+      }
+    });
     window.addEventListener('beforeunload', function (e) { if (rec) { e.preventDefault(); e.returnValue = ''; } });
 
     // ---------- Uploading a file from Voice Memos ----------
@@ -402,6 +588,7 @@
       if (!window.MediaRecorder) setState('This browser can’t record. Use Safari on the iPhone, or upload a file.', true);
       $('app').classList.remove('hidden');
       loadNotes();
+      sendLeftovers();
     });
   </script>
 </body>

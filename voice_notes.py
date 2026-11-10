@@ -6,7 +6,9 @@ The page uploads the audio in one-minute pieces to the private "voice-notes"
 bucket and starts the "Voice notes" action, which runs this:
 
   1. joins the pieces and transcribes them here on GitHub (faster-whisper,
-     free, nothing leaves GitHub but the text),
+     free, nothing leaves GitHub but the text). Since Nov 9 2026 each minute
+     is its own small audio file, and the page saves a log of what the phone
+     did on the note's `debug` column; read that first if a recording fails,
   2. asks the voice-summary edge function to have Claude write a title,
      summary, decisions and to-dos,
   3. emails the notes, with the full transcript attached, to whoever recorded
@@ -99,26 +101,62 @@ def delete_audio(note_id):
 
 # ---------- Audio ----------
 
+def starts_new_file(head):
+    """True when a piece begins with a file header (MP4 "ftyp", WebM/EBML,
+    or Ogg Opus). Since Nov 9 2026 the page records each minute as its own
+    complete file, and restarts the recorder when the phone cuts the mic
+    off. Older recordings were one long stream cut into chunks, where only
+    the first piece has a header."""
+    return head[4:8] == b"ftyp" or head[:4] == b"\x1a\x45\xdf\xa3" or b"OpusHead" in head[:80]
+
+
+def group_pieces(heads):
+    """Splits the pieces (given as their first bytes, in order) into runs
+    that each make one playable file: a run starts at every piece with a
+    header, and pieces without one belong to the run before them. Returns
+    lists of piece indexes."""
+    groups = []
+    for i, head in enumerate(heads):
+        if not groups or starts_new_file(head):
+            groups.append([])
+        groups[-1].append(i)
+    return groups
+
+
 def to_wav(parts, ext, workdir):
-    """Pieces from one phone recording are one stream cut into chunks, so
-    joining the bytes gives a playable file. If that ever fails, decode each
-    piece on its own and join the audio instead."""
-    wav = os.path.join(workdir, "audio.wav")
-    joined = os.path.join(workdir, f"joined.{ext}")
-    for p in parts:
-        download(p, joined)
+    """Downloads the pieces, joins each run of pieces into one file, decodes
+    each run and strings the audio together. A run that won't decode is
+    skipped (and logged) instead of losing the whole recording."""
     ff = ["ffmpeg", "-loglevel", "error", "-y"]
-    if subprocess.run(ff + ["-i", joined, "-ac", "1", "-ar", "16000", wav]).returncode == 0 and os.path.getsize(wav) > 1000:
-        return wav
-    print("  joined file didn't decode; decoding pieces one by one")
+    files = []
+    for i, p in enumerate(parts):
+        src = os.path.join(workdir, f"p{i:04d}.{ext}")
+        download(p, src)
+        files.append(src)
+    heads = []
+    for f in files:
+        with open(f, "rb") as fh:
+            heads.append(fh.read(80))
+    groups = group_pieces(heads)
+    print(f"  {len(parts)} piece(s) in {len(groups)} file(s)")
     listing = os.path.join(workdir, "list.txt")
+    good = 0
     with open(listing, "w") as lf:
-        for i, p in enumerate(parts):
-            src = os.path.join(workdir, f"p{i}.{ext}")
-            download(p, src)
-            out = os.path.join(workdir, f"p{i}.wav")
-            if subprocess.run(ff + ["-i", src, "-ac", "1", "-ar", "16000", out]).returncode == 0:
-                lf.write(f"file '{out}'\n")
+        for g, idx in enumerate(groups):
+            joined = os.path.join(workdir, f"run{g:04d}.{ext}")
+            with open(joined, "wb") as out:
+                for i in idx:
+                    with open(files[i], "rb") as fh:
+                        out.write(fh.read())
+            wav = os.path.join(workdir, f"run{g:04d}.wav")
+            if subprocess.run(ff + ["-i", joined, "-ac", "1", "-ar", "16000", wav]).returncode == 0 and os.path.getsize(wav) > 1000:
+                lf.write(f"file '{wav}'\n")
+                good += 1
+            else:
+                print(f"  pieces {idx[0]}-{idx[-1]} didn't decode; skipping them")
+    if not good:
+        raise RuntimeError("None of the uploaded audio could be played.")
+    wav = os.path.join(workdir, "audio.wav")
     subprocess.run(ff + ["-f", "concat", "-safe", "0", "-i", listing, "-c", "copy", wav], check=True)
     return wav
 
