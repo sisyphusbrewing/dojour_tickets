@@ -119,6 +119,33 @@ def fetch_supabase(endpoint):
         offset += page_size
 
 
+def show_family(title):
+    """The show behind a title, so a renamed edition still finds its contact.
+    "Advice Column!", "Advice Column - Spooky Edition" and "Advice Column (Late Show)"
+    are all "advice column". Same rule as public.show_family in Supabase, plus it
+    drops trailing punctuation like "!" (Sam Schedler's monthly show got no reports
+    in Nov 2026 because the contact was saved as "Advice Column" and the November
+    listing is "Advice Column!")."""
+    t = re.sub(r'\s*(\(|:|\s[-–—|]\s).*$', '', title or '')
+    t = re.sub(r'[\s!?.,*~]+$', '', t)
+    return re.sub(r'\s+', ' ', t).strip().lower()
+
+
+def contact_for(title, agent_records):
+    """The show_agents row for a show title: the exact title if there is one,
+    otherwise the same show under another name (the most recently updated row,
+    so a contact who changed their address on their report page wins)."""
+    title = title.strip()
+    exact = [r for r in agent_records if r["show_title"].strip() == title and r.get("agent_email")]
+    if exact:
+        return exact[0]
+    fam = show_family(title)
+    if not fam:
+        return None
+    same = [r for r in agent_records if r.get("agent_email") and show_family(r["show_title"]) == fam]
+    return max(same, key=lambda r: r.get("updated_at") or "", default=None)
+
+
 def website_showtimes(titles):
     """{title: [show_date, ...]} for every upcoming showtime on the website, so a
     showtime with no sales yet still makes the report (ticket rows only exist once
@@ -131,11 +158,11 @@ def website_showtimes(titles):
     except (Exception, SystemExit) as e:
         print(f"Notice: could not read showtimes from Shopify ({e}); unsold showtimes may be missing.")
         return {}
-    wanted = {t.lower(): t for t in titles}
+    wanted = {show_family(t) for t in titles} - {""}
     found = defaultdict(list)
     for p in products:
-        title = wanted.get(clean_show_title(p["title"]).lower())
-        if not title or skip_reason(p):
+        title = clean_show_title(p["title"])
+        if show_family(title) not in wanted or skip_reason(p):
             continue
         for v in p["variants"]["nodes"]:
             date_str = format_show_date(parse_show_datetime(date_text(v), require_time=True))
@@ -385,12 +412,19 @@ def main():
     if AGENT_TOKEN:
         agent_records = [r for r in agent_records if r.get("token") == AGENT_TOKEN]
         print(f"On-demand report for one agent ({len(agent_records)} record).")
-    token_map = {r["show_title"].strip(): r.get("token") or "" for r in agent_records}
-    agent_map = {r["show_title"].strip(): r["agent_email"].strip() for r in agent_records if r.get("agent_email")}
-    print(f"Loaded {len(agent_map)} agent email assignment(s) from Supabase.")
+    titles = [r["show_title"].strip() for r in agent_records if r.get("agent_email")]
+    print(f"Loaded {len(titles)} agent email assignment(s) from Supabase.")
 
     # 2. Ticket sales per upcoming showtime
-    shows_map = collect_shows(agent_map.keys())
+    shows_map = collect_shows(titles)
+
+    # Each upcoming show's contact, matching renamed editions of the same show.
+    agent_map, token_map = {}, {}
+    for title_str in {t for t, _ in shows_map}:
+        row = contact_for(title_str, agent_records)
+        if row:
+            agent_map[title_str] = row["agent_email"].strip()
+            token_map[title_str] = row.get("token") or ""
 
     # 3. Consolidate by Agent -> Comedian -> Shows
     consolidated = defaultdict(lambda: defaultdict(list))
