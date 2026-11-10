@@ -6,7 +6,9 @@ The page uploads the audio in one-minute pieces to the private "voice-notes"
 bucket and starts the "Voice notes" action, which runs this:
 
   1. joins the pieces and transcribes them here on GitHub (faster-whisper,
-     free, nothing leaves GitHub but the text),
+     free, nothing leaves GitHub but the text). Since Nov 9 2026 each minute
+     is its own small audio file, and the page saves a log of what the phone
+     did on the note's `debug` column; read that first if a recording fails,
   2. asks the voice-summary edge function to have Claude write a title,
      summary, decisions and to-dos,
   3. emails the notes, with the full transcript attached, to whoever recorded
