@@ -18,10 +18,19 @@ Env: DOJOUR_STATE (JSON or a file path) or DOJOUR_TOKEN. SUPABASE_KEY is optiona
   without it the counts come from the public website_hold_counts() feed.
   APPLY=1            actually create holds (default: print the plan only)
   INSTANCE_IDS=a,b   only these Dojour showtimes
+  NOTIFY_TO=email    plan-only runs email this address when holds are needed
+
+Dojour refuses holds made by a script from any machine; it only accepts them
+through the dashboard in Sam's own Chrome. So the daily GitHub run only plans,
+and emails Sam the list when something needs blocking. He then asks Claude in
+the Dojour thread to "top up Dojour", which adds them in his Chrome (Nov 10 2026).
 """
 import os
 import re
+import smtplib
+import ssl
 import sys
+from email.mime.text import MIMEText
 from collections import defaultdict
 
 import requests
@@ -205,6 +214,39 @@ def plan_for(report, title, date_str, web):
     return payload, f"BLOCK {blocked} ({detail}); {counts_line}"
 
 
+NOTIFY_TO = (os.environ.get("NOTIFY_TO") or "").strip()
+
+
+def notice_text(needed):
+    """Plain email body listing the holds Dojour still needs. needed = [(title, date, seats, detail)]."""
+    total = sum(n[2] for n in needed)
+    lines = [f"Dojour needs {total} more seat{'s' if total != 1 else ''} blocked for website sales "
+             f"on {len(needed)} showing{'s' if len(needed) != 1 else ''}:", ""]
+    lines += [f"- {title}, {date}: {seats} ({detail})" for title, date, seats, detail in needed]
+    lines += ["", 'To add them, say "top up Dojour" in the Dojour holds thread while your Mac is on.',
+              "Until then, Dojour can sell these seats a second time.", "", "Sisyphus Box Office"]
+    return "\n".join(lines)
+
+
+def send_notice(needed):
+    host = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
+    user = (os.environ.get("SMTP_USER") or "").strip()
+    password = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
+    sender = (os.environ.get("FROM_EMAIL") or user).strip()
+    if not user or not password:
+        print("No SMTP login; not emailing.")
+        return
+    total = sum(n[2] for n in needed)
+    msg = MIMEText(notice_text(needed), "plain")
+    msg["Subject"] = f"Dojour needs {total} seats blocked ({len(needed)} shows)"
+    msg["From"] = f"Sisyphus Box Office <{sender}>"
+    msg["To"] = NOTIFY_TO
+    with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context(), timeout=30) as server:
+        server.login(user, password)
+        server.sendmail(sender, [NOTIFY_TO], msg.as_string())
+    print(f"Emailed {NOTIFY_TO} about {len(needed)} showings")
+
+
 def main():
     dj = Dojour()
     try:
@@ -213,7 +255,7 @@ def main():
     except Exception as e:
         print("Could not read the Dojour login:", e)
     web_counts = website_counts()
-    made, failures = 0, []
+    made, failures, needed = 0, [], []
     for item in dj.showings():
         inst = str(item.get("id") or item.get("event_instance_id") or "")
         if not inst or (ONLY and inst not in ONLY):
@@ -239,6 +281,9 @@ def main():
                   "complete:", report.get("complete_count"), "active:", report.get("active_count"))
             print("   options:", [(oid(o), o.get("active_count"), o.get("complete_count"), o.get("title", "")[:30], o.get("limit"),
                                   o.get("remaining_count")) for o in report.get("option_set") or []])
+        if payload:
+            seats = sum(int(o.get("count") or 0) for o in payload["option_set"])
+            needed.append((title, date_str, seats, line.split("(", 1)[1].split(")", 1)[0]))
         if not payload or not APPLY:
             continue
         r = dj.manual_create(payload)
@@ -249,6 +294,8 @@ def main():
             failures.append(inst)
             print(f"   FAILED {r.status_code}: {r.text[:500]}")
     print(f"{'Created' if APPLY else 'Would create'} holds; made {made}, failed {len(failures)}")
+    if needed and NOTIFY_TO and not APPLY:
+        send_notice(needed)
     if failures:
         sys.exit(1)
 

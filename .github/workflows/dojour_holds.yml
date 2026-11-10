@@ -2,8 +2,10 @@ name: Block Website Sales on Dojour
 
 on:
   schedule:
-    # 20 minutes after each Sync Ticket Sales run, so Supabase has fresh website sales.
-    - cron: '20 */4 * * *'
+    # Daily 14:20 UTC = 8:20 AM Central, after a Sync Ticket Sales run. Plan only:
+    # Dojour refuses holds made by scripts, so this emails Sam when holds are
+    # needed and Claude adds them in his Chrome (Nov 10 2026).
+    - cron: '20 14 * * *'
   workflow_dispatch:
     inputs:
       apply:
@@ -12,6 +14,10 @@ on:
         default: false
       max_hold:
         description: 'Testing: cap each hold at this many seats (blank = no cap)'
+        required: false
+        type: string
+      notify_to:
+        description: 'Testing: email the plan to this address (blank = no email)'
         required: false
         type: string
       instance_ids:
@@ -49,4 +55,9 @@ jobs:
           APPLY: ${{ inputs.apply && '1' || '' }}
           INSTANCE_IDS: ${{ inputs.instance_ids }}
           MAX_HOLD: ${{ inputs.max_hold }}
+          NOTIFY_TO: ${{ github.event_name == 'schedule' && 'sam@sisyphusbrewing.com' || inputs.notify_to }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: python dojour_holds.py

@@ -41,9 +41,12 @@ and Dojour. Counts always mean Shopify + Dojour together.
 - `daily_sync.yml` runs the sync every 4 hours.
 
 Dojour gotchas, learned the hard way:
-- Dojour **rejects add-reservation calls from cloud / GitHub IPs** but accepts
-  the identical call from Sam's home network. Anything that writes to Dojour
-  has to run on one of Sam's computers. Reading from Dojour works from CI.
+- Dojour **rejects add-reservation calls made by scripts** ("You do not have
+  permission"), from GitHub, the office PC and Sam's Mac alike, but accepts
+  them through the dashboard in Sam's own signed-in Chrome. So
+  `dojour_holds.py` only plans (daily) and emails Sam; holds get added in his
+  Chrome. Don't try to make a script imitate a browser. Reading from Dojour
+  works from anywhere.
 - Sam's own Dojour holds (rows with no buyer email, e.g. "Shopify Sales")
   are not sales. Leave them out of any sales or agent count; agents read every
   number as paid tickets.
@@ -68,7 +71,7 @@ Workflows read secrets from GitHub Actions: `SHOPIFY_STORE`,
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_agent_reports test_dojour_holds`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.
