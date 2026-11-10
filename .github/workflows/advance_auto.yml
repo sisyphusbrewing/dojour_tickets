@@ -1,0 +1,36 @@
+name: Automatic advances
+
+# Makes a comedian advance for every headliner run 3 weeks out that doesn't
+# have one, and sends the "You're booked" welcome to the comic (or asks
+# booking@ for the comic's email). See advance_auto.py. (Sam, Nov 9 2026)
+
+on:
+  schedule:
+    # 14:13 UTC = 8:13 AM Central (CST; 9:13 AM in summer), every morning
+    - cron: '13 14 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: say what it would do, make and send nothing"
+        type: boolean
+        default: true
+
+jobs:
+  advances:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Make and send advances
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        run: python advance_auto.py
