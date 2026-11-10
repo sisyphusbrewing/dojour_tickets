@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tuesday Mic · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <style>
+    /* Tuesday open mic host screen (Sam, Nov 9 2026): see who signed up
+       online (mic/index.html), add the comics booked ahead, then draw the
+       rest at random. Everything saves to Supabase mic_signups. */
+    .who { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .who:first-child { border-top: 0; }
+    .who-name { font-weight: 700; font-size: 17px; color: #fff; }
+    .who-sub { color: var(--gray); font-size: 13px; margin-top: 2px; word-break: break-all; }
+    .who-acts { display: flex; gap: 6px; flex-shrink: 0; }
+    .slot { display: inline-block; min-width: 28px; color: var(--slate-light); font-family: var(--head); font-weight: 700; }
+    .tag1 { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: var(--slate); color: #fff; border-radius: 6px; padding: 3px 6px 1px; margin-left: 6px; vertical-align: 2px; }
+    .drawrow { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .drawrow .field { width: 140px; }
+    .lineup { font-size: 20px; line-height: 1.6; color: #fff; margin: 0; padding-left: 28px; }
+    .muted { color: var(--gray); font-size: 14px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Tuesday Mic</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+          <div class="hdr-title">Tuesday Mic<small id="summary">Sign-ups and the draw</small></div>
+        </a>
+        <div class="hdr-right">
+          <a class="btn btn-sm" href="./" target="_blank" rel="noopener">The form</a>
+          <button class="btn btn-sm" type="button" onclick="signOut()">Sign out</button>
+        </div>
+      </div>
+      <div class="hdr-tools"><div class="chips" id="dates"></div></div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app">
+    <div id="notManager" class="hidden empty"></div>
+
+    <div class="band-row"><span class="band">Lineup</span><span class="band-note" id="lineupNote"></span></div>
+    <div class="card">
+      <ol class="lineup" id="lineup"></ol>
+      <div class="muted" id="lineupEmpty">Nobody on the lineup yet. Add the booked comics, then draw.</div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" type="button" id="copyBtn">Copy lineup</button>
+      </div>
+    </div>
+
+    <div class="band-row"><span class="band">Booked ahead</span></div>
+    <div class="card">
+      <div id="booked"></div>
+      <form id="addForm" class="drawrow" style="margin-top:10px">
+        <div class="field" style="flex:1;min-width:180px"><label for="addName">Add a booked comic</label><input class="input" id="addName" maxlength="80" placeholder="Name"></div>
+        <button class="btn btn-primary" type="submit">Add</button>
+      </form>
+    </div>
+
+    <div class="band-row"><span class="band">The draw</span><span class="band-note" id="hatNote"></span></div>
+    <div class="card">
+      <div class="drawrow">
+        <div class="field"><label for="spots">Open spots</label><input class="input" id="spots" type="number" min="1" max="60" value="10"></div>
+        <button class="btn btn-primary" type="button" id="drawBtn">Draw names</button>
+        <button class="btn" type="button" id="undoBtn">Undo the draw</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0">Picks at random from everyone still in the hat. Drawn comics go on the lineup after the booked ones.</p>
+    </div>
+
+    <div class="band-row"><span class="band">Signed up</span></div>
+    <div class="card"><div id="hat"></div></div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var rows = [], micDate = null, dates = [];
+    function esc(s) { return escapeHtml(s == null ? '' : String(s)); }
+    function niceDate(iso, long) {
+      var p = iso.split('-').map(Number);
+      return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', long ? { weekday: 'long', month: 'long', day: 'numeric' } : { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+    function bySlot(a, b) { return (a.slot || 999) - (b.slot || 999) || a.created_at.localeCompare(b.created_at); }
+
+    async function loadDates() {
+      var next = (await sb.rpc('mic_next_date')).data;
+      var res = await sb.from('mic_signups').select('mic_date').order('mic_date', { ascending: false }).limit(500);
+      var set = {}; (res.data || []).forEach(function (r) { set[r.mic_date] = 1; }); if (next) set[next] = 1;
+      dates = Object.keys(set).sort().reverse().slice(0, 8);
+      if (!micDate) micDate = next || dates[0];
+      $('dates').innerHTML = dates.map(function (d) { return '<button class="chip' + (d === micDate ? ' on' : '') + '" type="button" data-d="' + d + '">' + niceDate(d) + '</button>'; }).join('');
+    }
+    $('dates').addEventListener('click', function (e) { var b = e.target.closest('[data-d]'); if (!b) return; micDate = b.dataset.d; loadDates(); load(); });
+
+    async function load() {
+      var res = await sb.from('mic_signups').select('*').eq('mic_date', micDate).neq('status', 'cancelled').order('created_at');
+      if (res.error) { toast(res.error.message, true); return; }
+      rows = res.data || []; render();
+    }
+
+    function person(r, acts) {
+      var sub = [r.email, r.phone].filter(Boolean).join(' · ');
+      return '<div class="who"><div><div class="who-name">' + (r.slot && (r.status === 'booked' || r.status === 'drawn') ? '<span class="slot">' + r.slot + '.</span>' : '') + esc(r.name) +
+        (r.first_time ? '<span class="tag1">First time</span>' : '') + '</div>' + (sub ? '<div class="who-sub">' + esc(sub) + '</div>' : '') + '</div>' +
+        '<div class="who-acts">' + acts + '</div></div>';
+    }
+    function btn(label, fn, id, extra) { return '<button class="btn btn-sm' + (extra || '') + '" type="button" onclick="' + fn + '(\'' + id + '\')">' + label + '</button>'; }
+
+    function render() {
+      var booked = rows.filter(function (r) { return r.status === 'booked'; }).sort(bySlot);
+      var drawn = rows.filter(function (r) { return r.status === 'drawn'; }).sort(bySlot);
+      var hat = rows.filter(function (r) { return r.status === 'hat' || r.status === 'not_drawn'; });
+      var line = booked.concat(drawn);
+      $('summary').textContent = niceDate(micDate, true) + ' · 7 PM';
+      $('lineup').innerHTML = line.map(function (r) { return '<li>' + esc(r.name) + (r.status === 'drawn' ? ' <span class="muted">(drawn)</span>' : '') + '</li>'; }).join('');
+      $('lineupEmpty').classList.toggle('hidden', line.length > 0);
+      $('lineupNote').textContent = line.length ? line.length + ' comics' : '';
+      $('booked').innerHTML = booked.length ? booked.map(function (r) { return person(r, btn('Remove', 'unbook', r.id, ' btn-danger')); }).join('') : '<div class="muted">No one booked ahead yet.</div>';
+      var waiting = hat.filter(function (r) { return r.status === 'hat'; }).length;
+      $('hatNote').textContent = waiting + ' in the hat';
+      $('hat').innerHTML = rows.length ? rows.filter(function (r) { return r.status !== 'booked'; }).map(function (r) {
+        var label = { hat: 'In the hat', drawn: 'Drawn', not_drawn: 'Not drawn' }[r.status];
+        var acts = '<span class="muted" style="align-self:center">' + label + '</span>' + (r.status !== 'drawn' ? btn('Book', 'book', r.id) : '') + btn('✕', 'cancel', r.id, ' btn-danger');
+        return person(r, acts);
+      }).join('') : '<div class="muted">No sign-ups for this Tuesday yet.</div>';
+    }
+
+    async function save(id, patch) {
+      var res = await sb.from('mic_signups').update(patch).eq('id', id);
+      if (res.error) { toast(res.error.message, true); return false; }
+      return true;
+    }
+    function nextSlot(status) { return rows.filter(function (r) { return r.status === status; }).length + 1; }
+    window.book = async function (id) { if (await save(id, { status: 'booked', slot: nextSlot('booked') })) { await renumber(); load(); } };
+    window.unbook = async function (id) { var r = rows.find(function (x) { return x.id === id; }); if (!r) return;
+      if (!r.email) { if (!confirm('Remove ' + r.name + ' from the lineup?')) return; await save(id, { status: 'cancelled', slot: null }); }
+      else await save(id, { status: 'hat', slot: null });
+      await renumber(); load(); };
+    window.cancel = async function (id) { var r = rows.find(function (x) { return x.id === id; }); if (r && confirm('Take ' + r.name + ' off the list?')) { await save(id, { status: 'cancelled', slot: null }); await renumber(); load(); } };
+
+    // Booked comics go first, then drawn ones, numbered 1, 2, 3...
+    async function renumber() {
+      var res = await sb.from('mic_signups').select('*').eq('mic_date', micDate).in('status', ['booked', 'drawn']).order('created_at');
+      var list = res.data || [];
+      var booked = list.filter(function (r) { return r.status === 'booked'; }).sort(bySlot);
+      var drawn = list.filter(function (r) { return r.status === 'drawn'; }).sort(bySlot);
+      var all = booked.concat(drawn);
+      for (var i = 0; i < all.length; i++) if (all[i].slot !== i + 1) await save(all[i].id, { slot: i + 1 });
+    }
+
+    $('addForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var name = $('addName').value.trim(); if (!name) return;
+      var res = await sb.from('mic_signups').insert({ mic_date: micDate, name: name, status: 'booked', slot: nextSlot('booked') });
+      if (res.error) { toast(res.error.message, true); return; }
+      $('addName').value = ''; await renumber(); load(); toast(name + ' is booked');
+    });
+
+    function shuffle(a) {
+      for (var i = a.length - 1; i > 0; i--) {
+        var r = new Uint32Array(1); crypto.getRandomValues(r);
+        var j = r[0] % (i + 1), t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+    $('drawBtn').addEventListener('click', async function () {
+      var n = parseInt($('spots').value, 10) || 0;
+      var pool = rows.filter(function (r) { return r.status === 'hat'; });
+      if (!pool.length) { toast('Nobody left in the hat.', true); return; }
+      if (n < 1) { toast('How many open spots?', true); return; }
+      var picked = shuffle(pool.slice()).slice(0, n);
+      var start = nextSlot('booked') + rows.filter(function (r) { return r.status === 'drawn'; }).length;
+      this.disabled = true;
+      for (var i = 0; i < picked.length; i++) await save(picked[i].id, { status: 'drawn', slot: start + i });
+      var pickedIds = picked.map(function (r) { return r.id; });
+      for (var k = 0; k < pool.length; k++) if (pickedIds.indexOf(pool[k].id) < 0) await save(pool[k].id, { status: 'not_drawn', slot: null });
+      this.disabled = false; await load(); toast(picked.length + ' names drawn');
+    });
+    $('undoBtn').addEventListener('click', async function () {
+      var redo = rows.filter(function (r) { return r.status === 'drawn' || r.status === 'not_drawn'; });
+      if (!redo.length || !confirm('Put everyone back in the hat?')) return;
+      for (var i = 0; i < redo.length; i++) await save(redo[i].id, { status: 'hat', slot: null });
+      load();
+    });
+    $('copyBtn').addEventListener('click', function () {
+      var text = 'Tuesday Mic, ' + niceDate(micDate, true) + '\n' + Array.prototype.map.call($('lineup').children, function (li, i) { return (i + 1) + '. ' + li.textContent.replace(' (drawn)', ''); }).join('\n');
+      navigator.clipboard.writeText(text).then(function () { toast('Lineup copied'); }, function () { toast('Could not copy', true); });
+    });
+
+    setupSignIn(async function (role) {
+      if (!roleAtLeast(role, 'staff')) { showNoAccess('staff', ['app']); $('notManager').classList.remove('hidden'); document.querySelector('main').classList.remove('hidden'); return; }
+      await loadDates(); load();
+    });
+  </script>
+</body>
+</html>
