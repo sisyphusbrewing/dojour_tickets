@@ -803,6 +803,34 @@ def sync_to_supabase(tickets: list):
     print(f"Successfully upserted {len(tickets)} records into Supabase.")
 
 
+def shows_to_purge(existing_rows: list, active_upcoming_tickets: list, sources_ok: bool) -> set:
+    """Which (show_date, show_title) pairs to delete from the door database.
+
+    A show goes once its date has passed. Before that, a show is also dropped when
+    neither Shopify nor Dojour lists it any more (a cancelled or renamed show).
+
+    Shows with Dojour buyers are never dropped that way (Sam, Nov 10 2026): Sisyphus
+    is winding Dojour down, and if Dojour ever stops listing an event, the people who
+    already bought there must still be on the door list. Their rows stay until the
+    show has happened. Comps, added from the door app, are kept the same way.
+    """
+    active_show_keys = set(f"{t['show_date']} • {t['show_title']}" for t in active_upcoming_tickets)
+    for r in existing_rows:
+        uid = str(r.get("unique_id") or "")
+        if uid.startswith("comp_") or uid.startswith("dj_"):
+            active_show_keys.add(f"{r.get('show_date') or ''} • {r.get('show_title') or ''}")
+    remove = set()
+    for r in existing_rows:
+        s_date = r.get("show_date") or ""
+        s_title = r.get("show_title") or ""
+        if sources_ok and f"{s_date} • {s_title}" not in active_show_keys:
+            remove.add((s_date, s_title))
+            continue
+        if is_past_event(parse_show_datetime(s_date)):
+            remove.add((s_date, s_title))
+    return remove
+
+
 def cleanup_past_shows_from_supabase(active_upcoming_tickets: list, sources_ok: bool = True):
     """
     Purges any shows from Supabase that are not part of the active upcoming roster,
@@ -838,28 +866,7 @@ def cleanup_past_shows_from_supabase(active_upcoming_tickets: list, sources_ok: 
                 break
             offset += page_size
 
-        active_show_keys = set(f"{t['show_date']} • {t['show_title']}" for t in active_upcoming_tickets)
-        # Comps are added from the door app, not Shopify/Dojour. A show that only has
-        # comps so far must not be treated as stale. (Past comps still get purged by date.)
-        for r in existing_rows:
-            if str(r.get("unique_id") or "").startswith("comp_"):
-                active_show_keys.add(f"{r.get('show_date') or ''} • {r.get('show_title') or ''}")
-        shows_to_remove = set()
-
-        for r in existing_rows:
-            s_date = r.get("show_date") or ""
-            s_title = r.get("show_title") or ""
-            key = f"{s_date} • {s_title}"
-
-            # 1. Not in active upcoming batch (only trusted when both sources loaded)
-            if sources_ok and key not in active_show_keys:
-                shows_to_remove.add((s_date, s_title))
-                continue
-
-            # 2. Date parses to past
-            parsed_dt = parse_show_datetime(s_date)
-            if is_past_event(parsed_dt):
-                shows_to_remove.add((s_date, s_title))
+        shows_to_remove = shows_to_purge(existing_rows, active_upcoming_tickets, sources_ok)
 
         if not shows_to_remove:
             print("Supabase door database is clean (no past shows detected).")

@@ -17,4 +17,4 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install requests
-      - run: python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_agent_reports test_dojour_holds
+      - run: python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds
