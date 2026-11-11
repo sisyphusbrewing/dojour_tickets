@@ -50,7 +50,11 @@ MA_PER_LED = 0.98  # full white; 4 A over 4096 LEDs
 
 if SQUARE:
     WIDTH = HEIGHT = 128
-    matrix = Matrix(width=128, height=128, tile_rows=2, serpentine=SERPENTINE, rotation=ROTATION, bit_depth=4)
+    # Colour depth 3, not 4 (Sam, Nov 11 2026): four panels in one chain at depth 4
+    # refresh slowly enough that Sam saw a shimmer, worst while the board was busy on
+    # Wi-Fi fetching the next picture. Depth 3 refreshes about twice as fast; on these
+    # small pictures the colour difference doesn't show.
+    matrix = Matrix(width=128, height=128, tile_rows=2, serpentine=SERPENTINE, rotation=ROTATION, bit_depth=3)
     ART = 64  # pictures fill a 64x64 square at the top; 32x32 ones are drawn twice the size
     ART_X, ART_Y = 32, 1
 else:
@@ -166,11 +170,32 @@ def tick_scroll():
     t.x = x
 
 
+def hold_screen():
+    """Stop showing changes while a new picture or caption is drawn. Without this
+    the panels showed the new picture half drawn in the old picture's colours for a
+    moment, which Sam saw as a flash every time the picture changed (Nov 11 2026)."""
+    display.auto_refresh = False
+
+
+def show_screen():
+    """Show everything drawn since hold_screen() in one go."""
+    display.refresh(minimum_frames_per_second=0)
+    display.auto_refresh = True  # scrolling captions need it back on
+
+
 def lum(c):
     return ((c >> 16) + ((c >> 8) & 0xFF) + (c & 0xFF)) / 765
 
 
 def show_art(a, info=""):
+    hold_screen()
+    try:
+        draw_art(a, info)
+    finally:
+        show_screen()
+
+
+def draw_art(a, info):
     pal = [int(c, 16) for c in a["palette"][:15]]
     rows = a["rows"]
     n = len(rows) or 1
@@ -200,6 +225,14 @@ def show_art(a, info=""):
 
 
 def show_words(text, small=""):
+    hold_screen()
+    try:
+        draw_words(text, small)
+    finally:
+        show_screen()
+
+
+def draw_words(text, small):
     art.hidden = True
     if not SQUARE:
         set_caption(text, full_width=True)
