@@ -4,8 +4,9 @@
 # Either a 64x32 panel (two side by side with SIGN_WIDTH = 128), or the front
 # bar's 15" square: four 64x64 panels, 128x128, with SIGN_HEIGHT = 128.
 #
-# CircuitPython 10. Asks Supabase (rpc sign_next) for the next picture every
-# SHOW seconds. settings.toml holds the Wi-Fi and the shape.
+# CircuitPython 10. Every 5 minutes it switches the Wi-Fi on, asks Supabase
+# (rpc sign_next) for the next batch of pictures, then switches the Wi-Fi off and
+# shows one every SHOW seconds. settings.toml holds the Wi-Fi and the shape.
 
 import os
 import time
@@ -32,7 +33,12 @@ CODES = ".123456789ABCDEF"
 # New versions load by themselves (Sam: remote updates by default): every few minutes
 # the sign compares its code.py with the site and restarts so boot.py swaps it in.
 SITE = "https://staff.sisyphusbrewing.com/sign/led/"
-UPDATE_EVERY = 300
+# Wi-Fi traffic makes the square sign's panels flicker (Sam, Nov 11 2026), so the Wi-Fi
+# stays switched off except for a few seconds every BATCH_EVERY seconds, when the sign
+# downloads the next batch of pictures, the beer prices and any new code in one go.
+# A picture a customer suggests therefore reaches the sign within about 5 minutes.
+BATCH_EVERY = 300
+BATCH = BATCH_EVERY // SHOW  # enough pictures to fill the gap
 
 # Two shapes. The default is one 64x32 panel, or two side by side with
 # SIGN_WIDTH = 128 in settings.toml. SIGN_HEIGHT = 128 in settings.toml means
@@ -50,11 +56,11 @@ MA_PER_LED = 0.98  # full white; 4 A over 4096 LEDs
 
 if SQUARE:
     WIDTH = HEIGHT = 128
-    # Colour depth 3, not 4 (Sam, Nov 11 2026): four panels in one chain at depth 4
-    # refresh slowly enough that Sam saw a shimmer, worst while the board was busy on
-    # Wi-Fi fetching the next picture. Depth 3 refreshes about twice as fast; on these
-    # small pictures the colour difference doesn't show.
-    matrix = Matrix(width=128, height=128, tile_rows=2, serpentine=SERPENTINE, rotation=ROTATION, bit_depth=3)
+    # Colour depth 2 (Sam, Nov 11 2026): with four panels in one chain, depth 3 and up
+    # refresh slowly enough that the panels visibly flash, even on a still picture with
+    # the Wi-Fi off (tested live with Sam: depth 1 and 2 steady, 3 flashes, 6 "going
+    # nuts"). Depth 2 still gives 64 colours, plenty for the pixel-art pictures.
+    matrix = Matrix(width=128, height=128, tile_rows=2, serpentine=SERPENTINE, rotation=ROTATION, bit_depth=2)
     ART = 64  # pictures fill a 64x64 square at the top; 32x32 ones are drawn twice the size
     ART_X, ART_Y = 32, 1
 else:
@@ -269,15 +275,39 @@ def connect():
         print("wifi", e)
 
 
-pool = adafruit_connection_manager.get_radio_socketpool(wifi.radio)
-ssl = adafruit_connection_manager.get_radio_ssl_context(wifi.radio)
 # Same as the stage clock: the board's built-in roots miss Supabase's (GTS Root R4).
 try:
     with open("roots.pem") as f:
-        ssl.load_verify_locations(cadata=f.read())
+        ROOTS = f.read()
 except Exception as e:
     print("roots", e)
-http = adafruit_requests.Session(pool, ssl)
+    ROOTS = None
+http = None
+
+
+def wifi_on():
+    """Switch the radio on, join the Wi-Fi and get a fresh web session. True if online."""
+    global http
+    wifi.radio.enabled = True
+    if not wifi.radio.connected:
+        connect()
+    if not wifi.radio.connected:
+        return False
+    pool = adafruit_connection_manager.get_radio_socketpool(wifi.radio)
+    ssl = adafruit_connection_manager.get_radio_ssl_context(wifi.radio)
+    if ROOTS:
+        ssl.load_verify_locations(cadata=ROOTS)
+    http = adafruit_requests.Session(pool, ssl)
+    return True
+
+
+def wifi_off():
+    """Close any open connections and switch the radio off so the panels stay steady."""
+    try:
+        adafruit_connection_manager.connection_manager_close_all(release_references=True)
+    except Exception as e:
+        print("close", e)
+    wifi.radio.enabled = False
 
 
 def checksum(data):
@@ -332,12 +362,10 @@ def abv_of(desc):
 
 
 menu = {}  # beer key -> "6.3%  $8", from GoTab
-menu_at = -1e9
 
 
 def load_menu():
-    global menu, menu_at
-    menu_at = time.monotonic()
+    global menu
     r = http.get(MENU)
     data = r.json()
     r.close()
@@ -366,49 +394,71 @@ def info_for(a):
     return ""
 
 
+def fetch_batch():
+    """Wi-Fi on, check for new code, fetch prices and the next BATCH pictures, Wi-Fi off."""
+    got = []
+    if not wifi_on():
+        wifi_off()
+        return got
+    try:
+        if newer_on_site():
+            show_words("UPDATING...")
+            time.sleep(1)
+            microcontroller.reset()  # boot.py downloads the new code
+    except Exception as e:
+        print("update check", e)
+    if SQUARE:
+        try:
+            load_menu()
+        except Exception as e:  # no prices this time, still show the pictures
+            print("menu", e)
+    try:
+        for _ in range(BATCH):
+            a = next_art()
+            if not a:
+                break
+            if got and a["id"] == got[0]["id"]:
+                break  # fewer approved pictures than a batch: we've been round them all
+            got.append(a)
+    except Exception as e:  # keep what we have and try again next time
+        print("sign", e)
+    wifi_off()
+    return got
+
+
+def show_plug():
+    if SQUARE:
+        show_words("DRAW ON THIS SIGN", "SCAN THE QR AT THE BAR")
+    else:
+        show_words(PLUG)
+
+
 if SQUARE:
     quadrant_test()
 show_words("SISYPHUS")
 turn = 0
 next_at = 0.0
-last_update_check = time.monotonic()
+next_batch = 0.0
+pictures = []  # this batch, shown in order
+shown = 0
 while True:
     now = time.monotonic()
-    if wifi.radio.connected and now - last_update_check > UPDATE_EVERY:
-        last_update_check = now
-        try:
-            if newer_on_site():
-                show_words("UPDATING...")
-                time.sleep(1)
-                microcontroller.reset()  # boot.py downloads the new code
-        except Exception as e:
-            print("update check", e)
+    if now >= next_batch:
+        fresh = fetch_batch()
+        if fresh:
+            pictures, shown = fresh, 0
+            next_batch = time.monotonic() + BATCH_EVERY
+        else:  # no Wi-Fi or nothing came back: keep the old pictures, try again soon
+            next_batch = time.monotonic() + 60
+        now = time.monotonic()
     if now >= next_at:
         next_at = now + SHOW
         turn += 1
-        if not wifi.radio.connected:
-            connect()
-            next_at = time.monotonic() + 5
-        elif turn % PLUG_EVERY == 0:
-            if SQUARE:
-                show_words("DRAW ON THIS SIGN", "SCAN THE QR AT THE BAR")
-            else:
-                show_words(PLUG)
+        if turn % PLUG_EVERY == 0 or not pictures:
+            show_plug()
         else:
-            try:
-                if SQUARE and now - menu_at > 600:
-                    load_menu()
-            except Exception as e:  # no prices this turn, still show the picture
-                print("menu", e)
-            try:
-                a = next_art()
-                if a:
-                    show_art(a, info_for(a))
-                elif SQUARE:
-                    show_words("DRAW ON THIS SIGN", "SCAN THE QR AT THE BAR")
-                else:
-                    show_words(PLUG)  # nothing approved yet
-            except Exception as e:  # keep the last picture up and try again next turn
-                print("sign", e)
+            a = pictures[shown % len(pictures)]
+            shown += 1
+            show_art(a, info_for(a))
     tick_scroll()
     time.sleep(0.03)
