@@ -20,7 +20,10 @@ the new version and exits; the system service starts it again straight away.
 Settings live in /etc/sisyphus-sign.env (see install.sh):
   SIGN_WIRING  "regular" when the panel cable is wired straight to the Pi's
                pins (default), "adafruit-hat" with Adafruit's Matrix Bonnet/HAT.
-  SIGN_SLOWDOWN  how much to slow the Pi's pins for the panels (Pi 4: 4).
+  SIGN_SLOWDOWN  how much to slow the Pi's pins for the panels (left out:
+               2 on a Pi 3, 4 on a Pi 4).
+  SIGN_PWM_BITS  colour depth, 1-11 (default 8). Lower refreshes faster.
+  SIGN_SHOW_REFRESH  set to 1 to print the refresh rate, for tuning.
   SIGN_PREVIEW   set to a file name to draw one screen to a PNG and stop
                (for checking the layout on a computer without panels).
 """
@@ -253,6 +256,14 @@ def newer_on_site():
 
 
 # ---- the panels ----
+def pi_model():
+    try:
+        with open("/proc/device-tree/model") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
 def open_panels():
     from rgbmatrix import RGBMatrix, RGBMatrixOptions  # only on the Pi
 
@@ -261,13 +272,19 @@ def open_panels():
     o.cols = 64
     o.chain_length = 4
     o.parallel = 1
-    # The chain snakes: top row left to right... the U-mapper folds four
-    # chained panels into a 2x2 square with the bottom row mounted upside
-    # down, the same cabling as the Matrix Portal version.
+    # Seen from the front the Pi is on the top right panel; the cable chain runs
+    # to the top left, down to the bottom left, then to the bottom right, with
+    # the bottom row mounted upside down. That is the library's "U-mapper"
+    # layout, and the same cabling the Matrix Portal version used.
     o.pixel_mapper_config = "U-mapper"
     o.hardware_mapping = os.getenv("SIGN_WIRING") or "regular"
-    o.gpio_slowdown = int(os.getenv("SIGN_SLOWDOWN") or 4)
-    o.pwm_bits = 11
+    # Faster Pis have to be slowed down or the panels show garbage.
+    o.gpio_slowdown = int(os.getenv("SIGN_SLOWDOWN") or (4 if "Pi 4" in pi_model() else 2))
+    # 8 bits a colour is plenty for pixel art and refreshes several times faster
+    # than the library's default of 11 (the flashing on the old board was a
+    # refresh too slow for four panels; Sam, Nov 11 2026).
+    o.pwm_bits = int(os.getenv("SIGN_PWM_BITS") or 8)
+    o.show_refresh_rate = bool(os.getenv("SIGN_SHOW_REFRESH"))
     o.brightness = 100
     o.drop_privileges = False  # it needs to rewrite its own file to update
     return RGBMatrix(options=o)

@@ -65,7 +65,7 @@ drawing knock off for an instant, and the longer the chain the worse it gets
 (one panel was clean, the same panel running the four-panel program flashed).
 `code.py` now runs the square at colour depth 2 with the Wi-Fi off between
 5-minute picture batches, which helps but doesn't cure it. Sam chose to move
-the square to a Raspberry Pi (Pi 4 recommended) with the rpi-rgb-led-matrix
+the square to a Raspberry Pi (his spare Pi 3B+) with the rpi-rgb-led-matrix
 library, the usual way to run big LED signs.
 
 `sign/pi/` holds the Pi version: `sign.py` shows the same pictures and layout,
@@ -79,4 +79,8 @@ Wiring: either Adafruit's RGB Matrix Bonnet/HAT (`SIGN_WIRING=adafruit-hat`;
 64x64 panels need its address E jumper soldered to 8) or the panel cable wired
 straight to the Pi's pins (`regular`): panel R1 to Pi pin 23, G1 13, B1 26,
 R2 24, G2 21, B2 19, A 15, B 16, C 18, D 22, E 10, CLK 11, LAT 7, OE 12, GND 6.
-The panels keep their own 5V supply; the Pi has its own USB-C power.
+The panels keep their own 5V supply; the Pi has its own USB power. Seen from the
+front the Pi goes on the top right panel, the same place the Matrix Portal was
+(the library's "U-mapper" layout). Wired straight to the pins there are no level
+shifters, which the library says works most of the time; if the picture shows
+stray dots or static, keep the wires short or use the Bonnet.
