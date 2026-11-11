@@ -36,7 +36,8 @@ panel's OUTPUT ribbon goes to the next panel's INPUT. At power-up the sign shows
 1 2 / 3 4 in the four panels for a few seconds; if they're in the wrong places,
 `SERPENTINE` and `ROTATION` at the top of `code.py` fix it, and the sign picks
 up the change by itself. Adafruit's 64x64 panels use address pin E on 8, which
-is the Matrix Portal S3's default, so there's nothing to solder.
+is the Matrix Portal S3's default (a factory trace, checked on Sam's board Nov 11),
+so there's nothing to solder.
 
 Power: one 5V 10A supply through a 2.1mm jack-to-screw-terminal adapter, all
 four panel power leads on its + and - terminals; the Matrix Portal runs off its
@@ -55,3 +56,27 @@ by side, add `SIGN_WIDTH = 128` to `settings.toml`.
 at every power-up or RESET, like the stage clock. It also checks the site every 5 minutes and restarts itself
 when there's a new version, so you never have to press RESET. Hold **DOWN** while pressing
 **RESET** to copy files over USB.
+
+## Moving the square to a Raspberry Pi (Nov 11 2026)
+
+Live tests with Sam showed the Matrix Portal S3 can't drive four 64x64 panels
+without visible flashing: its panel driver refreshes on a timer that Wi-Fi and
+drawing knock off for an instant, and the longer the chain the worse it gets
+(one panel was clean, the same panel running the four-panel program flashed).
+`code.py` now runs the square at colour depth 2 with the Wi-Fi off between
+5-minute picture batches, which helps but doesn't cure it. Sam chose to move
+the square to a Raspberry Pi (Pi 4 recommended) with the rpi-rgb-led-matrix
+library, the usual way to run big LED signs.
+
+`sign/pi/` holds the Pi version: `sign.py` shows the same pictures and layout,
+draws each screen off-screen and swaps it in whole, and updates itself from
+https://staff.sisyphusbrewing.com/sign/pi/sign.py every 5 minutes. On a fresh
+Raspberry Pi OS Lite, `install.sh` sets everything up as a service that starts
+at power-up. `SIGN_PREVIEW=out.png python3 sign/pi/sign.py` draws one screen to
+a PNG on any computer, to check the layout.
+
+Wiring: either Adafruit's RGB Matrix Bonnet/HAT (`SIGN_WIRING=adafruit-hat`;
+64x64 panels need its address E jumper soldered to 8) or the panel cable wired
+straight to the Pi's pins (`regular`): panel R1 to Pi pin 23, G1 13, B1 26,
+R2 24, G2 21, B2 19, A 15, B 16, C 18, D 22, E 10, CLK 11, LAT 7, OE 12, GND 6.
+The panels keep their own 5V supply; the Pi has its own USB-C power.
