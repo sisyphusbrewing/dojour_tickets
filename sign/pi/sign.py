@@ -587,6 +587,30 @@ def art_sparkle(d, t, name):  # Mr. Sparkle's Lager: a winking box of soap flake
         d.px(27, 5, "#fff3a0")
 
 
+def art_gobstopper(d, t, name):  # Neverlasting Gobstopper: a candy-factory jawbreaker
+    # Sam, Nov 12 2026: Wonka-themed. A giant jawbreaker in a purple top hat,
+    # its layers changing color as it goes, with gold sparkles (our own drawing).
+    layers = ("#e0306a", "#ff8a3d", "#ffd94a", "#5ad06a", "#3aa0ff", "#a050e0")
+    shift = int(t * 1.5)
+    for r in range(11, 0, -2):  # rings from the outside in, rotating colors
+        d.disc(16, 20, r, layers[(r // 2 + shift) % len(layers)])
+    d.disc(12, 16, 2, "#fff4f8")  # shine
+    d.px(11, 15, "#ffffff")
+    d.rect(8, 8, 16, 2, "#4a1a6a")  # the hat: brim
+    d.rect(11, 0, 10, 8, "#6a2a9a")  # crown
+    d.rect(11, 5, 10, 2, "#e0b030")  # gold band
+    d.px(10, 9, "#8a4aba")
+    for k in range(6):  # gold sparkles popping in and out
+        ph = (t * 1.3 + rnd(k) * 3) % 3
+        if ph < 0.9:
+            sx, sy = 2 + math.floor(rnd(k + 3) * 28), 6 + math.floor(rnd(k + 8) * 24)
+            if (sx - 16) ** 2 + (sy - 20) ** 2 > 140:
+                d.px(sx, sy, "#ffe680")
+                if ph > 0.3 and ph < 0.6:
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        d.px(sx + dx, sy + dy, "#c89a20")
+
+
 def art_slushie(d, t, name):  # the slushies: a swirl in a cup
     colada = "colada" in name.lower()
     a, b = ("#f6f1df", "#f5d33a") if colada else ("#7ccf5a", "#b8ec8e")
@@ -618,7 +642,7 @@ def art_glass(d, t, name):  # anything new: a pint in a color from its name
 
 
 CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
-    (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
+    (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"gobstop|wonka", art_gobstopper), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
     (r"comet", art_comet), (r"scoop", art_scoop), (r"nitro|stout|bobby", art_nitro),
     (r"peanut|jackpot", art_jackpot), (r"colada|margarita|slush", art_slushie),
@@ -699,7 +723,8 @@ def lum(c):
 
 
 def art_screen(a):
-    """A guest's picture (from sign_next): big at the top, caption under it."""
+    """A guest's picture (from sign_next): big at the top, caption under it,
+    and "BY <their name>" if they gave one."""
     s = Screen()
     pal = []
     for c in a.get("palette", [])[:15]:
@@ -727,7 +752,9 @@ def art_screen(a):
             i = idx[y][x]
             if i:
                 px[ART_X + x, ART_Y + y] = pal[i - 1]
-    caption_block(s, plain(a.get("caption") or ""))
+    # who drew it, from the name box on /sign/ (Sam, Nov 12 2026)
+    who = " ".join(plain(a.get("from_name") or "").split())
+    caption_block(s, plain(a.get("caption") or ""), ("BY " + who)[:21] if who else "")
     return s
 
 
