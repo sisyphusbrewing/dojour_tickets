@@ -278,12 +278,15 @@ def open_panels():
     # to the top left, down to the bottom left, then to the bottom right, with
     # the bottom row mounted upside down. That is the library's "U-mapper"
     # layout, and the same cabling the Matrix Portal version used.
-    o.pixel_mapper_config = "U-mapper"
     # If the picture comes out upside down or sideways, turn it here rather than
     # moving cables (SIGN_ROTATE=180 in /etc/sisyphus-sign.env; Sam, Nov 12 2026).
+    # Built as one string and set once: the library hands the setting back as
+    # bytes, so adding to it afterwards crashes.
+    mapper = "U-mapper"
     turn = int(os.getenv("SIGN_ROTATE") or 0) % 360
     if turn:
-        o.pixel_mapper_config += f";Rotate:{turn}"
+        mapper += f";Rotate:{turn}"
+    o.pixel_mapper_config = mapper
     o.hardware_mapping = os.getenv("SIGN_WIRING") or "regular"
     # Faster Pis have to be slowed down or the panels show garbage.
     o.gpio_slowdown = int(os.getenv("SIGN_SLOWDOWN") or (4 if "Pi 4" in pi_model() else 2))
