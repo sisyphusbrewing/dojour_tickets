@@ -260,12 +260,22 @@ def show_mute_keys(sources):
             for col, (name, s) in enumerate(sources)}
 
 
+# Portable deck battery (Sam, Nov 11 2026): the Pi's UPS HAT sends its charge % to custom
+# variable deck_battery every minute (av/pi-satellite-setup.sh). No key was free, so the
+# NEXT PAGE key on every page shows it, and turns red at 20% or less. 0 means no reading yet
+# (Pi just booted, or on wall power without the HAT), so it stays its normal colour.
+BATTERY_LOW = "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20"
+
+
 def page_key(this_page, next_page, number, color):
     """Top-left key on every page: press for the next page (Sam: "it should always just
-    say next page"). The page colour tells you which page you're on."""
+    say next page"). The page colour tells you which page you're on. Bottom line is the
+    portable deck's battery."""
     return button(
-        "NEXT\\nPAGE >",
+        "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
         press=[action(INTERNAL, "set_page", surfaceId="self", page=number)],
+        feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
+                            expression=BATTERY_LOW)],
         bgcolor=color,
         size="14",
     )
@@ -376,6 +386,7 @@ CUSTOM_VARIABLES = {
     "house_bar": "House lights Bar level %, written by the house-lights service",
     "alarm_state": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
     "stage_look": "Stage lights look, written by the stage-lights service (wash, show, warm, blue, ... off)",
+    "deck_battery": "Portable deck battery %, written every minute by the Pi (av/pi-satellite-setup.sh)",
 }
 
 

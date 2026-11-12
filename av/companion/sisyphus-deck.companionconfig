@@ -14,7 +14,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -24,7 +24,25 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0002",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
@@ -75,7 +93,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0004",
+                "id": "f0005",
                 "connectionId": "obs",
                 "definitionId": "recording",
                 "options": {},
@@ -88,7 +106,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0005",
+                "id": "f0006",
                 "connectionId": "obs",
                 "definitionId": "recordingPaused",
                 "options": {},
@@ -106,7 +124,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0002",
+                      "id": "a0003",
                       "connectionId": "obs",
                       "definitionId": "recording",
                       "options": {
@@ -119,7 +137,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0003",
+                      "id": "a0004",
                       "connectionId": "http",
                       "definitionId": "put",
                       "options": {
@@ -159,7 +177,7 @@
                   "3000": [
                     {
                       "type": "action",
-                      "id": "a0006",
+                      "id": "a0007",
                       "connectionId": "obs",
                       "definitionId": "recording",
                       "options": {
@@ -205,7 +223,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0007",
+                      "id": "a0008",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -253,7 +271,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0008",
+                      "id": "a0009",
                       "connectionId": "xair",
                       "definitionId": "load_snap",
                       "options": {
@@ -296,7 +314,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0010",
+                "id": "f0011",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -324,7 +342,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0009",
+                      "id": "a0010",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -373,7 +391,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0012",
+                "id": "f0013",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -401,7 +419,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0011",
+                      "id": "a0012",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -450,7 +468,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0014",
+                "id": "f0015",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -478,7 +496,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0013",
+                      "id": "a0014",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -527,7 +545,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0016",
+                "id": "f0017",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -555,7 +573,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0015",
+                      "id": "a0016",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -606,7 +624,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0123",
+                "id": "f0127",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -634,7 +652,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0122",
+                      "id": "a0126",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -683,7 +701,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0128",
+                "id": "f0132",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -711,7 +729,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0127",
+                      "id": "a0131",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -760,7 +778,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0133",
+                "id": "f0137",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -788,7 +806,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0132",
+                      "id": "a0136",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -837,7 +855,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0138",
+                "id": "f0142",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -865,7 +883,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0137",
+                      "id": "a0141",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -920,7 +938,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0126",
+                      "id": "a0130",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -944,7 +962,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0125",
+                      "id": "a0129",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -975,7 +993,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0124",
+                      "id": "a0128",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1035,7 +1053,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0131",
+                      "id": "a0135",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1059,7 +1077,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0130",
+                      "id": "a0134",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1090,7 +1108,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0129",
+                      "id": "a0133",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1150,7 +1168,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0136",
+                      "id": "a0140",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1174,7 +1192,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0135",
+                      "id": "a0139",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1205,7 +1223,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0134",
+                      "id": "a0138",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1265,7 +1283,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0141",
+                      "id": "a0145",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -1289,7 +1307,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0140",
+                      "id": "a0144",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1320,7 +1338,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0139",
+                      "id": "a0143",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -1376,7 +1394,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -1386,14 +1404,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0019",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0017",
+                      "id": "a0018",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -1441,7 +1477,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0018",
+                      "id": "a0020",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1510,7 +1546,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0019",
+                      "id": "a0021",
                       "connectionId": "internal",
                       "definitionId": "exec",
                       "options": {
@@ -1566,7 +1602,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0021",
+                      "id": "a0023",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1603,7 +1639,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0020",
+                      "id": "a0022",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1640,7 +1676,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0022",
+                      "id": "a0024",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1677,7 +1713,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0024",
+                      "id": "a0026",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1714,7 +1750,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0023",
+                      "id": "a0025",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1751,7 +1787,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0025",
+                      "id": "a0027",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1788,7 +1824,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0027",
+                      "id": "a0029",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1825,7 +1861,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0026",
+                      "id": "a0028",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1862,7 +1898,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0028",
+                      "id": "a0030",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1899,7 +1935,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0029",
+                      "id": "a0031",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1936,7 +1972,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0030",
+                      "id": "a0032",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -1973,7 +2009,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0031",
+                      "id": "a0033",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2010,7 +2046,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0032",
+                      "id": "a0034",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2047,7 +2083,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0033",
+                      "id": "a0035",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2076,7 +2112,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0034",
+                      "id": "a0036",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2105,7 +2141,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0035",
+                      "id": "a0037",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2134,7 +2170,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0036",
+                      "id": "a0038",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2163,7 +2199,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0037",
+                      "id": "a0039",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2226,7 +2262,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0039",
+                      "id": "a0041",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2263,7 +2299,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0038",
+                      "id": "a0040",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2300,7 +2336,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0040",
+                      "id": "a0042",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2337,7 +2373,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0042",
+                      "id": "a0044",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2374,7 +2410,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0041",
+                      "id": "a0043",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2411,7 +2447,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0043",
+                      "id": "a0045",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2448,7 +2484,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0045",
+                      "id": "a0047",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2485,7 +2521,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0044",
+                      "id": "a0046",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2522,7 +2558,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0046",
+                      "id": "a0048",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2559,7 +2595,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0047",
+                      "id": "a0049",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2596,7 +2632,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0048",
+                      "id": "a0050",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2633,7 +2669,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0049",
+                      "id": "a0051",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2662,7 +2698,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0050",
+                      "id": "a0052",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2691,7 +2727,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0051",
+                      "id": "a0053",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -2752,7 +2788,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0053",
+                      "id": "a0055",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2789,7 +2825,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0052",
+                      "id": "a0054",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2826,7 +2862,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0054",
+                      "id": "a0056",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2863,7 +2899,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0056",
+                      "id": "a0058",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2900,7 +2936,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0055",
+                      "id": "a0057",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2937,7 +2973,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0057",
+                      "id": "a0059",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -2974,7 +3010,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0059",
+                      "id": "a0061",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3011,7 +3047,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0058",
+                      "id": "a0060",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3048,7 +3084,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0060",
+                      "id": "a0062",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3085,7 +3121,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0061",
+                      "id": "a0063",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3114,7 +3150,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0062",
+                      "id": "a0064",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3143,7 +3179,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0063",
+                      "id": "a0065",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3204,7 +3240,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0064",
+                      "id": "a0066",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3241,7 +3277,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0065",
+                      "id": "a0067",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3278,7 +3314,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0066",
+                      "id": "a0068",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3315,7 +3351,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0067",
+                      "id": "a0069",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3352,7 +3388,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0068",
+                      "id": "a0070",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3389,7 +3425,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0069",
+                      "id": "a0071",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3426,7 +3462,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0070",
+                      "id": "a0072",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -3463,7 +3499,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0071",
+                      "id": "a0073",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3492,7 +3528,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0072",
+                      "id": "a0074",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3521,7 +3557,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0073",
+                      "id": "a0075",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3550,7 +3586,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0074",
+                      "id": "a0076",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3607,7 +3643,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0076",
+                "id": "f0078",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -3624,7 +3660,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0077",
+                "id": "f0079",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -3646,7 +3682,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0075",
+                      "id": "a0077",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -3692,7 +3728,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0223",
+                "id": "f0227",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -3714,7 +3750,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0222",
+                      "id": "a0226",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3771,7 +3807,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0228",
+                "id": "f0232",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -3793,7 +3829,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0227",
+                      "id": "a0231",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -3850,7 +3886,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0213",
+                "id": "f0217",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3878,7 +3914,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0212",
+                      "id": "a0216",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -3927,7 +3963,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0218",
+                "id": "f0222",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -3955,7 +3991,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0217",
+                      "id": "a0221",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4010,7 +4046,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0226",
+                      "id": "a0230",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4042,7 +4078,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0225",
+                      "id": "a0229",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4073,7 +4109,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0224",
+                      "id": "a0228",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4133,7 +4169,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0231",
+                      "id": "a0235",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4165,7 +4201,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0230",
+                      "id": "a0234",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4196,7 +4232,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0229",
+                      "id": "a0233",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4256,7 +4292,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0216",
+                      "id": "a0220",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4280,7 +4316,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0215",
+                      "id": "a0219",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4311,7 +4347,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0214",
+                      "id": "a0218",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4371,7 +4407,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0221",
+                      "id": "a0225",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -4395,7 +4431,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0220",
+                      "id": "a0224",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4426,7 +4462,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0219",
+                      "id": "a0223",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -4482,7 +4518,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -4492,14 +4528,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0081",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0078",
+                      "id": "a0080",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -4543,7 +4597,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0080",
+                "id": "f0083",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4565,7 +4619,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0079",
+                      "id": "a0082",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4622,7 +4676,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0082",
+                "id": "f0085",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4644,7 +4698,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0081",
+                      "id": "a0084",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4701,7 +4755,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0084",
+                "id": "f0087",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4723,7 +4777,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0083",
+                      "id": "a0086",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4782,7 +4836,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0086",
+                "id": "f0089",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4804,7 +4858,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0085",
+                      "id": "a0088",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4861,7 +4915,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0088",
+                "id": "f0091",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4883,7 +4937,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0087",
+                      "id": "a0090",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -4940,7 +4994,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0090",
+                "id": "f0093",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4958,7 +5012,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0091",
+                "id": "f0094",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4976,7 +5030,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0092",
+                "id": "f0095",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -4994,7 +5048,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0093",
+                "id": "f0096",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -5017,7 +5071,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0089",
+                      "id": "a0092",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5056,7 +5110,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0094",
+                      "id": "a0097",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5095,7 +5149,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0095",
+                      "id": "a0098",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5134,7 +5188,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0096",
+                      "id": "a0099",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5191,7 +5245,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0098",
+                "id": "f0101",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -5213,7 +5267,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0097",
+                      "id": "a0100",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5272,7 +5326,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0253",
+                "id": "f0257",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -5294,7 +5348,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0252",
+                      "id": "a0256",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5351,7 +5405,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0258",
+                "id": "f0262",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -5373,7 +5427,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0257",
+                      "id": "a0261",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5430,7 +5484,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0243",
+                "id": "f0247",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5458,7 +5512,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0242",
+                      "id": "a0246",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5507,7 +5561,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0248",
+                "id": "f0252",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -5535,7 +5589,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0247",
+                      "id": "a0251",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5590,7 +5644,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0256",
+                      "id": "a0260",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5622,7 +5676,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0255",
+                      "id": "a0259",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5653,7 +5707,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0254",
+                      "id": "a0258",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5713,7 +5767,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0261",
+                      "id": "a0265",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5745,7 +5799,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0260",
+                      "id": "a0264",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5776,7 +5830,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0259",
+                      "id": "a0263",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -5836,7 +5890,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0246",
+                      "id": "a0250",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5860,7 +5914,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0245",
+                      "id": "a0249",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -5891,7 +5945,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0244",
+                      "id": "a0248",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -5951,7 +6005,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0251",
+                      "id": "a0255",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -5975,7 +6029,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0250",
+                      "id": "a0254",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6006,7 +6060,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0249",
+                      "id": "a0253",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -6062,7 +6116,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -6072,14 +6126,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0103",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0099",
+                      "id": "a0102",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -6123,7 +6195,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0100",
+                "id": "f0104",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -6176,123 +6248,6 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0101",
-                      "connectionId": "http",
-                      "definitionId": "post",
-                      "options": {
-                        "url": {
-                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
-                          "isExpression": false
-                        },
-                        "body": {
-                          "value": "{\"minutes\": 3}",
-                          "isExpression": false
-                        },
-                        "header": {
-                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
-                          "isExpression": false
-                        },
-                        "contenttype": {
-                          "value": "application/json",
-                          "isExpression": false
-                        },
-                        "jsonResultDataVariable": {
-                          "value": "",
-                          "isExpression": false
-                        },
-                        "result_stringify": {
-                          "value": true,
-                          "isExpression": false
-                        },
-                        "statusCodeVariable": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": 3
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0102",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_t0",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "$(internal:time_unix)",
-                          "isExpression": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0103",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_len",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "180",
-                          "isExpression": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0104",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_wrap",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "0",
-                          "isExpression": true
-                        }
-                      }
-                    }
-                  ],
-                  "up": []
-                },
-                "options": {
-                  "runWhileHeld": []
-                }
-              }
-            },
-            "localVariables": []
-          },
-          "3": {
-            "type": "button",
-            "options": {
-              "stepProgression": "auto",
-              "rotaryActions": false
-            },
-            "style": {
-              "text": "START\\n5 MIN\\nSET",
-              "textExpression": false,
-              "size": "auto",
-              "alignment": "center:center",
-              "pngalignment": "center:center",
-              "color": 16777215,
-              "bgcolor": 2055982,
-              "show_topbar": "default",
-              "png64": null
-            },
-            "feedbacks": [],
-            "steps": {
-              "0": {
-                "action_sets": {
-                  "down": [
-                    {
-                      "type": "action",
                       "id": "a0105",
                       "connectionId": "http",
                       "definitionId": "post",
@@ -6302,7 +6257,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 5}",
+                          "value": "{\"minutes\": 3}",
                           "isExpression": false
                         },
                         "header": {
@@ -6355,7 +6310,7 @@
                           "isExpression": false
                         },
                         "value": {
-                          "value": "300",
+                          "value": "180",
                           "isExpression": true
                         }
                       }
@@ -6385,17 +6340,15 @@
               }
             },
             "localVariables": []
-          }
-        },
-        "1": {
-          "0": {
+          },
+          "3": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\n7 MIN\\nSET",
+              "text": "START\\n5 MIN\\nSET",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -6421,7 +6374,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 7}",
+                          "value": "{\"minutes\": 5}",
                           "isExpression": false
                         },
                         "header": {
@@ -6474,7 +6427,7 @@
                           "isExpression": false
                         },
                         "value": {
-                          "value": "420",
+                          "value": "300",
                           "isExpression": true
                         }
                       }
@@ -6504,15 +6457,17 @@
               }
             },
             "localVariables": []
-          },
-          "1": {
+          }
+        },
+        "1": {
+          "0": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\n10 MIN\\nSET",
+              "text": "START\\n7 MIN\\nSET",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -6538,7 +6493,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 10}",
+                          "value": "{\"minutes\": 7}",
                           "isExpression": false
                         },
                         "header": {
@@ -6591,7 +6546,7 @@
                           "isExpression": false
                         },
                         "value": {
-                          "value": "600",
+                          "value": "420",
                           "isExpression": true
                         }
                       }
@@ -6599,6 +6554,123 @@
                     {
                       "type": "action",
                       "id": "a0116",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "0",
+                          "isExpression": true
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "START\\n10 MIN\\nSET",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2055982,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0117",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"minutes\": 10}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0118",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0119",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "600",
+                          "isExpression": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0120",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -6646,7 +6718,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0117",
+                      "id": "a0121",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -6683,7 +6755,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0118",
+                      "id": "a0122",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -6699,7 +6771,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0119",
+                      "id": "a0123",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -6747,7 +6819,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0120",
+                      "id": "a0124",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -6784,7 +6856,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0121",
+                      "id": "a0125",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -6830,7 +6902,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0183",
+                "id": "f0187",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6858,7 +6930,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0182",
+                      "id": "a0186",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6907,7 +6979,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0188",
+                "id": "f0192",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -6935,7 +7007,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0187",
+                      "id": "a0191",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -6984,7 +7056,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0193",
+                "id": "f0197",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -7012,7 +7084,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0192",
+                      "id": "a0196",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -7065,7 +7137,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0262",
+                      "id": "a0266",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7102,7 +7174,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0263",
+                      "id": "a0267",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7118,7 +7190,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0264",
+                      "id": "a0268",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7168,7 +7240,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0186",
+                      "id": "a0190",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -7192,7 +7264,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0185",
+                      "id": "a0189",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -7223,7 +7295,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0184",
+                      "id": "a0188",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -7283,7 +7355,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0191",
+                      "id": "a0195",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -7307,7 +7379,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0190",
+                      "id": "a0194",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -7338,7 +7410,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0189",
+                      "id": "a0193",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -7398,7 +7470,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0196",
+                      "id": "a0200",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -7422,7 +7494,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0195",
+                      "id": "a0199",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -7453,7 +7525,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0194",
+                      "id": "a0198",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -7513,7 +7585,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0271",
+                      "id": "a0275",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7550,7 +7622,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0272",
+                      "id": "a0276",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7566,7 +7638,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0273",
+                      "id": "a0277",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7585,7 +7657,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0268",
+                      "id": "a0272",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7622,7 +7694,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0269",
+                      "id": "a0273",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7638,7 +7710,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0270",
+                      "id": "a0274",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7656,7 +7728,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0265",
+                      "id": "a0269",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -7693,7 +7765,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0266",
+                      "id": "a0270",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7709,7 +7781,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0267",
+                      "id": "a0271",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -7752,7 +7824,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -7762,14 +7834,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0279",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0274",
+                      "id": "a0278",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -7813,7 +7903,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0277",
+                "id": "f0282",
                 "connectionId": "obs",
                 "definitionId": "recording",
                 "options": {},
@@ -7826,7 +7916,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0278",
+                "id": "f0283",
                 "connectionId": "obs",
                 "definitionId": "recordingPaused",
                 "options": {},
@@ -7844,7 +7934,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0275",
+                      "id": "a0280",
                       "connectionId": "obs",
                       "definitionId": "recording",
                       "options": {
@@ -7857,7 +7947,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0276",
+                      "id": "a0281",
                       "connectionId": "http",
                       "definitionId": "put",
                       "options": {
@@ -7897,7 +7987,7 @@
                   "3000": [
                     {
                       "type": "action",
-                      "id": "a0279",
+                      "id": "a0284",
                       "connectionId": "obs",
                       "definitionId": "recording",
                       "options": {
@@ -7943,7 +8033,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0280",
+                      "id": "a0285",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -7991,7 +8081,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0281",
+                      "id": "a0286",
                       "connectionId": "xair",
                       "definitionId": "load_snap",
                       "options": {
@@ -8034,7 +8124,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0283",
+                "id": "f0288",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8062,7 +8152,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0282",
+                      "id": "a0287",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8111,7 +8201,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0285",
+                "id": "f0290",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8139,7 +8229,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0284",
+                      "id": "a0289",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8188,7 +8278,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0287",
+                "id": "f0292",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8216,7 +8306,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0286",
+                      "id": "a0291",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8265,7 +8355,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0289",
+                "id": "f0294",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8293,7 +8383,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0288",
+                      "id": "a0293",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8344,7 +8434,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0396",
+                "id": "f0404",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8372,7 +8462,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0395",
+                      "id": "a0403",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8421,7 +8511,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0401",
+                "id": "f0409",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8449,7 +8539,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0400",
+                      "id": "a0408",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8498,7 +8588,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0406",
+                "id": "f0414",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8526,7 +8616,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0405",
+                      "id": "a0413",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8575,7 +8665,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0411",
+                "id": "f0419",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -8603,7 +8693,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0410",
+                      "id": "a0418",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8658,7 +8748,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0399",
+                      "id": "a0407",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8682,7 +8772,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0398",
+                      "id": "a0406",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8713,7 +8803,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0397",
+                      "id": "a0405",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8773,7 +8863,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0404",
+                      "id": "a0412",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8797,7 +8887,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0403",
+                      "id": "a0411",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8828,7 +8918,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0402",
+                      "id": "a0410",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8888,7 +8978,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0409",
+                      "id": "a0417",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -8912,7 +9002,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0408",
+                      "id": "a0416",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -8943,7 +9033,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0407",
+                      "id": "a0415",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9003,7 +9093,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0414",
+                      "id": "a0422",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -9027,7 +9117,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0413",
+                      "id": "a0421",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9058,7 +9148,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0412",
+                      "id": "a0420",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -9114,7 +9204,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -9124,14 +9214,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0296",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0290",
+                      "id": "a0295",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -9179,7 +9287,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0291",
+                      "id": "a0297",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9248,7 +9356,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0292",
+                      "id": "a0298",
                       "connectionId": "internal",
                       "definitionId": "exec",
                       "options": {
@@ -9304,7 +9412,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0294",
+                      "id": "a0300",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9341,7 +9449,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0293",
+                      "id": "a0299",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9378,7 +9486,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0295",
+                      "id": "a0301",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9415,7 +9523,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0297",
+                      "id": "a0303",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9452,7 +9560,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0296",
+                      "id": "a0302",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9489,7 +9597,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0298",
+                      "id": "a0304",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9526,7 +9634,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0300",
+                      "id": "a0306",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9563,7 +9671,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0299",
+                      "id": "a0305",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9600,7 +9708,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0301",
+                      "id": "a0307",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9637,7 +9745,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0302",
+                      "id": "a0308",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9674,7 +9782,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0303",
+                      "id": "a0309",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9711,7 +9819,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0304",
+                      "id": "a0310",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9748,7 +9856,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0305",
+                      "id": "a0311",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -9785,7 +9893,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0306",
+                      "id": "a0312",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -9814,7 +9922,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0307",
+                      "id": "a0313",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -9843,7 +9951,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0308",
+                      "id": "a0314",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -9872,7 +9980,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0309",
+                      "id": "a0315",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -9901,7 +10009,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0310",
+                      "id": "a0316",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -9964,7 +10072,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0312",
+                      "id": "a0318",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10001,7 +10109,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0311",
+                      "id": "a0317",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10038,7 +10146,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0313",
+                      "id": "a0319",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10075,7 +10183,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0315",
+                      "id": "a0321",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10112,7 +10220,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0314",
+                      "id": "a0320",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10149,7 +10257,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0316",
+                      "id": "a0322",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10186,7 +10294,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0318",
+                      "id": "a0324",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10223,7 +10331,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0317",
+                      "id": "a0323",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10260,7 +10368,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0319",
+                      "id": "a0325",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10297,7 +10405,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0320",
+                      "id": "a0326",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10334,7 +10442,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0321",
+                      "id": "a0327",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10371,7 +10479,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0322",
+                      "id": "a0328",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -10400,7 +10508,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0323",
+                      "id": "a0329",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -10429,7 +10537,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0324",
+                      "id": "a0330",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -10490,7 +10598,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0326",
+                      "id": "a0332",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10527,7 +10635,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0325",
+                      "id": "a0331",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10564,7 +10672,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0327",
+                      "id": "a0333",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10601,7 +10709,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0329",
+                      "id": "a0335",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10638,7 +10746,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0328",
+                      "id": "a0334",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10675,7 +10783,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0330",
+                      "id": "a0336",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10712,7 +10820,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0332",
+                      "id": "a0338",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10749,7 +10857,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0331",
+                      "id": "a0337",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10786,7 +10894,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0333",
+                      "id": "a0339",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10823,7 +10931,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0334",
+                      "id": "a0340",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -10852,7 +10960,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0335",
+                      "id": "a0341",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -10881,7 +10989,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0336",
+                      "id": "a0342",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -10942,7 +11050,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0337",
+                      "id": "a0343",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -10979,7 +11087,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0338",
+                      "id": "a0344",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -11016,7 +11124,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0339",
+                      "id": "a0345",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -11053,7 +11161,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0340",
+                      "id": "a0346",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -11090,7 +11198,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0341",
+                      "id": "a0347",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -11127,7 +11235,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0342",
+                      "id": "a0348",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -11164,7 +11272,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0343",
+                      "id": "a0349",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -11201,7 +11309,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0344",
+                      "id": "a0350",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11230,7 +11338,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0345",
+                      "id": "a0351",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11259,7 +11367,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0346",
+                      "id": "a0352",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11288,7 +11396,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0347",
+                      "id": "a0353",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11345,7 +11453,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0349",
+                "id": "f0355",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -11362,7 +11470,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0350",
+                "id": "f0356",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -11384,7 +11492,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0348",
+                      "id": "a0354",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -11430,7 +11538,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0496",
+                "id": "f0504",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -11452,7 +11560,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0495",
+                      "id": "a0503",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11509,7 +11617,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0501",
+                "id": "f0509",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -11531,7 +11639,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0500",
+                      "id": "a0508",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11588,7 +11696,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0486",
+                "id": "f0494",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -11616,7 +11724,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0485",
+                      "id": "a0493",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11665,7 +11773,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0491",
+                "id": "f0499",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -11693,7 +11801,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0490",
+                      "id": "a0498",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -11748,7 +11856,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0499",
+                      "id": "a0507",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11780,7 +11888,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0498",
+                      "id": "a0506",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11811,7 +11919,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0497",
+                      "id": "a0505",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11871,7 +11979,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0504",
+                      "id": "a0512",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11903,7 +12011,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0503",
+                      "id": "a0511",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11934,7 +12042,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0502",
+                      "id": "a0510",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -11994,7 +12102,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0489",
+                      "id": "a0497",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -12018,7 +12126,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0488",
+                      "id": "a0496",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -12049,7 +12157,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0487",
+                      "id": "a0495",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -12109,7 +12217,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0494",
+                      "id": "a0502",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -12133,7 +12241,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0493",
+                      "id": "a0501",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -12164,7 +12272,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0492",
+                      "id": "a0500",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -12220,7 +12328,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -12230,14 +12338,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0358",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0351",
+                      "id": "a0357",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -12281,7 +12407,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0353",
+                "id": "f0360",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12303,7 +12429,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0352",
+                      "id": "a0359",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12360,7 +12486,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0355",
+                "id": "f0362",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12382,7 +12508,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0354",
+                      "id": "a0361",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12439,7 +12565,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0357",
+                "id": "f0364",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12461,7 +12587,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0356",
+                      "id": "a0363",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12520,7 +12646,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0359",
+                "id": "f0366",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12542,7 +12668,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0358",
+                      "id": "a0365",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12599,7 +12725,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0361",
+                "id": "f0368",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12621,7 +12747,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0360",
+                      "id": "a0367",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12678,7 +12804,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0363",
+                "id": "f0370",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12696,7 +12822,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0364",
+                "id": "f0371",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12714,7 +12840,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0365",
+                "id": "f0372",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12732,7 +12858,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0366",
+                "id": "f0373",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12755,7 +12881,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0362",
+                      "id": "a0369",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12794,7 +12920,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0367",
+                      "id": "a0374",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12833,7 +12959,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0368",
+                      "id": "a0375",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12872,7 +12998,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0369",
+                      "id": "a0376",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -12929,7 +13055,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0371",
+                "id": "f0378",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -12951,7 +13077,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0370",
+                      "id": "a0377",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13010,7 +13136,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0526",
+                "id": "f0534",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -13032,7 +13158,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0525",
+                      "id": "a0533",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13089,7 +13215,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0531",
+                "id": "f0539",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -13111,7 +13237,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0530",
+                      "id": "a0538",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13168,7 +13294,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0516",
+                "id": "f0524",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -13196,7 +13322,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0515",
+                      "id": "a0523",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -13245,7 +13371,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0521",
+                "id": "f0529",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -13273,7 +13399,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0520",
+                      "id": "a0528",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -13328,7 +13454,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0529",
+                      "id": "a0537",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13360,7 +13486,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0528",
+                      "id": "a0536",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13391,7 +13517,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0527",
+                      "id": "a0535",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13451,7 +13577,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0534",
+                      "id": "a0542",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13483,7 +13609,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0533",
+                      "id": "a0541",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13514,7 +13640,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0532",
+                      "id": "a0540",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -13574,7 +13700,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0519",
+                      "id": "a0527",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -13598,7 +13724,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0518",
+                      "id": "a0526",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -13629,7 +13755,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0517",
+                      "id": "a0525",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -13689,7 +13815,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0524",
+                      "id": "a0532",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -13713,7 +13839,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0523",
+                      "id": "a0531",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -13744,7 +13870,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0522",
+                      "id": "a0530",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -13800,7 +13926,7 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "NEXT\\nPAGE >",
+              "text": "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
               "textExpression": false,
               "size": "14",
               "alignment": "center:center",
@@ -13810,14 +13936,32 @@
               "show_topbar": "default",
               "png64": null
             },
-            "feedbacks": [],
+            "feedbacks": [
+              {
+                "type": "feedback",
+                "id": "f0380",
+                "connectionId": "internal",
+                "definitionId": "check_expression",
+                "options": {
+                  "expression": {
+                    "value": "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20",
+                    "isExpression": false
+                  }
+                },
+                "isInverted": false,
+                "style": {
+                  "bgcolor": 12582912,
+                  "color": 16777215
+                }
+              }
+            ],
             "steps": {
               "0": {
                 "action_sets": {
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0372",
+                      "id": "a0379",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -13861,7 +14005,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0373",
+                "id": "f0381",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -13914,242 +14058,6 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0374",
-                      "connectionId": "http",
-                      "definitionId": "post",
-                      "options": {
-                        "url": {
-                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
-                          "isExpression": false
-                        },
-                        "body": {
-                          "value": "{\"minutes\": 3}",
-                          "isExpression": false
-                        },
-                        "header": {
-                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
-                          "isExpression": false
-                        },
-                        "contenttype": {
-                          "value": "application/json",
-                          "isExpression": false
-                        },
-                        "jsonResultDataVariable": {
-                          "value": "",
-                          "isExpression": false
-                        },
-                        "result_stringify": {
-                          "value": true,
-                          "isExpression": false
-                        },
-                        "statusCodeVariable": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": 3
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0375",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_t0",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "$(internal:time_unix)",
-                          "isExpression": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0376",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_len",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "180",
-                          "isExpression": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0377",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_wrap",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "0",
-                          "isExpression": true
-                        }
-                      }
-                    }
-                  ],
-                  "up": []
-                },
-                "options": {
-                  "runWhileHeld": []
-                }
-              }
-            },
-            "localVariables": []
-          },
-          "3": {
-            "type": "button",
-            "options": {
-              "stepProgression": "auto",
-              "rotaryActions": false
-            },
-            "style": {
-              "text": "START\\n5 MIN\\nSET",
-              "textExpression": false,
-              "size": "auto",
-              "alignment": "center:center",
-              "pngalignment": "center:center",
-              "color": 16777215,
-              "bgcolor": 2055982,
-              "show_topbar": "default",
-              "png64": null
-            },
-            "feedbacks": [],
-            "steps": {
-              "0": {
-                "action_sets": {
-                  "down": [
-                    {
-                      "type": "action",
-                      "id": "a0378",
-                      "connectionId": "http",
-                      "definitionId": "post",
-                      "options": {
-                        "url": {
-                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
-                          "isExpression": false
-                        },
-                        "body": {
-                          "value": "{\"minutes\": 5}",
-                          "isExpression": false
-                        },
-                        "header": {
-                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
-                          "isExpression": false
-                        },
-                        "contenttype": {
-                          "value": "application/json",
-                          "isExpression": false
-                        },
-                        "jsonResultDataVariable": {
-                          "value": "",
-                          "isExpression": false
-                        },
-                        "result_stringify": {
-                          "value": true,
-                          "isExpression": false
-                        },
-                        "statusCodeVariable": {
-                          "value": "",
-                          "isExpression": false
-                        }
-                      },
-                      "upgradeIndex": 3
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0379",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_t0",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "$(internal:time_unix)",
-                          "isExpression": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0380",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_len",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "300",
-                          "isExpression": true
-                        }
-                      }
-                    },
-                    {
-                      "type": "action",
-                      "id": "a0381",
-                      "connectionId": "internal",
-                      "definitionId": "custom_variable_set_value",
-                      "options": {
-                        "name": {
-                          "value": "timer_wrap",
-                          "isExpression": false
-                        },
-                        "value": {
-                          "value": "0",
-                          "isExpression": true
-                        }
-                      }
-                    }
-                  ],
-                  "up": []
-                },
-                "options": {
-                  "runWhileHeld": []
-                }
-              }
-            },
-            "localVariables": []
-          }
-        },
-        "1": {
-          "0": {
-            "type": "button",
-            "options": {
-              "stepProgression": "auto",
-              "rotaryActions": false
-            },
-            "style": {
-              "text": "START\\n7 MIN\\nSET",
-              "textExpression": false,
-              "size": "auto",
-              "alignment": "center:center",
-              "pngalignment": "center:center",
-              "color": 16777215,
-              "bgcolor": 2055982,
-              "show_topbar": "default",
-              "png64": null
-            },
-            "feedbacks": [],
-            "steps": {
-              "0": {
-                "action_sets": {
-                  "down": [
-                    {
-                      "type": "action",
                       "id": "a0382",
                       "connectionId": "http",
                       "definitionId": "post",
@@ -14159,7 +14067,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 7}",
+                          "value": "{\"minutes\": 3}",
                           "isExpression": false
                         },
                         "header": {
@@ -14212,7 +14120,7 @@
                           "isExpression": false
                         },
                         "value": {
-                          "value": "420",
+                          "value": "180",
                           "isExpression": true
                         }
                       }
@@ -14243,14 +14151,14 @@
             },
             "localVariables": []
           },
-          "1": {
+          "3": {
             "type": "button",
             "options": {
               "stepProgression": "auto",
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\n10 MIN\\nSET",
+              "text": "START\\n5 MIN\\nSET",
               "textExpression": false,
               "size": "auto",
               "alignment": "center:center",
@@ -14276,7 +14184,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"minutes\": 10}",
+                          "value": "{\"minutes\": 5}",
                           "isExpression": false
                         },
                         "header": {
@@ -14329,7 +14237,7 @@
                           "isExpression": false
                         },
                         "value": {
-                          "value": "600",
+                          "value": "300",
                           "isExpression": true
                         }
                       }
@@ -14337,6 +14245,242 @@
                     {
                       "type": "action",
                       "id": "a0389",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "0",
+                          "isExpression": true
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          }
+        },
+        "1": {
+          "0": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "START\\n7 MIN\\nSET",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2055982,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0390",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"minutes\": 7}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0391",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0392",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "420",
+                          "isExpression": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0393",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_wrap",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "0",
+                          "isExpression": true
+                        }
+                      }
+                    }
+                  ],
+                  "up": []
+                },
+                "options": {
+                  "runWhileHeld": []
+                }
+              }
+            },
+            "localVariables": []
+          },
+          "1": {
+            "type": "button",
+            "options": {
+              "stepProgression": "auto",
+              "rotaryActions": false
+            },
+            "style": {
+              "text": "START\\n10 MIN\\nSET",
+              "textExpression": false,
+              "size": "auto",
+              "alignment": "center:center",
+              "pngalignment": "center:center",
+              "color": 16777215,
+              "bgcolor": 2055982,
+              "show_topbar": "default",
+              "png64": null
+            },
+            "feedbacks": [],
+            "steps": {
+              "0": {
+                "action_sets": {
+                  "down": [
+                    {
+                      "type": "action",
+                      "id": "a0394",
+                      "connectionId": "http",
+                      "definitionId": "post",
+                      "options": {
+                        "url": {
+                          "value": "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/timer_start",
+                          "isExpression": false
+                        },
+                        "body": {
+                          "value": "{\"minutes\": 10}",
+                          "isExpression": false
+                        },
+                        "header": {
+                          "value": "{\"apikey\": \"sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb\"}",
+                          "isExpression": false
+                        },
+                        "contenttype": {
+                          "value": "application/json",
+                          "isExpression": false
+                        },
+                        "jsonResultDataVariable": {
+                          "value": "",
+                          "isExpression": false
+                        },
+                        "result_stringify": {
+                          "value": true,
+                          "isExpression": false
+                        },
+                        "statusCodeVariable": {
+                          "value": "",
+                          "isExpression": false
+                        }
+                      },
+                      "upgradeIndex": 3
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0395",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_t0",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "$(internal:time_unix)",
+                          "isExpression": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0396",
+                      "connectionId": "internal",
+                      "definitionId": "custom_variable_set_value",
+                      "options": {
+                        "name": {
+                          "value": "timer_len",
+                          "isExpression": false
+                        },
+                        "value": {
+                          "value": "600",
+                          "isExpression": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "action",
+                      "id": "a0397",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -14384,7 +14528,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0390",
+                      "id": "a0398",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -14421,7 +14565,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0391",
+                      "id": "a0399",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -14437,7 +14581,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0392",
+                      "id": "a0400",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -14485,7 +14629,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0393",
+                      "id": "a0401",
                       "connectionId": "http",
                       "definitionId": "post",
                       "options": {
@@ -14522,7 +14666,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0394",
+                      "id": "a0402",
                       "connectionId": "internal",
                       "definitionId": "custom_variable_set_value",
                       "options": {
@@ -14568,7 +14712,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0456",
+                "id": "f0464",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -14596,7 +14740,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0455",
+                      "id": "a0463",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -14645,7 +14789,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0461",
+                "id": "f0469",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -14673,7 +14817,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0460",
+                      "id": "a0468",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -14722,7 +14866,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0466",
+                "id": "f0474",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -14750,7 +14894,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0465",
+                      "id": "a0473",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -14799,7 +14943,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0471",
+                "id": "f0479",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -14827,7 +14971,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0470",
+                      "id": "a0478",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -14882,7 +15026,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0459",
+                      "id": "a0467",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -14906,7 +15050,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0458",
+                      "id": "a0466",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -14937,7 +15081,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0457",
+                      "id": "a0465",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -14997,7 +15141,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0464",
+                      "id": "a0472",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -15021,7 +15165,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0463",
+                      "id": "a0471",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -15052,7 +15196,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0462",
+                      "id": "a0470",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -15112,7 +15256,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0469",
+                      "id": "a0477",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -15136,7 +15280,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0468",
+                      "id": "a0476",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -15167,7 +15311,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0467",
+                      "id": "a0475",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -15227,7 +15371,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0474",
+                      "id": "a0482",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -15251,7 +15395,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0473",
+                      "id": "a0481",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -15282,7 +15426,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0472",
+                      "id": "a0480",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -15355,7 +15499,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0535",
+                      "id": "a0543",
                       "connectionId": "internal",
                       "definitionId": "set_page",
                       "options": {
@@ -15399,7 +15543,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0537",
+                "id": "f0545",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -15416,7 +15560,7 @@
               },
               {
                 "type": "feedback",
-                "id": "f0538",
+                "id": "f0546",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -15438,7 +15582,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0536",
+                      "id": "a0544",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15499,7 +15643,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0539",
+                      "id": "a0547",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15560,7 +15704,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0540",
+                      "id": "a0548",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15619,7 +15763,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0543",
+                "id": "f0551",
                 "connectionId": "internal",
                 "definitionId": "check_expression",
                 "options": {
@@ -15642,7 +15786,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0541",
+                      "id": "a0549",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15671,7 +15815,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0542",
+                      "id": "a0550",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15710,7 +15854,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0544",
+                      "id": "a0552",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15739,7 +15883,7 @@
                     },
                     {
                       "type": "action",
-                      "id": "a0545",
+                      "id": "a0553",
                       "connectionId": "http",
                       "definitionId": "get",
                       "options": {
@@ -15798,7 +15942,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0547",
+                "id": "f0555",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -15826,7 +15970,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0546",
+                      "id": "a0554",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -15875,7 +16019,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0552",
+                "id": "f0560",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -15903,7 +16047,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0551",
+                      "id": "a0559",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -15952,7 +16096,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0557",
+                "id": "f0565",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -15980,7 +16124,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0556",
+                      "id": "a0564",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -16029,7 +16173,7 @@
             "feedbacks": [
               {
                 "type": "feedback",
-                "id": "f0562",
+                "id": "f0570",
                 "connectionId": "xair",
                 "definitionId": "ch",
                 "options": {
@@ -16057,7 +16201,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0561",
+                      "id": "a0569",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -16112,7 +16256,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0550",
+                      "id": "a0558",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -16136,7 +16280,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0549",
+                      "id": "a0557",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16167,7 +16311,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0548",
+                      "id": "a0556",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16227,7 +16371,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0555",
+                      "id": "a0563",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -16251,7 +16395,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0554",
+                      "id": "a0562",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16282,7 +16426,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0553",
+                      "id": "a0561",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16342,7 +16486,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0560",
+                      "id": "a0568",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -16366,7 +16510,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0559",
+                      "id": "a0567",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16397,7 +16541,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0558",
+                      "id": "a0566",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16457,7 +16601,7 @@
                   "down": [
                     {
                       "type": "action",
-                      "id": "a0565",
+                      "id": "a0573",
                       "connectionId": "xair",
                       "definitionId": "mute",
                       "options": {
@@ -16481,7 +16625,7 @@
                   "rotate_left": [
                     {
                       "type": "action",
-                      "id": "a0564",
+                      "id": "a0572",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16512,7 +16656,7 @@
                   "rotate_right": [
                     {
                       "type": "action",
-                      "id": "a0563",
+                      "id": "a0571",
                       "connectionId": "xair",
                       "definitionId": "fad_a",
                       "options": {
@@ -16640,6 +16784,12 @@
       "defaultValue": 0,
       "persistCurrentValue": false,
       "sortOrder": 6
+    },
+    "deck_battery": {
+      "description": "Portable deck battery %, written every minute by the Pi (av/pi-satellite-setup.sh)",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 7
     }
   }
 }
