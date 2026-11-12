@@ -63,8 +63,12 @@ AMBER = (224, 144, 0)
 WHITE = (180, 180, 180)  # warm gray: pure white glares
 CODES = ".123456789ABCDEF"
 SIZE = 128
-ART = 64  # pictures fill a 64x64 square at the top; 32x32 ones are drawn twice the size
-ART_X, BEER_ART_Y = 32, 3
+# Pictures are 32x32, drawn three times the size: a 96x96 square at the top,
+# with the words in the 31 rows under it. (Was twice the size until Sam saw it
+# on the panels in the black frame: too much black, Nov 12 2026.)
+ART = 96
+ART_X, ART_Y = 16, 0
+TEXT_Y = ART_Y + ART
 # One 5V 10A supply runs all four panels. A panel can pull 4 A with every LED
 # full white, so pictures that would pull more than this are dimmed.
 POWER_MA = 8000
@@ -218,29 +222,34 @@ def centered_text(img, s, y, color, z=1):
 
 
 def caption_block(s, name, style="", info=""):
-    """Name (big if it fits on 2 lines, else small, else scrolling), then the
-    style in blue and ABV + price, centered in the space under the picture."""
+    """The words under the picture: the name (big on one line if it fits,
+    otherwise small on up to two), the style in blue and ABV + price, as much
+    of that as fits, centered in the rows left under the picture. A name too
+    long for any of that scrolls."""
     name = name.upper()
+    room = SIZE - TEXT_Y
+    style = style.upper() if style and len(style) <= 21 else ""
     big, small = wrap_words(name, 10), wrap_words(name, 21)
-    rows = []
-    if big is not None and len(big) <= 2:
-        rows = [(line, AMBER, 2, 18) for line in big]
-    elif small is not None and len(small) <= 2:
-        rows = [(line, AMBER, 1, 10) for line in small]
-    if rows:
-        if style and len(style) <= 21:
-            rows.append((style.upper(), STYLE_BLUE, 1, 10))
-        if info:
-            rows.append((info, WHITE, 1, 10))
-        y = 70 + max(0, (56 - (sum(r[3] for r in rows) - 3)) // 2)
-        for line, color, z, h in rows:
-            centered_text(s.base, line, y, color, z)
-            y += h
-        return
+    names = []
+    if big is not None and len(big) == 1:
+        names.append([(big[0], AMBER, 2, 16)])  # 14 rows tall, 2 between
+    if small is not None and len(small) <= 2:
+        names.append([(line, AMBER, 1, 9) for line in small])
+    extras = [r for r in ((style, STYLE_BLUE, 1, 9), (info, WHITE, 1, 9)) if r[0]]
+    for rows in names:
+        for more in (extras, extras[-1:]):
+            block = rows + more
+            height = sum(r[3] for r in block) - 2
+            if height <= room:
+                y = TEXT_Y + (room - height) // 2
+                for line, color, z, h in block:
+                    centered_text(s.base, line, y, color, z)
+                    y += h
+                return
     span = SIZE + 12 * len(name)  # too long to sit still: it scrolls
-    s.layers.append(lambda img, t: pixel_text(img, name, SIZE - int(t * 40) % span, 78, AMBER, 2))
+    s.layers.append(lambda img, t: pixel_text(img, name, SIZE - int(t * 40) % span, TEXT_Y + 1, AMBER, 2))
     if info:
-        centered_text(s.base, info, 104, WHITE)
+        centered_text(s.base, info, TEXT_Y + 20, WHITE)
 
 
 def hexc(h):
@@ -429,17 +438,57 @@ def art_grail(d, t, name):  # Quest for the Holy Pale: the glow
         d.px(5, 18, "#ffffff")
 
 
-def art_comet(d, t, name):  # Comet Chameleon: it comes and goes, in every color
-    for i in range(14):
-        if math.sin(t * 3 + i * 1.7) > -0.3:
-            d.px(math.floor(rnd(i) * 32), math.floor(rnd(i + 20) * 32), "#3c4652")
-    p = (t % 3.2) / 3.2
-    hx, hy = -6 + p * 46, 4 + p * 22
-    for k in range(1, 13):
-        col = hsl((t * 120 + k * 25) % 360, 85, 58 - k * 2)
-        d.px(hx - k, hy - k * 0.5, col)
-        d.px(hx - k, hy - k * 0.5 + 1, col)
-    d.rect(hx, hy, 2, 2, "#ffffff")
+def art_comet(d, t, name):  # Comet Chameleon: a chameleon riding a comet, changing color as it goes
+    # ("karma chameleon... you come and go", Sam asked for a cooler one, Nov 12 2026)
+    for i in range(18):  # stars rushing past, near ones faster
+        speed = 6 + rnd(i + 40) * 18
+        sx = (rnd(i) * 40 - t * speed) % 40 - 4
+        sy = math.floor(rnd(i + 20) * 30)
+        d.px(sx, sy, "#8a96a8" if speed > 15 else "#3c4652")
+        if speed > 18:
+            d.px(sx + 1, sy, "#3c4652")
+    bob = jround(math.sin(t * 2.2))
+    hue = (t * 70) % 360
+    for k in range(16):  # the rainbow tail, streaming back to the lower left
+        for w in (-1, 0, 1):
+            if abs(w) * 3 > k + 2:
+                continue
+            col = hsl((hue + 180 + k * 22) % 360, 90, 60 - k * 2)
+            wav = jround(math.sin(t * 6 - k * 0.7) * min(1, k / 6))
+            d.px(16 - k, 25 + bob + jround(k * 0.45) + w + wav, col)
+    d.disc(19, 24 + bob, 4, "#ffb347")  # the comet's glowing head
+    d.disc(19, 24 + bob, 2, "#fff4c4")
+    d.px(20, 23 + bob, "#ffffff")
+    body, dark, belly = hsl(hue, 85, 50), hsl(hue, 85, 28), hsl((hue + 40) % 360, 85, 70)
+    y0 = 9 + bob
+    for x in range(9, 22):  # body: an arched back
+        top = y0 + 3 - jround(math.sin((x - 9) / 12 * math.pi) * 3)
+        d.px(x, top, dark)
+        d.rect(x, top + 1, 1, y0 + 8 - top - 1, body)
+        d.px(x, y0 + 8, belly)
+    for x in range(10, 21, 3):  # spots
+        d.px(x, y0 + 4, dark)
+    d.rect(21, y0 + 1, 6, 6, body)  # head with a little crest
+    d.px(21, y0, dark)
+    d.px(22, y0, dark)
+    d.px(23, y0 - 1, dark)
+    d.rect(24, y0, 3, 1, dark)
+    d.rect(27, y0 + 3, 1, 3, body)
+    d.rect(22, y0 + 6, 6, 1, dark)  # mouth line
+    d.disc(24, y0 + 3, 1, "#f2f2f2")  # a big rolling eye
+    d.px(24 + jround(math.cos(t * 1.7)), y0 + 3 + jround(math.sin(t * 2.3)), "#101010")
+    flick = t % 3.5
+    if 2.6 < flick < 3.2:  # the tongue shoots out for a star
+        reach = jround(min(flick - 2.6, 0.3) / 0.3 * 4)
+        d.rect(28, y0 + 5, reach, 1, "#ff5a8a")
+        d.px(28 + reach, y0 + 5, "#ff9ab8")
+    for lx in (11, 13, 18, 20):  # legs gripping the comet
+        d.rect(lx, y0 + 9, 1, 2, dark)
+    cx, cy = 7, y0 + 7  # tail curled into a spiral
+    for a in range(26):
+        ang = a * 0.42
+        r = 3.6 - a * 0.13
+        d.px(cx + math.cos(ang + math.pi * 0.1) * r + 1, cy - math.sin(ang + math.pi * 0.1) * r - 1, body if a % 4 else dark)
 
 
 def art_scoop(d, t, name):  # Scoopshot IPA: pineapple and vanilla scoops
@@ -620,7 +669,7 @@ def beer_screen(item):
     def draw(img, t):
         pen = Pen()
         art(pen, t, name)
-        img.paste(pen.img.resize((ART, ART), Image.NEAREST), (ART_X, BEER_ART_Y))
+        img.paste(pen.img.resize((ART, ART), Image.NEAREST), (ART_X, ART_Y))
     s.layers.append(draw)
     caption_block(s, name, plain(style), "   ".join(p for p in (abv, price) if p))
     return s
@@ -659,7 +708,7 @@ def art_screen(a):
     px = s.base.load()
     counts = [0] * 16
     idx = [[0] * ART for _ in range(ART)]
-    for y in range(ART):  # 32-row art is drawn twice the size
+    for y in range(ART):  # 32-row art is drawn three times the size
         row = rows[y * n // ART] or "."
         w = len(row) or 1
         for x in range(ART):
@@ -675,7 +724,7 @@ def art_screen(a):
         for x in range(ART):
             i = idx[y][x]
             if i:
-                px[ART_X + x, BEER_ART_Y + y] = pal[i - 1]
+                px[ART_X + x, ART_Y + y] = pal[i - 1]
     caption_block(s, plain(a.get("caption") or ""))
     return s
 
