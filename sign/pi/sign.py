@@ -500,6 +500,42 @@ def art_jackpot(d, t, name):  # Peanut Butter Jackpot: three peanuts, every time
             d.px(9 + q * 7, 28, "#ffd94a")
 
 
+def art_sparkle(d, t, name):  # Mr. Sparkle's Lager: a winking box of soap flakes
+    # A nod to the joke the beer is named for, drawn as our own mascot (Sam asked
+    # for the detergent box, Nov 12 2026; the cartoon character itself isn't ours to use).
+    for k in range(6):  # soap bubbles drifting up out of the box
+        by = 9 - ((t * (4 + rnd(k + 11) * 3) + rnd(k) * 9) % 9)
+        bx = 9 + math.floor(rnd(k + 5) * 14) + jround(math.sin(t * 2 + k))
+        d.px(bx, by, "#bfe6ff")
+    d.rect(23, 12, 3, 19, "#b0302a")  # the box's side, in shadow
+    d.rect(7, 10, 16, 21, "#f2f2f2")  # the front
+    d.rect(7, 10, 16, 5, "#e8452f")  # red top band with a "label"
+    for x in range(9, 21, 2):
+        d.px(x, 12, "#ffd94a")
+    d.rect(7, 27, 16, 4, "#2d6fd0")  # blue bottom band
+    d.disc(15, 20, 5, "#ffd23f")  # the mascot: a beaming sun
+    wink = t % 4 > 3.3
+    d.px(13, 19, "#5a3a10")
+    if wink:
+        d.px(16, 19, "#5a3a10")
+        d.px(17, 19, "#5a3a10")
+    else:
+        d.px(17, 19, "#5a3a10")
+    d.px(12, 22, "#5a3a10")
+    d.rect(13, 23, 5, 1, "#5a3a10")
+    d.px(18, 22, "#5a3a10")
+    tw = (math.sin(t * 4) + 1) / 2  # a big sparkle that twinkles
+    r = 2 + jround(tw * 2)
+    for i in range(-r, r + 1):
+        d.px(26 + i, 6, "#fffbe6")
+        d.px(26, 6 + i, "#fffbe6")
+    if tw > 0.6:
+        d.px(25, 5, "#fff3a0")
+        d.px(27, 7, "#fff3a0")
+        d.px(25, 7, "#fff3a0")
+        d.px(27, 5, "#fff3a0")
+
+
 def art_slushie(d, t, name):  # the slushies: a swirl in a cup
     colada = "colada" in name.lower()
     a, b = ("#f6f1df", "#f5d33a") if colada else ("#7ccf5a", "#b8ec8e")
@@ -531,7 +567,7 @@ def art_glass(d, t, name):  # anything new: a pint in a color from its name
 
 
 CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
-    (r"apple|cider", art_apple), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
+    (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
     (r"comet", art_comet), (r"scoop", art_scoop), (r"nitro|stout|bobby", art_nitro),
     (r"peanut|jackpot", art_jackpot), (r"colada|margarita|slush", art_slushie),
