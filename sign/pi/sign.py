@@ -23,8 +23,12 @@ Settings live in /etc/sisyphus-sign.env (see install.sh):
   SIGN_SLOWDOWN  how much to slow the Pi's pins for the panels (left out:
                2 on a Pi 3, 4 on a Pi 4).
   SIGN_PWM_BITS  colour depth, 1-11 (default 8). Lower refreshes faster.
-  SIGN_ROTATE    turns the whole picture: 0 (default), 90, 180 or 270.
-               180 if the sign comes out upside down (Sam, Nov 12 2026).
+  SIGN_PANELS    which part of the picture each panel in the cable chain shows,
+               seen from the front: four of TL TR BL BR, panel 1 (the one the
+               Pi plugs into) first. Default "TR TL BR BL".
+  SIGN_PANEL_TURN  how far each of those panels is turned in the frame: four
+               numbers out of 0 90 180 270, or one for all. Default "180".
+  SIGN_ROTATE    turns the whole picture after that: 0 (default), 90, 180, 270.
   SIGN_SHOW_REFRESH  set to 1 to print the refresh rate, for tuning.
   SIGN_PREVIEW   set to a file name to draw one screen to a PNG and stop
                (for checking the layout on a computer without panels).
@@ -274,19 +278,9 @@ def open_panels():
     o.cols = 64
     o.chain_length = 4
     o.parallel = 1
-    # Seen from the front the Pi is on the top right panel; the cable chain runs
-    # to the top left, down to the bottom left, then to the bottom right, with
-    # the bottom row mounted upside down. That is the library's "U-mapper"
-    # layout, and the same cabling the Matrix Portal version used.
-    # If the picture comes out upside down or sideways, turn it here rather than
-    # moving cables (SIGN_ROTATE=180 in /etc/sisyphus-sign.env; Sam, Nov 12 2026).
-    # Built as one string and set once: the library hands the setting back as
-    # bytes, so adding to it afterwards crashes.
-    mapper = "U-mapper"
-    turn = int(os.getenv("SIGN_ROTATE") or 0) % 360
-    if turn:
-        mapper += f";Rotate:{turn}"
-    o.pixel_mapper_config = mapper
+    # No pixel mapper: the panels see one 256x64 strip, one 64x64 block per
+    # panel in cable order, and to_panels() below cuts the 128x128 picture up
+    # to suit (the library's own mappers could not match the cabling).
     o.hardware_mapping = os.getenv("SIGN_WIRING") or "regular"
     # Faster Pis have to be slowed down or the panels show garbage.
     o.gpio_slowdown = int(os.getenv("SIGN_SLOWDOWN") or (4 if "Pi 4" in pi_model() else 2))
@@ -300,6 +294,37 @@ def open_panels():
     return RGBMatrix(options=o)
 
 
+# How the panels sit (Sam's numbered-panel photo, Nov 12 2026). Seen from the
+# front with the sign the right way up: panel 1 (the Pi's) top right, 2 top
+# left, 3 bottom right, 4 bottom left, and all four mounted upside down. That
+# puts panel 1's socket next to the Pi's spot behind the SISYPHUS blade.
+SPOTS = {"TL": (0, 0), "TR": (64, 0), "BL": (0, 64), "BR": (64, 64)}
+
+
+def panel_layout():
+    order = (os.getenv("SIGN_PANELS") or "TR TL BR BL").upper().split()
+    turns = [int(t) % 360 for t in (os.getenv("SIGN_PANEL_TURN") or "180").split()]
+    if len(turns) == 1:
+        turns *= 4
+    if sorted(order) != sorted(SPOTS) or len(turns) != 4 or any(t % 90 for t in turns):
+        raise SystemExit(f"bad SIGN_PANELS / SIGN_PANEL_TURN: {order} {turns}")
+    return list(zip(order, turns))
+
+
+def to_panels(img, layout, turn_all=0):
+    """The 128x128 picture as the 256x64 strip the chained panels expect."""
+    if turn_all:
+        img = img.rotate(-turn_all)  # PIL turns anticlockwise; this is clockwise
+    strip = Image.new("RGB", (64 * len(layout), 64))
+    for i, (spot, turn) in enumerate(layout):
+        x, y = SPOTS[spot]
+        block = img.crop((x, y, x + 64, y + 64))
+        if turn:
+            block = block.rotate(-turn)
+        strip.paste(block, (64 * i, 0))
+    return strip
+
+
 def main():
     preview = os.getenv("SIGN_PREVIEW")
     if preview:  # draw one screen to a PNG, for checking the layout off the Pi
@@ -308,6 +333,8 @@ def main():
             words_screen("DRAW ON THIS SIGN", "SCAN THE QR AT THE BAR").frame(0)
         img.resize((SIZE * 4, SIZE * 4), Image.NEAREST).save(preview)
         return
+    layout = panel_layout()
+    turn_all = int(os.getenv("SIGN_ROTATE") or 0) % 360
     matrix = open_panels()
     canvas = matrix.CreateFrameCanvas()
 
@@ -316,7 +343,7 @@ def main():
         end = time.monotonic() + seconds
         while True:
             now = time.monotonic()
-            canvas.SetImage(screen.frame(now))
+            canvas.SetImage(to_panels(screen.frame(now).convert("RGB"), layout, turn_all))
             canvas = matrix.SwapOnVSync(canvas)  # whole frame at once, no tearing
             if now >= end:
                 return
