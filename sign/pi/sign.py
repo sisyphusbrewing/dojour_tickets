@@ -390,19 +390,19 @@ def art_gold(d, t, name):  # Fool's Gold: it's raining money (it isn't)
 
 def art_sisyfest(d, t, name):  # Sisyfest: up the hill, every single time
     for x in range(32):
-        top = jround(31 - x * 0.62)
+        top = jround(31 - x * 0.78)
         d.rect(x, top, 1, 32 - top, "#3b5b3e")
         d.px(x, top, "#5f8a5f")
     p = t % 7
     s = p / 5.5 * 0.82 if p < 5.5 else 0.82 * (1 - (p - 5.5) / 1.5)
     bx = 8 + s * 20
-    by = 31 - bx * 0.62 - 5
-    d.disc(bx, by, 4, "#8c8c8c")
+    by = 31 - bx * 0.78 - 6
+    d.disc(bx, by, 5, "#8c8c8c")
     d.px(bx - 1, by - 2, "#b5b5b5")
     d.px(bx - 2, by - 1, "#b5b5b5")
     top = p >= 5.5
-    mx = 8 + 0.82 * 20 - 6 if top else bx - 6
-    my = 31 - mx * 0.62
+    mx = 29 if top else bx - 6  # at the top he steps aside and watches it roll
+    my = 31 - mx * 0.78
     man = "#e9e6df"
     d.px(mx, my - 7, man)
     d.line(mx, my - 6, mx, my - 3, man)
@@ -413,8 +413,10 @@ def art_sisyfest(d, t, name):  # Sisyfest: up the hill, every single time
         d.line(mx, my - 5, mx + 2, my - 8, man)
     else:
         d.line(mx, my - 5, mx + 2, my - 5, man)
+    d.disc(7, 7, 4, "#e8dcae")  # a big moon over the hill
+    d.disc(9, 6, 3, "#000000")  # ...a crescent
     for k in range(4):
-        d.px(4 + k * 6, 3 + (k % 2) * 2, "#3e4c5c")
+        d.px(14 + k * 4, 2 + (k % 2) * 3, "#3e4c5c")
 
 
 def art_grail(d, t, name):  # Quest for the Holy Pale: the glow
