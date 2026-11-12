@@ -23,6 +23,8 @@ Settings live in /etc/sisyphus-sign.env (see install.sh):
   SIGN_SLOWDOWN  how much to slow the Pi's pins for the panels (left out:
                2 on a Pi 3, 4 on a Pi 4).
   SIGN_PWM_BITS  colour depth, 1-11 (default 8). Lower refreshes faster.
+  SIGN_ROTATE    turns the whole picture: 0 (default), 90, 180 or 270.
+               180 if the sign comes out upside down (Sam, Nov 12 2026).
   SIGN_SHOW_REFRESH  set to 1 to print the refresh rate, for tuning.
   SIGN_PREVIEW   set to a file name to draw one screen to a PNG and stop
                (for checking the layout on a computer without panels).
@@ -277,6 +279,11 @@ def open_panels():
     # the bottom row mounted upside down. That is the library's "U-mapper"
     # layout, and the same cabling the Matrix Portal version used.
     o.pixel_mapper_config = "U-mapper"
+    # If the picture comes out upside down or sideways, turn it here rather than
+    # moving cables (SIGN_ROTATE=180 in /etc/sisyphus-sign.env; Sam, Nov 12 2026).
+    turn = int(os.getenv("SIGN_ROTATE") or 0) % 360
+    if turn:
+        o.pixel_mapper_config += f";Rotate:{turn}"
     o.hardware_mapping = os.getenv("SIGN_WIRING") or "regular"
     # Faster Pis have to be slowed down or the panels show garbage.
     o.gpio_slowdown = int(os.getenv("SIGN_SLOWDOWN") or (4 if "Pi 4" in pi_model() else 2))
