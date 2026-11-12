@@ -33,12 +33,19 @@ def fit(d, text, size, sp, max_w):
 
 
 def make(w, h, kicker, name):
+    """Faces sit in the vertical middle so Meta's wide (1.91:1) and square crops
+    of this image still show both faces whole (Sam, Nov 11 2026)."""
     tall = h > w
     img = Image.new("RGB", (w, h), CHAR)
     d = ImageDraw.Draw(img)
-    spaced(d, w / 2, 34, kicker, fit(d, kicker, 46, 5, w - 90), PALE, 5)
-    top = 110
-    ph = 740 if tall else 560
+    if tall:
+        spaced(d, w / 2, 36, kicker, fit(d, kicker, 44, 5, w - 90), PALE, 5)
+        y = 110
+        d.polygon([(0, y + 24), (w, y), (w, y + 126), (0, y + 150)], fill=BLUE)
+        spaced(d, w / 2, y + 38, "THE BACKPACK TOUR", fit(d, "THE BACKPACK TOUR", 96, 8, w - 80), WHITE, 8)
+        top, ph = 360, 640
+    else:
+        top, ph = 40, 600
     pw = w // 2 - 3
     for i, (p, label) in enumerate([(punkie, "PUNKIE JOHNSON · SNL"), (kalea, "KALEA MCNEIL · JUST FOR LAUGHS")]):
         s = max(pw / p.width, ph / p.height)
@@ -48,18 +55,17 @@ def make(w, h, kicker, name):
         img.paste(r, (x, top))
         d.rectangle((x, top + ph - 52, x + pw, top + ph), fill=(30, 28, 28))
         spaced(d, x + pw / 2, top + ph - 42, label, fit(d, label, 28, 2, pw - 30), WHITE, 2)
-    y = top + ph - 6
-    d.polygon([(0, y + 26), (w, y), (w, y + 120), (0, y + 146)], fill=BLUE)
-    spaced(d, w / 2, y + 36, "THE BACKPACK TOUR", fit(d, "THE BACKPACK TOUR", 96, 8, w - 80), WHITE, 8)
-    y += 180 if tall else 166
-    lines = [("THU NOV 12 · 8 PM", 66, WHITE), ("SISYPHUS · 712 ONTARIO AVE W · MINNEAPOLIS", 34, PALE)]
+    y = top + ph + 40
     if tall:
-        lines.append(("TICKETS $23", 56, WHITE))
+        lines = [("THU NOV 12 · 8 PM", 66, WHITE), ("TICKETS $23 · SISYPHUS · MINNEAPOLIS", 34, PALE)]
     else:
-        lines[1] = ("ONE NIGHT · SISYPHUS · TICKETS $23", 34, PALE)
+        d.polygon([(0, y + 4), (w, y - 16), (w, y + 104), (0, y + 124)], fill=BLUE)
+        spaced(d, w / 2, y + 22, "THE BACKPACK TOUR", fit(d, "THE BACKPACK TOUR", 84, 8, w - 80), WHITE, 8)
+        y += 160
+        lines = [("THU NOV 12 · 8 PM · TICKETS $23", 56, WHITE), ("SISYPHUS · MINNEAPOLIS", 32, PALE)]
     for text, size, col in lines:
         spaced(d, w / 2, y, text, fit(d, text, size, 5, w - 90), col, 5)
-        y += size + (40 if tall else 30)
+        y += size + 34
     img.save(os.path.join(HERE, name), quality=92)
 
 
