@@ -1297,8 +1297,8 @@
               "rotaryActions": false
             },
             "style": {
-              "text": "START\\nSHOW",
-              "textExpression": false,
+              "text": "$(custom:room_look) == 'show' ? 'SHOW IS ON\\ntap to open' : ($(internal:time_unix) - $(custom:door_at) < 180 && $(custom:door_left) >= 0) ? concat('START\\n', $(custom:door_show), ' SHOW\\n', $(custom:door_left) < 1 ? 'ALL HERE' : concat($(custom:door_left), ' TO COME')) : 'START\\nSHOW'",
+              "textExpression": true,
               "size": "auto",
               "alignment": "center:center",
               "pngalignment": "center:center",
@@ -1322,8 +1322,7 @@
                 "isInverted": false,
                 "style": {
                   "bgcolor": 12582912,
-                  "color": 16777215,
-                  "text": "SHOW IS ON\\ntap to open"
+                  "color": 16777215
                 }
               }
             ],
@@ -14447,6 +14446,30 @@
       "defaultValue": 0,
       "persistCurrentValue": false,
       "sortOrder": 7
+    },
+    "door_show": {
+      "description": "Door count: which show it is for, e.g. 8 PM",
+      "defaultValue": "",
+      "persistCurrentValue": false,
+      "sortOrder": 8
+    },
+    "door_left": {
+      "description": "Door count: guests not checked in yet (-1 = no show to count)",
+      "defaultValue": -1,
+      "persistCurrentValue": false,
+      "sortOrder": 9
+    },
+    "door_total": {
+      "description": "Door count: tickets for that show",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 10
+    },
+    "door_at": {
+      "description": "Door count: unix time of the last reading (old = don't show it)",
+      "defaultValue": 0,
+      "persistCurrentValue": false,
+      "sortOrder": 11
     }
   }
 }

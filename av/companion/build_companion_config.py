@@ -427,6 +427,11 @@ CUSTOM_VARIABLES = {
     "house_bar": ("House lights Bar level %, written by the house-lights service", 0),
     "stage_look": ("Stage lights look, written by the stage-lights service (wash, show, warm, blue, ... off)", 0),
     "deck_battery": ("Portable deck battery %, written every minute by the Pi (av/pi-satellite-setup.sh)", 0),
+    # Guests still to come, written every 30 s by av/door-count/door_count.py on the office PC
+    "door_show": ("Door count: which show it is for, e.g. 8 PM", ""),
+    "door_left": ("Door count: guests not checked in yet (-1 = no show to count)", -1),
+    "door_total": ("Door count: tickets for that show", 0),
+    "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
 }
 
 
@@ -688,6 +693,21 @@ def look_is(look):
     return f"$(custom:room_look) == '{look}'"
 
 
+# What the START SHOW key says (Sam, Nov 13 2026: "it should pull how many guests we are
+# waiting on"). av/door-count/door_count.py on the office PC reads the door app's check-ins
+# and writes the next show's numbers into the door_* variables, so the key reads
+#     START / 8 PM SHOW / 31 TO COME      then      START / 8 PM SHOW / ALL HERE
+# With no show left tonight, or a reading more than 3 minutes old (script or internet
+# down), it is plain START SHOW: a stale count never sits on the deck. Lines are kept to
+# 10 letters so the words stay as big as on the other keys.
+DOOR_FRESH = "$(internal:time_unix) - $(custom:door_at) < 180 && $(custom:door_left) >= 0"
+START_SHOW_TEXT = (
+    "$(custom:room_look) == 'show' ? 'SHOW IS ON\\ntap to open' : "
+    f"({DOOR_FRESH}) ? concat('START\\n', $(custom:door_show), ' SHOW\\n', "
+    "$(custom:door_left) < 1 ? 'ALL HERE' : concat($(custom:door_left), ' TO COME')) : 'START\\nSHOW'"
+)
+
+
 def reset_sound_key():
     """Loads XR18 snapshot 1 "SHOW", the known-good show mix saved Oct 19 2026."""
     return button(
@@ -797,9 +817,9 @@ def home_page():
             (0, 1): look_key("PRE-SHOW", "pre", look_preshow(), 0x8A6400),
             # If the show look is already on (the deck restarted mid-show), a tap only opens
             # the SHOW screen; it does not run the look again.
-            (0, 2): button("START\\nSHOW", bgcolor=SHOW_COLOR,
+            (0, 2): button(START_SHOW_TEXT, expression=True, bgcolor=SHOW_COLOR,
                            steps=[look_show() + [go(PAGE_SHOW)], [go(PAGE_SHOW)]], step_expression=SHOW_IS_ON_STEP,
-                           feedbacks=[when(look_is("show"), bgcolor=RED, color=WHITE, text="SHOW IS ON\\ntap to open")]),
+                           feedbacks=[when(look_is("show"), bgcolor=RED, color=WHITE)]),
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
             (1, 0): god_mic_key(),
             (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
