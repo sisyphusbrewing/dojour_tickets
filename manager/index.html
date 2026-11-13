@@ -41,6 +41,7 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
+  <script src="../staff/news.js"></script>
 </head>
 <body>
   <div id="lock" class="hidden">
@@ -83,6 +84,9 @@
 
   <main class="wrap">
     <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
+
+    <!-- What's new, same feed as /staff/ (Sam, Nov 13 2026: managers sign in here). -->
+    <section id="newsSection"></section>
 
     <!-- ===== Guest lists: any upcoming show, comps ===== -->
     <section id="tab-door">
@@ -432,7 +436,7 @@
     async function loadReport() {
       var box = $('reportList');
       box.innerHTML = '<div class="empty">Counting…</div>';
-      var results = await Promise.all([fetchAllTicketRows('show_date, show_title, tickets, source'), sb.from('show_agents').select('show_title, agent_email')]);
+      var results = await Promise.all([fetchAllTicketRows('show_date, show_title, tickets, source, email'), sb.from('show_agents').select('show_title, agent_email')]);
       if (results[0].error) { box.innerHTML = '<div class="empty">Couldn’t load ticket counts.</div>'; return; }
       agentDirectory = {};
       (results[1].data || []).forEach(function (a) { if (a.show_title && a.agent_email) agentDirectory[a.show_title.trim()] = a.agent_email.trim(); });
@@ -441,6 +445,9 @@
         if (!t.show_date || !t.show_title) return;
         var ts = parseShowDateToMillis(t.show_date);
         if (ts && ts < now - GRACE) return;
+        // Dojour rows with no buyer email are Sam's own holds ("Website Hold"),
+        // not sales; agents read every number as paid tickets (Nov 13 2026).
+        if (t.source === 'Dojour' && !String(t.email || '').trim()) return;
         var key = t.show_date.trim() + ' • ' + t.show_title.trim();
         var s = map[key] || (map[key] = { show_date: t.show_date.trim(), show_title: t.show_title.trim(), ts: ts || Number.MAX_SAFE_INTEGER, sold: 0, web: 0, dojour: 0, comps: 0 });
         var n = parseInt(t.tickets, 10) || 1;
@@ -664,6 +671,7 @@
       document.querySelectorAll('#newRole button').forEach(function (b) {
         b.classList.toggle('hidden', !canGive(b.dataset.role));
       });
+      startNews(role, u);
       loadShowList();
       setInterval(function () { if (!document.hidden && !$('tab-door').classList.contains('hidden')) loadGuests(); }, 30000);
     });
