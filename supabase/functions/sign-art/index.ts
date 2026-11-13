@@ -18,6 +18,10 @@
 // POST { beers: true }        managers: draws every beer on tap (GoTab feed)
 //                             that has no art yet, approved straight away.
 // POST { redraw: id }         managers: draws that picture again.
+// POST { animate: id }        managers: adds moving frames to a still picture.
+//
+// Every picture also gets 2-3 animation frames (Sam, Nov 12 2026: "the
+// customer ones need to be animated too"); the sign loops them.
 //
 // Art is 32 rows of 32 characters: "." is off, 1-9 and A-F pick palette[1..15].
 // Needs a Claude API key secret: ANTHROPIC_CLIENT_API (what Sam named it in
@@ -67,12 +71,14 @@ Nobody reviews the picture before it goes up in front of the whole bar. The hous
 
 When a suggestion crosses that line, don't refuse it: tweak it into something more mundane that keeps the characters and the silliness, and draw that. For example, "a dolphin having sex with a monkey" becomes a monkey dressed as a cowboy riding a dolphin like a horse. Sexual acts become a goofy friendly activity, nudity gets clothes, gore becomes a cartoon bonk. Set tamed to true when you did this. Never draw or write anything sexual, nude, political (parties, politicians, causes, slogans), hateful (slurs, hate symbols, stereotypes, mocking any group), mocking a real person, or anyone's personal details; keep the caption clean of those too.
 
+Animate it. Besides the main picture in rows, return 2 or 3 more frames in frames, each a full 32 rows of 32 characters using the same palette. The sign loops the main picture and the frames at about 3 per second, so change only the parts that move (a wave, a blink, a wagging tail, splashing water, steam, flames flickering, something bouncing a pixel or two) and keep everything else exactly the same, or it flickers.
+
 Set ok to false (and return a blank picture) only when there is no fun clean version to draw, such as a request built on a slur, hate or politics. Give the reason in one short sentence a customer would see.`;
 
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["ok", "tamed", "reason", "caption", "palette", "rows"],
+  required: ["ok", "tamed", "reason", "caption", "palette", "rows", "frames"],
   properties: {
     ok: { type: "boolean" },
     tamed: { type: "boolean" },
@@ -80,10 +86,11 @@ const SCHEMA = {
     caption: { type: "string" },
     palette: { type: "array", items: { type: "string" } },
     rows: { type: "array", items: { type: "string" } },
+    frames: { type: "array", items: { type: "array", items: { type: "string" } } },
   },
 };
 
-type Art = { ok: boolean; tamed?: boolean; reason: string; caption: string; palette: string[]; rows: string[] };
+type Art = { ok: boolean; tamed?: boolean; reason: string; caption: string; palette: string[]; rows: string[]; frames: string[][] };
 
 // Whatever comes back, the sign gets exactly 32 rows of 32 valid characters.
 function tidy(a: Art): Art {
@@ -92,18 +99,26 @@ function tidy(a: Art): Art {
     return /^[0-9A-F]{6}$/.test(hex) ? hex : "000000";
   });
   const allowed = CODES.slice(0, palette.length + 1);
-  const rows: string[] = [];
-  for (let y = 0; y < SIZE; y++) {
-    const raw = String((a.rows ?? [])[y] ?? "").toUpperCase();
-    let row = "";
-    for (let x = 0; x < SIZE; x++) {
-      const ch = raw[x] ?? ".";
-      row += allowed.includes(ch) ? ch : ".";
+  const grid = (src: string[]) => {
+    const rows: string[] = [];
+    for (let y = 0; y < SIZE; y++) {
+      const raw = String((src ?? [])[y] ?? "").toUpperCase();
+      let row = "";
+      for (let x = 0; x < SIZE; x++) {
+        const ch = raw[x] ?? ".";
+        row += allowed.includes(ch) ? ch : ".";
+      }
+      rows.push(row);
     }
-    rows.push(row);
-  }
+    return rows;
+  };
+  const rows = grid(a.rows);
+  // a frame that came back empty or half-drawn would flash, so it is left out
+  const lit = (r: string[]) => r.join("").replace(/\./g, "").length;
+  const frames = (Array.isArray(a.frames) ? a.frames : []).slice(0, 3).map(grid)
+    .filter((f) => lit(f) >= lit(rows) * 0.6);
   const caption = String(a.caption ?? "").replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim().toUpperCase().slice(0, 24);
-  return { ok: !!a.ok, tamed: !!a.tamed, reason: String(a.reason ?? ""), caption, palette, rows };
+  return { ok: !!a.ok, tamed: !!a.tamed, reason: String(a.reason ?? ""), caption, palette, rows, frames };
 }
 
 const API_KEY = Deno.env.get("ANTHROPIC_CLIENT_API") ?? Deno.env.get("ANTHROPIC_CLIENT_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
@@ -127,7 +142,7 @@ async function draw(ask: string, photo: Photo = null): Promise<Art> {
     }],
   });
   if (response.stop_reason === "refusal") {
-    return { ok: false, reason: "Claude wouldn't draw that one.", caption: "", palette: [], rows: [] };
+    return { ok: false, reason: "Claude wouldn't draw that one.", caption: "", palette: [], rows: [], frames: [] };
   }
   const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
   return tidy(JSON.parse(text) as Art);
@@ -171,13 +186,15 @@ function crc32(bytes: Uint8Array) {
   return ~c >>> 0;
 }
 
+// The picture and its frames side by side, so the check sees every frame.
 async function png(art: Art, scale = 8): Promise<string> {
-  const W = SIZE * scale;
-  const raw = new Uint8Array(W * (W * 3 + 1));
-  for (let y = 0; y < W; y++) {
-    const row = art.rows[Math.floor(y / scale)];
+  const pics = [art.rows, ...(art.frames ?? [])];
+  const Hh = SIZE * scale, W = Hh * pics.length;
+  const raw = new Uint8Array(Hh * (W * 3 + 1));
+  for (let y = 0; y < Hh; y++) {
     for (let x = 0; x < W; x++) {
-      const i = CODES.indexOf(row[Math.floor(x / scale)]);
+      const row = pics[Math.floor(x / Hh)][Math.floor(y / scale)];
+      const i = CODES.indexOf(row[Math.floor((x % Hh) / scale)]);
       const hex = i > 0 ? art.palette[i - 1] : "000000";
       const o = y * (W * 3 + 1) + 1 + x * 3;
       raw[o] = parseInt(hex.slice(0, 2), 16); raw[o + 1] = parseInt(hex.slice(2, 4), 16); raw[o + 2] = parseInt(hex.slice(4, 6), 16);
@@ -193,7 +210,7 @@ async function png(art: Art, scale = 8): Promise<string> {
     return out;
   };
   const ihdr = new Uint8Array(13), hv = new DataView(ihdr.buffer);
-  hv.setUint32(0, W); hv.setUint32(4, W); ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
+  hv.setUint32(0, W); hv.setUint32(4, Hh); ihdr[8] = 8; ihdr[9] = 2; // 8-bit RGB
   const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zipped), chunk("IEND", new Uint8Array())];
   const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
@@ -228,7 +245,8 @@ async function vet(prompt: string, art: Art): Promise<{ ok: boolean; reason: str
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: "image/png", data: await png(art) } },
-        { type: "text", text: `Customer's request: "${prompt}"\nCaption shown under the picture: "${art.caption}"` },
+        { type: "text", text: `Customer's request: "${prompt}"\nCaption shown under the picture: "${art.caption}"` +
+          (art.frames?.length ? `\nThe picture is animated: its ${art.frames.length + 1} frames are shown side by side above. Judge every frame.` : "") },
       ],
     }],
   });
@@ -348,10 +366,10 @@ async function suggestion(prompt: string, name: string, who: string, photo: Phot
   await insert({
     kind: "suggestion", prompt: shown, from_name: name || null, device: who || null,
     note: art.tamed ? "Toned down for the wall" : null,
-    caption: art.caption, palette: art.palette, rows: art.rows,
+    caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames.length ? art.frames : null,
     status: "approved", decided_at: new Date().toISOString(),
   });
-  return respond(200, { status: "approved", tamed: art.tamed, art: { caption: art.caption, palette: art.palette, rows: art.rows } });
+  return respond(200, { status: "approved", tamed: art.tamed, art: { caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames } });
 }
 
 function beerKey(name: string) {
@@ -397,7 +415,31 @@ async function redraw(id: number) {
   const r = await fetch(`${SB}/rest/v1/sign_art?id=eq.${id}`, {
     method: "PATCH",
     headers: { ...H, Prefer: "return=representation" },
-    body: JSON.stringify({ caption: art.caption, palette: art.palette, rows: art.rows }),
+    body: JSON.stringify({ caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames.length ? art.frames : null }),
+  });
+  return respond(200, { art: (await r.json())[0] });
+}
+
+// Adds moving frames to a picture that was drawn still (before Nov 12 2026,
+// or from a photo that is long gone). The picture itself stays as it is.
+async function animate(id: number) {
+  const rows = await fetch(`${SB}/rest/v1/sign_art?select=*&id=eq.${id}`, { headers: H }).then((r) => r.json());
+  const row = rows?.[0];
+  if (!row) return respond(404, { error: "No such picture." });
+  const drawn = await draw(
+    `Here is a finished picture for the sign, captioned "${row.caption}". Palette: ${JSON.stringify(row.palette)}\n` +
+    `Rows:\n${(row.rows as string[]).join("\n")}\n` +
+    `Return it unchanged (same rows, palette and caption, ok true) and add the animation frames.`,
+  );
+  const art: Art = { ...drawn, ok: true, caption: row.caption, palette: row.palette, rows: row.rows };
+  art.frames = tidy(art).frames;
+  if (!art.frames.length) return respond(200, { art: row, note: "Claude couldn't animate that one. Try again." });
+  const check = await vet(row.prompt ?? "", art);
+  if (!check.ok) return respond(200, { art: row, note: "The moving version didn't pass the check, so it stays still." });
+  const r = await fetch(`${SB}/rest/v1/sign_art?id=eq.${id}`, {
+    method: "PATCH",
+    headers: { ...H, Prefer: "return=representation" },
+    body: JSON.stringify({ frames: art.frames }),
   });
   return respond(200, { art: (await r.json())[0] });
 }
@@ -411,8 +453,9 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { /* bad body */ }
 
   try {
-    if (body.beers || body.redraw) {
+    if (body.beers || body.redraw || body.animate) {
       if (!(await isManager(req))) return respond(403, { error: "Managers only." });
+      if (body.animate) return await animate(Number(body.animate));
       return body.beers ? await beers() : await redraw(Number(body.redraw));
     }
     const prompt = String(body.prompt ?? "").replace(/\s+/g, " ").trim().slice(0, 100);

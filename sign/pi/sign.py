@@ -1022,36 +1022,55 @@ def lum(c):
     return sum(c) / 765
 
 
+GUEST_FPS = 3  # guest pictures flip through their frames 3 times a second
+
+
 def art_screen(a):
     """A guest's picture (from sign_next): big at the top, caption under it,
-    and "BY <their name>" if they gave one."""
+    and "BY <their name>" if they gave one. A picture with frames moves: the
+    sign loops it and its frames (Sam, Nov 12 2026: "the customer ones need
+    to be animated too")."""
     s = Screen()
     pal = []
     for c in a.get("palette", [])[:15]:
         v = int(c, 16)
         pal.append(((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF))
-    rows = a.get("rows") or []
-    n = len(rows) or 1
-    px = s.base.load()
-    counts = [0] * 16
-    idx = [[0] * ART for _ in range(ART)]
-    for y in range(ART):  # 32-row art is drawn three times the size
-        row = rows[y * n // ART] or "."
-        w = len(row) or 1
-        for x in range(ART):
-            i = CODES.find(row[x * w // ART])
-            i = i if 0 < i <= len(pal) else 0
-            idx[y][x] = i
-            counts[i] += 1
-    # keep the whole sign under what the power supply gives
-    ma = sum(counts[i + 1] * lum(c) for i, c in enumerate(pal)) * MA_PER_LED
-    dim = min(1.0, POWER_MA / ma) if ma else 1.0
+    pics = [a.get("rows") or []] + [f for f in (a.get("frames") or [])[:3] if isinstance(f, list) and f]
+    grids = []
+    worst = 0
+    for rows in pics:
+        n = len(rows) or 1
+        counts = [0] * 16
+        idx = [[0] * ART for _ in range(ART)]
+        for y in range(ART):  # 32-row art is drawn three times the size
+            row = str(rows[y * n // ART] or ".")
+            w = len(row) or 1
+            for x in range(ART):
+                i = CODES.find(row[x * w // ART])
+                i = i if 0 < i <= len(pal) else 0
+                idx[y][x] = i
+                counts[i] += 1
+        grids.append(idx)
+        worst = max(worst, sum(counts[i + 1] * lum(c) for i, c in enumerate(pal)) * MA_PER_LED)
+    # keep the whole sign under what the power supply gives, on its brightest frame
+    dim = min(1.0, POWER_MA / worst) if worst else 1.0
     pal = [tuple(int(v * dim) for v in c) for c in pal]
-    for y in range(ART):
-        for x in range(ART):
-            i = idx[y][x]
-            if i:
-                px[ART_X + x, ART_Y + y] = pal[i - 1]
+    pictures = []
+    for idx in grids:
+        img = Image.new("RGB", (ART, ART))
+        px = img.load()
+        for y in range(ART):
+            for x in range(ART):
+                i = idx[y][x]
+                if i:
+                    px[x, y] = pal[i - 1]
+        pictures.append(img)
+    if len(pictures) == 1:
+        s.base.paste(pictures[0], (ART_X, ART_Y))
+    else:
+        def draw(img, t):
+            img.paste(pictures[int(t * GUEST_FPS) % len(pictures)], (ART_X, ART_Y))
+        s.layers.append(draw)
     # who drew it, from the name box on /sign/ (Sam, Nov 12 2026)
     who = " ".join(plain(a.get("from_name") or "").split())
     caption_block(s, plain(a.get("caption") or ""), ("BY " + who)[:21] if who else "")
