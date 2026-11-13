@@ -1,6 +1,6 @@
 // Sisyphus - the taproom LED sign draws its own pictures.
 //
-// POST { prompt, name, image? }  a customer's suggestion (public page /sign/),
+// POST { prompt, name, image?, phone? }  a customer's suggestion (public page /sign/),
 //                             optionally a photo (data: URL) to turn into a
 //                             picture; the photo is never saved.
 //                             The name is required and shows on the sign as
@@ -29,6 +29,7 @@ const MODEL = "claude-opus-5-5";
 const MENU = "https://sisyphusmenu.stharriman.workers.dev/";
 const MAX_SUGGESTIONS_PER_HOUR = 30; // keeps one table from running up the bill
 const MAX_PER_DEVICE_PER_HOUR = 5;   // one phone can't flood the sign
+const MAX_PER_WIFI_PER_HOUR = 20;    // when the page sends no phone id, the whole bar's Wi-Fi shares one count
 const MAX_BEERS_PER_RUN = 8;
 const SIZE = 32;
 const CODES = ".123456789ABCDEF";
@@ -305,7 +306,7 @@ async function insert(row: Record<string, unknown>) {
   return (await r.json())[0];
 }
 
-async function suggestion(prompt: string, name: string, who: string, photo: Photo = null) {
+async function suggestion(prompt: string, name: string, who: string, photo: Photo = null, perPhone = true) {
   // Sam, Nov 3 2026: R-rated is fine, nothing political, offensive or nude.
   const shown = photo ? `Photo${prompt ? ": " + prompt : ""}` : prompt; // what managers see on review.html
   const since = new Date(Date.now() - 3600_000).toISOString();
@@ -314,7 +315,7 @@ async function suggestion(prompt: string, name: string, who: string, photo: Phot
   if (Array.isArray(recent) && recent.length >= MAX_SUGGESTIONS_PER_HOUR) {
     return respond(429, { error: "The sign is busy drawing. Try again in a little while." });
   }
-  if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= MAX_PER_DEVICE_PER_HOUR) {
+  if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= (perPhone ? MAX_PER_DEVICE_PER_HOUR : MAX_PER_WIFI_PER_HOUR)) {
     return respond(429, { error: "That's plenty from one phone for now. Give someone else a turn!" });
   }
   const turnDown = (reason: string) => insert({
@@ -422,7 +423,12 @@ Deno.serve(async (req) => {
     if (body.image && !photo) return respond(400, { error: "That photo didn't come through. Try a smaller one." });
     if (prompt.length < 2 && !photo) return respond(400, { error: "Tell the sign what to draw, or send a photo." });
     if (!name) return respond(400, { error: "Add your name. It goes on the sign under your picture." });
-    return await suggestion(photo ? (prompt || "") : prompt, name, device(req) ? await hash(device(req)) : "", photo);
+    // The per-phone limit counts the phone's own random id from the page; the
+    // internet address alone would lump everyone on the bar's Wi-Fi together
+    // (Sam, Nov 12 2026: friends kept getting "plenty from one phone").
+    const own = /^[a-z0-9]{8,40}$/.test(String(body.phone ?? ""));
+    const phone = own ? "phone:" + body.phone : device(req);
+    return await suggestion(photo ? (prompt || "") : prompt, name, phone ? await hash(phone) : "", photo, own);
   } catch (e) {
     console.error(e);
     return respond(500, { error: "The sign couldn't draw that right now. Try again in a minute." });

@@ -381,6 +381,7 @@ TINY = {  # a 3x5 font for words inside the cartoons
     "I": "111010010010111", "D": "110101101101110", "O": "111101101101111",
     "T": "111010010010010", "Y": "101101010010010", "U": "101101101101111",
     "!": "010010010000010",
+    "B": "110101110101110", "R": "110101110101101",
 }
 
 
@@ -854,6 +855,81 @@ def art_slushie(d, t, name):  # the slushies: a swirl in a cup
         d.px(24, 8, "#e9ffd0")
 
 
+def art_margarita(d, t, name):  # Margarita: a lime sips the slushie and gets BRAIN FREEZE
+    # Sam, Nov 12 2026: "needs to be way cooler", no idea given. A lime with a
+    # face slurps the frozen margarita through a long straw, freezes solid
+    # from the top down, shivers with ice sparkles ("BRR"), then thaws.
+    p = t % 6
+    frozen = 0 if p < 2.2 else min(1, (p - 2.2) / 0.8) if p < 4.6 else max(0, 1 - (p - 4.6) / 0.9)
+    shake = (1 if math.sin(t * 40) > 0 else -1) if 3.0 < p < 4.6 else 0
+    d.rect(0, 29, 32, 3, "#6b4224")  # the bar top
+    d.rect(0, 29, 32, 1, "#8a5a32")
+    # the glass: salt rim, a bowl of green slush, stem and foot
+    level = 12 + (min(p, 2.2) / 2.2) * 4 if p < 4.6 else 16 - (p - 4.6) / 1.4 * 4
+    for y in range(12, 20):
+        half = 7 - (y - 12) * 0.75
+        for x in range(jround(24 - half), jround(24 + half) + 1):
+            edge = x in (jround(24 - half), jround(24 + half)) or y == 19
+            if edge:
+                d.px(x, y, "#9fb3b8")
+            elif y >= level:
+                d.px(x, y, "#8fe36a" if (x * 3 + y * 5 + math.floor(t * 5)) % 7 < 4 else "#5fc24a")
+    for x in range(17, 32):
+        d.px(x, 11, "#f2f2ea" if (x + math.floor(t * 4)) % 3 else "#b4b4b4")  # salt, glinting
+    d.rect(24, 20, 1, 8, "#9fb3b8")
+    d.rect(21, 28, 7, 1, "#9fb3b8")
+    d.disc(30, 10, 2, "#3f9a3a")  # lime wedge on the rim
+    d.disc(30, 10, 1, "#c8f27a")
+    # the straw, slush running up it while he sips
+    d.line(14, 13, 23, 15, "#e23b3b")
+    d.line(23, 15, 23, 18, "#e23b3b")
+    if p < 2.2:
+        k = math.floor(t * 8) % 9
+        d.px(23 - k, 15 - k * 2 / 9, "#8fe36a")
+    # the lime guy, frosting over from the top down
+    cx, cy = 8 + shake, 15
+    line_y = cy - 8 + frozen * 17
+    for y in range(-7, 8):
+        for x in range(-7, 8):
+            r2 = x * x + y * y
+            if r2 > 7 * 7 + 4:
+                continue
+            ice = cy + y < line_y
+            if r2 > 5 * 5 + 3:
+                col = "#3fa0c8" if ice else "#2f8a2a"   # rind
+            elif r2 > 4 * 4 + 2:
+                col = "#bfeaff" if ice else "#e6f7b0"   # pith
+            else:
+                col = "#8fd2f0" if ice else "#a8e05a"   # flesh
+            d.px(cx + x, cy + y, col)
+    for a in range(6):  # the lime's segment lines
+        ang = a * math.pi / 3 + 0.5
+        for r in range(1, 4):
+            y = cy + math.sin(ang) * r
+            d.px(cx + math.cos(ang) * r, y, "#d4f0ff" if y < line_y else "#d8f59a")
+    if frozen > 0.5:  # eyes squeezed shut, teeth chattering
+        d.line(cx - 4, cy - 2, cx - 2, cy - 2, "#1d3550")
+        d.line(cx + 2, cy - 2, cx + 4, cy - 2, "#1d3550")
+        d.rect(cx - 2, cy + 3, 5, 2, "#f2f2ea")
+        d.px(cx - 1 + (math.floor(t * 20) % 2), cy + 3, "#1d3550")
+        d.px(cx + 1 + (math.floor(t * 20) % 2), cy + 4, "#1d3550")
+    else:  # big happy eyes, lips on the straw
+        for ex in (cx - 3, cx + 3):
+            d.rect(ex - 1, cy - 3, 2, 3, "#ffffff")
+            d.px(ex, cy - 2, "#1a1a1a")
+        d.disc(cx + 4, cy + 3, 1, "#c23b5a")
+    d.line(cx - 3, cy + 7, cx - 3, 28, "#2f8a2a")  # legs
+    d.line(cx + 3, cy + 7, cx + 3, 28, "#2f8a2a")
+    d.rect(cx - 5, 28, 3, 1, "#2f8a2a")
+    d.rect(cx + 3, 28, 3, 1, "#2f8a2a")
+    if frozen > 0.9 and 3.0 < p < 4.6:
+        for k in range(6):  # ice sparkles flying off
+            a = rnd(k) * 6.28
+            r = 8 + (t * 6 + rnd(k + 3) * 4) % 5
+            d.px(cx - shake + math.cos(a) * r, cy + math.sin(a) * r * 0.8, "#e8fbff")
+        tiny_text(d, "BRR", 1, 0, "#8fd2f0")
+
+
 def art_glass(d, t, name):  # anything new: a pint in a color from its name
     h = 0
     for ch in name:
@@ -869,7 +945,7 @@ CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
     (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"gobstop|wonka", art_gobstopper), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
     (r"comet", art_comet), (r"scoop", art_scoop), (r"bobby|nitro|stout", art_nitro),
-    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita|slush", art_slushie),
+    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita", art_margarita), (r"slush", art_slushie),
 ]
 
 
