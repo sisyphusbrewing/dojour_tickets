@@ -31,7 +31,8 @@ Settings live in /etc/sisyphus-sign.env (see install.sh):
   SIGN_PANEL_TURN  how far each of those panels is turned in the frame: four
                numbers out of 0 90 180 270, or one for all. Default "180".
   SIGN_ROTATE    turns the whole picture after that: 0 (default), 90, 180, 270.
-  SIGN_SHOW      seconds per beer or picture (default 12); shorter for testing.
+  SIGN_SHOW      seconds per beer or picture, overriding the setting managers
+               change on /sign/review.html (which is checked once a minute).
   SIGN_SHOW_REFRESH  set to 1 to print the refresh rate, for tuning.
   SIGN_PREVIEW   set to a file name like /tmp/sign.png to draw one lap to
                PNGs (sign-00.png, sign-01.png, ...) and stop, for checking the
@@ -375,18 +376,84 @@ def art_kentucky(d, t, name):  # Kentucky Common: a whiskey barrel pouring a bee
         d.rect(17, 31 - lvl - 1, 10, 1, "#efe3c8")
 
 
-def art_gold(d, t, name):  # Fool's Gold: it's raining money (it isn't)
-    for x in range(32):
-        h = max(0, jround(5 - abs(x - 16) / 4))
-        d.rect(x, 32 - h, 1, h, "#d9a520" if x % 3 else "#f5cf4a")
-    for i in range(14):
-        cx = 2 + math.floor(rnd(i) * 28)
-        cy = ((t * (7 + rnd(i + 5) * 6) + rnd(i + 2) * 40) % 38) - 4
-        w = max(1, jround(abs(math.sin(t * 5 + i)) * 3))
-        d.rect(cx - w // 2, cy, w, 3, "#f5cf4a")
-        d.px(cx, cy + 1, "#fff6c4")
-    if int(t * 4) % 3 == 0:
-        d.px(5 + int(t * 7) % 22, 26, "#ffffff")
+TINY = {  # a 3x5 font for words inside the cartoons
+    "I": "111010010010111", "D": "110101101101110", "O": "111101101101111",
+    "T": "111010010010010", "Y": "101101010010010", "U": "101101101101111",
+    "!": "010010010000010",
+}
+
+
+def tiny_text(d, word, x, y, col):
+    for n, ch in enumerate(word):
+        g = TINY.get(ch)
+        if g:
+            for k in range(15):
+                if g[k] == "1":
+                    d.px(x + n * 4 + k % 3, y + k // 3, col)
+
+
+def art_gold(d, t, name):  # Fool's Gold: a dope digs up a nugget, his buddy: "YOU IDIOT"
+    # Sam, Nov 12 2026: a stupid-looking guy digging for gold, finding a
+    # nugget, and his friend going "you idiot".
+    p = t % 8
+    found = p >= 3.2
+    skin, dirt, dirt2 = "#e3a97c", "#7a4a24", "#5e3618"
+    d.rect(0, 26, 32, 6, dirt)  # the ground, with his hole
+    for x in range(0, 32, 3):
+        d.px(x + (x // 3) % 2, 28 + (x // 3) % 3, dirt2)
+    d.rect(3, 26, 9, 2, "#2a1a10")
+    # the digger, left: crossed eyes, buck teeth, a floppy hat
+    d.rect(5, 18, 6, 6, "#c0392b")  # flannel
+    d.px(7, 20, "#7a1a12")
+    d.px(9, 22, "#7a1a12")
+    d.rect(5, 24, 2, 2, "#34507a")
+    d.rect(9, 24, 2, 2, "#34507a")
+    d.disc(8, 13, 4, skin)
+    d.rect(4, 8, 9, 2, "#8a6a3a")  # hat
+    d.rect(6, 6, 5, 2, "#8a6a3a")
+    d.px(7, 12, "#1a1a1a")  # crossed eyes
+    d.px(9, 12, "#1a1a1a")
+    d.rect(6, 15, 5, 2, "#7a1a12")  # open mouth
+    d.px(8, 15, "#f2f2f2")  # buck teeth
+    d.px(9, 15, "#f2f2f2")
+    if not found:  # swinging the pickaxe
+        up = int(t * 3) % 2 == 0
+        if up:
+            d.line(11, 19, 15, 12, "#9a6a3a")
+            d.line(13, 10, 17, 14, "#9aa3ad")
+        else:
+            d.line(11, 19, 14, 25, "#9a6a3a")
+            d.line(12, 26, 16, 24, "#9aa3ad")
+            for k in range(3):  # dirt flying
+                d.px(14 + k * 2, 22 - k - int(t * 6) % 2, dirt)
+    else:  # holds up the nugget, thrilled
+        d.line(10, 18, 13, 12, skin)
+        gx, gy = 13, 9
+        d.rect(gx, gy, 3, 3, "#f5cf4a")
+        d.px(gx, gy, "#fff6c4")
+        if int(t * 5) % 2:
+            d.px(gx + 4, gy - 1, "#ffffff")
+            d.px(gx - 1, gy - 2, "#fff6c4")
+        d.line(2, 25, 4, 27, "#9a6a3a")  # the pickaxe dropped in the hole
+    # the buddy, right
+    d.rect(22, 18, 6, 6, "#2f6d4a")
+    d.rect(22, 24, 2, 2, "#34507a")
+    d.rect(26, 24, 2, 2, "#34507a")
+    d.disc(25, 13, 4, skin)
+    d.rect(21, 9, 9, 2, "#3a3a3a")  # cap
+    d.rect(21, 9, 2, 1, "#3a3a3a")
+    if p >= 4.4:  # face-palm and the line
+        d.rect(23, 11, 5, 3, skin)
+        d.line(22, 19, 24, 13, skin)
+        d.rect(23, 12, 4, 2, "#c8865a")  # the hand over his eyes
+        d.rect(12, 0, 20, 7, "#f2f2f2")  # speech bubble
+        d.px(24, 7, "#f2f2f2")
+        d.px(23, 8, "#f2f2f2")
+        tiny_text(d, "IDIOT", 13, 1, "#c0392b")
+    else:
+        d.px(24, 12, "#1a1a1a")
+        d.px(27, 12, "#1a1a1a")
+        d.rect(24, 15, 3, 1, "#7a1a12")
 
 
 def art_sisyfest(d, t, name):  # Sisyfest: up the hill, every single time
@@ -828,6 +895,13 @@ def next_art():
     return a if isinstance(a, dict) and a.get("id") else None
 
 
+def sign_seconds():
+    """Seconds per picture, set by a manager on /sign/review.html."""
+    r = http.post(URL.replace("sign_next", "sign_seconds"), headers={"apikey": KEY, "Content-Type": "application/json"},
+                  data="{}", timeout=15)
+    return min(120.0, max(2.0, float(r.json())))
+
+
 def load_beers():
     """The beers and slushies on tap, in menu order, from the GoTab feed."""
     data = http.get(MENU, timeout=15).json()
@@ -974,6 +1048,7 @@ def main():
     show(quadrant_screen(), 4)
     show(words_screen("SISYPHUS"), 2)
     beers, menu_at, update_at = [], -1e9, time.monotonic()
+    seconds, seconds_at = SHOW, -1e9
     while True:
         now = time.monotonic()
         if now - menu_at > MENU_EVERY or not beers:
@@ -996,7 +1071,13 @@ def main():
                 print("sign", e, flush=True)
                 continue
             if screen:
-                show(screen, SHOW)
+                if not os.getenv("SIGN_SHOW") and time.monotonic() - seconds_at > 60:
+                    seconds_at = time.monotonic()
+                    try:
+                        seconds = sign_seconds()
+                    except Exception as e:  # keep the last setting
+                        print("seconds", e, flush=True)
+                show(screen, seconds)
 
 
 if __name__ == "__main__":
