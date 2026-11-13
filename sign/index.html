@@ -45,9 +45,14 @@
     <form class="card" id="form">
       <div class="field">
         <label for="prompt">What should it draw?</label>
-        <input class="input" id="prompt" maxlength="100" required placeholder="A moose drinking a stout" autocomplete="off">
+        <input class="input" id="prompt" maxlength="100" placeholder="A moose drinking a stout" autocomplete="off">
       </div>
       <div class="ideas" id="ideas"></div>
+      <div class="field">
+        <label for="photo">Or send a photo <span class="help">(your dog, your table, anything: it gets turned into a picture)</span></label>
+        <input class="input" id="photo" type="file" accept="image/*">
+        <img id="photoPrev" alt="" class="hidden" style="max-width:120px;border-radius:8px;margin-top:8px;display:block">
+      </div>
       <div class="field">
         <label for="name">Your name <span class="help">(it goes on the sign: "by Jake")</span></label>
         <input class="input" id="name" maxlength="18" required autocomplete="given-name" placeholder="Jake">
@@ -73,6 +78,25 @@
     $('ideas').innerHTML = IDEAS.map(function (i) { return '<button type="button">' + i + '</button>'; }).join('');
     $('ideas').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { $('prompt').value = b.textContent; $('prompt').focus(); } });
 
+    // A photo is shrunk on the phone to about 512 px before it's sent; it goes to
+    // Claude to draw from and is never saved (Sam, Nov 12 2026).
+    var photo = '';
+    $('photo').addEventListener('change', function () {
+      photo = ''; $('photoPrev').classList.add('hidden');
+      var f = $('photo').files[0]; if (!f) return;
+      var img = new Image(), url = URL.createObjectURL(f);
+      img.onload = function () {
+        var k = Math.min(1, 512 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        photo = c.toDataURL('image/jpeg', 0.85);
+        $('photoPrev').src = photo; $('photoPrev').classList.remove('hidden');
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = function () { $('err').textContent = "That photo couldn't be opened. Try another."; $('err').classList.remove('hidden'); };
+      img.src = url;
+    });
+
     function busy(on) {
       $('go').disabled = on;
       $('go').innerHTML = on ? '<span class="drawing" style="padding:0"><span>Drawing</span></span>' : 'Draw it';
@@ -81,11 +105,14 @@
     $('form').addEventListener('submit', async function (e) {
       e.preventDefault();
       $('err').classList.add('hidden');
+      if ($('prompt').value.trim().length < 2 && !photo) {
+        $('err').textContent = 'Tell the sign what to draw, or send a photo.'; $('err').classList.remove('hidden'); return;
+      }
       busy(true);
       try {
         var r = await fetch(FN, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: $('prompt').value, name: $('name').value })
+          body: JSON.stringify({ prompt: $('prompt').value, name: $('name').value, image: photo || undefined })
         });
         var data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Something went wrong.');
@@ -109,7 +136,7 @@
 
     $('again').addEventListener('click', function () {
       $('result').classList.add('hidden'); $('form').classList.remove('hidden');
-      $('prompt').value = ''; $('prompt').focus();
+      $('prompt').value = ''; $('photo').value = ''; photo = ''; $('photoPrev').classList.add('hidden'); $('prompt').focus();
     });
   })();
   </script>

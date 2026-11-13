@@ -804,45 +804,35 @@ def art_gobstopper(d, t, name):  # Neverlasting Gobstopper: a candy-factory jawb
 
 
 def art_colada(d, t, name):  # Piña colada: a beach at sunset, vacation vibes
-    # Sam, Nov 12 2026: "a beach scene like vacation vibe".
-    sky = ("#3a2a6a", "#6a2a7a", "#a83a6a", "#d85a4a", "#f08a3a", "#f8b040")
-    for y in range(16):  # sunset sky, purple at the top to gold at the sea
-        d.rect(0, y, 32, 1, sky[min(5, y * 6 // 16)])
-    d.disc(12, 16, 5, "#ffd86a")  # the sun, sinking
-    d.disc(12, 16, 3, "#fff0a8")
-    d.rect(0, 16, 32, 7, "#2a6aa8")  # the sea
-    for k in range(7):  # glints sliding along the water
-        gx = (rnd(k) * 32 + t * (3 + k % 3)) % 32
-        gy = 17 + k % 6
-        d.rect(gx, gy, 2 + k % 2, 1, "#ffd86a" if abs(gx - 12) < 6 else "#7ab8e8")
-    wave = int(t * 2) % 2
-    d.rect(0, 23, 32, 1, "#e8f4ff")  # surf line
-    for x in range(wave, 32, 4):
-        d.px(x, 22, "#e8f4ff")
-    d.rect(0, 24, 32, 8, "#e8c880")  # sand
-    for x in range(1, 32, 5):
-        d.px(x, 27 + x % 3, "#c8a860")
-    sway = math.sin(t * 1.5) * 1.5  # a palm tree, swaying
-    for y in range(6, 31):
-        bend = (31 - y) / 25
-        d.rect(26 - bend * 3 + sway * bend, y, 2, 1, "#8a5a2e" if y % 3 else "#6a4020")
-    tx, ty = 23 + sway, 6
-    for dx, dy, ex, ey in ((0, 0, -7, 3), (0, 0, -5, -2), (0, 0, 6, 2), (0, 0, 4, -3), (0, 0, 1, 5)):
-        d.line(tx + dx, ty + dy, tx + ex, ty + ey, "#3f9a3a")
-        d.px(tx + ex, ty + ey + 1, "#2a7a2a")
-    d.disc(tx, ty + 1, 1, "#6a4020")  # coconuts
-    # the drink, stuck in the sand: hurricane glass, pineapple, little umbrella
-    for y in range(20, 30):
-        w = 3 if y < 23 or y > 25 else 2
-        d.rect(9 - w, y, w * 2, 1, "#f6f1df" if y > 20 else "#f8f8f0")
-    d.rect(8, 30, 2, 1, "#c8d0d8")
-    d.rect(6, 31, 6, 1, "#c8d0d8")
-    d.rect(11, 18, 2, 3, "#f5cf4a")  # pineapple wedge
-    d.px(12, 17, "#3f9a3a")
-    d.line(6, 20, 4, 15, "#c8a060")  # umbrella
-    d.rect(1, 14, 7, 1, "#e23b6a")
-    d.rect(2, 13, 5, 1, "#ff6a9a")
-    d.px(4, 12, "#ff6a9a")
+    # Sam, Nov 12 2026: "a beach scene like vacation vibe", then "too messy
+    # with the colors", so: dark sky, one big sun, plain sea and sand, and the
+    # drink big in front.
+    d.rect(0, 13, 32, 2, "#5a2a1a")  # a thin warm glow on the horizon
+    d.disc(16, 15, 6, "#f8a830")  # the sun, half down
+    d.disc(16, 15, 4, "#ffd06a")
+    d.rect(0, 15, 32, 7, "#1e5aa0")  # the sea
+    for k in range(3):  # the sun's reflection, rippling
+        w = 6 - k * 2 + int(t * 3 + k) % 2 * 2
+        d.rect(16 - w // 2, 16 + k * 2, w, 1, "#f8a830")
+    d.rect(0, 22, 32, 10, "#e0c080")  # sand
+    sway = math.sin(t * 1.5) * 1.5  # a palm tree on the right, swaying
+    for y in range(4, 30):
+        bend = (30 - y) / 26
+        d.rect(27 - bend * 3 + sway * bend, y, 2, 1, "#7a4a24")
+    tx, ty = 24 + sway, 4
+    for ex, ey in ((-6, 3), (-4, -2), (6, 3), (4, -2)):
+        d.line(tx, ty, tx + ex, ty + ey, "#3f9a3a")
+    # the drink, big in front: white slush, pineapple, pink umbrella
+    for y in range(17, 29):
+        w = 5 if y < 21 or y > 24 else 3
+        d.rect(10 - w, y, w * 2, 1, "#f2efe2")
+    d.rect(9, 29, 2, 1, "#b8c0c8")
+    d.rect(6, 30, 8, 1, "#b8c0c8")
+    d.rect(13, 14, 3, 4, "#f5cf4a")  # pineapple wedge
+    d.px(14, 13, "#3f9a3a")
+    d.line(7, 17, 5, 11, "#c8a060")  # umbrella
+    d.rect(1, 10, 9, 1, "#e8407a")
+    d.rect(3, 9, 5, 1, "#e8407a")
 
 
 def art_slushie(d, t, name):  # the slushies: a swirl in a cup
