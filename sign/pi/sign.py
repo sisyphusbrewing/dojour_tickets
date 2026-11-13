@@ -610,18 +610,18 @@ def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his st
     d.rect(12, 9, 3, 1, edge)  # brows
     d.rect(17, 9, 3, 1, edge)
     blink = (t % 3.7) > 3.5
-    frame = "#1c1c1c"  # his glasses (Sam): dark frames read as outlines on the LEDs
+    # his glasses (Sam): thin gold wire rims, so he looks friendly, not shady
+    rim = "#d4b45a"
     for x0 in (11, 16):
-        d.rect(x0, 10, 5, 1, frame)
-        d.rect(x0 + 1, 12, 3, 1, frame)
-        d.px(x0, 11, frame)
-        d.px(x0 + 4, 11, frame)
-        d.rect(x0 + 1, 11, 3, 1, "#e8e8e8")  # whites of his eyes behind the lenses
+        d.rect(x0 + 1, 10, 3, 1, rim)
+        d.rect(x0 + 1, 12, 3, 1, rim)
+        d.px(x0, 11, rim)
+        d.px(x0 + 4, 11, rim)
+    d.px(10, 11, rim)
+    d.px(21, 11, rim)
     if not blink:
         d.px(13, 11, "#3a9be8")  # blue eyes (Sam)
         d.px(18, 11, "#3a9be8")
-    d.px(10, 11, frame)
-    d.px(21, 11, frame)
     d.rect(15, 12, 2, 3, "#c8865a")  # nose
     for y in range(10, 18):  # mutton chops, widening down the cheeks
         w = 2 + (y - 10) // 3
