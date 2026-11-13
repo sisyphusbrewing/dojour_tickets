@@ -396,12 +396,14 @@ def clock_wrap():
 
 def clock_nudge(minutes):
     """One click of the CLOCK knob: a minute more or less (1 to 90). The rpc moves a running
-    set by the same amount; a stopped clock gets the deck's length when it next starts."""
+    set by the same amount; a stopped clock gets the deck's length when it next starts.
+    The rpc also clears WRAP IT UP, so the deck's copy is cleared with it (otherwise the
+    WRAP IT UP key and the comic's screen end up saying opposite things)."""
     if minutes > 0:
         new = f"{_MIN} >= {CLOCK_MAX_MIN} ? {CLOCK_MAX_MIN} : {_MIN} + {minutes}"
     else:
         new = f"{_MIN} <= 1 ? 1 : {_MIN} - {-minutes}"
-    return [set_var("timer_min", new, expression=True),
+    return [set_var("timer_min", new, expression=True), set_number("timer_wrap", 0),
             supabase_call("timer_add", {"seconds": minutes * 60})]
 
 
