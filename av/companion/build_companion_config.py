@@ -8,15 +8,32 @@ main, swaps in only the buttons and checks the result. Add -DryRun to preview.
 
     python3 build_companion_config.py
 
-The file is written in Companion's older "version 12" button format on purpose:
-Companion upgrades it to its current format on import, so this script does not
-have to track Companion's newer, much more verbose button layout.
+How the deck works since Nov 12 2026 (Sam: "it needs to be intuitive"; staff found the old
+nine pages behind one NEXT PAGE key hard to use):
+
+  * Two screens for a whole night, and the deck moves between them by itself.
+    HOME is where it sits all day: the four room looks in the order of a night
+    (DAYTIME, PRE-SHOW, START SHOW, ALL OFF) and the bar keys. START SHOW brings up the
+    SHOW screen (comic clock, wrap it up, end show); END SHOW asks "are you sure?" and
+    then brings HOME back.
+  * The four knobs are the same four things on both screens: MIC, MUSIC, LIGHTS, CLOCK.
+    Turn = more or less. Push = that thing on or off (mic, play/pause, lights, clock
+    start/stop). Tap the touch screen above a knob = that thing's extra choices, with BACK
+    always top-left.
+  * No RECORD key and nothing to hold down. Recording follows the SHOW look: START SHOW
+    starts it, every other look stops it. (On Nov 12 the old "tap to start, hold 3 s to
+    stop" key got five taps that did nothing, so it looked broken, and a tap after the stop
+    started a second file.)
+  * The comic clock just starts (START CLOCK or push the CLOCK knob). The knob sets the
+    set length, before or during the set.
+
+Buttons are written in Companion's older plain "button" style on purpose: Companion
+converts them to its current layered format on import, so this script does not have to
+track that much more verbose layout.
 
 Stream Deck + grid in Companion (4 columns):
-    row 0, row 1  the 8 keys
-    row 2         the touch strip, one segment above each knob; it is the only
-                  screen the knobs have, so it labels them. Tap = press actions.
-                  A sideways swipe changes page (Surfaces settings can turn that off).
+    row 0, row 1  the 8 keys (120 x 120)
+    row 2         the touch screen, one 200 x 100 tile above each knob. Tap = press actions.
     row 3         the 4 knobs (turn = rotate actions, push = press actions; no screen)
 """
 
@@ -143,19 +160,35 @@ def feedback(connection, definition, style=None, **options):
 
 
 def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks=(),
-           color=WHITE, bgcolor=BLACK, size="auto", expression=False):
+           color=WHITE, bgcolor=BLACK, size="auto", expression=False, steps=None, step_expression=""):
+    """One key, touch-screen tile or knob.
+
+    Text always sizes itself to fit (`size` is ignored): the fixed sizes used until Nov 12 2026
+    chopped words on the real deck ("DAYTI ME", "RECORD ING").
+
+    `steps` is for a control whose press depends on what is going on: a list of press-action
+    lists, with `step_expression` picking which one runs (1 = the first). Turning the knob does
+    the same thing in every step.
+    """
     rotary = bool(turn_left or turn_right)
-    action_sets = {"down": list(press), "up": list(release)}
-    if rotary:
-        action_sets["rotate_left"] = list(turn_left)
-        action_sets["rotate_right"] = list(turn_right)
+
+    def action_sets(down):
+        sets = {"down": list(down), "up": list(release)}
+        if rotary:
+            # fresh copies so every action keeps a unique id
+            sets["rotate_left"] = [dict(a, id=_next_id("a")) for a in turn_left]
+            sets["rotate_right"] = [dict(a, id=_next_id("a")) for a in turn_right]
+        return {"action_sets": sets, "options": {"runWhileHeld": []}}
+
+    presses = steps if steps else [press]
     return {
         "type": "button",
-        "options": {"stepProgression": "auto", "rotaryActions": rotary},
+        "options": {"stepProgression": "expression" if step_expression else "auto",
+                    "stepExpression": step_expression, "rotaryActions": rotary},
         "style": {
             "text": text,
             "textExpression": expression,
-            "size": size,
+            "size": "auto",
             "alignment": "center:center",
             "pngalignment": "center:center",
             "color": color,
@@ -164,7 +197,7 @@ def button(text, *, press=(), release=(), turn_left=(), turn_right=(), feedbacks
             "png64": None,
         },
         "feedbacks": list(feedbacks),
-        "steps": {"0": {"action_sets": action_sets, "options": {"runWhileHeld": []}}},
+        "steps": {str(i): action_sets(down) for i, down in enumerate(presses)},
         "localVariables": [],
     }
 
@@ -261,32 +294,50 @@ def show_mute_keys(sources):
 
 
 # Portable deck battery (Sam, Nov 11 2026): the Pi's UPS HAT sends its charge % to custom
-# variable deck_battery every minute (av/pi-satellite-setup.sh). No key was free, so the
-# NEXT PAGE key on every page shows it, and turns red at 20% or less. 0 means no reading yet
-# (Pi just booted, or on wall power without the HAT), so it stays its normal colour.
+# variable deck_battery every minute (av/pi-satellite-setup.sh). It only matters when it is
+# low, so the top-right key (ALL OFF / END SHOW) says so at 20% or less. 0 means no reading
+# yet (Pi just booted, or on wall power without the HAT).
 BATTERY_LOW = "$(custom:deck_battery) > 0 && $(custom:deck_battery) <= 20"
+GREY = 0x2F2F2F     # a key that is there to press but is not "on"
+BACK_GREY = 0x505050
 
 
-def page_key(this_page, next_page, number, color):
-    """Top-left key on every page: press for the next page (Sam: "it should always just
-    say next page"). The page colour tells you which page you're on. Bottom line is the
-    portable deck's battery."""
-    return button(
-        "NEXT\\nPAGE >\\nbatt $(custom:deck_battery)%",
-        press=[action(INTERNAL, "set_page", surfaceId="self", page=number)],
-        feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
-                            expression=BATTERY_LOW)],
-        bgcolor=color,
-        size="14",
-    )
+def set_var(name, value, expression=False):
+    """Set one of Companion's custom variables. With expression=True the value is worked out
+    when the key is pressed. (Companion 5.1 ignores the old "custom_variable_set_expression"
+    on import, so this is "custom_variable_set_value" with the value marked as an expression.)"""
+    act = action(INTERNAL, "custom_variable_set_value", name=name, value=value)
+    act["options"]["value"]["isExpression"] = expression
+    return act
 
 
-def supabase_call(rpc, body=None):
-    """Calls one of our Supabase functions (menu board, stage timer)."""
+def set_number(name, number):
+    """Set a custom variable to a number (kept as a number, so the clock maths never sees text)."""
+    return set_var(name, str(number), expression=True)
+
+
+def go(page):
+    """Show another page on the deck that was pressed. "back" = the page it came from."""
+    return action(INTERNAL, "set_page", surfaceId="self", page=page)
+
+
+def when(expr, **style):
+    """Restyle a key while `expr` is true (bgcolor, color, text)."""
+    return feedback(INTERNAL, "check_expression", style=style, expression=expr)
+
+
+def battery_warning(name):
+    return when(BATTERY_LOW, bgcolor=0xB06000, color=WHITE,
+                text=f"{name}\\nPLUG IN DECK\\nbatt $(custom:deck_battery)%")
+
+
+def supabase_call(rpc, body=None, raw_body=None):
+    """Calls one of our Supabase functions (menu board, stage timer). `raw_body` is for a
+    body with a Companion variable in it, which Companion fills in when the key is pressed."""
     return action(
         HTTP, "post",
         url=f"{SUPABASE}/rest/v1/rpc/{rpc}",
-        body=json.dumps(body or {}),
+        body=raw_body if raw_body is not None else json.dumps(body or {}),
         header=json.dumps({"apikey": SUPABASE_KEY}),
         contenttype="application/json",
         jsonResultDataVariable="",
@@ -305,101 +356,90 @@ def menu_refresh_key():
     return supabase_key("REFRESH\\nTV MENU\\nscreen", "bump_menu_refresh")
 
 
-def timer_actions(rpc, body=None):
-    """Stage timer (staff.sisyphusbrewing.com/timer/, see timer/README.md).
-
-    Calls the Supabase rpc and also updates Companion's own copy of the timer (custom
-    variables timer_t0 / timer_len / timer_wrap) so the TIMER page readout can show it."""
-    body = body or {}
-    if rpc == "timer_start":
-        sets = {"timer_t0": "$(internal:time_unix)", "timer_len": str(body["minutes"] * 60), "timer_wrap": "0"}
-    elif rpc == "timer_add":  # the rpc never goes below a 1-minute set; match it
-        new_len = f"$(custom:timer_len) + {body['seconds']}"
-        sets = {"timer_len": f"{new_len} < 60 ? 60 : {new_len}", "timer_wrap": "0"}
-    elif rpc == "timer_stop":
-        sets = {"timer_t0": "0", "timer_wrap": "0"}
-    else:  # timer_light = WRAP IT UP toggle
-        sets = {"timer_wrap": "1 - $(custom:timer_wrap)"}
-    acts = [supabase_call(rpc, body)]
-    # Companion 5.1 ignores the old "custom_variable_set_expression" on import (its upgrade
-    # script doesn't run on our imports), so use "custom_variable_set_value" with the
-    # value marked as an expression.
-    for name, expr in sets.items():
-        act = action(INTERNAL, "custom_variable_set_value", name=name, value=expr)
-        act["options"]["value"]["isExpression"] = True
-        acts.append(act)
-    return acts
-
-
-def timer_key(text, rpc, body=None, bgcolor=TIMER_GREEN):
-    return button(text, press=timer_actions(rpc, body), bgcolor=bgcolor)
-
-
-# TIMER page (2-mic layout): the GOD MIC knob becomes TIME (nobody makes announcements
-# mid-set). Sam, Oct 29 2026: "one of the knobs on the timer page adjust the timer".
-TIME_STEP = 15  # seconds per click (Sam, Oct 29 2026)
-
-
-def time_knob():
-    """Turn: give or take TIME_STEP seconds. Push: one more minute (never stops the clock)."""
-    return button(
-        "",
-        turn_right=timer_actions("timer_add", {"seconds": TIME_STEP}),
-        turn_left=timer_actions("timer_add", {"seconds": -TIME_STEP}),
-        press=timer_actions("timer_add", {"seconds": 60}),
-    )
-
-
-def time_strip():
-    """Touch strip above the TIME knob: the set length; tap it for one more minute too."""
-    return button(
-        f"concat('TIME ', secondsToTimestamp($(custom:timer_len), 'mm:ss'), '\\ntap: +1 MIN')",
-        press=timer_actions("timer_add", {"seconds": 60}),
-        bgcolor=TIMER_COLOR,
-        size="14",
-        expression=True,
-    )
-
-
-# What the stage clock is showing, worked out on the deck from the variables above.
-# It follows deck presses (a set started from the timer web page doesn't show here).
+# --------------------------------------------------------------------------
+# The comic clock (staff.sisyphusbrewing.com/timer/, see timer/README.md)
+#
+# Sam, Nov 12 2026: "The clock running needs to be intuitive. Right now, the clock doesn't
+# work or start until you pick a time key." So START CLOCK (or a push of the CLOCK knob)
+# just starts it, using the set length the deck is holding (custom variable timer_min,
+# 7 minutes until someone changes it). Turning the CLOCK knob changes the length a minute at
+# a time, before or during a set. The deck keeps its own copy of the clock (timer_t0 = when
+# the set started, timer_wrap = WRAP IT UP is on) so the touch screen can show it; a set
+# started from the timer web page does not show here.
+# --------------------------------------------------------------------------
+CLOCK_DEFAULT_MIN = 7
+CLOCK_MAX_MIN = 90   # the timer_start rpc's own limit
+CLOCK_PRESETS = [3, 5, 7, 10, 15, 20, 45]
+_MIN = "$(custom:timer_min)"
 _E = "($(internal:time_unix) - $(custom:timer_t0))"  # seconds into the set
-_L = "$(custom:timer_len)"
-# Companion 5.1 expressions don't join text with "+" (it adds as numbers, giving NaN), so
-# the text is built with concat().
-TIMER_READOUT = (
-    f"$(custom:timer_t0) == 0 ? 'CLOCK\\nstopped' : "
-    f"concat(secondsToTimestamp({_E}, 'mm:ss'), '\\n', "
-    f"{_E} >= {_L} + 60 ? 'FAMOUS?' : "
-    f"{_E} >= {_L} ? 'OVER' : "
-    f"($(custom:timer_wrap) == 1 || {_L} - {_E} <= 30) ? 'WRAP IT UP' : "
-    f"{_L} - {_E} <= 60 ? 'LIGHT' : "
-    f"concat('of ', secondsToTimestamp({_L}, 'mm:ss')))"
-)
+_L = f"({_MIN} * 60)"                                 # set length in seconds
+CLOCK_RUNNING = "$(custom:timer_t0) != 0"
 # red from the light on (1 min left, or WRAP IT UP pressed)
-TIMER_RED = (f"$(custom:timer_t0) != 0 && ($(custom:timer_wrap) == 1 || {_L} - {_E} <= 60)")
+CLOCK_RED = f"$(custom:timer_t0) != 0 && ($(custom:timer_wrap) == 1 || {_L} - {_E} <= 60)"
+
+
+def clock_start():
+    return [supabase_call("timer_start", raw_body='{"minutes": $(custom:timer_min)}'),
+            set_var("timer_t0", "$(internal:time_unix)", expression=True),
+            set_number("timer_wrap", 0)]
+
+
+def clock_stop():
+    return [supabase_call("timer_stop"), set_number("timer_t0", 0), set_number("timer_wrap", 0)]
+
+
+def clock_wrap():
+    """WRAP IT UP on the comic's clock right now; press again to clear."""
+    return [supabase_call("timer_light"),
+            set_var("timer_wrap", "1 - $(custom:timer_wrap)", expression=True)]
+
+
+def clock_nudge(minutes):
+    """One click of the CLOCK knob: a minute more or less (1 to 90). The rpc moves a running
+    set by the same amount; a stopped clock gets the deck's length when it next starts."""
+    if minutes > 0:
+        new = f"{_MIN} >= {CLOCK_MAX_MIN} ? {CLOCK_MAX_MIN} : {_MIN} + {minutes}"
+    else:
+        new = f"{_MIN} <= 1 ? 1 : {_MIN} - {-minutes}"
+    return [set_var("timer_min", new, expression=True),
+            supabase_call("timer_add", {"seconds": minutes * 60})]
+
+
+# What the touch screen above the CLOCK knob says. Companion 5.1 expressions don't join text
+# with "+" (it adds as numbers, giving NaN), so the text is built with concat().
+CLOCK_TILE = (
+    f"$(custom:timer_t0) == 0 ? concat('CLOCK\\n', {_MIN}, ' MIN SET\\npush = start') : "
+    f"concat(secondsToTimestamp({_E}, 'mm:ss'), ' of ', {_MIN}, ':00\\n', "
+    f"{_E} >= {_L} + 60 ? 'FAMOUS?' : "
+    f"{_E} >= {_L} ? 'OVER TIME' : "
+    f"($(custom:timer_wrap) == 1 || {_L} - {_E} <= 30) ? 'WRAP IT UP' : "
+    f"{_L} - {_E} <= 60 ? 'LIGHT IS ON' : 'push = stop')"
+)
+# name: (what it is for, value a new one starts with)
 CUSTOM_VARIABLES = {
-    "timer_t0": "Stage timer: unix time the set started on the deck (0 = stopped)",
-    "timer_len": "Stage timer: set length in seconds",
-    "timer_wrap": "Stage timer: 1 while WRAP IT UP is on",
-    "house_tables": "House lights Tables level %, written by the house-lights service",
-    "house_bar": "House lights Bar level %, written by the house-lights service",
-    "alarm_state": "SimpliSafe state, written by the alarm service (OFF, HOME, AWAY, ARMING, ALARM!, ERROR)",
-    "stage_look": "Stage lights look, written by the stage-lights service (wash, show, warm, blue, ... off)",
-    "deck_battery": "Portable deck battery %, written every minute by the Pi (av/pi-satellite-setup.sh)",
+    "timer_t0": ("Comic clock: unix time the set started on the deck (0 = stopped)", 0),
+    "timer_min": ("Comic clock: set length in minutes (the CLOCK knob)", CLOCK_DEFAULT_MIN),
+    "timer_wrap": ("Comic clock: 1 while WRAP IT UP is on", 0),
+    "room_look": ("Which room look was pressed last: day, pre, show or off", "day"),
+    "house_tables": ("House lights Tables level %, written by the house-lights service", 0),
+    "house_bar": ("House lights Bar level %, written by the house-lights service", 0),
+    "stage_look": ("Stage lights look, written by the stage-lights service (wash, show, warm, blue, ... off)", 0),
+    "deck_battery": ("Portable deck battery %, written every minute by the Pi (av/pi-satellite-setup.sh)", 0),
 }
 
 
-def timer_readout_key():
-    """TIMER page: what the comic's clock says. Display only (pressing does nothing)."""
-    return button(
-        TIMER_READOUT,
-        feedbacks=[feedback(INTERNAL, "check_expression", style={"bgcolor": RED, "color": WHITE},
-                            expression=TIMER_RED)],
-        bgcolor=TIMER_COLOR,
-        size="18",
-        expression=True,
-    )
+def clock_tile():
+    """Touch screen above the CLOCK knob: the comic's clock. Tap = the set-length choices."""
+    return button(CLOCK_TILE, expression=True, press=[go(PAGE_CLOCK)], bgcolor=DARK,
+                  feedbacks=[when(CLOCK_RUNNING, bgcolor=0x1F7A35, color=WHITE),
+                             when(CLOCK_RED, bgcolor=RED, color=WHITE)])
+
+
+def clock_knob():
+    """Turn = set length. Push = start if the clock is stopped, stop if it is running."""
+    return button("", turn_right=clock_nudge(1), turn_left=clock_nudge(-1),
+                  steps=[clock_start(), clock_stop()],
+                  step_expression="$(custom:timer_t0) == 0 ? 1 : 2")
 
 
 def shell_key(text, command, bgcolor=MENU_BLUE):
@@ -596,97 +636,54 @@ def stage_keys():
     return dict(zip(spots, keys))
 
 
-def hall_keys():
-    """Room-wide looks: each key sets the hallway and the house lights together (Sam, Nov 2 2026)."""
-    return {
-        (0, 3): button("PRE-SHOW", bgcolor=0x7A5A00, size="18",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-                       + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)
-                       + [stage(STAGE_PRESHOW)]),  # house 20% (Sam, Nov 5 2026; was 17%)
-        (1, 0): button("DAYTIME", bgcolor=0x6A5A30, size="18",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-                       + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)),
-        # house lights off (Sam, Nov 2); hallway same as PRE-SHOW (Sam, Nov 5 2026)
-        (1, 1): button("SHOW", bgcolor=SHOW_COLOR, size="18",
-                       press=[a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-                       + house_both(0) + [stage(STAGE_SHOW)]),
-        (1, 2): button("ALL\\nOFF", bgcolor=DARK, size="18",
-                       press=[govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-                       + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
-                       + [stage("off")]),
-    }
-
-
-# SimpliSafe alarm (Sam, Nov 3 2026): a local service on the office PC (av/simplisafe/alarm.py,
-# C:\\Users\\Sam\\sisyphus-av\\simplisafe) arms it and writes the state to custom variable alarm_state.
-# No DISARM key: the deck sits on the bar, where anyone could press it.
-ALARM_URL = "http://127.0.0.1:8791/alarm"
-ALARM_PAGE = 7
-ALARM_COLOR = 0x8A1C1C
-ALARM_ON = "$(custom:alarm_state) == 'AWAY' || $(custom:alarm_state) == 'HOME'"
-ALARM_BUSY = "$(custom:alarm_state) == 'ARMING' || $(custom:alarm_state) == 'DOOR OPEN' || $(custom:alarm_state) == 'ALARM!' || $(custom:alarm_state) == 'ERROR'"
-
-
-def alarm(path):
-    return action(HTTP, "get", url=f"{ALARM_URL}/{path}", header="",
-                  jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
-
-
-def alarm_status_feedbacks():
-    return [feedback(INTERNAL, "check_expression", style={"bgcolor": 0x1E5E2A, "color": WHITE}, expression=ALARM_ON),
-            feedback(INTERNAL, "check_expression", style={"bgcolor": 0xB06000, "color": WHITE}, expression=ALARM_BUSY)]
-
-
-def alarm_key():
-    """BAR page: shows the alarm state (green when armed); press for the ALARM page."""
-    return button("ALARM\\n$(custom:alarm_state)", bgcolor=DARK, size="18",
-                  press=[action(INTERNAL, "set_page", surfaceId="self", page=ALARM_PAGE)],
-                  feedbacks=alarm_status_feedbacks())
-
-
-def alarm_page():
-    return {
-        "name": "ALARM",
-        "controls": {
-            (0, 0): button("BACK", bgcolor=ALARM_COLOR, size="24",
-                           press=[action(INTERNAL, "set_page", surfaceId="self", page="back")]),
-            (0, 1): button("ALARM\\n$(custom:alarm_state)", bgcolor=DARK, size="18",
-                           press=[alarm("status")], feedbacks=alarm_status_feedbacks()),
-            (0, 2): button("ARM\\nAWAY\\nclosing", bgcolor=ALARM_COLOR, size="18", press=[alarm("away")]),
-            (0, 3): button("ARM\\nHOME\\nstaying", bgcolor=0x6A3A1A, size="18", press=[alarm("home")]),
-            (1, 0): candles_key(),  # for testing the IR blaster; no free key on BAR yet
-            **sound_controls(SOURCES_2),
-        },
-    }
-
-
+# --------------------------------------------------------------------------
+# The four room looks. Each one sets the hallway, plugs, house lights, candles and stage
+# together (Sam, Nov 2 2026), remembers itself in room_look so its key can light up, and
+# starts or stops the recording: recording runs while the SHOW look is on and at no other time.
+# --------------------------------------------------------------------------
 CAMERA_URL = "http://192.168.86.31/camera/sdk"  # OBSBOT Tail 2 stage camera
-RECORD_HOLD_MS = 3000
 
 
-def record_key():
-    """Press: start OBS recording and point the camera at its Stage preset (preset 1, id 0).
-    Pressing again does nothing; hold 3 s to stop. Red with the running time while recording.
+def record(on):
+    """OBS module v4 "Recording - Controls". Start also points the camera at its Stage preset
+    (preset 1, id 0), which undoes any drift: on Nov 8 it followed a front table all show."""
+    if not on:
+        return [action(OBS, "recording", action="stop")]
+    return [action(OBS, "recording", action="start"),
+            action(HTTP, "put", url=f"{CAMERA_URL}/ptz/preset", body='{"operation":"call","id":0}', header="",
+                   contenttype="application/json", jsonResultDataVariable="", result_stringify=True,
+                   statusCodeVariable="")]
 
-    It was a toggle until Nov 9 2026: double taps at every intro split each show into pieces, and
-    one tap without the second lost a whole set. The camera call also undoes AI tracking drift
-    (on Nov 8 it followed someone at a front table all show)."""
-    key = button(
-        "RECORD\\nVIDEO\\n$(obs:recording_timecode)",
-        # OBS module v4 "Recording - Controls" (start/stop); page imports don't run the module's
-        # upgrade scripts, so older ids (StartStopRecording, toggle_recording) import as dead actions
-        press=[action(OBS, "recording", action="start"),
-               action(HTTP, "put", url=f"{CAMERA_URL}/ptz/preset", body='{"operation":"call","id":0}', header="",
-                      contenttype="application/json", jsonResultDataVariable="", result_stringify=True,
-                      statusCodeVariable="")],
-        feedbacks=[feedback(OBS, "recording", style={"color": WHITE, "bgcolor": RED}),
-                   feedback(OBS, "recordingPaused", style={"color": WHITE, "bgcolor": 0xFF8800})],
-        bgcolor=DARK,
-    )
-    step = key["steps"]["0"]
-    step["action_sets"][str(RECORD_HOLD_MS)] = [action(OBS, "recording", action="stop")]
-    step["options"]["runWhileHeld"] = [RECORD_HOLD_MS]
-    return key
+
+def look_daytime():
+    return ([a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
+            + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
+            + record(False) + [set_var("room_look", "day")])
+
+
+def look_preshow():
+    return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
+            + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
+            + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
+
+
+def look_show():
+    # house lights off (Sam, Nov 2); hallway same as PRE-SHOW (Sam, Nov 5 2026). The stage mic
+    # is switched on in case it was left muted.
+    return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
+            + house_both(0) + [stage(STAGE_SHOW)]
+            + [action(XAIR, "mute", mute="1", type="/ch/", num=1)]
+            + record(True) + [set_var("room_look", "show")])
+
+
+def look_off():
+    return ([govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
+            + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
+            + [stage("off")] + record(False) + clock_stop() + [set_var("room_look", "off")])
+
+
+def look_is(look):
+    return f"$(custom:room_look) == '{look}'"
 
 
 def reset_sound_key():
@@ -699,78 +696,226 @@ def reset_sound_key():
 
 
 # --------------------------------------------------------------------------
-# PAGES: edit here. Keys are (row, column). Every page also gets
-# sound_controls(): rows 2-3, the touch strip labels and the four knobs.
+# Music: Spotify on the office PC, playing into the mixer's MUSIC channel.
+# Tonight's test build presses the PC's own media keys (play/pause, next, previous), so the
+# deck cannot yet show the song or know whether it is playing.
 # --------------------------------------------------------------------------
+MEDIA_PLAY_PAUSE, MEDIA_NEXT, MEDIA_PREVIOUS = 179, 176, 177  # Windows media key codes
 
-def layout(sources, first, mics, other_first, stage_page):
-    """SHOW, BAR, STAGE and TIMER pages for one mic layout. SHOW/BAR/TIMER are numbered from
-    `first`; STAGE came later (Nov 5 2026), so it takes page `stage_page` to keep the old numbers."""
-    show, bar, timer = first, first + 1, first + 2
-    tag = "" if mics == 2 else " 4"  # page names: SHOW / SHOW 4 ...
-    pages = {
-        show: {
-            "name": f"SHOW{tag}",
-            "controls": {
-                (0, 0): page_key(f"SHOW{tag}", "BAR", bar, SHOW_COLOR),
-                (0, 1): record_key(),
-                (0, 2): mics_key(mics, other_first),
-                (0, 3): reset_sound_key(),
-                **show_mute_keys(sources),
-            },
-        },
-        bar: {
-            "name": f"BAR{tag}",
-            "controls": {
-                (0, 0): page_key(f"BAR{tag}", "STAGE", stage_page, BAR_COLOR),
-                (0, 1): menu_refresh_key(),
-                (0, 2): print_menu_key(),
-                **hall_keys(),
-                (1, 3): alarm_key(),
-            },
-        },
-        stage_page: {
-            "name": f"STAGE{tag}",
-            "controls": {
-                (0, 0): page_key(f"STAGE{tag}", "TIMER", timer, STAGE_COLOR),
-                **stage_keys(),
-            },
-        },
-        timer: {
-            "name": f"TIMER{tag}",
-            "controls": {
-                (0, 0): page_key(f"TIMER{tag}", "SHOW", show, TIMER_COLOR),
-                (0, 1): timer_readout_key(),  # live readout of the stage clock
-                (0, 2): timer_key("START\\n3 MIN\\nSET", "timer_start", {"minutes": 3}),
-                (0, 3): timer_key("START\\n5 MIN\\nSET", "timer_start", {"minutes": 5}),
-                (1, 0): timer_key("START\\n7 MIN\\nSET", "timer_start", {"minutes": 7}),
-                (1, 1): timer_key("START\\n10 MIN\\nSET", "timer_start", {"minutes": 10}),
-                (1, 2): timer_key("STOP\\nCLOCK", "timer_stop", bgcolor=RED),
-                # WRAP IT UP on the stage clock now (timer_light); press again to clear.
-                # (+1 MIN gave up its key to the readout; push the TIME knob instead.)
-                (1, 3): timer_key("WRAP\\nIT UP", "timer_light", bgcolor=RED),
-            },
+
+def media_key(code):
+    command = ('powershell -NoProfile -WindowStyle Hidden -Command '
+               f'"(New-Object -ComObject WScript.Shell).SendKeys([char]{code})"')
+    return action(INTERNAL, "exec", path=f'start "" /min {command}', cwd="", timeout=5000, targetVariable="")
+
+
+def music_unmute():
+    """The old deck "paused" music by muting its channel; make sure that isn't left on."""
+    return action(XAIR, "mute", mute="1", **MUSIC["mute_strip"])
+
+
+def play_pause():
+    return [media_key(MEDIA_PLAY_PAUSE), music_unmute()]
+
+
+# --------------------------------------------------------------------------
+# The four knobs and the touch-screen tile above each: MIC, MUSIC, LIGHTS, CLOCK.
+# The same on HOME and SHOW, so a knob never changes what it does mid-night.
+# --------------------------------------------------------------------------
+PAGE_HOME, PAGE_SHOW, PAGE_END, PAGE_MIC, PAGE_MUSIC, PAGE_LIGHTS, PAGE_CLOCK = 1, 2, 3, 4, 5, 6, 7
+MIC = CHANNEL(1)  # the stage mic. Mics 2-4 are on the MIC page, each on its own knob.
+
+
+def main_controls():
+    def level_knob(source, push):
+        fade = dict(duration=0, faderLim=True, **source["strip"])  # never push past 0 dB
+        return button("", press=push,
+                      turn_right=[action(XAIR, source["fader_action"], ticks="2", **fade)],
+                      turn_left=[action(XAIR, source["fader_action"], ticks="-2", **fade)])
+
+    def is_muted(source, text):
+        return feedback(XAIR, source["mute_feedback"], muted(text), state="1", **source["feedback_strip"])
+
+    both = ("tables", "bar")
+    return {
+        (2, 0): button("MIC\\nvolume $(xair:f_ch1_p)\\npush = on/off", press=[go(PAGE_MIC)], bgcolor=0x143A1D,
+                       feedbacks=[is_muted(MIC, "MIC IS OFF\\npush knob\\nto turn on")]),
+        (3, 0): level_knob(MIC, [action(XAIR, "mute", mute="2", **MIC["mute_strip"])]),
+        (2, 1): button("MUSIC\\nvolume $(xair:f_ch3_p)\\npush = play/pause", press=[go(PAGE_MUSIC)], bgcolor=0x16324A,
+                       feedbacks=[is_muted(MUSIC, "MUSIC MUTED\\npush knob\\nto turn on")]),
+        (3, 1): level_knob(MUSIC, play_pause()),
+        (2, 2): button("LIGHTS\\n$(custom:house_tables)%\\npush = on/off", press=[go(PAGE_LIGHTS)], bgcolor=DARK,
+                       feedbacks=[when("$(custom:house_tables) > 0", bgcolor=0x6A5A30, color=WHITE)]),
+        (3, 2): button("", press=[house(f"toggle?zone={z}") for z in both],
+                       turn_right=[house(f"step?zone={z}&delta={DIM_STEP}") for z in both],
+                       turn_left=[house(f"step?zone={z}&delta=-{DIM_STEP}") for z in both]),
+        (2, 3): clock_tile(),
+        (3, 3): clock_knob(),
+    }
+
+
+# Which of the two main screens the deck belongs on right now: SHOW while the show look is on,
+# HOME the rest of the time. Used as a step picker (1 = first choice, 2 = second).
+SHOW_IS_ON_STEP = "$(custom:room_look) == 'show' ? 2 : 1"
+
+
+def go_main(first=()):
+    """Press choices for a key that returns to the main screen: HOME, or SHOW during a show.
+    (Not Companion's own "back": that does nothing after a restart, which would strand the
+    deck on an extras page.)"""
+    return dict(steps=[[*first, go(PAGE_HOME)], [*[dict(a, id=_next_id("a")) for a in first], go(PAGE_SHOW)]],
+                step_expression=SHOW_IS_ON_STEP)
+
+
+def back_key():
+    return button("BACK", bgcolor=BACK_GREY, **go_main())
+
+
+def god_mic_key():
+    """The announcer's mic in the office (channel 5). Green while it is live."""
+    god = CHANNEL(5)
+    return button("GOD MIC\\nIS LIVE\\ntap = off", bgcolor=0x1F7A35,
+                  press=[action(XAIR, "mute", mute="2", **god["mute_strip"])],
+                  feedbacks=[feedback(XAIR, "ch", {"bgcolor": GREY, "color": WHITE, "text": "GOD MIC\\ntap to talk"},
+                                      state="1", **god["feedback_strip"])])
+
+
+def look_key(text, look, actions, lit, extra=()):
+    """A room-look key: grey until it is the look that is on, then its own colour."""
+    return button(text, bgcolor=GREY, press=actions,
+                  feedbacks=[when(look_is(look), bgcolor=lit, color=WHITE, text=f"{text}\\non now"), *extra])
+
+
+def home_page():
+    return {
+        "name": "HOME",
+        "controls": {
+            # the night, left to right
+            (0, 0): look_key("DAYTIME", "day", look_daytime(), 0xB08A2E),
+            (0, 1): look_key("PRE-SHOW", "pre", look_preshow(), 0x8A6400),
+            # If the show look is already on (the deck restarted mid-show), a tap only opens
+            # the SHOW screen; it does not run the look again.
+            (0, 2): button("START\\nSHOW", bgcolor=SHOW_COLOR,
+                           steps=[look_show() + [go(PAGE_SHOW)], [go(PAGE_SHOW)]], step_expression=SHOW_IS_ON_STEP,
+                           feedbacks=[when(look_is("show"), bgcolor=RED, color=WHITE, text="SHOW IS ON\\ntap to open")]),
+            (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
+            (1, 0): god_mic_key(),
+            (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
+            (1, 2): print_menu_key(),
+            (1, 3): menu_refresh_key(),
+            **main_controls(),
         },
     }
-    for page in pages.values():
-        page["controls"].update(sound_controls(sources))
-    pages[bar]["controls"].update(bar_knobs())
-    pages[stage_page]["controls"].update(bar_knobs())  # house dimmers here too: it's a lights page
-    if mics == 2:  # with 4 mics every knob is a mic, so TIMER 4 keeps them
-        pages[timer]["controls"].update({(2, 3): time_strip(), (3, 3): time_knob()})
-    return pages
 
 
-def mics_key(mics, other_first):
-    """SHOW page: which mic layout the knobs use; press to switch."""
-    other = 4 if mics == 2 else 2
-    return button(f"USING\\n{mics} MICS\\ntap for {other}", bgcolor=0x3A3A6A, size="14",
-                  press=[action(INTERNAL, "set_page", surfaceId="self", page=other_first)])
+def show_page():
+    """What the deck shows while a show is on. END SHOW is the only way back to HOME, so no
+    stray press can bring the house lights up or stop the recording mid-show."""
+    return {
+        "name": "SHOW",
+        "controls": {
+            # Orange and saying so if OBS is not recording; a tap then starts it.
+            (0, 0): button("SHOW IS ON\\nNOT RECORDING\\ntap = record", bgcolor=0xB06000, press=record(True),
+                           feedbacks=[feedback(OBS, "recording",
+                                               {"bgcolor": RED, "color": WHITE,
+                                                "text": "SHOW IS ON\\nREC\\n$(obs:recording_timecode)"})]),
+            (0, 3): button("END\\nSHOW", bgcolor=GREY, press=[go(PAGE_END)], feedbacks=[battery_warning("END SHOW")]),
+            (1, 0): god_mic_key(),
+            (1, 1): button("START\\nCLOCK", bgcolor=0x1F7A35, press=clock_start(),
+                           feedbacks=[when(CLOCK_RUNNING, bgcolor=0x2FA04A, color=WHITE,
+                                           text="RESTART\\nCLOCK\\nnext comic")]),
+            (1, 2): button("WRAP\\nIT UP", bgcolor=0x8A1C1C, press=clock_wrap(),
+                           feedbacks=[when("$(custom:timer_wrap) == 1", bgcolor=0xFF2020, color=WHITE,
+                                           text="WRAP IT UP\\nIS ON\\ntap = clear")]),
+            (1, 3): button("STOP\\nCLOCK", bgcolor=GREY, press=clock_stop(),
+                           feedbacks=[when(CLOCK_RUNNING, bgcolor=0x7A3A00, color=WHITE)]),
+            **main_controls(),
+        },
+    }
 
 
-STAGE_PAGE, STAGE_PAGE_4 = 8, 9
-PAGES = {**layout(SOURCES_2, 1, 2, 4, STAGE_PAGE), **layout(SOURCES_4, 4, 4, 1, STAGE_PAGE_4),
-         ALARM_PAGE: alarm_page()}
+def end_show_page():
+    """"Are you sure?" NO sits where END SHOW was, so a double tap on END SHOW cancels itself.
+    YES brings the pre-show look back (which stops the recording), stops the comic clock and
+    returns to HOME."""
+    return {
+        "name": "END SHOW?",
+        "controls": {
+            (0, 0): button("END THE\\nSHOW?", bgcolor=BLACK),
+            (0, 3): button("NO\\nGO BACK", bgcolor=BACK_GREY, press=[go(PAGE_SHOW)]),
+            (1, 1): button("YES\\nEND SHOW\\nlights up", bgcolor=RED,
+                           press=look_preshow() + clock_stop() + [go(PAGE_HOME)]),
+            **main_controls(),
+        },
+    }
+
+
+def mic_page():
+    """Tap MIC: each stage mic on its own knob (turn = volume, push or tap = on/off), an
+    on/off key for each, the god mic's volume and RESET SOUND."""
+    god_fade = dict(duration=0, faderLim=True, type="/ch/", num=5)
+    return {
+        "name": "MIC",
+        "controls": {
+            (0, 0): back_key(),
+            (0, 1): reset_sound_key(),
+            (0, 2): button("GOD MIC\\nQUIETER", bgcolor=GREY, press=[action(XAIR, "fad_a", ticks="-3", **god_fade)]),
+            (0, 3): button("GOD MIC\\nLOUDER", bgcolor=GREY, press=[action(XAIR, "fad_a", ticks="3", **god_fade)]),
+            **show_mute_keys(SOURCES_4),
+            **sound_controls(SOURCES_4),
+        },
+    }
+
+
+def music_page():
+    return {
+        "name": "MUSIC",
+        "controls": {
+            (0, 0): back_key(),
+            (0, 1): button("PLAY /\\nPAUSE", bgcolor=0x16324A, press=play_pause()),
+            (0, 2): button("NEXT\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_NEXT)]),
+            (0, 3): button("LAST\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_PREVIOUS)]),
+            **main_controls(),
+        },
+    }
+
+
+def lights_page():
+    """Tap LIGHTS: the stage looks on the keys, the two house dimmers on knobs 1 and 2, and
+    the candles on the touch screen (IR can't report back, so ON and OFF are separate taps)."""
+    controls = {(0, 0): back_key(), **stage_keys()}
+    for col, (zone, name) in enumerate((("tables", "TABLES"), ("bar", "BAR"))):
+        controls[(2, col)] = dimmer_strip(zone, name)
+        controls[(3, col)] = dimmer_knob(zone)
+    controls[(2, 2)] = button("CANDLES\\nON\\ntap", bgcolor=CANDLE_COLOR, press=candles(True))
+    controls[(2, 3)] = button("CANDLES\\nOFF\\ntap", bgcolor=DARK, press=candles(False))
+    return {"name": "LIGHTS", "controls": controls}
+
+
+def clock_page():
+    """Tap CLOCK: one tap picks a set length and returns to the main screen. It does not start
+    the clock."""
+    spots = [(0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    controls = {(0, 0): back_key(), **main_controls()}
+    for spot, minutes in zip(spots, CLOCK_PRESETS):
+        controls[spot] = button(f"{minutes} MIN\\nSET", bgcolor=GREY,
+                                **go_main([set_number("timer_min", minutes)]),
+                                feedbacks=[when(f"{_MIN} == {minutes}", bgcolor=0x1F7A35, color=WHITE)])
+    return {"name": "CLOCK", "controls": controls}
+
+
+# --------------------------------------------------------------------------
+# PAGES: edit the page functions above. Keys are (row, column).
+# --------------------------------------------------------------------------
+PAGES = {
+    PAGE_HOME: home_page(),
+    PAGE_SHOW: show_page(),
+    PAGE_END: end_show_page(),
+    PAGE_MIC: mic_page(),
+    PAGE_MUSIC: music_page(),
+    PAGE_LIGHTS: lights_page(),
+    PAGE_CLOCK: clock_page(),
+}
 
 
 GRID = {"minColumn": 0, "maxColumn": 3, "minRow": 0, "maxRow": 3}
@@ -804,8 +949,8 @@ def build():
         "instances": instances,
         "triggers": {},
         "custom_variables": {
-            name: {"description": desc, "defaultValue": 0, "persistCurrentValue": False, "sortOrder": i}
-            for i, (name, desc) in enumerate(CUSTOM_VARIABLES.items())
+            name: {"description": desc, "defaultValue": default, "persistCurrentValue": False, "sortOrder": i}
+            for i, (name, (desc, default)) in enumerate(CUSTOM_VARIABLES.items())
         },
     }
 
