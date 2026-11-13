@@ -516,7 +516,8 @@ def art_scoop(d, t, name):  # Scoopshot IPA: pineapple and vanilla scoops
 def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his stout
     # Sam, Nov 12 2026: Bob's mutton chops run into a handlebar mustache
     # (a Colonel Sanders vibe); he lifts the pint, sips, and wears the foam.
-    skin, chops, shirt = "#e3a97c", "#6b4424", "#2f5d8a"
+    skin, chops, shirt = "#e3a97c", "#d6d6ce", "#2f5d8a"  # Bob has white hair (Sam)
+    hair, edge = "#c8c8c0", "#8e8e88"
     p = t % 6
     lift = 0.0  # 0 resting on the bar, 1 at his mouth
     if 2.6 <= p < 3.4:
@@ -534,15 +535,23 @@ def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his st
     d.px(21, 5, None)
     d.rect(9, 9, 1, 5, skin)  # ears
     d.rect(22, 9, 1, 5, skin)
-    d.rect(10, 3, 12, 3, "#4a2e16")  # hair
-    d.rect(9, 4, 1, 4, "#4a2e16")
-    d.rect(22, 4, 1, 4, "#4a2e16")
-    d.rect(12, 9, 3, 1, "#4a2e16")  # brows
-    d.rect(17, 9, 3, 1, "#4a2e16")
+    d.rect(10, 3, 12, 3, hair)  # hair
+    d.rect(9, 4, 1, 4, hair)
+    d.rect(22, 4, 1, 4, hair)
+    d.rect(12, 9, 3, 1, edge)  # brows
+    d.rect(17, 9, 3, 1, edge)
     blink = (t % 3.7) > 3.5
     if not blink:
         d.px(13, 11, "#1a1a1a")
         d.px(18, 11, "#1a1a1a")
+    frame = "#1c1c1c"  # his glasses (Sam): dark frames read as outlines on the LEDs
+    for x0 in (11, 16):
+        d.rect(x0, 10, 5, 1, frame)
+        d.rect(x0, 12, 5, 1, frame)
+        d.px(x0, 11, frame)
+        d.px(x0 + 4, 11, frame)
+    d.px(10, 11, frame)
+    d.px(21, 11, frame)
     d.rect(15, 12, 2, 3, "#c8865a")  # nose
     for y in range(10, 18):  # mutton chops, widening down the cheeks
         w = 2 + (y - 10) // 3
@@ -553,11 +562,10 @@ def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his st
     d.rect(19, 18, 3, 1, chops)
     for x, y in ((9, 15), (8, 14), (8, 13), (22, 15), (23, 14), (23, 13)):  # handlebar curls
         d.px(x, y, chops)
+    d.rect(11, 17, 10, 1, edge)  # a gray edge so the white whiskers read against his face
     d.rect(14, 17, 4, 1, "#9a4a3a")  # mouth under it
     if 4.6 <= p < 5.9:  # foam on the mustache after a sip
-        d.rect(12, 15, 8, 1, "#efe0bc")
-        d.px(11, 16, "#efe0bc")
-        d.px(20, 16, "#efe0bc")
+        d.rect(12, 16, 8, 1, "#b08a50")
     d.rect(0, 26, 32, 1, "#c08850")  # the bar
     d.rect(0, 27, 32, 5, "#7a4a24")
     for x in range(2, 32, 7):
