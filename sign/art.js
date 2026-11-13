@@ -42,20 +42,26 @@
     var dot = Math.max(3, Math.floor(canvas.clientWidth / W) || 6);
     canvas.width = W * dot; canvas.height = H * dot;
     var g = canvas.getContext('2d');
-    var pic = [];
-    for (var y = 0; y < H; y++) { pic.push([]); for (var x = 0; x < 32; x++) pic[y].push(null); }
     var pal = (art && art.palette) || [];
-    ((art && art.rows) || []).forEach(function (row, y) {
-      for (var x = 0; x < row.length && x < 32; x++) {
-        var i = CODES.indexOf(row[x]);
-        if (i > 0 && pal[i - 1]) pic[y][x] = '#' + pal[i - 1];
-      }
+    // the picture plus any animation frames; they loop 3 times a second, like the sign
+    var pics = [(art && art.rows) || []].concat(((art && art.frames) || []).slice(0, 3)).map(function (rows) {
+      var pic = [];
+      for (var y = 0; y < H; y++) { pic.push([]); for (var x = 0; x < 32; x++) pic[y].push(null); }
+      rows.forEach(function (row, y) {
+        for (var x = 0; x < row.length && x < 32 && y < H; x++) {
+          var i = CODES.indexOf(row[x]);
+          if (i > 0 && pal[i - 1]) pic[y][x] = '#' + pal[i - 1];
+        }
+      });
+      return pic;
     });
+    var FPS = 3, born = Date.now(), pic = pics[0];
     var text = String((art && art.caption) || '');
     var ls = lines(text, Math.floor((W - LEFT) / 6));
     var still = ls && ls.length <= 3;
 
     function frame(scrollX) {
+      pic = pics[Math.floor((Date.now() - born) / 1000 * FPS) % pics.length];
       var px = [];
       for (var y = 0; y < H; y++) { px.push([]); for (var x = 0; x < W; x++) px[y].push(null); }
       function letters(line, left, mid) {
@@ -81,9 +87,10 @@
       }
     }
 
-    if (still) { frame(0); return; }
+    if (still && pics.length < 2) { frame(0); return; }
     var start = Date.now();
     function step() {
+      if (still) { frame(0); return; }
       var x = W - Math.floor((Date.now() - start) / 1000 * SCROLL);
       if (x < LEFT - 6 * text.length) { start = Date.now(); x = W; }
       frame(x);

@@ -187,7 +187,8 @@
           '<div class="a-ask">' + esc(a.prompt) + '</div>' +
           '<div class="a-sub">' + who + ' · ' + day(a.created_at) + '</div>' +
           (a.note ? '<div class="a-note">' + esc(a.note) + '</div>' : '') +
-          '<div class="a-actions">' + acts + '<button class="btn btn-sm" data-act="redraw" type="button">Draw it again</button></div></div>';
+          '<div class="a-actions">' + acts + '<button class="btn btn-sm" data-act="redraw" type="button">Draw it again</button>' +
+          (a.frames && a.frames.length ? '' : '<button class="btn btn-sm" data-act="animate" type="button">Make it move</button>') + '</div></div>';
       }).join('');
       Array.prototype.forEach.call($('list').querySelectorAll('.art'), function (card) {
         var a = items.find(function (x) { return String(x.id) === card.dataset.id; });
@@ -205,6 +206,13 @@
         b.disabled = true;
         var data = await call({ redraw: id }, 'Drawing it again…');
         if (data && data.art) { var i = items.findIndex(function (a) { return a.id === id; }); items[i] = data.art; render(); }
+        b.disabled = false;
+      } else if (b.dataset.act === 'animate') {
+        // still pictures get moving frames added (Sam, Nov 12 2026)
+        b.disabled = true;
+        var got = await call({ animate: id }, 'Adding movement…');
+        if (got && got.note) toast(got.note);
+        if (got && got.art) { var j = items.findIndex(function (a) { return a.id === id; }); items[j] = got.art; render(); }
         b.disabled = false;
       }
     });
