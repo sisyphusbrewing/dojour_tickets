@@ -1,6 +1,8 @@
 // Sisyphus - the taproom LED sign draws its own pictures.
 //
-// POST { prompt, name }       a customer's suggestion (public page /sign/).
+// POST { prompt, name, image?, phone? }  a customer's suggestion (public page /sign/),
+//                             optionally a photo (data: URL) to turn into a
+//                             picture; the photo is never saved.
 //                             The name is required and shows on the sign as
 //                             "BY <name>" (Sam, Nov 12 2026); it must pass the
 //                             word filter and a Claude check before anything
@@ -27,6 +29,7 @@ const MODEL = "claude-opus-5-5";
 const MENU = "https://sisyphusmenu.stharriman.workers.dev/";
 const MAX_SUGGESTIONS_PER_HOUR = 30; // keeps one table from running up the bill
 const MAX_PER_DEVICE_PER_HOUR = 5;   // one phone can't flood the sign
+const MAX_PER_WIFI_PER_HOUR = 20;    // when the page sends no phone id, the whole bar's Wi-Fi shares one count
 const MAX_BEERS_PER_RUN = 8;
 const SIZE = 32;
 const CODES = ".123456789ABCDEF";
@@ -47,15 +50,16 @@ const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "applic
 
 const SYSTEM = `You draw pixel art for the LED sign in the taproom at Sisyphus, a comedy club and brewery in Minneapolis.
 
-The sign is a 64x32 RGB LED panel in a dark bar. Your picture fills a 32x32 square on it and the caption shows beside it. Draw it as 32 rows of exactly 32 characters each. "." is an unlit pixel (black). The characters 1-9 and A-F pick colors from your palette: "1" is palette[0], "2" is palette[1], and so on up to "F" for palette[14]. Use 15 colors or fewer, as 6-digit hex strings without "#".
+The sign is a 128x128 RGB LED board over the bar. Your picture is shown big (each pixel drawn 3x3) with the caption and the guest's name under it. Draw it as 32 rows of exactly 32 characters each. "." is an unlit pixel (black). The characters 1-9 and A-F pick colors from your palette: "1" is palette[0], "2" is palette[1], and so on up to "F" for palette[14]. Use 15 colors or fewer, as 6-digit hex strings without "#".
 
 What reads well on an LED panel:
 - One bold subject, big, on a black background. Use the whole square: the subject should reach within a few pixels of the top and bottom rows and both sides, never sit in one corner or half.
+- Fill in the WHOLE picture: every one of the 32 rows, with real detail (faces, hands, props, a ground line). A few blocks or a half-drawn picture is not finished.
 - Thick shapes and strong outlines. Single stray pixels and fine detail turn to mush.
 - Bright, saturated colors. Dark colors (below about 30% brightness) barely light up, and pure white is glaring, so prefer a warm light gray like B4B4B4 for whites.
 - Dark outlines in a deep version of the fill color, not black, so the edges stay visible.
 
-The caption is shown in a small font beside the picture: at most 24 characters, uppercase, punchy, no emoji. Up to three words of five letters or fewer sit still beside the picture; anything longer scrolls past, which is fine for a joke but slower to read. It can be the subject's name or a short funny line in the voice of a comedy club.
+The caption is shown in a small font under the picture: at most 24 characters, uppercase, punchy, no emoji. Short captions read best. It can be the subject's name or a short funny line in the voice of a comedy club.
 
 Sisyphus pushes a boulder up a mountain forever and has made peace with it; a boulder, a mountain or a hill are fair game when they fit, but don't force them in.
 
@@ -105,7 +109,9 @@ function tidy(a: Art): Art {
 const API_KEY = Deno.env.get("ANTHROPIC_CLIENT_API") ?? Deno.env.get("ANTHROPIC_CLIENT_API_KEY") ?? Deno.env.get("ANTHROPIC_API_KEY");
 const anthropic = new Anthropic({ apiKey: API_KEY });
 
-async function draw(ask: string): Promise<Art> {
+type Photo = { media_type: "image/jpeg" | "image/png"; data: string } | null;
+
+async function draw(ask: string, photo: Photo = null): Promise<Art> {
   const response = await anthropic.beta.messages.create({
     model: MODEL,
     max_tokens: 16000,
@@ -113,13 +119,42 @@ async function draw(ask: string): Promise<Art> {
     fallbacks: "default",
     output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
     system: SYSTEM,
-    messages: [{ role: "user", content: ask }],
+    messages: [{
+      role: "user",
+      content: photo
+        ? [{ type: "image", source: { type: "base64", media_type: photo.media_type, data: photo.data } }, { type: "text", text: ask }]
+        : ask,
+    }],
   });
   if (response.stop_reason === "refusal") {
     return { ok: false, reason: "Claude wouldn't draw that one.", caption: "", palette: [], rows: [] };
   }
   const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
   return tidy(JSON.parse(text) as Art);
+}
+
+// Claude now and then hands back a half-done picture: a few rows, or a couple
+// of blocks (Sam, Nov 12 2026: "it didn't draw the full image"). This says what
+// is missing so the drawing can be sent back once to be finished.
+function unfinished(a: Art): string {
+  const lit = a.rows.map((r) => r.replace(/\./g, "").length);
+  const used = lit.map((n, y) => (n ? y : -1)).filter((y) => y >= 0);
+  const total = lit.reduce((s, n) => s + n, 0);
+  const tall = used.length ? used[used.length - 1] - used[0] + 1 : 0;
+  if (tall < 22) return `It only fills ${tall} of the 32 rows. Draw the whole picture, top to bottom.`;
+  if (total < 220) return `Only ${total} of 1024 pixels are lit. Draw a full, detailed picture that fills the square.`;
+  if (new Set(a.rows.join("").replace(/\./g, "")).size < 3) return "It uses fewer than three colors. Draw it with real color and detail.";
+  return "";
+}
+
+async function drawWhole(ask: string, photo: Photo = null): Promise<Art> {
+  const art = await draw(ask, photo);
+  if (!art.ok) return art;
+  const gap = unfinished(art);
+  if (!gap) return art;
+  const again = await draw(`${ask}\nYour first drawing was unfinished: ${gap}`, photo);
+  const lit = (x: Art) => x.rows.join("").replace(/\./g, "").length;
+  return again.ok && (!unfinished(again) || lit(again) > lit(art)) ? again : art;
 }
 
 // ---- the second look ----
@@ -193,7 +228,7 @@ async function vet(prompt: string, art: Art): Promise<{ ok: boolean; reason: str
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: "image/png", data: await png(art) } },
-        { type: "text", text: `Customer's request: "${prompt}"\nCaption shown beside the picture: "${art.caption}"` },
+        { type: "text", text: `Customer's request: "${prompt}"\nCaption shown under the picture: "${art.caption}"` },
       ],
     }],
   });
@@ -271,41 +306,47 @@ async function insert(row: Record<string, unknown>) {
   return (await r.json())[0];
 }
 
-async function suggestion(prompt: string, name: string, who: string) {
+async function suggestion(prompt: string, name: string, who: string, photo: Photo = null, perPhone = true) {
   // Sam, Nov 3 2026: R-rated is fine, nothing political, offensive or nude.
+  const shown = photo ? `Photo${prompt ? ": " + prompt : ""}` : prompt; // what managers see on review.html
   const since = new Date(Date.now() - 3600_000).toISOString();
   const recent = await fetch(`${SB}/rest/v1/sign_art?select=device&kind=eq.suggestion&created_at=gte.${since}`, { headers: H })
     .then((r) => r.json());
   if (Array.isArray(recent) && recent.length >= MAX_SUGGESTIONS_PER_HOUR) {
     return respond(429, { error: "The sign is busy drawing. Try again in a little while." });
   }
-  if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= MAX_PER_DEVICE_PER_HOUR) {
+  if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= (perPhone ? MAX_PER_DEVICE_PER_HOUR : MAX_PER_WIFI_PER_HOUR)) {
     return respond(429, { error: "That's plenty from one phone for now. Give someone else a turn!" });
   }
   const turnDown = (reason: string) => insert({
-    kind: "suggestion", prompt, from_name: name || null, device: who || null,
+    kind: "suggestion", prompt: shown, from_name: name || null, device: who || null,
     status: "rejected", note: reason, decided_at: new Date().toISOString(),
   }).then((saved) => respond(200, { status: "rejected", note: saved.note }));
 
   if (!(await nameOk(name))) {
     return respond(400, { error: "The sign won't show that name. Try your first name or a nickname." });
   }
-  const ask = `A customer at the bar suggested: "${prompt}"`;
-  let art = await draw(ask);
+  // A guest can send a photo to be turned into a picture (Sam, Nov 12 2026).
+  // The photo goes to Claude only; it is never saved.
+  const ask = photo
+    ? `A customer at the bar sent this photo to be turned into a picture for the sign${prompt ? `, with the note: "${prompt}"` : ""}. ` +
+      `Draw its main subject as bold, simple pixel art. If it shows people, draw a friendly cartoon of them, never anything that mocks them.`
+    : `A customer at the bar suggested: "${prompt}"`;
+  let art = await drawWhole(ask, photo);
   if (!art.ok) return await turnDown(art.reason);
   if (rude(art.caption)) art = { ...art, caption: "" };
-  let check = await vet(prompt, art);
+  let check = await vet(shown, art);
   if (!check.ok) {
     // one more go, tamer, before giving up
-    art = await draw(`${ask}\nA first drawing was turned down for the wall because: ${check.reason} Draw a tamer, clean version that still keeps the joke.`);
+    art = await drawWhole(`${ask}\nA first drawing was turned down for the wall because: ${check.reason} Draw a tamer, clean version that still keeps the joke.`, photo);
     if (!art.ok) return await turnDown(art.reason);
     if (rude(art.caption)) art = { ...art, caption: "" };
-    check = await vet(prompt, art);
+    check = await vet(shown, art);
     if (!check.ok) return await turnDown(check.reason);
     art.tamed = true;
   }
   await insert({
-    kind: "suggestion", prompt, from_name: name || null, device: who || null,
+    kind: "suggestion", prompt: shown, from_name: name || null, device: who || null,
     note: art.tamed ? "Toned down for the wall" : null,
     caption: art.caption, palette: art.palette, rows: art.rows,
     status: "approved", decided_at: new Date().toISOString(),
@@ -352,7 +393,7 @@ async function redraw(id: number) {
   const ask = row.kind === "beer"
     ? `Draw the beer on tap called "${row.prompt}". Make the picture about the beer's name. The caption is the beer's name.`
     : `A customer at the bar suggested: "${row.prompt}"`;
-  const art = await draw(ask + "\nThis is a second try, so take a fresh approach.");
+  const art = await drawWhole(ask + "\nThis is a second try, so take a fresh approach.");
   const r = await fetch(`${SB}/rest/v1/sign_art?id=eq.${id}`, {
     method: "PATCH",
     headers: { ...H, Prefer: "return=representation" },
@@ -376,9 +417,18 @@ Deno.serve(async (req) => {
     }
     const prompt = String(body.prompt ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
     const name = String(body.name ?? "").replace(/[^\x20-\x7E\u00C0-\u017F]/g, "").replace(/\s+/g, " ").trim().slice(0, 18);
-    if (prompt.length < 2) return respond(400, { error: "Tell the sign what to draw." });
+    // an optional photo, sent from the page as a data: URL, already shrunk to about 512 px
+    const m = /^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.image ?? ""));
+    const photo: Photo = m && m[2].length < 2_000_000 ? { media_type: m[1] as "image/jpeg" | "image/png", data: m[2] } : null;
+    if (body.image && !photo) return respond(400, { error: "That photo didn't come through. Try a smaller one." });
+    if (prompt.length < 2 && !photo) return respond(400, { error: "Tell the sign what to draw, or send a photo." });
     if (!name) return respond(400, { error: "Add your name. It goes on the sign under your picture." });
-    return await suggestion(prompt, name, device(req) ? await hash(device(req)) : "");
+    // The per-phone limit counts the phone's own random id from the page; the
+    // internet address alone would lump everyone on the bar's Wi-Fi together
+    // (Sam, Nov 12 2026: friends kept getting "plenty from one phone").
+    const own = /^[a-z0-9]{8,40}$/.test(String(body.phone ?? ""));
+    const phone = own ? "phone:" + body.phone : device(req);
+    return await suggestion(photo ? (prompt || "") : prompt, name, phone ? await hash(phone) : "", photo, own);
   } catch (e) {
     console.error(e);
     return respond(500, { error: "The sign couldn't draw that right now. Try again in a minute." });
