@@ -31,6 +31,7 @@ Settings live in /etc/sisyphus-sign.env (see install.sh):
   SIGN_PANEL_TURN  how far each of those panels is turned in the frame: four
                numbers out of 0 90 180 270, or one for all. Default "180".
   SIGN_ROTATE    turns the whole picture after that: 0 (default), 90, 180, 270.
+  SIGN_SHOW      seconds per beer or picture (default 12); shorter for testing.
   SIGN_SHOW_REFRESH  set to 1 to print the refresh rate, for tuning.
   SIGN_PREVIEW   set to a file name like /tmp/sign.png to draw one lap to
                PNGs (sign-00.png, sign-01.png, ...) and stop, for checking the
@@ -54,7 +55,7 @@ URL = "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/sign_next"
 KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 MENU = "https://sisyphusmenu.stharriman.workers.dev/"  # GoTab, for ABV and price
 SITE = "https://staff.sisyphusbrewing.com/sign/pi/"
-SHOW = 12  # seconds per beer or picture, as in the mock-up
+SHOW = float(os.getenv("SIGN_SHOW") or 12)  # seconds per beer or picture, as in the mock-up
 FPS = 20  # frames a second while something moves
 MENU_EVERY = 600
 UPDATE_EVERY = 300
