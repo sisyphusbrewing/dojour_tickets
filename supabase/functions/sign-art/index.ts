@@ -1,6 +1,10 @@
 // Sisyphus - the taproom LED sign draws its own pictures.
 //
-// POST { prompt, name? }      a customer's suggestion (public page /sign/).
+// POST { prompt, name }       a customer's suggestion (public page /sign/).
+//                             The name is required and shows on the sign as
+//                             "BY <name>" (Sam, Nov 12 2026); it must pass the
+//                             word filter and a Claude check before anything
+//                             is drawn.
 //                             Claude draws it as 32x32 pixel art and it goes
 //                             straight onto the sign (Sam, Nov 3 2026: no
 //                             manager approval). Rude ideas get redrawn as a
@@ -199,6 +203,30 @@ async function vet(prompt: string, art: Art): Promise<{ ok: boolean; reason: str
   return { ok: v.ok === true, reason: String(v.reason ?? "") };
 }
 
+// The name goes on the wall too ("BY JAKE"), so it gets the word filter and
+// its own quick Claude check first (Sam, Nov 12 2026: "we really need to be
+// censoring the names"). Prank names like "Mike Hunt" or "Hugh Jass" count.
+async function nameOk(name: string): Promise<boolean> {
+  if (rude(name) || rude(name.replace(/\s+/g, ""))) return false;
+  const response = await anthropic.beta.messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low", format: { type: "json_schema", schema: VET_SCHEMA } },
+    system: "A customer typed this as their name. It will show as \"BY <name>\" under their drawing on the LED sign on " +
+      "the wall of a comedy club taproom, with no one reviewing it first. Set ok to true only for something that reads " +
+      "as a person's name, nickname or initials (\"Jake\", \"Big Sue\", \"JT\", \"Table 4\" is fine too). Set ok to false " +
+      "for anything rude, sexual, a swear word, a slur or hate, politics (politicians, parties, slogans), a prank name " +
+      "that sounds rude when read aloud (\"Mike Hunt\", \"Hugh Jass\", \"Ben Dover\"), an insult aimed at someone, " +
+      "an ad or web address, phone numbers or other personal details. Keep the reason short.",
+    messages: [{ role: "user", content: `Name: "${name}"` }],
+  });
+  if (response.stop_reason === "refusal") return false;
+  const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+  return JSON.parse(text).ok === true;
+}
+
 // A last word filter on the caption that goes on the wall, including l33t
 // spellings and spaced-out letters. Swearing is fine (R-rated, Sam); sexual,
 // nude and hateful words are not. Requests aren't filtered: rude ones get
@@ -259,7 +287,9 @@ async function suggestion(prompt: string, name: string, who: string) {
     status: "rejected", note: reason, decided_at: new Date().toISOString(),
   }).then((saved) => respond(200, { status: "rejected", note: saved.note }));
 
-  if (rude(name)) name = "";
+  if (!(await nameOk(name))) {
+    return respond(400, { error: "The sign won't show that name. Try your first name or a nickname." });
+  }
   const ask = `A customer at the bar suggested: "${prompt}"`;
   let art = await draw(ask);
   if (!art.ok) return await turnDown(art.reason);
@@ -345,8 +375,9 @@ Deno.serve(async (req) => {
       return body.beers ? await beers() : await redraw(Number(body.redraw));
     }
     const prompt = String(body.prompt ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
-    const name = String(body.name ?? "").replace(/\s+/g, " ").trim().slice(0, 40);
+    const name = String(body.name ?? "").replace(/[^\x20-\x7E\u00C0-\u017F]/g, "").replace(/\s+/g, " ").trim().slice(0, 18);
     if (prompt.length < 2) return respond(400, { error: "Tell the sign what to draw." });
+    if (!name) return respond(400, { error: "Add your name. It goes on the sign under your picture." });
     return await suggestion(prompt, name, device(req) ? await hash(device(req)) : "");
   } catch (e) {
     console.error(e);
