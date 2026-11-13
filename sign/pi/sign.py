@@ -513,15 +513,66 @@ def art_scoop(d, t, name):  # Scoopshot IPA: pineapple and vanilla scoops
             d.px(17, y - 6, "#3f9a3a")
 
 
-def art_nitro(d, t, name):  # Bobby Boy: the nitro cascade settling down
-    p = (t % 8) / 8
-    head = 1 + jround(p * 4)
-    mud = jround(40 + max(0, 1 - p * 1.3) * 60)
-    body = (mud, jround(mud * 0.7), jround(mud * 0.45))
-    d.pint(lambda y, x: "#efe0bc" if y < 6 + head else body)
-    if p < 0.8:
-        for i in range(12):
-            d.px(11 + math.floor(rnd(i) * 10), 8 + head + ((t * 9 + rnd(i + 4) * 20) % (22 - head)), "#c4a57a")
+def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his stout
+    # Sam, Nov 12 2026: Bob's mutton chops run into a handlebar mustache
+    # (a Colonel Sanders vibe); he lifts the pint, sips, and wears the foam.
+    skin, chops, shirt = "#e3a97c", "#6b4424", "#2f5d8a"
+    p = t % 6
+    lift = 0.0  # 0 resting on the bar, 1 at his mouth
+    if 2.6 <= p < 3.4:
+        lift = (p - 2.6) / 0.8
+    elif 3.4 <= p < 4.6:
+        lift = 1.0
+    elif 4.6 <= p < 5.2:
+        lift = 1 - (p - 4.6) / 0.6
+    d.rect(5, 21, 22, 6, shirt)  # shoulders
+    d.rect(13, 20, 6, 2, skin)  # neck
+    d.px(15, 22, "#d8d8d8")
+    d.px(16, 22, "#d8d8d8")
+    d.rect(10, 5, 12, 15, skin)  # face
+    d.px(10, 5, None)
+    d.px(21, 5, None)
+    d.rect(9, 9, 1, 5, skin)  # ears
+    d.rect(22, 9, 1, 5, skin)
+    d.rect(10, 3, 12, 3, "#4a2e16")  # hair
+    d.rect(9, 4, 1, 4, "#4a2e16")
+    d.rect(22, 4, 1, 4, "#4a2e16")
+    d.rect(12, 9, 3, 1, "#4a2e16")  # brows
+    d.rect(17, 9, 3, 1, "#4a2e16")
+    blink = (t % 3.7) > 3.5
+    if not blink:
+        d.px(13, 11, "#1a1a1a")
+        d.px(18, 11, "#1a1a1a")
+    d.rect(15, 12, 2, 3, "#c8865a")  # nose
+    for y in range(10, 18):  # mutton chops, widening down the cheeks
+        w = 2 + (y - 10) // 3
+        d.rect(10, y, w, 1, chops)
+        d.rect(22 - w, y, w, 1, chops)
+    d.rect(11, 15, 10, 2, chops)  # the mustache joining them
+    d.rect(10, 18, 3, 1, chops)
+    d.rect(19, 18, 3, 1, chops)
+    for x, y in ((9, 15), (8, 14), (8, 13), (22, 15), (23, 14), (23, 13)):  # handlebar curls
+        d.px(x, y, chops)
+    d.rect(14, 17, 4, 1, "#9a4a3a")  # mouth under it
+    if 4.6 <= p < 5.9:  # foam on the mustache after a sip
+        d.rect(12, 15, 8, 1, "#efe0bc")
+        d.px(11, 16, "#efe0bc")
+        d.px(20, 16, "#efe0bc")
+    d.rect(0, 26, 32, 1, "#c08850")  # the bar
+    d.rect(0, 27, 32, 5, "#7a4a24")
+    for x in range(2, 32, 7):
+        d.rect(x, 28, 1, 4, "#5e3618")
+    gx = jround(24 - lift * 6)  # the pint, from the bar up to his mouth
+    gy = jround(17 - lift * 5)
+    d.rect(gx, gy, 6, 9, "#7d8790")
+    d.rect(gx + 1, gy + 2, 4, 6, "#2a1a10")
+    d.rect(gx + 1, gy, 4, 2, "#efe0bc")
+    if lift < 0.5:  # the nitro cascade, settling
+        for i in range(4):
+            by = gy + 7 - ((t * 5 + rnd(i) * 6) % 5)
+            d.px(gx + 1 + math.floor(rnd(i + 3) * 4), by, "#8a6a48")
+    d.rect(gx - 2, gy + 4, 2, 3, skin)  # his hand on the glass
+    d.rect(gx - 4, gy + 6, 2, 2, shirt)
 
 
 def art_jackpot(d, t, name):  # Peanut Butter Jackpot: three peanuts, every time
@@ -644,7 +695,7 @@ def art_glass(d, t, name):  # anything new: a pint in a color from its name
 CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
     (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"gobstop|wonka", art_gobstopper), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
-    (r"comet", art_comet), (r"scoop", art_scoop), (r"nitro|stout|bobby", art_nitro),
+    (r"comet", art_comet), (r"scoop", art_scoop), (r"bobby|nitro|stout", art_nitro),
     (r"peanut|jackpot", art_jackpot), (r"colada|margarita|slush", art_slushie),
 ]
 
