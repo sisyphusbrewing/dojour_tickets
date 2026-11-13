@@ -14,7 +14,11 @@
 //                             finished picture and a word filter checks the
 //                             caption before it goes up.
 //                             Managers can still take any picture down on
-//                             /sign/review.html. Returns { status, art }.
+//                             /sign/review.html. Answers right away with
+//                             { status: "drawing", id } and draws in the
+//                             background (Sam, Nov 12 2026: guests shouldn't
+//                             have to wait); the page asks rpc sign_status(id)
+//                             until it is approved or rejected.
 // POST { beers: true }        managers: draws every beer on tap (GoTab feed)
 //                             that has no art yet, approved straight away.
 // POST { redraw: id }         managers: draws that picture again.
@@ -336,14 +340,38 @@ async function suggestion(prompt: string, name: string, who: string, photo: Phot
   if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= (perPhone ? MAX_PER_DEVICE_PER_HOUR : MAX_PER_WIFI_PER_HOUR)) {
     return respond(429, { error: "That's plenty from one phone for now. Give someone else a turn!" });
   }
-  const turnDown = (reason: string) => insert({
-    kind: "suggestion", prompt: shown, from_name: name || null, device: who || null,
-    status: "rejected", note: reason, decided_at: new Date().toISOString(),
-  }).then((saved) => respond(200, { status: "rejected", note: saved.note }));
-
   if (!(await nameOk(name))) {
     return respond(400, { error: "The sign won't show that name. Try your first name or a nickname." });
   }
+  // The row goes in now as "drawing" (it counts toward the hourly limits right
+  // away) and the drawing finishes in the background, so the guest can put
+  // their phone away. The sign only shows approved rows.
+  const saved = await insert({
+    kind: "suggestion", prompt: shown, from_name: name || null, device: who || null, status: "drawing",
+  });
+  const work = finish(saved.id, prompt, photo).catch(async (e) => {
+    console.error(e);
+    await patch(saved.id, { status: "rejected", note: "The sign couldn't draw that one. Try again.", decided_at: new Date().toISOString() });
+  });
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work); else await work;
+  return respond(202, { status: "drawing", id: saved.id });
+}
+
+async function patch(id: number, fields: Record<string, unknown>) {
+  const r = await fetch(`${SB}/rest/v1/sign_art?id=eq.${id}`, {
+    method: "PATCH",
+    headers: { ...H, Prefer: "return=representation" },
+    body: JSON.stringify(fields),
+  });
+  if (!r.ok) throw new Error(`patch ${r.status} ${await r.text()}`);
+  return (await r.json())[0];
+}
+
+async function finish(id: number, prompt: string, photo: Photo) {
+  const shown = photo ? `Photo${prompt ? ": " + prompt : ""}` : prompt;
+  const turnDown = (reason: string) => patch(id, { status: "rejected", note: reason, decided_at: new Date().toISOString() });
   // A guest can send a photo to be turned into a picture (Sam, Nov 12 2026).
   // The photo goes to Claude only; it is never saved.
   const ask = photo
@@ -363,13 +391,11 @@ async function suggestion(prompt: string, name: string, who: string, photo: Phot
     if (!check.ok) return await turnDown(check.reason);
     art.tamed = true;
   }
-  await insert({
-    kind: "suggestion", prompt: shown, from_name: name || null, device: who || null,
+  await patch(id, {
     note: art.tamed ? "Toned down for the wall" : null,
     caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames.length ? art.frames : null,
     status: "approved", decided_at: new Date().toISOString(),
   });
-  return respond(200, { status: "approved", tamed: art.tamed, art: { caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames } });
 }
 
 function beerKey(name: string) {
