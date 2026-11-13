@@ -855,6 +855,99 @@ def art_slushie(d, t, name):  # the slushies: a swirl in a cup
         d.px(24, 8, "#e9ffd0")
 
 
+def art_spice(d, t, name):  # The Spice Must Flow!: a desert-planet sandworm swallows the pint
+    # Sam, Nov 12 2026: "needs to be Dune themed". Our own desert world, not
+    # the film's look: two moons over the dunes, orange spice drifting, a
+    # ripple in the sand heading for the pumpkin pint, then a giant worm
+    # bursts up under it, opens a round mouth full of teeth, gulps the pint
+    # and sinks. The pint pops back.
+    p = t % 7
+    for y in range(22):  # dusk: deep purple up top, burnt orange at the horizon
+        d.rect(0, y, 32, 1, hsl((270 + y * 5.2) % 360, 55, 7 + y * 0.8))
+    d.disc(5, 5, 2, "#e8e0c8")  # two moons
+    d.disc(11, 3, 1, "#c8b8a0")
+    for k in range(5):  # stars
+        if (math.floor(t * 2) + k) % 4:
+            d.px(math.floor(rnd(k) * 32), math.floor(rnd(k + 9) * 10), "#9a90b0")
+
+    def ground(x):
+        return 21 + jround(1.6 * math.sin(x * 0.3 + 1))
+    for x in range(32):  # the dunes, shaded on the far side of each crest
+        g = ground(x)
+        shade = ground(x + 1) < g
+        for y in range(g, 32):
+            d.px(x, y, "#b8823e" if shade and y - g < 3 else "#d9a35a")
+        d.px(x, g, "#a8723a" if shade else "#f0c27a")
+    cx = 24
+    if p < 2.6:  # a ripple in the sand running toward the pint (wormsign)
+        rx = jround(2 + p / 2.6 * 18)
+        for i in range(-2, 3):
+            x = rx + i
+            d.px(x, ground(x) - (1 if abs(i) < 2 else 0), "#f0c27a")
+            d.px(x, ground(x) + 1, "#8a5a2a")
+    # how far the worm is out of the sand
+    if p < 2.6 or p >= 5.6:
+        h = 0
+    elif p < 3.3:
+        h = (p - 2.6) / 0.7 * 13
+    elif p < 4.6:
+        h = 13
+    else:
+        h = 13 * (1 - (p - 4.6))
+    h = jround(h)
+    base = ground(cx)
+    top = base - h
+    if h > 0:
+        for y in range(top, base + 1):  # a ringed body with a slight sway
+            sway = jround(1.2 * math.sin((base - y) * 0.35 + t * 2))
+            for x in range(-5, 6):
+                if x in (-5, 5):
+                    col = "#5e3a24"
+                elif x == -3:
+                    col = "#d6a576"
+                else:
+                    col = "#9a6c45" if (y - top) % 3 == 0 else "#b98a5e"
+                d.px(cx + x + sway, y, col)
+        for x in range(cx - 7, cx + 8):  # sand spraying off it
+            d.px(x, base, "#f0c27a")
+            if (x + math.floor(t * 8)) % 3 == 0:
+                d.px(x, base - 1 - (x % 2), "#f0c27a")
+        if 3.3 <= p < 4.6:  # the mouth opens wide, ringed with teeth
+            d.disc(cx, top, 6, "#5e3a24")
+            d.disc(cx, top, 5, "#3a0c0c")
+            d.disc(cx, top, 2, "#6a1a14")
+            for k in range(12):
+                a = k * math.pi / 6 + t * 0.8
+                d.px(cx + math.cos(a) * 4.6, top + math.sin(a) * 4.6, "#efe4c4")
+                d.px(cx + math.cos(a) * 3.6, top + math.sin(a) * 3.6, "#efe4c4" if k % 2 else "#3a0c0c")
+        else:
+            d.disc(cx, top, 5, "#b98a5e")
+            d.disc(cx, top, 2, "#5e3a24")
+    # the pumpkin pint: on the dune, lifted on the worm, then dropped in
+    if p < 3.9 or p > 6.2:
+        if p < 2.6 or p > 6.2:
+            py, size = base, 7
+        elif p < 3.3:
+            py, size = top - 2, 7
+        else:  # tossed up, then falling into the mouth and shrinking away
+            k = (p - 3.3) / 0.6
+            py, size = top - 6 + jround(k * k * 8), max(3, 7 - jround(k * 4))
+        w = 5 if size > 4 else 3
+        x0 = cx - w // 2
+        d.rect(x0, py - size, w, size, "#e8782a")
+        d.rect(x0, py - size, w, 2, "#f4ecd8")
+        for y in range(py - size + 1, py):
+            d.px(x0 - 1, y, "#c9d2d6")
+            d.px(x0 + w, y, "#c9d2d6")
+        if 6.2 < p < 6.7:  # pops back with a sparkle
+            for a in range(4):
+                d.px(cx + (5 if a % 2 else -5), py - 9 + a * 2, "#ffd35a")
+    for k in range(8):  # spice drifting on the wind
+        x = (rnd(k) * 40 + t * (3 + rnd(k + 4) * 3)) % 36 - 2
+        y = 6 + rnd(k + 2) * 14 - ((t * 1.5 + rnd(k) * 10) % 6)
+        d.px(x, y, "#ff9a30" if k % 2 else "#ffc040")
+
+
 def art_margarita(d, t, name):  # Margarita: a lime sips the slushie and gets BRAIN FREEZE
     # Sam, Nov 12 2026: "needs to be way cooler", no idea given. A lime with a
     # face slurps the frozen margarita through a long straw, freezes solid
@@ -945,7 +1038,7 @@ CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
     (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"gobstop|wonka", art_gobstopper), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
     (r"comet", art_comet), (r"scoop", art_scoop), (r"bobby|nitro|stout", art_nitro),
-    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita", art_margarita), (r"slush", art_slushie),
+    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita", art_margarita), (r"spice|dune", art_spice), (r"slush", art_slushie),
 ]
 
 
