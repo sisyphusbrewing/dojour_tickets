@@ -11,8 +11,8 @@ core just for refreshing, so Wi-Fi and drawing never disturb it.
 What it shows (the mock-up Sam approved, Nov 12 2026): every beer and slushie
 on tap from the GoTab menu, 12 seconds each, with a little animated cartoon,
 its name, style, ABV and price. After every 3rd beer comes a picture Claude
-drew from a guest's suggestion (Supabase rpc sign_next), and once a lap,
-"DRAW ON THIS SIGN - SCAN THE QR AT THE BAR". Each frame is drawn
+drew from a guest's suggestion (Supabase rpc sign_next), and at the end of a
+lap, at most once every 10 minutes, "DRAW ON THIS SIGN - SCAN THE QR AT THE BAR". Each frame is drawn
 off-screen and swapped in whole.
 
 It keeps itself up to date: every 5 minutes it compares itself with
@@ -60,6 +60,7 @@ SHOW = float(os.getenv("SIGN_SHOW") or 12)  # seconds per beer or picture, as in
 FPS = 20  # frames a second while something moves
 MENU_EVERY = 600
 UPDATE_EVERY = 300
+PLUG_GAP = 600  # "draw on this sign" at most once every 10 minutes (Sam, Nov 12 2026)
 SCROLL = 20  # pixels a second for captions too long to sit still
 AMBER = (224, 144, 0)
 WHITE = (180, 180, 180)  # warm gray: pure white glares
@@ -1049,6 +1050,7 @@ def main():
     show(words_screen("SISYPHUS"), 2)
     beers, menu_at, update_at = [], -1e9, time.monotonic()
     seconds, seconds_at = SHOW, -1e9
+    plug_at = time.monotonic()  # first plug 10 minutes after start-up
     while True:
         now = time.monotonic()
         if now - menu_at > MENU_EVERY or not beers:
@@ -1065,6 +1067,10 @@ def main():
                         sys.exit(0)  # the service starts the new version
                 except Exception as e:
                     print("update check", e, flush=True)
+            if kind == "plug":
+                if time.monotonic() - plug_at < PLUG_GAP:
+                    continue
+                plug_at = time.monotonic()
             try:
                 screen = screen_for(kind, beer)
             except Exception as e:  # no Wi-Fi for a guest's picture: skip it
