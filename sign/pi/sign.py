@@ -488,25 +488,76 @@ def art_sisyfest(d, t, name):  # Sisyfest: up the hill, every single time
         d.px(14 + k * 4, 2 + (k % 2) * 3, "#3e4c5c")
 
 
-def art_grail(d, t, name):  # Quest for the Holy Pale: the glow
-    pulse = (math.sin(t * 2.4) + 1) / 2
-    for a in range(12):
-        ang = a / 12 * math.pi * 2 + t * 0.3
-        r = 11
-        while r < 12 + pulse * 4:
-            d.px(16 + math.cos(ang) * r, 13 + math.sin(ang) * r, "#7a6a2a" if a % 2 else "#c8b050")
-            r += 1
-    for y in range(8, 17):
-        ins = (y - 8) // 3
-        d.rect(9 + ins, y, 14 - ins * 2, 1, "#fff4c4" if y < 10 else "#f0c040")
-    d.rect(15, 17, 2, 7, "#d9a520")
-    d.rect(11, 24, 10, 2, "#d9a520")
-    d.rect(10, 26, 12, 1, "#b8861a")
-    d.px(12, 12, "#fffbe6")
-    if pulse > 0.7:
-        d.px(16, 3, "#ffffff")
-        d.px(26, 9, "#ffffff")
-        d.px(5, 18, "#ffffff")
+def explorer(d, x, t, running, holding):
+    """Our own temple-raiding explorer: pith helmet, khaki, satchel. x is his
+    left edge; his feet are on the temple floor (row 26)."""
+    skin, khaki, dark = "#e3a97c", "#c8a868", "#6a4a2a"
+    d.rect(x, 12, 6, 2, "#d8c890")  # pith helmet
+    d.rect(x + 1, 11, 4, 1, "#d8c890")
+    d.rect(x + 1, 14, 4, 3, skin)  # face
+    d.px(x + 4, 15, "#1a1a1a")
+    d.px(x + 3, 16, "#a06040")  # stubble grin
+    d.rect(x + 1, 17, 4, 5, khaki)  # shirt
+    d.px(x + 2, 18, dark)  # satchel strap
+    d.px(x + 3, 19, dark)
+    d.rect(x, 20, 2, 2, dark)  # satchel
+    if running:  # legs scissoring
+        step = int(t * 8) % 2
+        d.rect(x + 1, 22, 2, 4 - step, "#5a4030")
+        d.rect(x + 3 + step, 22, 2, 4, "#5a4030")
+    else:
+        d.rect(x + 1, 22, 2, 4, "#5a4030")
+        d.rect(x + 3, 22, 2, 4, "#5a4030")
+    if holding:  # the chalice held high
+        d.rect(x + 5, 13, 1, 4, skin)
+        chalice(d, x + 5, 9)
+
+
+def chalice(d, x, y):
+    """A small golden chalice of pale ale, foam on top. (x, y) is its top left."""
+    d.rect(x, y, 4, 1, "#f4f1e4")
+    d.rect(x, y + 1, 4, 2, "#f0c040")
+    d.rect(x + 1, y + 3, 2, 1, "#d9a520")
+    d.rect(x, y + 4, 4, 1, "#d9a520")
+
+
+def art_grail(d, t, name):  # Quest for the Holy Pale: a temple raid
+    # Sam, Nov 12 2026: "a lot cooler, like Indiana Jones". Our own explorer
+    # grabs the glowing pale ale off its pedestal, and a boulder (Sisyphus's,
+    # naturally) chases him out of the temple.
+    p = t % 8
+    for x in (1, 28):  # dim temple pillars
+        d.rect(x, 2, 3, 24, "#3a3428")
+        d.rect(x - 1, 2, 5, 1, "#4e4636")
+    d.rect(0, 26, 32, 6, "#5a5040")  # stone floor
+    for x in range(0, 32, 5):
+        d.rect(x, 28 + (x // 5) % 2 * 2, 4, 1, "#40382c")
+    d.rect(19, 21, 6, 5, "#7a6a50")  # pedestal
+    d.rect(18, 20, 8, 1, "#9a8a68")
+    if p < 3.0:  # walking up to it while it glows
+        pulse = (math.sin(t * 4) + 1) / 2
+        for a in range(8):
+            ang = a / 8 * math.pi * 2 + t
+            r = 4 + pulse * 2
+            d.px(21.5 + math.cos(ang) * r, 17 + math.sin(ang) * r, "#c8b050" if a % 2 else "#7a6a2a")
+        chalice(d, 20, 15)
+        explorer(d, jround(-2 + p / 3.0 * 12), t, p < 2.4, False)
+    elif p < 4.0:  # he lifts it, the temple shakes
+        shake = int(t * 20) % 2
+        d.px(10 + shake, 1, "#8a7a60")
+        d.px(16 - shake, 3, "#8a7a60")
+        explorer(d, 10, t, False, True)
+    else:  # run!
+        q = (p - 4.0) / 4.0
+        ex = jround(10 + q * 24)
+        explorer(d, ex, t, True, True)
+        bx = -8 + q * 30  # the boulder rolling in behind him
+        d.disc(bx, 19, 7, "#8c8c8c")
+        d.disc(bx - 2, 16, 2, "#a8a8a8")
+        spin = int(t * 6) % 4
+        for k in range(3):
+            ang = spin * math.pi / 2 + k * 2.1
+            d.px(bx + math.cos(ang) * 4, 19 + math.sin(ang) * 4, "#6a6a6a")
 
 
 def art_comet(d, t, name):  # Comet Chameleon: a chameleon riding a comet, changing color as it goes
@@ -611,7 +662,7 @@ def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his st
     d.rect(17, 9, 3, 1, edge)
     blink = (t % 3.7) > 3.5
     # his glasses (Sam): thin gold wire rims, so he looks friendly, not shady
-    rim = "#d4b45a"
+    rim = "#4a4e58"  # dark wire, so it shows against his skin on the LEDs
     for x0 in (11, 16):
         d.rect(x0 + 1, 10, 3, 1, rim)
         d.rect(x0 + 1, 12, 3, 1, rim)
@@ -680,40 +731,52 @@ def art_jackpot(d, t, name):  # Peanut Butter Jackpot: three peanuts, every time
             d.px(9 + q * 7, 28, "#ffd94a")
 
 
-def art_sparkle(d, t, name):  # Mr. Sparkle's Lager: a winking box of soap flakes
+def art_sparkle(d, t, name):  # Mr. Sparkle's Lager: a loud late-night soap commercial
     # A nod to the joke the beer is named for, drawn as our own mascot (Sam asked
-    # for the detergent box, Nov 12 2026; the cartoon character itself isn't ours to use).
-    for k in range(6):  # soap bubbles drifting up out of the box
-        by = 9 - ((t * (4 + rnd(k + 11) * 3) + rnd(k) * 9) % 9)
-        bx = 9 + math.floor(rnd(k + 5) * 14) + jround(math.sin(t * 2 + k))
-        d.px(bx, by, "#bfe6ff")
-    d.rect(23, 12, 3, 19, "#b0302a")  # the box's side, in shadow
-    d.rect(7, 10, 16, 21, "#f2f2f2")  # the front
-    d.rect(7, 10, 16, 5, "#e8452f")  # red top band with a "label"
-    for x in range(9, 21, 2):
-        d.px(x, 12, "#ffd94a")
-    d.rect(7, 27, 16, 4, "#2d6fd0")  # blue bottom band
-    d.disc(15, 20, 5, "#ffd23f")  # the mascot: a beaming sun
-    wink = t % 4 > 3.3
-    d.px(13, 19, "#5a3a10")
+    # for the detergent box, Nov 12 2026; the cartoon character itself isn't ours
+    # to use). "Cooler" (Sam): spinning burst, bouncing box, sparkles everywhere.
+    spin = t * 0.8
+    for y in range(32):  # a spinning sunburst behind the box
+        for x in range(32):
+            ang = math.atan2(y - 15, x - 15) + spin
+            if int((ang / (2 * math.pi)) * 16) % 2:
+                d.px(x, y, "#3a1a5a")
+            else:
+                d.px(x, y, "#1a2a6a")
+    hop = abs(math.sin(t * 3.2)) * 3  # the box bounces
+    y0 = jround(8 - hop)
+    sq = 1 if hop < 0.4 else 0  # squashes a touch when it lands
+    d.rect(25, y0 + 2 + sq, 3, 20 - sq, "#a02a24")  # side
+    d.rect(7, y0 + sq, 18, 22 - sq, "#f2f2f2")  # front
+    d.rect(7, y0 + sq, 18, 5, "#e8452f")  # red band, gold dots
+    for x in range(9, 23, 2):
+        d.px(x, y0 + 2 + sq, "#ffd94a")
+    d.rect(7, y0 + 18, 18, 4, "#2d6fd0")  # blue band
+    for x in range(8, 24, 3):
+        d.px(x + int(t * 6) % 3, y0 + 19, "#8ac8ff")
+    cx, cy = 16, y0 + 11 + sq  # the mascot: a beaming sun with a wink
+    d.disc(cx, cy, 5, "#ffd23f")
+    for k in range(8):  # its rays
+        ang = k * math.pi / 4 + t * 2
+        d.px(cx + math.cos(ang) * 6.5, cy + math.sin(ang) * 6.5, "#ffb000")
+    wink = t % 3 > 2.3
+    d.px(cx - 2, cy - 1, "#5a3a10")
     if wink:
-        d.px(16, 19, "#5a3a10")
-        d.px(17, 19, "#5a3a10")
+        d.rect(cx + 1, cy - 1, 2, 1, "#5a3a10")
     else:
-        d.px(17, 19, "#5a3a10")
-    d.px(12, 22, "#5a3a10")
-    d.rect(13, 23, 5, 1, "#5a3a10")
-    d.px(18, 22, "#5a3a10")
-    tw = (math.sin(t * 4) + 1) / 2  # a big sparkle that twinkles
-    r = 2 + jround(tw * 2)
-    for i in range(-r, r + 1):
-        d.px(26 + i, 6, "#fffbe6")
-        d.px(26, 6 + i, "#fffbe6")
-    if tw > 0.6:
-        d.px(25, 5, "#fff3a0")
-        d.px(27, 7, "#fff3a0")
-        d.px(25, 7, "#fff3a0")
-        d.px(27, 5, "#fff3a0")
+        d.px(cx + 2, cy - 1, "#5a3a10")
+    d.px(cx - 3, cy + 2, "#5a3a10")
+    d.rect(cx - 2, cy + 3, 5, 1, "#5a3a10")
+    d.px(cx + 3, cy + 2, "#5a3a10")
+    for k in range(9):  # sparkles popping all over
+        ph = (t * 1.6 + rnd(k) * 4) % 4
+        if ph < 1.0:
+            sx, sy = math.floor(rnd(k + 2) * 30) + 1, math.floor(rnd(k + 9) * 30) + 1
+            r = 1 if ph < 0.3 or ph > 0.7 else 2
+            col = ("#fffbe6", "#8af0ff", "#ffb0f0")[k % 3]
+            for i in range(-r, r + 1):
+                d.px(sx + i, sy, col)
+                d.px(sx, sy + i, col)
 
 
 def art_gobstopper(d, t, name):  # Neverlasting Gobstopper: a candy-factory jawbreaker
@@ -738,6 +801,48 @@ def art_gobstopper(d, t, name):  # Neverlasting Gobstopper: a candy-factory jawb
                 if ph > 0.3 and ph < 0.6:
                     for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                         d.px(sx + dx, sy + dy, "#c89a20")
+
+
+def art_colada(d, t, name):  # Piña colada: a beach at sunset, vacation vibes
+    # Sam, Nov 12 2026: "a beach scene like vacation vibe".
+    sky = ("#3a2a6a", "#6a2a7a", "#a83a6a", "#d85a4a", "#f08a3a", "#f8b040")
+    for y in range(16):  # sunset sky, purple at the top to gold at the sea
+        d.rect(0, y, 32, 1, sky[min(5, y * 6 // 16)])
+    d.disc(12, 16, 5, "#ffd86a")  # the sun, sinking
+    d.disc(12, 16, 3, "#fff0a8")
+    d.rect(0, 16, 32, 7, "#2a6aa8")  # the sea
+    for k in range(7):  # glints sliding along the water
+        gx = (rnd(k) * 32 + t * (3 + k % 3)) % 32
+        gy = 17 + k % 6
+        d.rect(gx, gy, 2 + k % 2, 1, "#ffd86a" if abs(gx - 12) < 6 else "#7ab8e8")
+    wave = int(t * 2) % 2
+    d.rect(0, 23, 32, 1, "#e8f4ff")  # surf line
+    for x in range(wave, 32, 4):
+        d.px(x, 22, "#e8f4ff")
+    d.rect(0, 24, 32, 8, "#e8c880")  # sand
+    for x in range(1, 32, 5):
+        d.px(x, 27 + x % 3, "#c8a860")
+    sway = math.sin(t * 1.5) * 1.5  # a palm tree, swaying
+    for y in range(6, 31):
+        bend = (31 - y) / 25
+        d.rect(26 - bend * 3 + sway * bend, y, 2, 1, "#8a5a2e" if y % 3 else "#6a4020")
+    tx, ty = 23 + sway, 6
+    for dx, dy, ex, ey in ((0, 0, -7, 3), (0, 0, -5, -2), (0, 0, 6, 2), (0, 0, 4, -3), (0, 0, 1, 5)):
+        d.line(tx + dx, ty + dy, tx + ex, ty + ey, "#3f9a3a")
+        d.px(tx + ex, ty + ey + 1, "#2a7a2a")
+    d.disc(tx, ty + 1, 1, "#6a4020")  # coconuts
+    # the drink, stuck in the sand: hurricane glass, pineapple, little umbrella
+    for y in range(20, 30):
+        w = 3 if y < 23 or y > 25 else 2
+        d.rect(9 - w, y, w * 2, 1, "#f6f1df" if y > 20 else "#f8f8f0")
+    d.rect(8, 30, 2, 1, "#c8d0d8")
+    d.rect(6, 31, 6, 1, "#c8d0d8")
+    d.rect(11, 18, 2, 3, "#f5cf4a")  # pineapple wedge
+    d.px(12, 17, "#3f9a3a")
+    d.line(6, 20, 4, 15, "#c8a060")  # umbrella
+    d.rect(1, 14, 7, 1, "#e23b6a")
+    d.rect(2, 13, 5, 1, "#ff6a9a")
+    d.px(4, 12, "#ff6a9a")
 
 
 def art_slushie(d, t, name):  # the slushies: a swirl in a cup
@@ -774,7 +879,7 @@ CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
     (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"gobstop|wonka", art_gobstopper), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
     (r"comet", art_comet), (r"scoop", art_scoop), (r"bobby|nitro|stout", art_nitro),
-    (r"peanut|jackpot", art_jackpot), (r"colada|margarita|slush", art_slushie),
+    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita|slush", art_slushie),
 ]
 
 
