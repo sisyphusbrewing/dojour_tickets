@@ -14,7 +14,8 @@
   <link rel="stylesheet" href="../staff.css">
   <style>
     /* Plain-language guide to the showroom Stream Deck +. Mirrors the PAGES in
-       av/companion/build_companion_config.py: change a key there, change it here. */
+       av/companion/build_companion_config.py: change a key there, change it here.
+       Rewritten Nov 13 2026 for the two-screen layout (HOME and SHOW). */
     .intro { color: var(--muted); margin: 18px 0 4px; }
     p, li { color: var(--muted); }
     b, strong { color: var(--white); }
@@ -32,6 +33,8 @@
     .strip { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 10px; background: #202020; border-radius: 8px; overflow: hidden; }
     .strip div { text-align: center; font-size: 11px; padding: 7px 2px; color: var(--muted); border-left: 1px solid #333; font-weight: 600; }
     .strip div:first-child { border-left: 0; }
+    .strip div small { display: block; font-weight: 400; font-size: 10px; opacity: .85; }
+    .strip div b { display: block; color: #fff; letter-spacing: .04em; }
     .knobs { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
     .knobs span { width: 40px; height: 40px; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #666, #2a2a2a); border: 2px solid #111; }
     .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; vertical-align: 2px; }
@@ -62,141 +65,219 @@
   </header>
 
   <main class="wrap">
-    <p class="intro">Eight buttons, four knobs, one show. You push buttons. The computer in the office does the rest.</p>
+    <p class="intro">Two screens, four knobs, one show. You push buttons. The computer in the office does the rest.</p>
 
-    <div class="band-row"><span class="band">The basics</span></div>
+    <div class="band-row"><span class="band">The basics</span><span class="band-note">New layout, Nov 13</span></div>
     <div class="card">
-      <p>The Stream Deck at the bar runs sound, the record button, the stage timer, the hallway lights and the menus. It's a remote control: the brains are on the <b>office PC</b> (a program called Companion), and the mixer is in the office too.</p>
-      <p>The deck has <b>three pages</b>: <b>SHOW</b>, <b>BAR</b> and <b>TIMER</b>. The top-left key on every page says <b>NEXT PAGE</b>: press it to go to the next one. Its colour (purple, blue or green) tells you which page you're on. Swiping sideways on the touch strip also changes page.</p>
-      <p><b>The knobs are the same on every page:</b> MIC 1, MIC 2, MUSIC and GOD MIC. One exception: on the TIMER page the GOD MIC knob is the comic's TIME. Turn for louder or quieter, push to mute. The strip above each knob shows its name and level, and turns red with <b>MUTED</b> when it's off. Tap the strip to unmute.</p>
-      <p>The overall room volume is set once on the mixer and never lives on a knob. If the whole room is too loud or too quiet, see <a href="#trouble">If something's wrong</a>.</p>
+      <p>The Stream Deck at the bar runs the lights, the sound, the music, the recording and the comic's clock. It's a remote control: the brains are on the <b>office PC</b>.</p>
+      <p><b>The top row is the night, left to right:</b> DAYTIME, PRE-SHOW, START SHOW, ALL OFF. The one that's on is lit and says <b>on now</b>.</p>
+      <p><b>The deck changes screens by itself.</b> Press <b>START SHOW</b> and it becomes the SHOW screen. Press <b>END SHOW</b> and it goes back to HOME. There is no NEXT PAGE key any more.</p>
+      <p><b>The four knobs never change:</b> MIC, MUSIC, LIGHTS, CLOCK. <b>Turn</b> for more or less. <b>Push</b> for on/off. The square on the touch screen above each knob says what it's doing; <b>tap that square</b> for more of that thing, and <b>BACK</b> (top left) to return.</p>
+      <p>Gone on purpose: the RECORD key (recording starts with START SHOW and stops with END SHOW), anything you had to hold down, and the alarm (use the keypad or the SimpliSafe app).</p>
     </div>
 
-    <div class="band-row"><span class="band">The three pages</span></div>
+    <div class="band-row"><span class="band">The screens</span></div>
     <div class="chips tabs" id="tabs">
-      <button class="chip on" data-page="show">Show</button>
-      <button class="chip" data-page="bar">Bar</button>
-      <button class="chip" data-page="timer">Timer</button>
+      <button class="chip on" data-page="home">Home</button>
+      <button class="chip" data-page="show">Show</button>
+      <button class="chip" data-page="mic">Mic</button>
+      <button class="chip" data-page="music">Music</button>
+      <button class="chip" data-page="lights">Lights</button>
+      <button class="chip" data-page="clock">Clock</button>
     </div>
 
-    <!-- SHOW page -->
-    <section class="page on" id="page-show">
-      <div class="deck" aria-label="SHOW page layout">
+    <section class="page on" id="page-home">
+      <p class="intro" style="margin-top:0">What the deck shows all day. The top row is the night, left to right.</p>
+      <div class="deck" aria-label="HOME screen">
         <div class="keys">
-          <div class="key" style="background:#5a2a82">NEXT<br>PAGE &gt;</div>
-          <div class="key" style="background:#202020">Record<br>video</div>
-          <div class="key" style="background:#3a3a6a">Using<br>2 mics<br>tap for 4</div>
-          <div class="key" style="background:#7a3a00">Reset<br>sound</div>
-          <div class="key" style="background:#1e5e2a">Mic 1<br>on</div>
-          <div class="key" style="background:#1e5e2a">Mic 2<br>on</div>
-          <div class="key" style="background:#1e5e2a">Music<br>on</div>
-          <div class="key" style="background:#1e5e2a">God mic<br>on</div>
+          <div class="key" style="background:#2f2f2f">DAYTIME</div>
+          <div class="key" style="background:#8a6400">PRE-SHOW<br>on now</div>
+          <div class="key" style="background:#5a2a82">START<br>8 PM SHOW<br>31 TO COME</div>
+          <div class="key" style="background:#2f2f2f">ALL OFF</div>
+          <div class="key" style="background:#2f2f2f">GOD MIC<br>tap to talk</div>
+          <div class="key" style="background:#2f2f2f">NEXT<br>SONG</div>
+          <div class="key" style="background:#1e4c7a">PRINT<br>5 PAPER<br>MENUS</div>
+          <div class="key" style="background:#1e4c7a">REFRESH<br>TV MENU<br>screen</div>
         </div>
-        <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>GOD MIC</div></div>
+        <div class="strip"><div style="background:#143a1d"><b>MIC</b><small>volume 72<br>push = on/off</small></div><div style="background:#16324a"><b>MUSIC</b><small>volume 55<br>push = play/pause</small></div><div style="background:#6a5a30"><b>LIGHTS</b><small>20%<br>push = on/off</small></div><div style="background:#202020"><b>CLOCK</b><small>7 MIN SET<br>push = start</small></div></div>
         <div class="knobs"><span></span><span></span><span></span><span></span></div>
       </div>
       <ul class="keylist">
-        <li><span class="sw" style="background:#5a2a82"></span><div><b>Show page</b><p>You're on SHOW. Press for the BAR page.</p></div></li>
-        <li><span class="sw" style="background:#202020;border:1px solid #555"></span><div><b>Record video</b><p>Starts recording the set on the office PC (cameras plus room sound). The key turns <b>red</b> and shows the running time. Press again to stop. Orange means paused.</p></div></li>
-        <li><span class="sw" style="background:#7a3a00"></span><div><b>Reset sound</b><p>Puts the mixer back to the saved show mix. Use it when sound is weird: a mic dead, music gone, everything too quiet. Safe to press any time; it just undoes whatever got bumped.</p></div></li>
-        <li><span class="sw" style="background:#1e5e2a"></span><div><b>Mic 1 · Mic 2 · Music · God mic</b><p>Green <b>ON</b> means live. Press to mute: the key goes red and says <b>MUTED</b>. Press again to bring it back. Same thing as pushing the knob below it.</p></div></li>
-        <li><span class="sw" style="background:#3a3a6a"></span><div><b>2 mics / 4 mics</b><p>Switches the knobs between two layouts. <b>2 MICS</b>: MIC 1, MIC 2, MUSIC, GOD MIC. <b>4 MICS</b>: MIC 1 to MIC 4 (mics 3 and 4 plug into mixer inputs 9 and 10). Every page has both versions; the key on the SHOW page flips between them.</p></div></li>
+        <li><span class="sw" style="background:#b08a2e"></span><div><b>Daytime</b><p>Regular taproom hours. Hallway soft warm white, poster lamp and shuffleboard on, room lights full, candles off.</p></div></li>
+        <li><span class="sw" style="background:#8a6400"></span><div><b>Pre-show</b><p>Doors are open. Hallway in show colours, the Sisyphus sign, wall wash, poster lamp and shuffleboard on, candles on, stage lights blue, room lights down to 20%.</p></div></li>
+        <li><span class="sw" style="background:#5a2a82"></span><div><b>Start show</b><p>One press starts the show: room lights fade out, stage lights go to the show look, the stage mic is switched on, the recording starts, and the deck moves to the <b>SHOW</b> screen.<br><br>On a show night this key also counts the guests who haven't checked in at the door yet: <b>8 PM SHOW, 31 TO COME</b>, then <b>ALL HERE</b>. The number comes from the door app and catches up within half a minute. After the early show it counts the late show. No number means no show tonight, or the deck can't reach the door list; the key works the same either way.</p></div></li>
+        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>All off</b><p>Closing. Hallway, sign, wall wash, plugs, room lights, candles and stage lights all off, and the comic's clock is cleared. The hallway runs over the internet, so if it doesn't answer, press again in a minute.</p></div></li>
+        <li><span class="sw" style="background:#1f7a35"></span><div><b>God mic</b><p>The announcer's mic in the office. Tap to talk: the key turns green and says <b>GOD MIC IS LIVE</b>. Tap again when you're done.</p></div></li>
+        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>Next song</b><p>Skips to the next song in Spotify.</p></div></li>
+        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Print 5 paper menus</b><p>Prints five copies of today's taps on the office printer, straight from GoTab. Give it a moment.</p></div></li>
+        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Refresh TV menu</b><p>Makes the taproom TV reload the beer list. Press it after a keg change in GoTab.</p></div></li>
       </ul>
     </section>
 
-    <!-- BAR page -->
-    <section class="page" id="page-bar">
-      <div class="deck" aria-label="BAR page layout">
+    <section class="page" id="page-show">
+      <p class="intro" style="margin-top:0">What the deck shows while a show is on. It gets here by itself when you press START SHOW, and END SHOW is the only way out, so a stray press can't bring the lights up mid-show.</p>
+      <div class="deck" aria-label="SHOW screen">
         <div class="keys">
-          <div class="key" style="background:#1e4c7a">NEXT<br>PAGE &gt;</div>
-          <div class="key" style="background:#1e4c7a">Refresh<br>TV menu</div>
-          <div class="key" style="background:#1e4c7a">Print<br>5 menus</div>
-          <div class="key" style="background:#7a5a00">PRE-SHOW</div>
-          <div class="key" style="background:#6a5a30">DAYTIME</div>
-          <div class="key" style="background:#5a2a82">SHOW</div>
-          <div class="key" style="background:#202020">ALL<br>OFF</div>
-          <div class="key" style="background:#202020">ALARM<br>OFF</div>
+          <div class="key" style="background:#c00000">SHOW IS ON<br>REC<br>00:12:34</div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+          <div class="key" style="background:#2f2f2f">END<br>SHOW</div>
+          <div class="key" style="background:#2f2f2f">GOD MIC<br>tap to talk</div>
+          <div class="key" style="background:#1f7a35">START<br>CLOCK</div>
+          <div class="key" style="background:#8a1c1c">WRAP<br>IT UP</div>
+          <div class="key" style="background:#2f2f2f">STOP<br>CLOCK</div>
         </div>
-        <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>GOD MIC</div></div>
+        <div class="strip"><div style="background:#143a1d"><b>MIC</b><small>volume 72<br>push = on/off</small></div><div style="background:#16324a"><b>MUSIC</b><small>volume 55<br>push = play/pause</small></div><div style="background:#6a5a30"><b>LIGHTS</b><small>20%<br>push = on/off</small></div><div style="background:#202020"><b>CLOCK</b><small>7 MIN SET<br>push = start</small></div></div>
         <div class="knobs"><span></span><span></span><span></span><span></span></div>
       </div>
       <ul class="keylist">
-        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Bar page</b><p>You're on BAR. Press for the TIMER page.</p></div></li>
-        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Refresh TV menu</b><p>Makes the taproom TV reload the beer list. Press it after a keg change in GoTab. Takes a few seconds.</p></div></li>
-        <li><span class="sw" style="background:#1e4c7a"></span><div><b>Print 5 menus</b><p>Prints five copies of today's taps (one page each) on the office printer, straight from GoTab. Give it a moment.</p></div></li>
-        <li><span class="sw" style="background:#7a5a00"></span><div><b>PRE-SHOW</b><p>Doors are open. Hallway bulbs in show colors, the Sisyphus sign, stage wall wash, poster lamp and shuffleboard on, and the room lights dim to 17%.</p></div></li>
-        <li><span class="sw" style="background:#6a5a30"></span><div><b>DAYTIME</b><p>Regular taproom hours. Hallway soft warm white, poster lamp and shuffleboard on, room lights full.</p></div></li>
-        <li><span class="sw" style="background:#5a2a82"></span><div><b>SHOW</b><p>The show is starting. Fades the room lights out over 3 seconds. Nothing else changes.</p></div></li>
-        <li><span class="sw" style="background:#202020;border:1px solid #555"></span><div><b>ALL OFF</b><p>Closing. Hallway, sign, wall wash, plugs and room lights all off. The hallway runs over the internet, so if the Wi-Fi is down it may not answer. Press again in a minute.</p></div></li>
-        <li><span class="sw" style="background:#8a1c1c"></span><div><b>Alarm</b><p>Shows whether the alarm is set (OFF, AWAY, HOME). Press it for the ALARM page: <b>ARM AWAY</b> when you're the last one out, <b>ARM HOME</b> if someone is staying inside, <b>BACK</b> to return. There is no disarm button on purpose; use the keypad or the SimpliSafe app.</p></div></li>
+        <li><span class="sw" style="background:#c00000"></span><div><b>Show is on</b><p>Red with <b>REC</b> and a running time means the show is being recorded. If it is <b>orange</b> and says <b>NOT RECORDING</b>, tap it once.</p></div></li>
+        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>End show</b><p>Asks <b>END THE SHOW?</b> first. <b>YES END SHOW</b> brings the lights up to the pre-show look, stops the recording and the clock, and takes the deck back to HOME. <b>NO GO BACK</b> changes nothing.</p></div></li>
+        <li><span class="sw" style="background:#1f7a35"></span><div><b>Start clock</b><p>Press it when the comic hits the stage. It starts the comic's clock on the <a href='../timer/'>stage timer</a> screen at the length shown above the CLOCK knob. While a clock is running the key says <b>RESTART CLOCK</b>: press it when the next comic walks up.</p></div></li>
+        <li><span class="sw" style="background:#8a1c1c"></span><div><b>Wrap it up</b><p>Puts WRAP IT UP on the comic's screen right now. Tap again to clear it. The clock already goes red at 1 minute left and says WRAP IT UP on its own at 30 seconds.</p></div></li>
+        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>Stop clock</b><p>Clears the comic's clock. Press it when the comic is off.</p></div></li>
+        <li><span class="sw" style="background:#1f7a35"></span><div><b>God mic</b><p>Same as on HOME: tap to talk, tap again when you're done.</p></div></li>
       </ul>
     </section>
 
-    <!-- TIMER page -->
-    <section class="page" id="page-timer">
-      <div class="deck" aria-label="TIMER page layout">
+    <section class="page" id="page-mic">
+      <p class="intro" style="margin-top:0">Tap the MIC square on the touch screen. Here every knob is one stage mic.</p>
+      <div class="deck" aria-label="MIC screen">
         <div class="keys">
-          <div class="key" style="background:#1f5f2e">NEXT<br>PAGE &gt;</div>
-          <div class="key" style="background:#1f5f2e">04:12<br>of 05:00</div>
-          <div class="key" style="background:#1f5f2e">Start<br>3 min</div>
-          <div class="key" style="background:#1f5f2e">Start<br>5 min</div>
-          <div class="key" style="background:#1f5f2e">Start<br>7 min</div>
-          <div class="key" style="background:#1f5f2e">Start<br>10 min</div>
-          <div class="key" style="background:#c00000">Stop<br>clock</div>
-          <div class="key" style="background:#c00000">Wrap<br>it up</div>
+          <div class="key" style="background:#505050">BACK</div>
+          <div class="key" style="background:#7a3a00">RESET<br>SOUND<br>show mix</div>
+          <div class="key" style="background:#2f2f2f">GOD MIC<br>QUIETER</div>
+          <div class="key" style="background:#2f2f2f">GOD MIC<br>LOUDER</div>
+          <div class="key" style="background:#1e5e2a">MIC 1<br>ON</div>
+          <div class="key" style="background:#1e5e2a">MIC 2<br>ON</div>
+          <div class="key" style="background:#1e5e2a">MIC 3<br>ON</div>
+          <div class="key" style="background:#c00000">MIC 4<br>MUTED</div>
         </div>
-        <div class="strip"><div>MIC 1</div><div>MIC 2</div><div>MUSIC</div><div>TIME</div></div>
+        <div class="strip"><div style="background:#202020"><b>MIC 1</b><small>-10 dB<br>turn knob</small></div><div style="background:#202020"><b>MIC 2</b><small>-10 dB<br>turn knob</small></div><div style="background:#202020"><b>MIC 3</b><small>-10 dB<br>turn knob</small></div><div style="background:#c00000"><b>MIC 4</b><small>MUTED<br>tap to unmute</small></div></div>
         <div class="knobs"><span></span><span></span><span></span><span></span></div>
       </div>
       <ul class="keylist">
-        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Timer readout</b><p>Shows what the comic's clock says (time on stage, then LIGHT, WRAP IT UP, OVER) and turns red from the light on. It follows the keys on this deck, so a set started from the timer web page won't show here. It's only a display; the NEXT PAGE key next to it goes back to SHOW.</p></div></li>
-        <li><span class="sw" style="background:#1f5f2e"></span><div><b>Start 3 / 5 / 7 / 10 min</b><p>Starts the comic's clock (counting up from 0:00) on the <a href="../timer/">stage timer</a> screen. Press it when the comic hits the stage. Pressing another one restarts from 0:00 at the new length. Need to give extra time? Use the TIME knob.</p></div></li>
-        <li><span class="sw" style="background:#1f5f2e"></span><div><b>TIME knob</b><p>On the TIMER page the 4th knob (GOD MIC everywhere else) is the comic's time. Turn right for 15 more seconds a click, left for 15 less. Push the knob, or tap the strip above it, for a whole extra minute. The strip above it shows the set length. With 4 mics on, it stays MIC 4.</p></div></li>
-        <li><span class="sw" style="background:#c00000"></span><div><b>Stop clock</b><p>Clears the timer. Press it when the comic is off.</p></div></li>
-        <li><span class="sw" style="background:#c00000"></span><div><b>Wrap it up</b><p>Puts WRAP IT UP on the stage clock right now; press again to clear. The clock already goes red at 1 minute left and says WRAP IT UP on its own at 30 seconds. Over time it says "You better know what you are doing....", and a minute over, "No seriously.... are you famous?"</p></div></li>
+        <li><span class="sw" style="background:#1e5e2a"></span><div><b>Mic 1 · Mic 2 · Mic 3 · Mic 4</b><p>Green <b>ON</b> means live. Press to mute: the key goes red and says <b>MUTED</b>. Press again to bring it back. The knob under each key is that mic's volume; pushing the knob mutes it too. Mic 1 is the stage mic.</p></div></li>
+        <li><span class="sw" style="background:#7a3a00"></span><div><b>Reset sound</b><p>Puts the mixer back to the saved show mix. Use it when sound is weird: a mic dead, music gone, everything too quiet. Safe to press any time.</p></div></li>
+        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>God mic quieter / louder</b><p>The office announcer's mic volume, a step per press.</p></div></li>
+        <li><span class="sw" style="background:#505050"></span><div><b>Back</b><p>Returns to HOME, or to SHOW if a show is on.</p></div></li>
       </ul>
     </section>
+
+    <section class="page" id="page-music">
+      <p class="intro" style="margin-top:0">Tap the MUSIC square on the touch screen. Music is Spotify on the office PC.</p>
+      <div class="deck" aria-label="MUSIC screen">
+        <div class="keys">
+          <div class="key" style="background:#505050">BACK</div>
+          <div class="key" style="background:#16324a">PLAY /<br>PAUSE</div>
+          <div class="key" style="background:#16324a">NEXT<br>SONG</div>
+          <div class="key" style="background:#16324a">LAST<br>SONG</div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+          <div class="key empty"></div>
+        </div>
+        <div class="strip"><div style="background:#143a1d"><b>MIC</b><small>volume 72<br>push = on/off</small></div><div style="background:#16324a"><b>MUSIC</b><small>volume 55<br>push = play/pause</small></div><div style="background:#6a5a30"><b>LIGHTS</b><small>20%<br>push = on/off</small></div><div style="background:#202020"><b>CLOCK</b><small>7 MIN SET<br>push = start</small></div></div>
+        <div class="knobs"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <ul class="keylist">
+        <li><span class="sw" style="background:#16324a"></span><div><b>Play / pause</b><p>Starts or pauses Spotify. Same as pushing the MUSIC knob.</p></div></li>
+        <li><span class="sw" style="background:#16324a"></span><div><b>Next song · Last song</b><p>Skip forward, or go back a song.</p></div></li>
+        <li><span class="sw" style="background:#505050"></span><div><b>Back</b><p>Returns to HOME, or to SHOW if a show is on.</p></div></li>
+      </ul>
+    </section>
+
+    <section class="page" id="page-lights">
+      <p class="intro" style="margin-top:0">Tap the LIGHTS square on the touch screen. For when you want something other than the four looks on HOME.</p>
+      <div class="deck" aria-label="LIGHTS screen">
+        <div class="keys">
+          <div class="key" style="background:#505050">BACK</div>
+          <div class="key" style="background:#202020">STAGE<br>WASH</div>
+          <div class="key" style="background:#5a2a82">STAGE<br>SHOW</div>
+          <div class="key" style="background:#202020">STAGE<br>WARM</div>
+          <div class="key" style="background:#202020">STAGE<br>WHITE</div>
+          <div class="key" style="background:#202020">STAGE<br>UV</div>
+          <div class="key" style="background:#202020">STAGE<br>COLOR<br>tap to step</div>
+          <div class="key" style="background:#202020">STAGE<br>OFF</div>
+        </div>
+        <div class="strip"><div style="background:#6a5a30"><b>TABLES</b><small>LIGHTS 20%<br>turn knob</small></div><div style="background:#6a5a30"><b>BAR</b><small>LIGHTS 20%<br>turn knob</small></div><div style="background:#b06000"><b>CANDLES</b><small>ON<br>tap</small></div><div style="background:#202020"><b>CANDLES</b><small>OFF<br>tap</small></div></div>
+        <div class="knobs"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <ul class="keylist">
+        <li><span class="sw" style="background:#5a2a82"></span><div><b>Stage wash · show · warm · white · UV</b><p>Stage light looks. The one that's on is lit.</p></div></li>
+        <li><span class="sw" style="background:#c0307a"></span><div><b>Stage color</b><p>Each press steps to the next colour: pink, blue, red, purple.</p></div></li>
+        <li><span class="sw" style="background:#c00000"></span><div><b>Stage off</b><p>Stage lights off.</p></div></li>
+        <li><span class="sw" style="background:#6a5a30"></span><div><b>Tables · Bar</b><p>On this screen knob 1 dims the lights over the tables and knob 2 the lights over the bar, each on its own. Push the knob for on/off.</p></div></li>
+        <li><span class="sw" style="background:#b06000"></span><div><b>Candles on · Candles off</b><p>Tap the square on the touch screen. The candles can't tell the deck whether they heard it, so if a few missed it, tap again.</p></div></li>
+        <li><span class="sw" style="background:#505050"></span><div><b>Back</b><p>Returns to HOME, or to SHOW if a show is on.</p></div></li>
+      </ul>
+    </section>
+
+    <section class="page" id="page-clock">
+      <p class="intro" style="margin-top:0">Tap the CLOCK square on the touch screen to pick how long the set is.</p>
+      <div class="deck" aria-label="CLOCK screen">
+        <div class="keys">
+          <div class="key" style="background:#505050">BACK</div>
+          <div class="key" style="background:#2f2f2f">3 MIN<br>SET</div>
+          <div class="key" style="background:#2f2f2f">5 MIN<br>SET</div>
+          <div class="key" style="background:#1f7a35">7 MIN<br>SET</div>
+          <div class="key" style="background:#2f2f2f">10 MIN<br>SET</div>
+          <div class="key" style="background:#2f2f2f">15 MIN<br>SET</div>
+          <div class="key" style="background:#2f2f2f">20 MIN<br>SET</div>
+          <div class="key" style="background:#2f2f2f">45 MIN<br>SET</div>
+        </div>
+        <div class="strip"><div style="background:#143a1d"><b>MIC</b><small>volume 72<br>push = on/off</small></div><div style="background:#16324a"><b>MUSIC</b><small>volume 55<br>push = play/pause</small></div><div style="background:#6a5a30"><b>LIGHTS</b><small>20%<br>push = on/off</small></div><div style="background:#202020"><b>CLOCK</b><small>7 MIN SET<br>push = start</small></div></div>
+        <div class="knobs"><span></span><span></span><span></span><span></span></div>
+      </div>
+      <ul class="keylist">
+        <li><span class="sw" style="background:#1f7a35"></span><div><b>3 · 5 · 7 · 10 · 15 · 20 · 45 min</b><p>One tap picks the set length and takes you straight back. It does not start the clock; <b>START CLOCK</b> or a push of the CLOCK knob does. The length that's set is green. Need something in between? Turn the CLOCK knob: one click is one minute.</p></div></li>
+        <li><span class="sw" style="background:#505050"></span><div><b>Back</b><p>Returns to HOME, or to SHOW if a show is on.</p></div></li>
+      </ul>
+    </section>
+
+    <div class="band-row"><span class="band">The four knobs</span><span class="band-note">Same on HOME and SHOW</span></div>
+    <ul class="keylist">
+      <li><span class="sw" style="background:#143a1d"></span><div><b>Mic</b><p>The stage mic. Turn for volume. Push for on/off: the square goes red and says <b>MIC IS OFF</b>. Tap the square for all four mics.</p></div></li>
+      <li><span class="sw" style="background:#16324a"></span><div><b>Music</b><p>Turn for volume. Push to play or pause Spotify. Tap the square for next and last song.</p></div></li>
+      <li><span class="sw" style="background:#6a5a30"></span><div><b>Lights</b><p>The room lights over the tables and the bar, together. Turn to dim or brighten, push for on/off. Tap the square for stage lights, candles and each dimmer on its own.</p></div></li>
+      <li><span class="sw" style="background:#1f7a35"></span><div><b>Clock</b><p>The comic's clock. Turn to set the length, a minute a click. Push to start; push again to stop. While it runs the square shows the time, goes red when the light is on, and says WRAP IT UP and OVER TIME when the comic's screen does.</p></div></li>
+    </ul>
 
     <div class="band-row"><span class="band">A show night</span></div>
     <div class="card">
       <ol class="steps">
-        <li><b>Doors.</b> BAR page: <b>PRE-SHOW</b>. Start the pre-show playlist in Spotify on the office PC and set it with the <b>MUSIC</b> knob.</li>
-        <li><b>Host walks up.</b> BAR page: <b>SHOW</b> to drop the room lights. SHOW page: check <b>MIC 1</b> is green. Turn MUSIC down or push the knob to mute it. Press <b>Record video</b>.</li>
-        <li><b>Each comic.</b> TIMER page: start their time. <b>Stop clock</b> when they're off.</li>
-        <li><b>Announcements</b> from the office: <b>GOD MIC</b> on, talk, mute it again.</li>
-        <li><b>After the show.</b> SHOW page: press <b>Record video</b> to stop (the key goes back to dark). Music back up. BAR page: <b>PRE-SHOW</b> or <b>DAYTIME</b> for the rest of the night. Last one out: <b>ALL OFF</b>, then <b>ARM AWAY</b>.</li>
+        <li><b>Doors.</b> Press <b>PRE-SHOW</b>. Push the <b>MUSIC</b> knob to start the playlist and turn it to taste.</li>
+        <li><b>Waiting on the room.</b> The <b>START SHOW</b> key counts down the guests still to come, so you can see from the bar when the room is in.</li>
+        <li><b>Host walks up.</b> Press <b>START SHOW</b>. Lights drop, the stage mic is on, the recording starts. Push the <b>MUSIC</b> knob to pause the music.</li>
+        <li><b>Each comic.</b> Set their time with the <b>CLOCK</b> knob, then <b>START CLOCK</b> when they hit the stage. <b>STOP CLOCK</b> when they're off.</li>
+        <li><b>Announcements</b> from the office: <b>GOD MIC</b>, talk, tap it again.</li>
+        <li><b>After the show.</b> <b>END SHOW</b>, then <b>YES</b>. Lights come up and the recording stops. Push the <b>MUSIC</b> knob to bring the music back. On a two-show night, do it all again for the late show.</li>
+        <li><b>Last one out.</b> <b>ALL OFF</b>, then set the alarm at the keypad.</li>
       </ol>
     </div>
 
     <div class="band-row" id="trouble"><span class="band">If something's wrong</span></div>
     <div class="card">
       <ul class="plain">
-        <li><b>Sound is weird</b> (a mic dead, music gone, too quiet): SHOW page, <b>Reset sound</b>. Fixes most things.</li>
-        <li><b>A key is red.</b> That thing is muted. Press it.</li>
+        <li><b>You're on a screen you don't recognise.</b> Press <b>BACK</b>, top left.</li>
+        <li><b>The MIC square is red.</b> The stage mic is off. Push the MIC knob.</li>
+        <li><b>SHOW IS ON is orange.</b> It isn't recording. Tap it once.</li>
+        <li><b>Sound is weird</b> (a mic dead, music gone, too quiet): tap the MIC square, then <b>RESET SOUND</b>. Fixes most things.</li>
+        <li><b>A little warning triangle in the corner of some keys.</b> Something those keys talk to didn't answer last time. The keys still work. If a light or the candles didn't change, press again.</li>
+        <li><b>A key says PLUG IN DECK.</b> The deck's battery is low. Plug it in.</li>
+        <li><b>No guest count on START SHOW</b> on a show night. The key still starts the show; check the door app for who's in.</li>
         <li><b>The deck is blank or frozen.</b> The office PC probably restarted. Follow <a href="../av/if-it-crashes.html">If the show computer restarts</a>. It takes about two minutes.</li>
         <li><b>No music</b> even after Reset sound: the office PC's sound must go to <b>OUT 3-4 (BEHRINGER X-AIR)</b>, over the USB cable to the mixer. Don't unplug that cable. If Spotify is quiet, restart it.</li>
-        <li><b>A hall light key does nothing.</b> Those go through the internet. Wait a minute and press again.</li>
+        <li><b>A hall light does nothing.</b> Those go through the internet. Wait a minute and press the look again.</li>
         <li><b>Still stuck.</b> Call Sam. Then improvise; you work at a comedy club.</li>
       </ul>
-    </div>
-
-    <div class="band-row"><span class="band">Coming soon</span><span class="band-note">Parts ordered, not wired up yet</span></div>
-    <div class="card">
-      <ul class="plain">
-        <li><b>House lights</b> <span class="tag soon">Coming soon</span><br>Smart dimmers on the two showroom light switches: SHOW (dim), FULL and OFF keys.</li>
-        <li><b>Smart plugs</b> <span class="tag soon">Coming soon</span><br>Signs and accent lights on and off from the deck.</li>
-        <li><b>Candles</b> <span class="tag soon">Coming soon</span><br>The table candles on and off by infrared, all at once.</li>
-        <li><b>Air conditioning</b> <span class="tag soon">Coming soon</span><br>Cool the room before a sold-out show, from the bar.</li>
-        <li><b>Scene keys</b> <span class="tag soon">Coming soon</span><br>DOORS, START SHOW and END SHOW: one press sets sound, lights and recording together.</li>
-      </ul>
-      <p style="margin-top:8px">Until then, use the wall switches and the thermostat like it's 2014.</p>
     </div>
 
     <p class="foot">Keys on the deck are built from <code>av/companion/build_companion_config.py</code>. If this page and the deck disagree, the deck wins. Tell Sam.</p>
   </main>
 
   <script>
-    // Page tabs: show one deck page at a time.
+    // Screen tabs: show one deck screen at a time.
     (function () {
       var chips = document.querySelectorAll('#tabs .chip');
       chips.forEach(function (c) {
