@@ -1249,6 +1249,7 @@ def main():
     beers, menu_at, update_at = [], -1e9, time.monotonic()
     seconds, hidden, config_at = SHOW, set(), -1e9
     plug_at = time.monotonic()  # first plug 10 minutes after start-up
+    empty = 0  # laps in a row with nothing shown
     while True:
         now = time.monotonic()
         if now - menu_at > MENU_EVERY or not beers:
@@ -1289,7 +1290,16 @@ def main():
                 show(screen, seconds)
                 shown = True
         if not shown:  # everything switched off or no Wi-Fi: don't spin
+            # Say why in the log, and after 3 empty laps in a row start over
+            # fresh (Sam, Nov 12 2026: it sat on SISYPHUS until a restart).
+            empty += 1
+            print("nothing to show: %d beers, hidden %s, lap %d" % (len(beers), sorted(hidden), empty), flush=True)
             show(words_screen("SISYPHUS"), seconds)
+            menu_at = config_at = -1e9  # fetch the menu and settings again next lap
+            if empty >= 3:
+                sys.exit(1)  # the service starts it again
+        else:
+            empty = 0
 
 
 if __name__ == "__main__":
