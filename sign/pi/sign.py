@@ -610,15 +610,16 @@ def art_nitro(d, t, name):  # Bobby Boy: Sam's friend Bob at the bar with his st
     d.rect(12, 9, 3, 1, edge)  # brows
     d.rect(17, 9, 3, 1, edge)
     blink = (t % 3.7) > 3.5
-    if not blink:
-        d.px(13, 11, "#1a1a1a")
-        d.px(18, 11, "#1a1a1a")
     frame = "#1c1c1c"  # his glasses (Sam): dark frames read as outlines on the LEDs
     for x0 in (11, 16):
         d.rect(x0, 10, 5, 1, frame)
-        d.rect(x0, 12, 5, 1, frame)
+        d.rect(x0 + 1, 12, 3, 1, frame)
         d.px(x0, 11, frame)
         d.px(x0 + 4, 11, frame)
+        d.rect(x0 + 1, 11, 3, 1, "#e8e8e8")  # whites of his eyes behind the lenses
+    if not blink:
+        d.px(13, 11, "#3a9be8")  # blue eyes (Sam)
+        d.px(18, 11, "#3a9be8")
     d.px(10, 11, frame)
     d.px(21, 11, frame)
     d.rect(15, 12, 2, 3, "#c8865a")  # nose
@@ -896,11 +897,18 @@ def next_art():
     return a if isinstance(a, dict) and a.get("id") else None
 
 
-def sign_seconds():
-    """Seconds per picture, set by a manager on /sign/review.html."""
-    r = http.post(URL.replace("sign_next", "sign_seconds"), headers={"apikey": KEY, "Content-Type": "application/json"},
+def sign_config():
+    """Seconds per picture and the slides switched off, both set by a manager
+    on /sign/review.html."""
+    r = http.post(URL.replace("sign_next", "sign_config"), headers={"apikey": KEY, "Content-Type": "application/json"},
                   data="{}", timeout=15)
-    return min(120.0, max(2.0, float(r.json())))
+    c = r.json()
+    return min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or [])
+
+
+def slide_key(name):
+    """A beer's key for switching it off: 'Piña colada' -> 'pinacolada'."""
+    return "".join(ch for ch in plain(name).lower() if ch.isascii() and ch.isalnum())
 
 
 def load_beers():
@@ -1049,7 +1057,7 @@ def main():
     show(quadrant_screen(), 4)
     show(words_screen("SISYPHUS"), 2)
     beers, menu_at, update_at = [], -1e9, time.monotonic()
-    seconds, seconds_at = SHOW, -1e9
+    seconds, hidden, config_at = SHOW, set(), -1e9
     plug_at = time.monotonic()  # first plug 10 minutes after start-up
     while True:
         now = time.monotonic()
@@ -1058,6 +1066,7 @@ def main():
                 beers, menu_at = load_beers(), now
             except Exception as e:  # no Wi-Fi: keep the last list
                 print("menu", e, flush=True)
+        shown = False
         for kind, beer in playlist(beers):
             if time.monotonic() - update_at > UPDATE_EVERY:
                 update_at = time.monotonic()
@@ -1067,23 +1076,30 @@ def main():
                         sys.exit(0)  # the service starts the new version
                 except Exception as e:
                     print("update check", e, flush=True)
+            if time.monotonic() - config_at > 60:
+                config_at = time.monotonic()
+                try:
+                    seconds, hidden = sign_config()
+                except Exception as e:  # keep the last settings
+                    print("config", e, flush=True)
+                if os.getenv("SIGN_SHOW"):
+                    seconds = SHOW
             if kind == "plug":
-                if time.monotonic() - plug_at < PLUG_GAP:
+                if "plug" in hidden or time.monotonic() - plug_at < PLUG_GAP:
                     continue
                 plug_at = time.monotonic()
+            if kind == "beer" and slide_key(beer.get("name") or "") in hidden:
+                continue
             try:
                 screen = screen_for(kind, beer)
             except Exception as e:  # no Wi-Fi for a guest's picture: skip it
                 print("sign", e, flush=True)
                 continue
             if screen:
-                if not os.getenv("SIGN_SHOW") and time.monotonic() - seconds_at > 60:
-                    seconds_at = time.monotonic()
-                    try:
-                        seconds = sign_seconds()
-                    except Exception as e:  # keep the last setting
-                        print("seconds", e, flush=True)
                 show(screen, seconds)
+                shown = True
+        if not shown:  # everything switched off or no Wi-Fi: don't spin
+            show(words_screen("SISYPHUS"), seconds)
 
 
 if __name__ == "__main__":
