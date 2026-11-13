@@ -82,6 +82,9 @@
   (function () {
     'use strict';
     var FN = 'https://idsdwkubqnavkazlteis.supabase.co/functions/v1/sign-art';
+    var STATUS = 'https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/sign_status';
+    var PUBLIC_KEY = 'sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb';  // the same public key the sign uses
+    var waiting = 0;  // which drawing this page is waiting on
     var IDEAS = ['A moose drinking a stout', 'Sisyphus on a skateboard', 'A loon in sunglasses', 'Pizza with a mustache', 'My dog Biscuit'];
     var $ = function (id) { return document.getElementById(id); };
 
@@ -128,23 +131,56 @@
         if (!r.ok) throw new Error(data.error || 'Something went wrong.');
         $('form').classList.add('hidden');
         $('result').classList.remove('hidden');
-        if (data.status === 'rejected') {
+        if (data.status === 'drawing') {
+          // Drawn in the background (Sam, Nov 12 2026): no need to wait here.
           $('art').classList.add('hidden');
-          $('msg').textContent = "The sign won't draw that one" + (data.note ? ': ' + data.note.replace(/\.$/, '') : '') + '. Try something else?';
-        } else {
-          $('art').classList.remove('hidden');
-          drawSignArt($('art'), data.art, 64);
-          $('msg').textContent = data.tamed
-            ? "Here's your picture, toned down a touch for the wall. Look for it on the sign in the taproom."
-            : "Here's your picture. Look for it on the sign in the taproom.";
-        }
+          $('msg').innerHTML = '<span class="drawing" style="padding:0"><span>Drawing</span></span><br>' +
+            "Got it! It goes up on the sign by itself in about a minute, so you can put your phone away. Keep this open if you want to see it here first.";
+          watch(data.id);
+        } else show(data);
       } catch (err) {
         $('err').textContent = err.message || 'Could not reach the sign. Try again in a minute.';
         $('err').classList.remove('hidden');
       } finally { busy(false); }
     });
 
+    function show(data) {
+      if (data.status === 'rejected') {
+        $('art').classList.add('hidden');
+        $('msg').textContent = "The sign won't draw that one" + (data.note ? ': ' + data.note.replace(/\.$/, '') : '') + '. Try something else?';
+      } else {
+        $('art').classList.remove('hidden');
+        drawSignArt($('art'), data.art, 64);
+        $('msg').textContent = data.tamed
+          ? "Here's your picture, toned down a touch for the wall. Look for it on the sign in the taproom."
+          : "Here's your picture. Look for it on the sign in the taproom.";
+      }
+    }
+
+    // Asks every few seconds whether the drawing is done, for up to 4 minutes.
+    function watch(id) {
+      waiting = id;
+      var tries = 0;
+      (function ask() {
+        if (waiting !== id) return;
+        setTimeout(async function () {
+          if (waiting !== id) return;
+          try {
+            var r = await fetch(STATUS, {
+              method: 'POST', headers: { 'Content-Type': 'application/json', apikey: PUBLIC_KEY },
+              body: JSON.stringify({ p_id: id })
+            });
+            var data = await r.json();
+            if (data && (data.status === 'approved' || data.status === 'rejected')) { waiting = 0; show(data); return; }
+          } catch (e) { /* phone went to sleep or lost signal: keep asking */ }
+          if (++tries < 60) ask();
+          else $('msg').textContent = "It's taking a while. It'll still go up on the sign by itself when it's done.";
+        }, 4000);
+      })();
+    }
+
     $('again').addEventListener('click', function () {
+      waiting = 0;
       $('result').classList.add('hidden'); $('form').classList.remove('hidden');
       $('prompt').value = ''; $('photo').value = ''; photo = ''; $('photoPrev').classList.add('hidden'); $('prompt').focus();
     });
