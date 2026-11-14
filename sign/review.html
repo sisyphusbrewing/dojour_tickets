@@ -67,9 +67,13 @@
       <span class="help">The sign picks it up within a minute.</span>
     </div>
     <div class="card" style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-weight:600">Sign is</span>
-      <button class="btn btn-sm" id="power" type="button">…</button>
-      <span class="help">Off turns the panels black (Sam, Nov 14 2026). The sign picks it up within a minute.</span>
+      <span style="font-weight:600">Sign</span>
+      <div class="chips" id="modes" style="margin:0">
+        <button class="chip" data-m="auto" type="button">Open hours</button>
+        <button class="chip" data-m="on" type="button">Always on</button>
+        <button class="chip" data-m="off" type="button">Off</button>
+      </div>
+      <span class="help" id="modeHelp">"Open hours" runs it Tue-Wed 4-9, Thu 4-11, Fri-Sat 1-11, Sun 1-6, off Mondays (Sam, Nov 14 2026). The sign picks it up within a minute.</span>
     </div>
     <div class="card" style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <label for="bright" style="font-weight:600">Brightness</label>
@@ -127,11 +131,11 @@
       }).join('');
     }
     async function loadSettings() {
-      var res = await sb.from('sign_settings').select('seconds, hidden, brightness, power').eq('id', 1).single();
+      var res = await sb.from('sign_settings').select('seconds, hidden, brightness, mode').eq('id', 1).single();
       if (!res.error && res.data) {
         $('secs').value = Number(res.data.seconds); hidden = res.data.hidden || [];
         $('bright').value = Number(res.data.brightness); $('brightVal').textContent = res.data.brightness + '%';
-        showPower(res.data.power !== false);
+        showMode(res.data.mode || 'auto');
       }
       try {
         var menu = await fetch('https://sisyphusmenu.stharriman.workers.dev/').then(function (r) { return r.json(); });
@@ -157,17 +161,18 @@
       toast(res.error ? 'Save failed: ' + res.error.message : 'Saved: ' + v + ' seconds a picture.');
     });
 
-    var power = true;
-    function showPower(on) {
-      power = on;
-      $('power').textContent = on ? 'ON · tap to turn off' : 'OFF · tap to turn on';
-      $('power').classList.toggle('btn-primary', !on);
+    // Open hours / always on / off (Sam, Nov 14 2026: "Can we have it set so the
+    // sign runs during our open hours?"). On and Off stay until someone picks
+    // Open hours again.
+    function showMode(m) {
+      [].forEach.call($('modes').querySelectorAll('.chip'), function (b) { b.classList.toggle('on', b.dataset.m === m); });
     }
-    $('power').addEventListener('click', async function () {
-      var res = await sb.from('sign_settings').update({ power: !power, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
+    $('modes').addEventListener('click', async function (e) {
+      var b = e.target.closest('.chip'); if (!b) return;
+      var res = await sb.from('sign_settings').update({ mode: b.dataset.m, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
       if (res.error) { toast('Save failed: ' + res.error.message); return; }
-      showPower(res.data.power !== false);
-      toast(power ? 'Sign turning on (within a minute).' : 'Sign turning off (within a minute).');
+      showMode(res.data.mode);
+      toast({ auto: 'Sign follows the open hours.', on: 'Sign stays on until you pick Open hours.', off: 'Sign turning off (within a minute).' }[res.data.mode]);
     });
     $('bright').addEventListener('input', function () { $('brightVal').textContent = $('bright').value + '%'; });
     $('brightSave').addEventListener('click', async function () {
