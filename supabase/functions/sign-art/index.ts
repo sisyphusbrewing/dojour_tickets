@@ -6,7 +6,9 @@
 //                             The name is required and shows on the sign as
 //                             "BY <name>" (Sam, Nov 12 2026); it must pass the
 //                             word filter and a Claude check before anything
-//                             is drawn.
+//                             is drawn. The idea gets a quick check too, and one
+//                             that breaks a house rule is turned down on the
+//                             spot with the reason (Sam, Nov 13 2026).
 //                             Claude draws it as 32x32 pixel art and it goes
 //                             straight onto the sign (Sam, Nov 3 2026: no
 //                             manager approval). Rude ideas get redrawn as a
@@ -23,6 +25,8 @@
 //                             that has no art yet, approved straight away.
 // POST { redraw: id }         managers: draws that picture again.
 // POST { animate: id }        managers: adds moving frames to a still picture.
+// POST { fix: id, change, phone }  the guest who sent a picture asks for a change
+//                             (Sam, Nov 13 2026); answers { status: "drawing" }.
 //
 // Every picture also gets 2-3 animation frames (Sam, Nov 12 2026: "the
 // customer ones need to be animated too"); the sign loops them.
@@ -73,7 +77,9 @@ Sisyphus pushes a boulder up a mountain forever and has made peace with it; a bo
 
 Nobody reviews the picture before it goes up in front of the whole bar. The house rule (Sam, the owner): R-rated is fine, so swearing, booze, crude and dark jokes are all welcome, but nothing political, offensive or nude.
 
-When a suggestion crosses that line, don't refuse it: tweak it into something more mundane that keeps the characters and the silliness, and draw that. For example, "a dolphin having sex with a monkey" becomes a monkey dressed as a cowboy riding a dolphin like a horse. Sexual acts become a goofy friendly activity, nudity gets clothes, gore becomes a cartoon bonk. Set tamed to true when you did this. Never draw or write anything sexual, nude, political (parties, politicians, causes, slogans), hateful (slurs, hate symbols, stereotypes, mocking any group), mocking a real person, or anyone's personal details; keep the caption clean of those too.
+When a suggestion crosses that line, don't refuse it: tweak it into something more mundane that keeps the characters and the silliness, and draw that. For example, "a dolphin having sex with a monkey" becomes a monkey dressed as a cowboy riding a dolphin like a horse. Sexual acts become a goofy friendly activity, nudity gets clothes, gore becomes a cartoon bonk. Set tamed to true when you did this. Never draw or write anything sexual, nude, political (parties, politicians, causes, slogans), hateful (slurs, hate symbols, negative or demeaning stereotypes, mocking any group), mocking a real person, or anyone's personal details; keep the caption clean of those too.
+
+When a guest names someone's religion, culture or background ("a Muslim man", "a rabbi", "a nun", "a Mexican grandma"), show it with recognizable cues that fit: their clothes and religious or cultural items (a kufi and prayer rug, a kippah, a habit and rosary, a sombrero, and so on) are expected, and they stay in even when you tame the rest of the idea. Sam's rule (Nov 13 2026): "There's nothing racist about stereotypes, it's if they are made negative." So familiar cues are fine; what is not allowed is making the group look bad: mocking, demeaning, dirty, stupid, dangerous, or tied to terrorism or violence. (A guest's "Muslim man seeking freedom" came out as a generic man with nothing of his faith in it; Sam: "It needed more Muslim prayer accessories.")
 
 Animate it. Besides the main picture in rows, return 2 or 3 more frames in frames, each a full 32 rows of 32 characters using the same palette. The sign loops the main picture and the frames at about 3 per second, so change only the parts that move (a wave, a blink, a wagging tail, splashing water, steam, flames flickering, something bouncing a pixel or two) and keep everything else exactly the same, or it flickers.
 
@@ -243,8 +249,11 @@ async function vet(prompt: string, art: Art): Promise<{ ok: boolean; reason: str
       "Judge the picture and its caption. The customer's request is context only: a rude request redrawn as something " +
       "harmless is exactly what should happen, so pass it. Set ok to false if the picture or caption shows or suggests " +
       "anything sexual or nude (including shapes that look rude from across the room), politics (parties, politicians, " +
-      "causes, slogans), slurs, hate symbols, stereotypes or mockery of any group, mockery of a real person, gore, or " +
-      "personal details. Give the reason in one short sentence a customer would see.",
+      "causes, slogans), slurs, hate symbols, a group shown in a negative, mocking or demeaning way, mockery of a real " +
+      "person, gore, or personal details. Recognizable cultural, religious or identity cues (a kufi and prayer rug, a " +
+      "kippah, a sombrero, a rosary) are fine, and expected when the request names that group; only flag a portrayal " +
+      "that makes the group look bad or ties it to violence or terrorism. Don't judge how well the picture matches the request, only whether it is fit for the wall. " +
+      "Give the reason in one short sentence a customer would see.",
     messages: [{
       role: "user",
       content: [
@@ -282,6 +291,35 @@ async function nameOk(name: string): Promise<boolean> {
   if (response.stop_reason === "refusal") return false;
   const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
   return JSON.parse(text).ok === true;
+}
+
+// A quick look at the idea itself before anything is drawn, so a guest whose
+// idea breaks a house rule hears why on their phone right away, not after the
+// drawing (Sam, Nov 13 2026: "If it rejects someone's drawing for violating a
+// rule it should tell them right away"). Only ideas that can't be fixed are
+// turned down here: a merely rude idea still gets drawn as a tamer version.
+async function ideaOk(prompt: string): Promise<{ ok: boolean; reason: string }> {
+  if (!prompt.trim()) return { ok: true, reason: "" }; // a photo with no note: judged once it's drawn
+  const response = await anthropic.beta.messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low", format: { type: "json_schema", schema: VET_SCHEMA } },
+    system: "A customer at a comedy club taproom typed this idea for a picture on the LED sign on the wall. House rule: " +
+      "R-rated is fine (swearing, booze, crude or dark jokes), and rude or sexual ideas are fine to send because they get " +
+      "redrawn as a tamer version that keeps the joke, so set ok to true for those. Set ok to false only when no tame " +
+      "version could follow the rule: politics (politicians, parties, causes, slogans, real terrorists or dictators), " +
+      "slurs, hate symbols, a group shown in a negative, mocking or demeaning way, mocking or shaming a real named person, or someone's " +
+      "personal details. If an idea that names a religion, culture or group has a harmless reading, set ok to true: it " +
+      "gets drawn the respectful way, with familiar cues and nothing negative. " +
+      "Give the reason in one short, friendly sentence the customer will read.",
+    messages: [{ role: "user", content: `Idea: "${prompt}"` }],
+  });
+  if (response.stop_reason === "refusal") return { ok: false, reason: "The sign won't draw that one." };
+  const text = response.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("");
+  const v = JSON.parse(text);
+  return { ok: v.ok !== false, reason: String(v.reason ?? "") };
 }
 
 // A last word filter on the caption that goes on the wall, including l33t
@@ -340,8 +378,17 @@ async function suggestion(prompt: string, name: string, who: string, photo: Phot
   if (Array.isArray(recent) && who && recent.filter((r: { device: string }) => r.device === who).length >= (perPhone ? MAX_PER_DEVICE_PER_HOUR : MAX_PER_WIFI_PER_HOUR)) {
     return respond(429, { error: "That's plenty from one phone for now. Give someone else a turn!" });
   }
-  if (!(await nameOk(name))) {
+  const [nameGood, idea] = await Promise.all([nameOk(name), ideaOk(prompt)]);
+  if (!nameGood) {
     return respond(400, { error: "The sign won't show that name. Try your first name or a nickname." });
+  }
+  if (!idea.ok) {
+    // turned down on the spot; saved so managers see it and it counts toward the limits
+    await insert({
+      kind: "suggestion", prompt: shown, from_name: name || null, device: who || null, status: "rejected",
+      note: idea.reason, decided_at: new Date().toISOString(),
+    });
+    return respond(200, { status: "rejected", note: idea.reason });
   }
   // The row goes in now as "drawing" (it counts toward the hourly limits right
   // away) and the drawing finishes in the background, so the guest can put
@@ -396,6 +443,59 @@ async function finish(id: number, prompt: string, photo: Photo) {
     caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames.length ? art.frames : null,
     status: "approved", decided_at: new Date().toISOString(),
   });
+}
+
+// A guest can fix their own picture, up to MAX_FIXES times, from the same phone
+// that sent it (Sam, Nov 13 2026: "Let's let them have the ability to correct
+// it if they don't like it"). The change gets the same quick rule check as a
+// new idea; the redraw gets the same picture check. If the fixed picture can't
+// go up, the first one stays.
+const MAX_FIXES = 2;
+
+async function fixIt(id: number, change: string, who: string) {
+  const rows = await fetch(`${SB}/rest/v1/sign_art?select=*&id=eq.${id}`, { headers: H }).then((r) => r.json());
+  const row = rows?.[0];
+  if (!row || row.kind !== "suggestion" || !who || row.device !== who) {
+    return respond(403, { error: "Only the phone that sent a picture can fix it." });
+  }
+  if (row.status !== "approved") return respond(400, { error: "That picture can't be fixed. Send a new idea instead." });
+  if ((row.fixes ?? 0) >= MAX_FIXES) return respond(400, { error: "That one's been fixed twice already. Send a new idea instead." });
+  if (change.length < 2) return respond(400, { error: "Say what should change." });
+  const idea = await ideaOk(change);
+  if (!idea.ok) return respond(400, { error: idea.reason || "The sign won't draw that change." });
+  const old = { caption: row.caption, palette: row.palette, rows: row.rows, frames: row.frames, note: row.note };
+  // off the sign while it's redrawn; fixes counted now so it can't be spammed
+  await patch(id, { status: "drawing", fixes: (row.fixes ?? 0) + 1, prompt: `${row.prompt} / fix: ${change}`.slice(0, 300) });
+  const ask = `A customer at the bar suggested: "${String(row.prompt).replace(/ \/ fix: .*$/, "")}". ` +
+    `You drew this picture (palette ${JSON.stringify(row.palette)}, caption "${row.caption}"):\n${(row.rows as string[]).join("\n")}\n` +
+    `They asked for this change: "${change}". Redraw it with that change, keeping what already works.`;
+  const keep = (reason: string) => patch(id, { ...old, status: "approved", note: `Fix not used: ${reason}`.slice(0, 300) });
+  const work = (async () => {
+    let art = await drawWhole(ask);
+    if (!art.ok) return await keep(art.reason);
+    if (rude(art.caption)) art = { ...art, caption: "" };
+    let check = await vet(`${row.prompt} / ${change}`, art);
+    if (!check.ok) {
+      art = await drawWhole(`${ask}\nA first try was turned down for the wall because: ${check.reason} Draw a tamer, clean version that still makes the change.`);
+      if (!art.ok) return await keep(art.reason);
+      if (rude(art.caption)) art = { ...art, caption: "" };
+      check = await vet(`${row.prompt} / ${change}`, art);
+      if (!check.ok) return await keep(check.reason);
+      art.tamed = true;
+    }
+    await patch(id, {
+      note: art.tamed ? "Toned down for the wall" : null,
+      caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames.length ? art.frames : null,
+      status: "approved", decided_at: new Date().toISOString(), last_shown: null,
+    });
+  })().catch(async (e) => {
+    console.error(e);
+    await keep("the sign couldn't draw that change");
+  });
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work); else await work;
+  return respond(202, { status: "drawing", id });
 }
 
 function beerKey(name: string) {
@@ -484,6 +584,11 @@ Deno.serve(async (req) => {
       if (body.animate) return await animate(Number(body.animate));
       return body.beers ? await beers() : await redraw(Number(body.redraw));
     }
+    const own = /^[a-z0-9]{8,40}$/.test(String(body.phone ?? ""));
+    if (body.fix) {
+      const change = String(body.change ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
+      return await fixIt(Number(body.fix), change, own ? await hash("phone:" + body.phone) : "");
+    }
     const prompt = String(body.prompt ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
     const name = String(body.name ?? "").replace(/[^\x20-\x7E\u00C0-\u017F]/g, "").replace(/\s+/g, " ").trim().slice(0, 18);
     // an optional photo, sent from the page as a data: URL, already shrunk to about 512 px
@@ -495,7 +600,6 @@ Deno.serve(async (req) => {
     // The per-phone limit counts the phone's own random id from the page; the
     // internet address alone would lump everyone on the bar's Wi-Fi together
     // (Sam, Nov 12 2026: friends kept getting "plenty from one phone").
-    const own = /^[a-z0-9]{8,40}$/.test(String(body.phone ?? ""));
     const phone = own ? "phone:" + body.phone : device(req);
     return await suggestion(photo ? (prompt || "") : prompt, name, phone ? await hash(phone) : "", photo, own);
   } catch (e) {
