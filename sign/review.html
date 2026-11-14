@@ -66,6 +66,13 @@
       <button class="btn btn-sm" id="secsSave" type="button">Save</button>
       <span class="help">The sign picks it up within a minute.</span>
     </div>
+    <div class="card" style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label for="bright" style="font-weight:600">Brightness</label>
+      <input id="bright" type="range" min="5" max="100" step="5" style="width:180px">
+      <span id="brightVal" style="min-width:3em">50%</span>
+      <button class="btn btn-sm" id="brightSave" type="button">Save</button>
+      <span class="help">Lower is dimmer (Sam, Nov 13 2026). The sign picks it up within a minute.</span>
+    </div>
     <div class="card" style="margin-top:12px">
       <div style="font-weight:600">What the sign shows</div>
       <p class="help" style="margin:4px 0 10px">Tap to switch a slide off or back on. Guest drawings are below: use "Take it down".</p>
@@ -115,8 +122,11 @@
       }).join('');
     }
     async function loadSettings() {
-      var res = await sb.from('sign_settings').select('seconds, hidden').eq('id', 1).single();
-      if (!res.error && res.data) { $('secs').value = Number(res.data.seconds); hidden = res.data.hidden || []; }
+      var res = await sb.from('sign_settings').select('seconds, hidden, brightness').eq('id', 1).single();
+      if (!res.error && res.data) {
+        $('secs').value = Number(res.data.seconds); hidden = res.data.hidden || [];
+        $('bright').value = Number(res.data.brightness); $('brightVal').textContent = res.data.brightness + '%';
+      }
       try {
         var menu = await fetch('https://sisyphusmenu.stharriman.workers.dev/').then(function (r) { return r.json(); });
         taps = [];
@@ -139,6 +149,13 @@
       if (!(v >= 2 && v <= 120)) { toast('Pick 2 to 120 seconds.'); return; }
       var res = await sb.from('sign_settings').update({ seconds: v, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
       toast(res.error ? 'Save failed: ' + res.error.message : 'Saved: ' + v + ' seconds a picture.');
+    });
+
+    $('bright').addEventListener('input', function () { $('brightVal').textContent = $('bright').value + '%'; });
+    $('brightSave').addEventListener('click', async function () {
+      var v = Math.round(Number($('bright').value));
+      var res = await sb.from('sign_settings').update({ brightness: v, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
+      toast(res.error ? 'Save failed: ' + res.error.message : 'Saved: brightness ' + v + '%.');
     });
 
     async function load() {

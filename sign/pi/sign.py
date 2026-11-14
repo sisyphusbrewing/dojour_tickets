@@ -55,6 +55,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 URL = "https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/sign_next"
 KEY = "sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb"
 MENU = "https://sisyphusmenu.stharriman.workers.dev/"  # GoTab, for ABV and price
+BRIGHT = int(os.getenv("SIGN_BRIGHTNESS") or 50)  # percent; managers change it on /sign/review.html
 SITE = "https://staff.sisyphusbrewing.com/sign/pi/"
 SHOW = float(os.getenv("SIGN_SHOW") or 12)  # seconds per beer or picture, as in the mock-up
 FPS = 20  # frames a second while something moves
@@ -1181,12 +1182,13 @@ def next_art():
 
 
 def sign_config():
-    """Seconds per picture and the slides switched off, both set by a manager
-    on /sign/review.html."""
+    """Seconds per picture, the slides switched off and the brightness, all set
+    by a manager on /sign/review.html."""
     r = http.post(URL.replace("sign_next", "sign_config"), headers={"apikey": KEY, "Content-Type": "application/json"},
                   data="{}", timeout=15)
     c = r.json()
-    return min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or [])
+    bright = min(100, max(5, int(c.get("brightness") or BRIGHT)))
+    return min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or []), bright
 
 
 def slide_key(name):
@@ -1247,7 +1249,7 @@ def open_panels():
     # refresh too slow for four panels; Sam, Nov 11 2026).
     o.pwm_bits = int(os.getenv("SIGN_PWM_BITS") or 8)
     o.show_refresh_rate = bool(os.getenv("SIGN_SHOW_REFRESH"))
-    o.brightness = 100
+    o.brightness = BRIGHT
     o.drop_privileges = False  # it needs to rewrite its own file to update
     return RGBMatrix(options=o)
 
@@ -1363,7 +1365,10 @@ def main():
             if time.monotonic() - config_at > 60:
                 config_at = time.monotonic()
                 try:
-                    seconds, hidden = sign_config()
+                    seconds, hidden, bright = sign_config()
+                    if os.getenv("SIGN_BRIGHTNESS"):
+                        bright = BRIGHT
+                    matrix.brightness = bright  # Sam, Nov 13 2026: "make it dimmer"
                 except Exception as e:  # keep the last settings
                     print("config", e, flush=True)
                 if os.getenv("SIGN_SHOW"):
