@@ -17,9 +17,9 @@ on:
         default: '20.00'
         type: string
       room_capacity:
-        description: 'Ticket Limit per variant (90 max, the room)'
+        description: 'Ticket Limit per variant (100 max, the room)'
         required: true
-        default: '90'
+        default: '100'
         type: string
       bio:
         description: 'Event Description / Bio / Class Details'

@@ -20,10 +20,11 @@ CLIENT_SECRET = os.environ.get("SHOPIFY_CLIENT_SECRET", "")
 TITLE = os.environ.get("SHOW_TITLE") or os.environ.get("COMEDIAN_NAME") or "Untitled Event"
 SHOWTIMES_RAW = os.environ.get("SHOW_DATE") or os.environ.get("SHOWTIMES") or "General Admission"
 PRICE = os.environ.get("SHOW_PRICE") or os.environ.get("TICKET_PRICE") or "20.00"
-CAPACITY_RAW = os.environ.get("SHOW_CAPACITY") or os.environ.get("ROOM_CAPACITY") or "90"
-# Seats in the showroom. A show is never stocked above this (the bigger room
-# isn't happening at this site), so a typo can't oversell the room.
-ROOM_MAX = 90
+CAPACITY_RAW = os.environ.get("SHOW_CAPACITY") or os.environ.get("ROOM_CAPACITY") or "100"
+# Seats per show. A show is never stocked above this, so a typo can't oversell
+# the room. Raised from 90 to 100 when the big room fell through and Joey Avery
+# came back to this room (Sam, Nov 14 2026: "100 for him and going forward").
+ROOM_MAX = 100
 BIO_RAW = os.environ.get("SHOW_BIO") or os.environ.get("BIO") or ""
 IMAGE_URL = os.environ.get("SHOW_IMAGE_URL") or os.environ.get("IMAGE_URL") or ""
 
