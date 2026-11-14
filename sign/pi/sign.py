@@ -1188,13 +1188,14 @@ def next_art():
 
 
 def sign_config():
-    """Seconds per picture, the slides switched off and the brightness, all set
-    by a manager on /sign/review.html."""
+    """Seconds per picture, the slides switched off, the brightness and whether
+    the sign is on at all, all set by a manager on /sign/review.html."""
     r = http.post(URL.replace("sign_next", "sign_config"), headers={"apikey": KEY, "Content-Type": "application/json"},
                   data="{}", timeout=15)
     c = r.json()
     bright = min(100, max(5, int(c.get("brightness") or BRIGHT)))
-    return min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or []), bright
+    return (min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or []), bright,
+            c.get("on") is not False)
 
 
 def slide_key(name):
@@ -1333,6 +1334,31 @@ def main():
     matrix = open_panels()
     canvas = matrix.CreateFrameCanvas()
 
+    def stay_dark():
+        """Switched off on the review page (Sam, Nov 14 2026: "turn off taproom
+        bar digital animation sign"): black panels, a look at the setting every
+        30 seconds, and still picking up new versions of this program."""
+        nonlocal canvas
+        print("switched off on the review page", flush=True)
+        canvas.Clear()
+        canvas = matrix.SwapOnVSync(canvas)
+        checked = time.monotonic()
+        while True:
+            time.sleep(30)
+            try:
+                if sign_config()[3]:
+                    print("switched back on", flush=True)
+                    return
+            except Exception as e:  # no Wi-Fi: stay dark and keep asking
+                print("config", e, flush=True)
+            if time.monotonic() - checked > UPDATE_EVERY:
+                checked = time.monotonic()
+                try:
+                    if newer_on_site():
+                        sys.exit(0)  # the service starts the new version
+                except Exception as e:
+                    print("update check", e, flush=True)
+
     def show(screen, seconds):
         nonlocal canvas
         start = time.monotonic()
@@ -1371,10 +1397,13 @@ def main():
             if time.monotonic() - config_at > 60:
                 config_at = time.monotonic()
                 try:
-                    seconds, hidden, bright = sign_config()
+                    seconds, hidden, bright, on = sign_config()
                     if os.getenv("SIGN_BRIGHTNESS"):
                         bright = BRIGHT
                     matrix.brightness = bright  # Sam, Nov 13 2026: "make it dimmer"
+                    if not on:
+                        stay_dark()
+                        config_at = -1e9  # fresh settings once it's back on
                 except Exception as e:  # keep the last settings
                     print("config", e, flush=True)
                 if os.getenv("SIGN_SHOW"):
