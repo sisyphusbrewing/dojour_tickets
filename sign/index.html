@@ -64,6 +64,15 @@
     <div class="result hidden" id="result">
       <canvas id="art"></canvas>
       <p id="msg"></p>
+      <!-- Not happy with it? The guest can ask for a change, twice (Sam, Nov 13 2026:
+           "Let's let them have the ability to correct it if they don't like it"). -->
+      <div class="field hidden" id="fixBox" style="margin-top:14px">
+        <label for="change">Not quite right? Tell it what to change</label>
+        <input class="input" id="change" maxlength="100" placeholder="Make the moose wear a hat" autocomplete="off">
+        <button class="btn btn-primary" id="fixGo" type="button" style="width:100%;margin-top:10px">Fix it</button>
+      </div>
+      <div class="err hidden" id="fixErr" style="margin-top:10px"></div>
+      <button class="btn hidden" id="edit" type="button" style="width:100%;margin-top:14px">Change my idea and try again</button>
       <button class="btn" id="again" type="button" style="width:100%;margin-top:14px">Draw something else</button>
     </div>
   </main>
@@ -85,6 +94,7 @@
     var STATUS = 'https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/sign_status';
     var PUBLIC_KEY = 'sb_publishable_c77Jm5yL_nrOJmxxNe-_pg_mkvDHpJb';  // the same public key the sign uses
     var waiting = 0;  // which drawing this page is waiting on
+    var current = 0, fixes = 0;  // the guest's latest picture and how often it was fixed
     var IDEAS = ['A moose drinking a stout', 'Sisyphus on a skateboard', 'A loon in sunglasses', 'Pizza with a mustache', 'My dog Biscuit'];
     var $ = function (id) { return document.getElementById(id); };
 
@@ -131,11 +141,12 @@
         if (!r.ok) throw new Error(data.error || 'Something went wrong.');
         $('form').classList.add('hidden');
         $('result').classList.remove('hidden');
+        current = data.id || 0; fixes = 0;
         if (data.status === 'drawing') {
           // Drawn in the background (Sam, Nov 12 2026): no need to wait here.
           $('art').classList.add('hidden');
           $('msg').innerHTML = '<span class="drawing" style="padding:0"><span>Drawing</span></span><br>' +
-            "Got it! It goes up on the sign by itself in about a minute, so you can put your phone away. Keep this open if you want to see it here first.";
+            "Got it! It goes up on the sign by itself in about a minute, so you can put your phone away. Keep this open to see it here first, or to hear right away if it can't go up.";
           watch(data.id);
         } else show(data);
       } catch (err) {
@@ -145,17 +156,54 @@
     });
 
     function show(data) {
+      $('fixErr').classList.add('hidden');
       if (data.status === 'rejected') {
         $('art').classList.add('hidden');
-        $('msg').textContent = "The sign won't draw that one" + (data.note ? ': ' + data.note.replace(/\.$/, '') : '') + '. Try something else?';
+        $('fixBox').classList.add('hidden');
+        $('edit').classList.remove('hidden');  // their idea stays in the box to change
+        $('msg').textContent = "The sign won't draw that one" + (data.note ? ': ' + data.note.replace(/\.$/, '') : '') + '.';
       } else {
         $('art').classList.remove('hidden');
+        $('edit').classList.add('hidden');
         drawSignArt($('art'), data.art, 64);
-        $('msg').textContent = data.tamed
+        if (typeof data.fixes === 'number') fixes = data.fixes;
+        $('fixBox').classList.toggle('hidden', !current || fixes >= 2);
+        $('msg').textContent = data.kept
+          ? "Your change couldn't go up (" + data.kept.replace(/\.$/, '') + "), so the first picture stays."
+          : data.tamed
           ? "Here's your picture, toned down a touch for the wall. Look for it on the sign in the taproom."
           : "Here's your picture. Look for it on the sign in the taproom.";
       }
     }
+
+    $('fixGo').addEventListener('click', async function () {
+      var change = $('change').value.trim();
+      $('fixErr').classList.add('hidden');
+      if (change.length < 2) { $('fixErr').textContent = 'Say what should change.'; $('fixErr').classList.remove('hidden'); return; }
+      $('fixGo').disabled = true;
+      try {
+        var r = await fetch(FN, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fix: current, change: change, phone: phoneId() })
+        });
+        var data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Something went wrong.');
+        $('change').value = ''; $('fixBox').classList.add('hidden');
+        $('art').classList.add('hidden');
+        $('msg').innerHTML = '<span class="drawing" style="padding:0"><span>Fixing</span></span><br>' +
+          "Got it! The fixed one goes up on the sign by itself in about a minute.";
+        watch(current);
+      } catch (err) {
+        $('fixErr').textContent = err.message || 'Could not reach the sign. Try again in a minute.';
+        $('fixErr').classList.remove('hidden');
+      } finally { $('fixGo').disabled = false; }
+    });
+
+    $('edit').addEventListener('click', function () {
+      waiting = 0;
+      $('result').classList.add('hidden'); $('form').classList.remove('hidden');
+      $('prompt').focus();
+    });
 
     // Asks every few seconds whether the drawing is done, for up to 4 minutes.
     function watch(id) {
@@ -180,7 +228,7 @@
     }
 
     $('again').addEventListener('click', function () {
-      waiting = 0;
+      waiting = 0; current = 0;
       $('result').classList.add('hidden'); $('form').classList.remove('hidden');
       $('prompt').value = ''; $('photo').value = ''; photo = ''; $('photoPrev').classList.add('hidden'); $('prompt').focus();
     });
