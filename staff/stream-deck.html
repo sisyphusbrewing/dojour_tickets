@@ -71,7 +71,7 @@
     <div class="card">
       <p>The Stream Deck at the bar runs the lights, the sound, the music, the recording and the comic's clock. It's a remote control: the brains are on the <b>office PC</b>.</p>
       <p><b>The top row is the night, left to right:</b> DAYTIME, PRE-SHOW, START SHOW, ALL OFF. The one that's on is lit and says <b>on now</b>.</p>
-      <p><b>The deck changes screens by itself.</b> Press <b>START SHOW</b> and it becomes the SHOW screen. Press <b>END SHOW</b> and it goes back to HOME. There is no NEXT PAGE key any more.</p>
+      <p><b>The deck changes screens by itself.</b> Press <b>START SHOW</b> and it becomes the SHOW screen, and the music fades out with the lights. Press <b>END SHOW</b> and it goes back to HOME, and the music comes back. There is no NEXT PAGE key any more.</p>
       <p><b>The four knobs never change:</b> MIC, MUSIC, LIGHTS, CLOCK. <b>Turn</b> for more or less. <b>Push</b> for on/off. The square on the touch screen above each knob says what it's doing; <b>tap that square</b> for more of that thing, and <b>BACK</b> (top left) to return.</p>
       <p>Gone on purpose: the RECORD key (recording starts with START SHOW and stops with END SHOW), anything you had to hold down, and the alarm (use the keypad or the SimpliSafe app).</p>
     </div>
@@ -105,7 +105,7 @@
       <ul class="keylist">
         <li><span class="sw" style="background:#b08a2e"></span><div><b>Daytime</b><p>Regular taproom hours. Hallway soft warm white, poster lamp and shuffleboard on, room lights full, candles off.</p></div></li>
         <li><span class="sw" style="background:#8a6400"></span><div><b>Pre-show</b><p>Doors are open. Hallway in show colours, the Sisyphus sign, wall wash, poster lamp and shuffleboard on, candles on, stage lights blue, room lights down to 20%.</p></div></li>
-        <li><span class="sw" style="background:#5a2a82"></span><div><b>Start show</b><p>One press starts the show: room lights fade out, stage lights go to the show look, the stage mic is switched on, the recording starts, and the deck moves to the <b>SHOW</b> screen.<br><br>On a show night this key also counts the guests who haven't checked in at the door yet: <b>8 PM SHOW, 31 TO COME</b>, then <b>ALL HERE</b>. The number comes from the door app and catches up within half a minute. After the early show it counts the late show. No number means no show tonight, or the deck can't reach the door list; the key works the same either way.</p></div></li>
+        <li><span class="sw" style="background:#5a2a82"></span><div><b>Start show</b><p>One press starts the show: room lights and music fade out, stage lights go to the show look, the stage mic is switched on, the recording starts, and the deck moves to the <b>SHOW</b> screen.<br><br>On a show night this key also counts the guests who haven't checked in at the door yet: <b>8 PM SHOW, 31 TO COME</b>, then <b>ALL HERE</b>. The number comes from the door app and catches up within half a minute. After the early show it counts the late show. No number means no show tonight, or the deck can't reach the door list; the key works the same either way.</p></div></li>
         <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>All off</b><p>Closing. Hallway, sign, wall wash, plugs, room lights, candles and stage lights all off, and the comic's clock is cleared. The hallway runs over the internet, so if it doesn't answer, press again in a minute.</p></div></li>
         <li><span class="sw" style="background:#1f7a35"></span><div><b>God mic</b><p>The announcer's mic in the office. Tap to talk: the key turns green and says <b>GOD MIC IS LIVE</b>. Tap again when you're done.</p></div></li>
         <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>Next song</b><p>Skips to the next song in Spotify.</p></div></li>
@@ -132,7 +132,7 @@
       </div>
       <ul class="keylist">
         <li><span class="sw" style="background:#c00000"></span><div><b>Show is on</b><p>Red with <b>REC</b> and a running time means the show is being recorded. If it is <b>orange</b> and says <b>NOT RECORDING</b>, tap it once.</p></div></li>
-        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>End show</b><p>Asks <b>END THE SHOW?</b> first. <b>YES END SHOW</b> brings the lights up to the pre-show look, stops the recording and the clock, and takes the deck back to HOME. <b>NO GO BACK</b> changes nothing.</p></div></li>
+        <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>End show</b><p>Asks <b>END THE SHOW?</b> first. <b>YES END SHOW</b> brings the lights up to the pre-show look, fades the music back in, stops the recording and the clock, and takes the deck back to HOME. <b>NO GO BACK</b> changes nothing.</p></div></li>
         <li><span class="sw" style="background:#1f7a35"></span><div><b>Start clock</b><p>Press it when the comic hits the stage. It starts the comic's clock on the <a href='../timer/'>stage timer</a> screen at the length shown above the CLOCK knob. While a clock is running the key says <b>RESTART CLOCK</b>: press it when the next comic walks up.</p></div></li>
         <li><span class="sw" style="background:#8a1c1c"></span><div><b>Wrap it up</b><p>Puts WRAP IT UP on the comic's screen right now. Tap again to clear it. The clock already goes red at 1 minute left and says WRAP IT UP on its own at 30 seconds.</p></div></li>
         <li><span class="sw" style="background:#2f2f2f;border:1px solid #555"></span><div><b>Stop clock</b><p>Clears the comic's clock. Press it when the comic is off.</p></div></li>
@@ -173,7 +173,7 @@
           <div class="key" style="background:#16324a">NEXT<br>SONG</div>
           <div class="key" style="background:#16324a">LAST<br>SONG</div>
           <div class="key empty"></div>
-          <div class="key empty"></div>
+          <div class="key" style="background:#16324a">FADE<br>MUSIC<br>OUT</div>
           <div class="key empty"></div>
           <div class="key empty"></div>
         </div>
@@ -183,6 +183,7 @@
       <ul class="keylist">
         <li><span class="sw" style="background:#16324a"></span><div><b>Play / pause</b><p>Starts or pauses Spotify. Same as pushing the MUSIC knob.</p></div></li>
         <li><span class="sw" style="background:#16324a"></span><div><b>Next song · Last song</b><p>Skip forward, or go back a song.</p></div></li>
+        <li><span class="sw" style="background:#b06000"></span><div><b>Fade music out</b><p>Fades the music to silence by hand, the same way START SHOW does. The key turns orange and says <b>MUSIC OUT</b>; tap it again to bring the music back to where it was.</p></div></li>
         <li><span class="sw" style="background:#505050"></span><div><b>Back</b><p>Returns to HOME, or to SHOW if a show is on.</p></div></li>
       </ul>
     </section>
@@ -238,7 +239,7 @@
     <div class="band-row"><span class="band">The four knobs</span><span class="band-note">Same on HOME and SHOW</span></div>
     <ul class="keylist">
       <li><span class="sw" style="background:#143a1d"></span><div><b>Mic</b><p>The stage mic. Turn for volume. Push for on/off: the square goes red and says <b>MIC IS OFF</b>. Tap the square for all four mics.</p></div></li>
-      <li><span class="sw" style="background:#16324a"></span><div><b>Music</b><p>Turn for volume. Push to play or pause Spotify. Tap the square for next and last song.</p></div></li>
+      <li><span class="sw" style="background:#16324a"></span><div><b>Music</b><p>Turn for volume. Push to play or pause Spotify. Tap the square for next and last song. During a show the square says <b>MUSIC OUT FOR SHOW</b>: one push brings the music back for a walk-on, and after that a push is play or pause again.</p></div></li>
       <li><span class="sw" style="background:#6a5a30"></span><div><b>Lights</b><p>The room lights over the tables and the bar, together. Turn to dim or brighten, push for on/off. Tap the square for stage lights, candles and each dimmer on its own.</p></div></li>
       <li><span class="sw" style="background:#1f7a35"></span><div><b>Clock</b><p>The comic's clock. Turn to set the length, a minute a click. Push to start; push again to stop. While it runs the square shows the time, goes red when the light is on, and says WRAP IT UP and OVER TIME when the comic's screen does.</p></div></li>
     </ul>
@@ -248,10 +249,11 @@
       <ol class="steps">
         <li><b>Doors.</b> Press <b>PRE-SHOW</b>. Push the <b>MUSIC</b> knob to start the playlist and turn it to taste.</li>
         <li><b>Waiting on the room.</b> The <b>START SHOW</b> key counts down the guests still to come, so you can see from the bar when the room is in.</li>
-        <li><b>Host walks up.</b> Press <b>START SHOW</b>. Lights drop, the stage mic is on, the recording starts. Push the <b>MUSIC</b> knob to pause the music.</li>
+        <li><b>Host walks up.</b> Press <b>START SHOW</b>. Lights and music fade out, the stage mic is on, the recording starts.</li>
         <li><b>Each comic.</b> Set their time with the <b>CLOCK</b> knob, then <b>START CLOCK</b> when they hit the stage. <b>STOP CLOCK</b> when they're off.</li>
         <li><b>Announcements</b> from the office: <b>GOD MIC</b>, talk, tap it again.</li>
-        <li><b>After the show.</b> <b>END SHOW</b>, then <b>YES</b>. Lights come up and the recording stops. Push the <b>MUSIC</b> knob to bring the music back. On a two-show night, do it all again for the late show.</li>
+        <li><b>Walk-on music.</b> Push the <b>MUSIC</b> knob to bring the music back between acts, and push it again to pause it.</li>
+        <li><b>After the show.</b> <b>END SHOW</b>, then <b>YES</b>. Lights and music come back and the recording stops. On a two-show night, do it all again for the late show.</li>
         <li><b>Last one out.</b> <b>ALL OFF</b>, then set the alarm at the keypad.</li>
       </ol>
     </div>
@@ -262,6 +264,7 @@
         <li><b>You're on a screen you don't recognise.</b> Press <b>BACK</b>, top left.</li>
         <li><b>The MIC square is red.</b> The stage mic is off. Push the MIC knob.</li>
         <li><b>SHOW IS ON is orange.</b> It isn't recording. Tap it once.</li>
+        <li><b>No music after the show.</b> If the MUSIC square says <b>MUSIC OUT</b>, push the MUSIC knob once. If it still says a volume but you hear nothing, Spotify is paused: push the knob to play.</li>
         <li><b>Sound is weird</b> (a mic dead, music gone, too quiet): tap the MIC square, then <b>RESET SOUND</b>. Fixes most things.</li>
         <li><b>A little warning triangle in the corner of some keys.</b> Something those keys talk to didn't answer last time. The keys still work. If a light or the candles didn't change, press again.</li>
         <li><b>A key says PLUG IN DECK.</b> The deck's battery is low. Plug it in.</li>
