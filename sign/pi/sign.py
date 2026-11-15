@@ -1297,9 +1297,8 @@ def playlist(beers):
     and "draw on this sign" once, at the end of the lap (Sam, Nov 12 2026:
     every 5 beers was too often). Sam, Nov 15 2026: "Prioritize showing the
     customer ones over the beer ones", so guests get a slot after each beer,
-    not every 3rd. A guest slot is skipped when sign_next has nothing ready
-    (each drawing still shows at most once per 10 minutes), so with only a
-    few drawings the beers fill the gaps."""
+    not every 3rd. Drawings take turns with no waiting time (Sam, same day),
+    and a slot is skipped only when there are no approved drawings."""
     out = [("guest", None)]
     for beer in beers:
         out.append(("beer", beer))
