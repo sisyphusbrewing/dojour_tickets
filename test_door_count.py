@@ -78,5 +78,67 @@ class KeyText(unittest.TestCase):
         self.assertEqual(dc.key_text(None), "START / SHOW")
 
 
+class TellDeck(unittest.TestCase):
+    """Companion on the office PC answers on the PC's network address, not on 127.0.0.1
+    (found Nov 14 2026), so the helper has to find the address that answers."""
+
+    def setUp(self):
+        self.calls = []
+        self.real_call, self.real_env = dc.call, dc.os.environ.get("COMPANION_URL")
+        dc.os.environ.pop("COMPANION_URL", None)
+        dc._answered = None
+        self.addCleanup(self.restore)
+
+    def restore(self):
+        dc.call = self.real_call
+        dc._answered = None
+        dc.os.environ.pop("COMPANION_URL", None)
+        if self.real_env is not None:
+            dc.os.environ["COMPANION_URL"] = self.real_env
+
+    def answer_only_on(self, good):
+        def fake(url, body=None, headers=None, timeout=20):
+            self.calls.append(url)
+            if not url.startswith(good):
+                raise dc.urllib.error.URLError("connection refused")
+            return "ok"
+        dc.call = fake
+
+    def test_network_address_is_tried_first(self):
+        self.assertEqual(dc.companion_addresses()[0], "http://192.168.86.42:8000")
+        self.answer_only_on("http://192.168.86.42:8000")
+        used = dc.tell_deck({"show": "8 PM", "left": 31, "total": 94}, TODAY)
+        self.assertEqual(used, "http://192.168.86.42:8000")
+        self.assertEqual(len(self.calls), 4)                      # the four door_* variables, one address
+        self.assertIn("/api/custom-variable/door_left/value?value=31", self.calls[1])
+        self.assertIn("door_show/value?value=8%20PM", self.calls[0])
+
+    def test_falls_back_and_remembers_the_address_that_answered(self):
+        self.answer_only_on("http://127.0.0.1:8000")
+        self.assertEqual(dc.tell_deck(None, TODAY), "http://127.0.0.1:8000")
+        self.calls.clear()
+        dc.tell_deck(None, TODAY)
+        self.assertTrue(all(u.startswith("http://127.0.0.1:8000") for u in self.calls))   # no wasted try
+
+    def test_address_from_the_settings_file_wins(self):
+        dc.os.environ["COMPANION_URL"] = "http://10.0.0.9:8000/"
+        self.assertEqual(dc.companion_addresses()[0], "http://10.0.0.9:8000")
+
+    def test_says_so_when_companion_answers_nowhere(self):
+        self.answer_only_on("http://nowhere")
+        with self.assertRaises(OSError) as caught:
+            dc.tell_deck(None, TODAY)
+        self.assertIn("did not answer", str(caught.exception))
+
+    def test_a_missing_variable_is_reported_not_retried_elsewhere(self):
+        def fake(url, body=None, headers=None, timeout=20):
+            self.calls.append(url)
+            raise dc.urllib.error.HTTPError(url, 404, "Not found", None, None)
+        dc.call = fake
+        with self.assertRaises(dc.urllib.error.HTTPError):
+            dc.tell_deck(None, TODAY)
+        self.assertEqual(len(self.calls), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
