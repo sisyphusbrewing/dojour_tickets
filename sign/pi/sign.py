@@ -10,7 +10,7 @@ core just for refreshing, so Wi-Fi and drawing never disturb it.
 
 What it shows (the mock-up Sam approved, Nov 12 2026): every beer and slushie
 on tap from the GoTab menu, 12 seconds each, with a little animated cartoon,
-its name, style, ABV and price. After every 3rd beer comes a picture Claude
+its name, style, ABV and price. Between beers come pictures Claude
 drew from a guest's suggestion (Supabase rpc sign_next), and at the end of a
 lap, at most once every 10 minutes, "DRAW ON THIS SIGN AT SISYPHUSBREWING.COM/DRAW". Each frame is drawn
 off-screen and swapped in whole.
@@ -1293,15 +1293,16 @@ def to_panels(img, layout, turn_all=0):
 
 
 def playlist(beers):
-    """One lap of the sign: every beer in menu order, a guest's picture after
-    every 3rd beer, and "draw on this sign" once, at the end of the lap (Sam,
-    Nov 12 2026: every 5 beers was too often)."""
-    out = []
-    for i, beer in enumerate(beers):
+    """One lap of the sign: a guest's picture first and then after every beer,
+    and "draw on this sign" once, at the end of the lap (Sam, Nov 12 2026:
+    every 5 beers was too often). Sam, Nov 15 2026: "Prioritize showing the
+    customer ones over the beer ones", so guests get a slot after each beer,
+    not every 3rd. A guest slot is skipped when sign_next has nothing ready
+    (each drawing still shows at most once per 10 minutes), so with only a
+    few drawings the beers fill the gaps."""
+    out = [("guest", None)]
+    for beer in beers:
         out.append(("beer", beer))
-        if i % 3 == 2:
-            out.append(("guest", None))
-    if not out or out[-1][0] != "guest":
         out.append(("guest", None))
     out.append(("plug", None))
     return out
