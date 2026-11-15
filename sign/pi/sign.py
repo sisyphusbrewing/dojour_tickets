@@ -1385,6 +1385,7 @@ def main():
             except Exception as e:  # no Wi-Fi: keep the last list
                 print("menu", e, flush=True)
         shown = False
+        last_kind = None
         for kind, beer in playlist(beers):
             if time.monotonic() - update_at > UPDATE_EVERY:
                 update_at = time.monotonic()
@@ -1414,6 +1415,12 @@ def main():
                 plug_at = time.monotonic()
             if kind == "beer" and slide_key(beer.get("name") or "") in hidden:
                 continue
+            # One guest try per beer actually on screen: switched-off beers
+            # would otherwise leave guest slots back to back, each one a call
+            # to Supabase.
+            if kind == "guest" and last_kind == "guest":
+                continue
+            last_kind = kind
             try:
                 screen = screen_for(kind, beer)
             except Exception as e:  # no Wi-Fi for a guest's picture: skip it
