@@ -53,12 +53,31 @@ Dojour gotchas, learned the hard way:
 - `DOJOUR_STATE` is a saved browser login (Playwright storage state);
   `login_setup.py` makes it.
 
+## The staff site (staff home, top bar, schedule)
+
+- **`staff/tools.js` is the one list of staff tools.** The staff home page
+  draws its tiles from it and the top bar (`staff/nav.js`) draws its "All
+  tools" menu from it. A new tool is one new entry there, with the lowest
+  login that may open it. A staff page gets the top bar with one line:
+  `<script src="/staff/nav.js"></script>`. Don't put the bar on pages
+  customers or comics see (exchange, payme, the Shopify embeds).
+- **`schedule/`** is the staff schedule that replaces When I Work (Sam, Nov 14
+  2026). The rules (who sees drafts, who can take a shift, who gets told)
+  live in the database, in `supabase/migrations/20261115040000_staff_schedule.sql`;
+  the page only shows and asks. Every change that affects someone writes a
+  row to `schedule_outbox`; `schedule_notify.py` sends those by email or text,
+  whichever that person picked. Check rule changes with
+  `supabase/tests/staff_schedule/` before applying them.
+- This repo is public, so are its Actions logs. Scripts must not print staff
+  names, email addresses, phone numbers or message text.
+
 ## Secrets
 
 Workflows read secrets from GitHub Actions: `SHOPIFY_STORE`,
 `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` (or `SHOPIFY_ACCESS_TOKEN`),
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_HOST/PORT/USER/PASS`,
-`FROM_EMAIL`, `DOJOUR_STATE`. Never print or commit their values.
+`FROM_EMAIL`, `DOJOUR_STATE`, and (for schedule texts, once set up) `TWILIO_ACCOUNT_SID`,
+`TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or commit their values.
 `service_account.json` and `state.json` are gitignored for that reason.
 
 ## How to work here
@@ -71,7 +90,7 @@ Workflows read secrets from GitHub Actions: `SHOPIFY_STORE`,
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_schedule_notify`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.

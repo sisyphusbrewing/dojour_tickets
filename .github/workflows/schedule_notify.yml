@@ -1,0 +1,41 @@
+name: Schedule notices
+
+# Sends staff their schedule notices by email or text (schedule_notify.py):
+# a posted week, a changed shift, a shift up for grabs, a time off answer, and
+# a "you work today" reminder the morning of. Each person picks email, text,
+# both or neither on the schedule page (staff hub > Schedule).
+# The page starts this through the "run-workflow" Supabase function as soon as
+# something changes; the timer is the backstop and sends the reminders.
+# Texts need the TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM secrets;
+# without them a "text" choice is emailed instead.
+
+on:
+  schedule:
+    - cron: '7,22,37,52 0-6,14-23 * * *'   # every 15 min, 8 AM to about 1 AM Central (9 AM to 2 AM in summer)
+  workflow_dispatch:
+
+concurrency:
+  group: schedule-notify
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Send schedule notices
+        env:
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+        run: python schedule_notify.py

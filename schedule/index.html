@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Schedule</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Schedule">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="schedule.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="../staff/nav.js"></script>
+</head>
+<body class="sched-page">
+  <!-- The staff schedule (Sam, Nov 14 2026: phase out When I Work and "do the
+       scheduling through the staff page"). One page for everybody:
+         - staff see the posted week, trade shifts, ask for time off, say which
+           days they can't work, and pick email or text for notices;
+         - managers build the week on the same page (Grace builds it going
+           forward), post it, and answer time off.
+       The rules live in the database (supabase/migrations/..._staff_schedule.sql);
+       this page only shows it and asks for changes. -->
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Schedule</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Schedule<small id="weekLabel">&nbsp;</small></div>
+        </a>
+        <div class="hdr-right">
+          <button class="btn btn-sm" id="prevWeek" aria-label="The week before">‹</button>
+          <button class="btn btn-sm" id="thisWeek">This week</button>
+          <button class="btn btn-sm" id="nextWeek" aria-label="The week after">›</button>
+        </div>
+      </div>
+      <div class="hdr-tools hidden" id="hdrTools">
+        <div class="chips" id="viewChips">
+          <button class="chip on" data-view="all">Everyone</button>
+          <button class="chip" data-view="mine">Just me</button>
+          <button class="chip hidden" data-view="grabs" id="grabsChip">Up for grabs</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap hidden" id="page">
+    <div class="empty hidden" id="notManager"></div>
+
+    <!-- Notices: what changed that affects this login. The same lines go out
+         by email or text, whichever the person picked below. -->
+    <section id="noticeSection" class="hidden">
+      <div class="notices" id="notices"></div>
+    </section>
+
+    <!-- Managers: drafts are only visible to managers until posted. -->
+    <section id="mgrBar" class="mgr-bar hidden">
+      <div id="mgrStatus"></div>
+      <div class="mgr-acts">
+        <button class="btn btn-primary hidden" id="postBtn"></button>
+        <button class="btn" id="copyBtn">Copy last week</button>
+      </div>
+    </section>
+
+    <p class="my-week hidden" id="myWeek"></p>
+
+    <section>
+      <button class="btn-link hidden" id="earlierBtn"></button>
+      <div class="week" id="week"><p class="quiet">Loading the week…</p></div>
+      <div class="hours hidden" id="hours"></div>
+    </section>
+
+    <section id="offSection">
+      <div class="band-row"><span class="band">Time off</span></div>
+      <div id="offPending"></div>
+      <div class="cols2">
+        <form id="offForm" class="card stack">
+          <div class="lbl">Ask for time off</div>
+          <div class="grid2">
+            <div class="field"><label for="offFrom">First day off</label><input class="input" id="offFrom" type="date" required></div>
+            <div class="field"><label for="offTo">Last day off</label><input class="input" id="offTo" type="date" required></div>
+            <div class="field full"><label for="offNote">Anything a manager should know (optional)</label><input class="input" id="offNote" maxlength="200"></div>
+          </div>
+          <button class="btn btn-primary" type="submit" id="offBtn">Ask</button>
+        </form>
+        <div>
+          <div class="lbl" id="offListLbl">Your requests</div>
+          <div class="rows" id="offList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="availSection">
+      <div class="band-row"><span class="band">Days I can’t work</span></div>
+      <form id="availForm" class="card stack">
+        <p class="help" style="margin:0">Tap the days you can never work. For a one-off, ask for time off instead.</p>
+        <div class="daypick" id="dayPick"></div>
+        <div class="field"><label for="availNote">Anything else (optional)</label><input class="input" id="availNote" maxlength="200" placeholder="Class until 5 on Tuesdays"></div>
+        <button class="btn btn-primary" type="submit" id="availBtn">Save</button>
+      </form>
+      <details class="fold hidden" id="availAll"><summary>When everyone can’t work</summary><div class="rows" id="availAllList"></div></details>
+    </section>
+
+    <section id="reachSection">
+      <div class="band-row"><span class="band">How to reach me</span></div>
+      <form id="reachForm" class="card stack">
+        <p class="help" style="margin:0">A new schedule, a change to your shift, a shift up for grabs, an answer on time off, and a reminder the morning you work.</p>
+        <div class="chips" id="reachPick">
+          <button type="button" class="chip" data-by="email">Email</button>
+          <button type="button" class="chip" data-by="text">Text</button>
+          <button type="button" class="chip" data-by="both">Both</button>
+          <button type="button" class="chip" data-by="none">Neither</button>
+        </div>
+        <div class="grid2">
+          <div class="field"><label for="reachEmail">Email</label><input class="input" id="reachEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
+          <div class="field"><label for="reachPhone">Mobile number</label><input class="input" id="reachPhone" type="tel" autocomplete="tel" placeholder="612-555-0100"></div>
+        </div>
+        <p class="help hidden" id="textsNote" style="margin:0">Texts aren’t switched on yet. Until they are, a text is sent as an email, so add your email too.</p>
+        <button class="btn btn-primary" type="submit" id="reachBtn">Save</button>
+      </form>
+    </section>
+
+    <section id="peopleSection" class="hidden">
+      <details class="fold"><summary>Who’s on the schedule</summary>
+        <p class="help">Every staff login is listed. Give each a name, and untick logins that aren’t a person or don’t take shifts.</p>
+        <div class="rows" id="peopleList"></div>
+      </details>
+    </section>
+
+    <p class="foot">One must imagine the schedule posted.</p>
+  </main>
+
+  <!-- Managers: add or change one shift. -->
+  <dialog id="shiftDialog" class="sheet">
+    <form id="shiftForm" class="stack" method="dialog">
+      <h2 id="shiftTitle">Add a shift</h2>
+      <div class="grid2">
+        <div class="field full"><label for="sfDate">Day</label><input class="input" id="sfDate" type="date" required></div>
+        <div class="field"><label for="sfStart">Starts</label><input class="input" id="sfStart" type="time" required></div>
+        <div class="field"><label for="sfEnd">Ends</label><input class="input" id="sfEnd" type="time">
+          <label class="check"><input type="checkbox" id="sfClose"> Until close</label></div>
+        <div class="field"><label for="sfPos">Job</label><input class="input" id="sfPos" list="posList" required maxlength="40">
+          <datalist id="posList"><option>Bar</option><option>Door</option><option>Comedy room</option><option>Barback</option><option>Manager</option><option>Brewery</option></datalist></div>
+        <div class="field"><label for="sfWho">Who</label><select class="input" id="sfWho"></select></div>
+        <div class="field full"><label for="sfNote">Note (optional)</label><input class="input" id="sfNote" maxlength="120" placeholder="Two shows tonight"></div>
+      </div>
+      <div class="warn hidden" id="sfWarn"></div>
+      <p class="help hidden" id="sfLive" style="margin:0"></p>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="sfSave">Save</button>
+        <button class="btn hidden" type="button" id="sfAgain">Save and add another</button>
+        <button class="btn btn-danger hidden" type="button" id="sfRemove">Remove</button>
+        <button class="btn btn-ghost" type="button" id="sfCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="schedule.js"></script>
+</body>
+</html>
