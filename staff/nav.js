@@ -53,8 +53,10 @@
     var find = nav.querySelector('.snav-find'), list = nav.querySelector('.snav-list');
     // What this login can open: the staff home page remembers it on each
     // device; a page that has the database connection loaded asks afresh.
-    var role = 'door', voice = false;
-    try { role = localStorage.getItem('staffRoleSeen') || 'door'; voice = !!localStorage.getItem('staffVoiceSeen'); } catch (e) {}
+    // A device that has never opened the staff home page gets the everyday
+    // staff list; a tool this login can't open simply says so when tapped.
+    var role = 'staff', voice = false;
+    try { role = localStorage.getItem('staffRoleSeen') || 'staff'; voice = !!localStorage.getItem('staffVoiceSeen'); } catch (e) {}
 
     function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     function href(t) { return t.href.charAt(0) === '/' ? base + t.href.slice(1) : t.href; }
@@ -95,8 +97,12 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });
 
     var db = window.sb || window.supabaseClient;
-    if (db && db.rpc) {
-      Promise.resolve(db.rpc('my_role')).then(function (r) {
+    if (db && db.rpc && db.auth) {
+      // Only ask once someone is signed in; a signed-out page has no role to ask about.
+      db.auth.getSession().then(function (res) {
+        if (!res.data || !res.data.session) return null;
+        return db.rpc('my_role');
+      }).then(function (r) {
         if (r && r.data) { role = r.data; try { localStorage.setItem('staffRoleSeen', role); } catch (e) {} }
       }).catch(function () {});
     }
