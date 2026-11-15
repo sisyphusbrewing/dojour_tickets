@@ -3,7 +3,7 @@ Dates are built relative to today so the tests never go stale."""
 import unittest
 from datetime import datetime, time, timedelta
 
-from advance_auto import CENTRAL, plan
+from advance_auto import CENTRAL, plan, website_nights
 
 
 def night(title, days, hour=19):
@@ -11,6 +11,11 @@ def night(title, days, hour=19):
     day = datetime.now(CENTRAL).date() + timedelta(days=days)
     ts = datetime.combine(day, time(hour), CENTRAL).astimezone().isoformat()
     return {"show_title": title, "starts_at": ts}
+
+
+def web(title, days, price=25, hour=19):
+    """An exchange_showtimes row: a showtime on sale on the website."""
+    return dict(night(title, days, hour), price=price)
 
 
 TODAY = datetime.now(CENTRAL).date()
@@ -62,6 +67,41 @@ class PlanTest(unittest.TestCase):
                 "contact_email": "g@gmail.com", "staff_notes": None, "welcome_sent_at": None}]
         _, later = plan([], adv, [], TODAY)
         self.assertEqual([a["id"] for a in later], ["a1"])   # never re-sends Grace's own desk rows
+
+
+class WebsiteOnlyTest(unittest.TestCase):
+    """Dojour is being phased out, so a new show may be on the website only
+    (Sam, Nov 15 2026). It still gets its advance."""
+
+    def test_website_only_run_gets_an_advance(self):
+        hist = website_nights([web("Pat Example", 12), web("Pat Example", 13), web("Pat Example", 13, hour=21)])
+        todo, _ = plan(hist, [], [], TODAY)
+        self.assertEqual([(a, r["title"], (r["last"] - r["first"]).days) for a, r, _, _ in todo], [("ask", "Pat Example", 1)])
+
+    def test_show_on_both_lists_is_one_run(self):
+        hist = [night("Pat Example", 12), night("Pat Example", 13)] + website_nights([web("Pat Example", 12), web("Pat Example", 13)])
+        todo, _ = plan(hist, [], [], TODAY)
+        self.assertEqual(len(todo), 1)
+
+    def test_free_house_nights_on_the_website_never_count(self):
+        hist = website_nights([web("Tuesday Night Laughs", 2, price=0), web("Stand Up Comedy Open Mic", 4, price=0),
+                               web("Blingo!", 5, price="0.00"), web("Advice Column!", 6, price=8)])
+        todo, _ = plan(hist, [], [], TODAY)
+        self.assertEqual(todo, [])
+
+    def test_website_run_with_an_advance_is_left_alone(self):
+        hist = website_nights([web("Pat Example", 12), web("Pat Example", 13)])
+        adv = [{"show_name": "Pat Example", "show_date": (TODAY + timedelta(days=12)).isoformat()}]
+        todo, _ = plan(hist, adv, [], TODAY)
+        self.assertEqual(todo, [])
+
+    def test_not_needed_or_fallen_through_on_the_booking_board_is_skipped(self):
+        hist = website_nights([web("Pat Example", 12), web("Robin Sample", 14), web("Lee Newcomer", 16)])
+        board = [{"act": "Pat Example", "first_night": (TODAY + timedelta(days=12)).isoformat(), "stage": "confirmed", "checks": {"advance": "na"}},
+                 {"act": "Robin Sample", "first_night": (TODAY + timedelta(days=14)).isoformat(), "stage": "dropped", "checks": {}},
+                 {"act": "Lee Newcomer", "first_night": (TODAY + timedelta(days=16)).isoformat(), "stage": "confirmed", "checks": {"host": "na"}}]
+        todo, _ = plan(hist, [], [], TODAY, board=board)
+        self.assertEqual([r["title"] for _, r, _, _ in todo], ["Lee Newcomer"])
 
 
 if __name__ == "__main__":
