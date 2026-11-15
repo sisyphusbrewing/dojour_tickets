@@ -73,7 +73,7 @@
         <button class="chip" data-m="on" type="button">Always on</button>
         <button class="chip" data-m="off" type="button">Off</button>
       </div>
-      <span class="help" id="modeHelp">"Open hours" runs it Tue-Wed 4-9, Thu 4-11, Fri-Sat 1-11, Sun 1-6, off Mondays (Sam, Nov 14 2026). The sign picks it up within a minute.</span>
+      <span class="help" id="modeHelp">"Open hours" runs it Tue-Wed 4-9, Thu 4-11, Fri-Sat 1-11, Sun 1-6, off Mondays (Sam, Nov 14 2026). "Always on" and "Off" last until 6 AM, then it's back to open hours by itself. The sign picks it up within a minute.</span>
     </div>
     <div class="card" style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <label for="bright" style="font-weight:600">Brightness</label>
@@ -135,7 +135,9 @@
       if (!res.error && res.data) {
         $('secs').value = Number(res.data.seconds); hidden = res.data.hidden || [];
         $('bright').value = Number(res.data.brightness); $('brightVal').textContent = res.data.brightness + '%';
-        showMode(res.data.mode || 'auto');
+        // what the sign is doing now: a manual On/Off only lasts that night
+        var cfg = await sb.rpc('sign_config');
+        showMode((cfg.data && cfg.data.mode) || res.data.mode || 'auto');
       }
       try {
         var menu = await fetch('https://sisyphusmenu.stharriman.workers.dev/').then(function (r) { return r.json(); });
@@ -169,10 +171,10 @@
     }
     $('modes').addEventListener('click', async function (e) {
       var b = e.target.closest('.chip'); if (!b) return;
-      var res = await sb.from('sign_settings').update({ mode: b.dataset.m, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
+      var res = await sb.from('sign_settings').update({ mode: b.dataset.m, mode_set_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', 1).select().single();
       if (res.error) { toast('Save failed: ' + res.error.message); return; }
       showMode(res.data.mode);
-      toast({ auto: 'Sign follows the open hours.', on: 'Sign stays on until you pick Open hours.', off: 'Sign turning off (within a minute).' }[res.data.mode]);
+      toast({ auto: 'Sign follows the open hours.', on: 'Sign stays on tonight, then back to open hours.', off: 'Sign off for tonight (within a minute); back on at the next opening.' }[res.data.mode]);
     });
     $('bright').addEventListener('input', function () { $('brightVal').textContent = $('bright').value + '%'; });
     $('brightSave').addEventListener('click', async function () {

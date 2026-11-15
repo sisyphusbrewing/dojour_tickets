@@ -306,14 +306,13 @@ async function ideaOk(prompt: string): Promise<{ ok: boolean; reason: string }> 
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     output_config: { effort: "low", format: { type: "json_schema", schema: VET_SCHEMA } },
-    system: "A customer at a comedy club taproom typed this idea for a picture on the LED sign on the wall. House rule: " +
-      "R-rated is fine (swearing, booze, crude or dark jokes), and rude or sexual ideas are fine to send because they get " +
-      "redrawn as a tamer version that keeps the joke, so set ok to true for those. Set ok to false only when no tame " +
-      "version could follow the rule: politics (politicians, parties, causes, slogans, real terrorists or dictators), " +
-      "slurs, hate symbols, a group shown in a negative, mocking or demeaning way, mocking or shaming a real named person, or someone's " +
-      "personal details. If an idea that names a religion, culture or group has a harmless reading, set ok to true: it " +
-      "gets drawn the respectful way, with familiar cues and nothing negative. " +
-      "Give the reason in one short, friendly sentence the customer will read.",
+    system: "A customer at a comedy club taproom typed this idea for a picture on the LED sign on the wall. Almost " +
+      "everything should pass: the drawing step tones down anything rude, sexual, violent, gross or edgy into a tamer " +
+      "version that keeps the joke (Sam, Nov 15 2026: \"I want things to just be toned down not filtered out " +
+      "completely\"), so dark jokes, disasters, crude humor and edgy references all get ok true. Set ok to false ONLY " +
+      "for the few ideas no tame version could fix: a slur or hate symbol, an idea whose whole point is attacking a " +
+      "religion, race or other group, naming a real politician, party or political slogan, or someone's personal " +
+      "details. Give the reason in one short, friendly sentence the customer will read.",
     messages: [{ role: "user", content: `Idea: "${prompt}"` }],
   });
   if (response.stop_reason === "refusal") return { ok: false, reason: "The sign won't draw that one." };
@@ -425,19 +424,30 @@ async function finish(id: number, prompt: string, photo: Photo) {
     ? `A customer at the bar sent this photo to be turned into a picture for the sign${prompt ? `, with the note: "${prompt}"` : ""}. ` +
       `Draw its main subject as bold, simple pixel art. If it shows people, draw a friendly cartoon of them, never anything that mocks them.`
     : `A customer at the bar suggested: "${prompt}"`;
+  // Tone it down rather than turn it down (Sam, Nov 15 2026: "I want things to
+  // just be toned down not filtered out completely"): a refusal or a failed
+  // check gets a tamer redraw, then a very tame one, before giving up.
+  const TAMER = [
+    "Draw a tamer, clean version that still keeps the joke.",
+    "Draw a very tame, totally harmless version: keep the main subject and the silliness, drop whatever was the problem, and keep the caption clean.",
+  ];
   let art = await drawWhole(ask, photo);
+  if (!art.ok) {
+    art = await drawWhole(`${ask}\nDon't refuse unless it is built on a slur, hate or politics. ${TAMER[1]}`, photo);
+    art.tamed = true;
+  }
   if (!art.ok) return await turnDown(art.reason);
   if (rude(art.caption)) art = { ...art, caption: "" };
   let check = await vet(shown, art);
-  if (!check.ok) {
-    // one more go, tamer, before giving up
-    art = await drawWhole(`${ask}\nA first drawing was turned down for the wall because: ${check.reason} Draw a tamer, clean version that still keeps the joke.`, photo);
-    if (!art.ok) return await turnDown(art.reason);
+  for (let i = 0; !check.ok && i < TAMER.length; i++) {
+    const again = await drawWhole(`${ask}\nA drawing was turned down for the wall because: ${check.reason} ${TAMER[i]}`, photo);
+    if (!again.ok) continue;
+    art = again;
     if (rude(art.caption)) art = { ...art, caption: "" };
     check = await vet(shown, art);
-    if (!check.ok) return await turnDown(check.reason);
     art.tamed = true;
   }
+  if (!check.ok) return await turnDown(check.reason);
   await patch(id, {
     note: art.tamed ? "Toned down for the wall" : null,
     caption: art.caption, palette: art.palette, rows: art.rows, frames: art.frames.length ? art.frames : null,
