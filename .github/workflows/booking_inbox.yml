@@ -1,0 +1,49 @@
+name: Booking inbox
+
+# Reads the booking@ inbox (read-only) and files each conversation on the
+# Booking board (staff.sisyphusbrewing.com/booking/): contracts and W-9s tick
+# themselves off, booking requests land in the Requests list. See
+# booking_inbox.py. (Sam, Nov 14 2026)
+#
+# Needs the secret BOOKING_IMAP_PASS, an app password for the booking@ Google
+# account. Until it exists every run says so and stops without an error.
+# This repo's logs are public: the script prints counts only, never names,
+# addresses or subject lines.
+
+on:
+  schedule:
+    # Every hour at :23, 7 AM to 11 PM Central (13:23 to 05:23 UTC in winter;
+    # an hour later by the clock in summer)
+    - cron: '23 0-5,13-23 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many days back to read (60 for the first catch-up)"
+        default: "3"
+      dry_run:
+        description: "Dry run: count what it would file, save nothing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: booking-inbox
+  cancel-in-progress: false
+
+jobs:
+  inbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Read booking@ and file it on the board
+        env:
+          DAYS: ${{ inputs.days || '3' }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          BOOKING_IMAP_PASS: ${{ secrets.BOOKING_IMAP_PASS }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python booking_inbox.py

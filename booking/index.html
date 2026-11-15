@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Booking Board</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Booking">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="../staff/nav.js"></script>
+  <style>
+    /* The Booking board: every weekend, what each show still needs, and who
+       is asking for a date. Built for Grace (Sam, Nov 14 2026). */
+    .wrap { max-width: 980px; }
+    .tabs { margin-top: 12px; }
+    .tabs .chip i { font-style: normal; background: #fff; color: var(--bg); border-radius: 999px; padding: 1px 7px; margin-left: 6px; font-size: 12px; }
+    .note-bar { margin: 16px 0 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 14px; }
+
+    /* The strip: one square per weekend for the next half year. */
+    .strip { display: flex; gap: 4px; overflow-x: auto; padding: 4px 0 8px; scrollbar-width: none; }
+    .strip::-webkit-scrollbar { display: none; }
+    .sq { flex: 0 0 34px; height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--white);
+          font-size: 11px; line-height: 1.15; text-align: center; cursor: pointer; padding: 5px 0 0; font-weight: 700; }
+    .sq small { display: block; font-weight: 600; color: inherit; opacity: .85; font-size: 10px; }
+    .sq.s-ok { background: var(--ok-dark); border-color: #4b6a52; }
+    .sq.s-due { background: #5a4a26; border-color: #8c7434; }
+    .sq.s-late { background: #5e332c; border-color: var(--danger); }
+    .sq.s-pencil { background: repeating-linear-gradient(135deg, var(--card), var(--card) 5px, #4b4747 5px, #4b4747 10px); }
+    .sq.s-open { background: transparent; border-style: dashed; color: var(--gray); }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--gray); font-size: 13px; margin: 2px 0 0; }
+    .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line); }
+    .legend .l-ok::before { background: var(--ok-dark); border-color: #4b6a52; }
+    .legend .l-due::before { background: #5a4a26; border-color: #8c7434; }
+    .legend .l-late::before { background: #5e332c; border-color: var(--danger); }
+    .legend .l-pencil::before { background: repeating-linear-gradient(135deg, var(--card), var(--card) 3px, #5a5656 3px, #5a5656 6px); }
+    .legend .l-open::before { border-style: dashed; }
+
+    /* Needs doing */
+    .todo { display: grid; gap: 6px; }
+    .todo button { display: flex; gap: 10px; align-items: baseline; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--line);
+                   border-left: 4px solid #8c7434; border-radius: 10px; padding: 10px 12px; cursor: pointer; color: var(--white); }
+    .todo button.late { border-left-color: var(--danger); }
+    .todo b { font-family: var(--head); letter-spacing: .03em; white-space: nowrap; }
+    .todo span { color: var(--muted); font-size: 15px; min-width: 0; }
+    .todo em { font-style: normal; color: var(--gray); }
+    @media (max-width: 560px) { .todo button { flex-wrap: wrap; gap: 2px 10px; } .todo span { order: 3; flex-basis: 100%; } }
+    .todo small { color: var(--gray); margin-left: auto; white-space: nowrap; font-size: 13px; }
+
+    /* Weeks */
+    .week { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .week:first-child { border-top: 0; }
+    .wk-when { padding-top: 12px; }
+    .wk-when b { display: block; font-family: var(--head); font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
+    .wk-when small { color: var(--gray); font-size: 13px; }
+    .wk-shows { display: grid; gap: 8px; min-width: 0; }
+    .open-wk { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px dashed var(--line); border-radius: 12px; padding: 6px 8px 6px 14px; color: var(--gray); font-size: 15px; }
+    @media (max-width: 560px) { .week { grid-template-columns: 1fr; gap: 6px; } .wk-when { padding-top: 0; display: flex; gap: 8px; align-items: baseline; } }
+
+    /* A run of shows */
+    .run { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 12px; min-width: 0; scroll-margin-top: 150px; }
+    .week { scroll-margin-top: 150px; }
+    .run.r-ok { border-left-color: var(--ok); }
+    .run.r-due { border-left-color: #c9a646; }
+    .run.r-late { border-left-color: var(--danger); }
+    .run.r-pencil { border-style: dashed; border-left-style: solid; }
+    .run-head { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 12px 14px; cursor: pointer; color: inherit; }
+    .run-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+    .run-t { font-family: var(--head); font-weight: 700; font-size: 18px; letter-spacing: .02em; overflow-wrap: anywhere; }
+    .run-d { color: var(--slate-light); font-size: 14px; font-weight: 600; margin-top: 2px; }
+    .run-n { white-space: nowrap; color: var(--muted); font-size: 14px; text-align: right; }
+    .run-n b { color: var(--white); font-family: var(--head); font-size: 20px; }
+    .run-bar { height: 5px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
+    .run-bar i { display: block; height: 100%; background: var(--slate-light); }
+    .cks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .ck { font-size: 13px; font-weight: 700; padding: 3px 9px 2px; border-radius: 999px; border: 1px solid var(--line); color: var(--gray); white-space: nowrap; }
+    .ck-done { color: #cfe8d4; border-color: #4b6a52; background: var(--ok-dark); }
+    .ck-due { color: #f3dfa2; border-color: #8c7434; background: #4a3f24; }
+    .ck-late { color: #ffd2c9; border-color: var(--danger); background: #5e332c; }
+    .ck-wait { color: var(--slate-light); border-color: var(--slate); }
+    .ck-na { text-decoration: line-through; }
+    .pill { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; border-radius: 6px; border: 1px solid var(--line);
+            color: var(--slate-light); font-family: var(--head); margin-left: 6px; vertical-align: 2px; white-space: nowrap; }
+
+    /* Open run: the full checklist */
+    .run-body { border-top: 1px solid var(--line); padding: 4px 14px 14px; }
+    .item { display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 10px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .item .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--gray); margin-top: 2px; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+    .item.i-done .dot { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+    .item.i-due .dot { border-color: #c9a646; color: #c9a646; }
+    .item.i-late .dot { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .item.i-wait .dot { border-color: var(--slate-light); color: var(--slate-light); }
+    .item b { font-weight: 700; }
+    .item .why { color: var(--muted); font-size: 14px; margin-top: 1px; }
+    .item .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .item .input { min-height: 38px; margin-top: 6px; }
+    @media (max-width: 560px) { .item { grid-template-columns: 22px 1fr; } .item .acts { grid-column: 2; justify-content: flex-start; } }
+    .mail { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--white); text-decoration: none; }
+    .mail:last-child { border-bottom: 0; }
+    .mail small { display: block; color: var(--gray); font-size: 13px; }
+    .sub-h { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-light); margin: 16px 0 2px; }
+    .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+    /* Requests */
+    .req { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+    .req + .req { margin-top: 10px; }
+    .req.ours { border-left: 4px solid #c9a646; }
+    .req-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .req-t { font-family: var(--head); font-weight: 700; font-size: 18px; letter-spacing: .02em; overflow-wrap: anywhere; }
+    .req-who { color: var(--slate-light); font-size: 14px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+    .req-ask { margin-top: 8px; font-weight: 600; }
+    .req-ask span { color: var(--gray); font-weight: 400; }
+    .req-snip { color: var(--muted); margin-top: 6px; font-size: 15px; }
+    .req-meta { color: var(--gray); font-size: 13px; margin-top: 8px; }
+    .req-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .grade { flex: 0 0 auto; text-align: center; border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px 3px; line-height: 1.1; }
+    .grade b { display: block; font-family: var(--head); font-size: 22px; }
+    .grade small { color: var(--gray); font-size: 11px; white-space: nowrap; }
+
+    /* Pencil-in sheet */
+    #sheet { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; }
+    #sheet .card { width: 100%; max-width: 520px; border-radius: 16px 16px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto; }
+    @media (min-width: 600px) { #sheet { align-items: center; } #sheet .card { border-radius: 16px; } }
+    #sheet h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 12px; }
+    .seg { display: flex; gap: 8px; }
+    .seg label { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; cursor: pointer; font-weight: 600; text-align: center; }
+    .seg input { position: absolute; opacity: 0; }
+    .seg input:checked + span { color: #fff; }
+    .seg label:has(input:checked) { background: var(--slate); border-color: var(--slate-light); }
+    .row-btns { display: flex; gap: 8px; margin-top: 14px; }
+    .row-btns .btn { flex: 1; }
+  </style>
+</head>
+<body>
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Booking board</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Booking board<small>Every weekend, what it needs, who's asking</small></div>
+        </a>
+        <div class="hdr-right"><button class="btn btn-sm" id="refreshBtn" title="Load the latest">↻</button></div>
+      </div>
+      <div class="chips tabs hidden" id="tabs">
+        <button class="chip on" data-tab="weekends">Weekends</button>
+        <button class="chip" data-tab="requests">Requests<i id="reqCount" class="hidden"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="empty hidden" id="notManager"></div>
+    <div id="board" class="hidden">
+      <div class="note-bar hidden" id="inboxNote"></div>
+
+      <div id="viewWeekends">
+        <section>
+          <div class="band-row"><span class="band">The next six months</span><span class="band-note" id="stripNote"></span></div>
+          <div class="strip" id="strip"></div>
+          <div class="legend"><span class="l-ok">All set</span><span class="l-due">Needs something</span><span class="l-late">Overdue</span><span class="l-pencil">Pencilled in</span><span class="l-open">Open</span></div>
+        </section>
+        <section id="todoSection">
+          <div class="band-row"><span class="band">Needs doing</span><span class="band-note" id="todoNote"></span></div>
+          <div class="todo" id="todo"></div>
+        </section>
+        <section id="playedSection">
+          <div class="band-row"><span class="band">Just played</span><span class="band-note">Wrap-up for the last 3 weeks</span></div>
+          <div class="wk-shows" id="played"></div>
+        </section>
+        <section>
+          <div class="band-row"><span class="band">Coming up</span>
+            <button class="btn btn-sm btn-primary" id="pencilBtn">+ Pencil in a date</button></div>
+          <div id="weeks"></div>
+        </section>
+      </div>
+
+      <div id="viewRequests" class="hidden">
+        <div class="chips" id="reqFilters" style="margin-top:18px">
+          <button class="chip on" data-f="answer">To answer</button>
+          <button class="chip" data-f="waiting">Waiting on them</button>
+          <button class="chip" data-f="later">Later</button>
+          <button class="chip" data-f="done">Pencilled or booked</button>
+          <button class="chip" data-f="pass">Passed</button>
+        </div>
+        <p class="help" style="margin:10px 0 14px">Everyone asking for a date: emails to booking@ and comics who tapped Sam's card. The letter is the comic's CSS grade when we have one.</p>
+        <div id="reqs"></div>
+      </div>
+      <p class="foot camus">One must imagine the calendar full.</p>
+    </div>
+  </main>
+
+  <div id="sheet" class="hidden">
+    <form class="card" id="pencilForm">
+      <h2 id="sheetTitle">Pencil in a date</h2>
+      <div class="grid2">
+        <div class="field full"><label for="p_act">Who</label><input class="input" id="p_act" required placeholder="Comic or show name"></div>
+        <div class="field"><label for="p_first">First night</label><input class="input" id="p_first" type="date" required></div>
+        <div class="field"><label for="p_last">Last night</label><input class="input" id="p_last" type="date"></div>
+        <div class="field full"><label for="p_contact">Who it's with</label><input class="input" id="p_contact" placeholder="Agent or contact, if not the comic"></div>
+        <div class="field full"><label for="p_notes">Notes</label><textarea class="input" id="p_notes" style="min-height:70px" placeholder="Deal, show times, anything to remember"></textarea></div>
+        <div class="field full"><span class="lbl">How firm is it?</span>
+          <div class="seg"><label><input type="radio" name="p_stage" value="pencil" checked><span>Pencilled in</span></label>
+            <label><input type="radio" name="p_stage" value="confirmed"><span>Confirmed</span></label></div></div>
+      </div>
+      <div class="row-btns"><button class="btn" type="button" id="sheetCancel">Cancel</button><button class="btn btn-primary" type="submit" id="sheetSave">Save</button></div>
+    </form>
+  </div>
+  <div class="toast hidden" id="toast"></div>
+
+  <script>
+    // ---------------------------------------------------------------------
+    // Where the numbers come from. One call, booking_board(), returns:
+    //   nights    every showtime on the website (show_nights)
+    //   advances  the comedian advances and how far each has got
+    //   agents    shows with someone on the weekly ticket report
+    //   w9, pay   which names have a W-9; per show on the pay sheet: lines
+    //             owed/paid, who hosted and featured, payouts missing a W-9
+    //   sold      tickets sold per showtime, kept after the show has played
+    //   scores    CSS letter grades, for sorting requests
+    //   cards     comics who tapped Sam's card and asked to be booked
+    //   shows     dates pencilled in here, plus host/feature/notes/ticks
+    //   threads   conversations in the booking@ inbox (booking_inbox.py)
+    // Live ticket counts come from staff_show_counts(), same as the staff page.
+    // ---------------------------------------------------------------------
+    // Who can open the board. Owner-only while Sam looks it over (Nov 15 2026).
+    // To hand it to Grace, change this to 'manager', and the same on the
+    // Booking board tile in staff/tools.js.
+    var OPEN_TO = 'owner';
+    var SEATS = 90;                 // seats per showtime, for the sold bar
+    var ADVANCE_DAYS = 21;          // advances go out three weeks before
+    var W9_OVER = 2000;             // Sam, Nov 13 2026: pay over $2,000 needs a W-9
+    var FEE = 3;                    // the website fee is not door money
+    // House nights and recurring shows are not bookings to chase.
+    var REGULARS = /cancel|postpon|magic|gathering|blingo|advice column|\bmic\b|showcase|trivia|class|workshop|private event|poets/i;
+    // A showtime the website has retitled "CANCELED: ..." is off the board.
+    var CANCELLED = /^\s*(cancell?ed|postponed)\b[\s:–—-]*/i;
+
+    var D = null, counts = [], runs = [], me = '', inboxLive = false;
+    var tab = 'weekends', openRun = null, reqFilter = 'answer', sheetFrom = null;
+
+    // ---------- dates (everything in Central time) ----------
+    function cday(ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); }   // "2026-11-20"
+    function dnum(day) { return Math.round(Date.parse(day + 'T12:00:00Z') / 86400000); }
+    function addDays(day, n) { return new Date(Date.parse(day + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
+    function fmt(day, opts) { return new Date(day + 'T12:00:00Z').toLocaleDateString('en-US', Object.assign({ timeZone: 'UTC' }, opts)); }
+    function today() { return cday(Date.now()); }
+    function range(first, last) {
+      var a = fmt(first, { weekday: 'short' }), m = fmt(first, { month: 'short', day: 'numeric' });
+      if (!last || last === first) return a + ', ' + m;
+      var sameMonth = first.slice(0, 7) === last.slice(0, 7);
+      return a + '–' + fmt(last, { weekday: 'short' }) + ', ' + m + '–' + (sameMonth ? fmt(last, { day: 'numeric' }) : fmt(last, { month: 'short', day: 'numeric' }));
+    }
+    function away(days) {
+      if (days === 0) return 'today'; if (days === 1) return 'tomorrow';
+      if (days < 0) return (-days) + (days === -1 ? ' day ago' : ' days ago');
+      return days < 14 ? 'in ' + days + ' days' : days < 70 ? 'in ' + Math.round(days / 7) + ' weeks' : 'in ' + Math.round(days / 30) + ' months';
+    }
+    // "Fri, Dec 11 • 7:00 PM" -> "2026-12-11" (the day as written, whatever clock the phone is on).
+    function showDay(text) {
+      var ts = parseShowDateToMillis(text); if (!ts) return '';
+      var d = new Date(ts);
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function shortDate(ts) { return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' }); }
+    // Same rule as show_family() in the database: the name without the tour tail.
+    function fam(t) { return String(t || '').replace(/\s*(\(|:|\s[-–—|]\s).*$/, '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+
+    // ---------- load ----------
+    async function load() {
+      var both = await Promise.all([sb.rpc('booking_board'), sb.rpc('staff_show_counts')]);
+      if (both[0].error) { toast('Could not load the board: ' + both[0].error.message, true); return; }
+      D = both[0].data; counts = both[1].data || [];
+      // Until the booking@ inbox is connected, the only emails here are the
+      // ones copied to Sam (keys starting "sam:"). Real ones replace them.
+      inboxLive = D.threads.some(function (t) { return /^gm:/.test(t.key); });
+      if (inboxLive) D.threads = D.threads.filter(function (t) { return !/^sam:/.test(t.key); });
+      build(); draw();
+    }
+
+    // Turns showtimes into runs (Fri + Sat = one run) and hangs everything
+    // we know about each run on it.
+    function build() {
+      // Tickets sold per showtime: the kept totals first, then today's live
+      // counts on top (the live table drops a show once it has played).
+      var per = {};
+      (D.sold || []).forEach(function (x) { per[x.show_title + '|' + x.show_date] = { title: x.show_title, date: x.show_date, sold: Number(x.tickets) || 0, comps: 0 }; });
+      counts.forEach(function (c) { per[c.show_title + '|' + c.show_date] = { title: c.show_title, date: c.show_date, sold: Number(c.web) + Number(c.dojour), comps: Number(c.comps) }; });
+      var sales = Object.keys(per).map(function (k) { return { title: per[k].title, family: fam(per[k].title), day: showDay(per[k].date), sold: per[k].sold, comps: per[k].comps }; });
+
+      var gone = {};     // "family|day" of showtimes marked cancelled
+      function cancelled(title, day) { if (CANCELLED.test(title) && day) gone[fam(title.replace(CANCELLED, '')) + '|' + day] = true; }
+      D.nights.forEach(function (n) { cancelled(n.title, cday(n.starts_at)); });
+      sales.forEach(function (x) { cancelled(x.title, x.day); });
+
+      var byFam = {};
+      D.nights.forEach(function (n) {
+        if (REGULARS.test(n.title)) return;
+        var f = fam(n.title), day = cday(n.starts_at); if (!f || gone[f + '|' + day]) return;
+        (byFam[f] = byFam[f] || []).push({ title: n.title, day: day });
+      });
+      runs = [];
+      Object.keys(byFam).forEach(function (f) {
+        var nights = byFam[f].sort(function (a, b) { return a.day < b.day ? -1 : 1; }), cur = null;
+        nights.forEach(function (n) {
+          if (!cur || dnum(n.day) - dnum(cur.last) > 3) { cur = { family: f, title: n.title, first: n.day, last: n.day, shows: 0, onsale: true }; runs.push(cur); }
+          cur.last = n.day; cur.shows++;
+        });
+      });
+      // The hand-kept rows: notes and ticks for runs on sale, dates pencilled
+      // in before tickets exist, and runs someone marked as fallen through.
+      function sameRun(x, s) { return x.family === fam(s.act) && Math.abs(dnum(x.first) - dnum(s.first_night)) <= 4; }
+      var dropped = D.shows.filter(function (s) { return s.stage === 'dropped'; });
+      D.shows.forEach(function (s) {
+        if (s.stage === 'dropped') return;
+        var r = runs.find(function (x) { return sameRun(x, s); });
+        if (r) r.extra = s;
+        else runs.push({ family: fam(s.act), title: s.act, first: s.first_night, last: s.last_night || s.first_night, shows: 0, onsale: false, extra: s });
+      });
+      runs = runs.filter(function (r) { return r.extra || !dropped.some(function (s) { return sameRun(r, s); }); });
+      var t = today(), agents = {}, w9 = {};
+      D.agents.forEach(function (a) { agents[a] = true; });
+      D.w9.forEach(function (n) { w9[n] = true; });
+      runs.forEach(function (r) {
+        r.id = r.family + '|' + r.first;
+        r.days = dnum(r.first) - dnum(t);            // days until the first night
+        r.after = dnum(t) - dnum(r.last);            // days since the last night (past runs)
+        r.sold = 0; r.comps = 0;
+        sales.forEach(function (x) {
+          if (x.family === r.family && x.day >= r.first && x.day <= r.last) { r.sold += x.sold; r.comps += x.comps; }
+        });
+        r.price = Number(D.prices[r.family]) || 0;
+        r.advance = D.advances.find(function (a) {
+          return (fam(a.show_name) === r.family || fam(a.act_name) === r.family) && a.show_date &&
+            dnum(a.show_date) >= dnum(r.first) - 3 && dnum(a.show_date) <= dnum(r.last) + 3;
+        });
+        r.threads = D.threads.filter(function (m) { return m.act && fam(m.act) === r.family; });
+        r.agent = !!agents[r.family];
+        r.w9 = !!w9[r.family] || r.threads.some(function (m) { return (m.docs || []).some(function (d) { return d.doc === 'w9'; }); });
+        r.pay = D.pay.filter(function (p) { return p.family === r.family && Math.abs(dnum(p.show_end) - dnum(r.last)) <= 4; })
+          .reduce(function (s, p) {
+            return { paid: s.paid + p.paid, owed: s.owed + p.owed, w9_missing: s.w9_missing + (p.w9_missing || 0),
+                     hosts: s.hosts.concat(p.hosts || []), features: s.features.concat(p.features || []) };
+          }, { paid: 0, owed: 0, w9_missing: 0, hosts: [], features: [] });
+        r.items = checklist(r);
+        r.needs = r.items.filter(function (i) { return i.state === 'due' || i.state === 'late'; });
+        r.tone = r.needs.some(function (i) { return i.state === 'late'; }) ? 'late' : r.needs.length ? 'due' : 'ok';
+      });
+      runs.sort(function (a, b) { return a.first < b.first ? -1 : a.first > b.first ? 1 : 0; });
+    }
+
+    // ---------- the checklist ----------
+    // Each line is worked out from real records where we can. A manager can
+    // still tick a line by hand ("yes") or say it doesn't apply ("na").
+    // States: done, due (do it now), late (overdue), wait (in motion, nothing
+    // to do), later (not time yet), na.
+    function checklist(r) {
+      var x = r.extra || {}, hand = x.checks || {}, items = [], past = r.after > 0, started = r.days < 0, pencil = !r.onsale && x.stage === 'pencil';
+      function add(k, label, state, why, more) { items.push(Object.assign({ k: k, label: label, state: state, why: why }, more || {})); }
+      function byHand(k, label) {
+        if (hand[k] === 'yes') { add(k, label, 'done', 'Ticked by hand', { hand: true }); return true; }
+        if (hand[k] === 'na') { add(k, label, 'na', 'Not needed for this one', { hand: true }); return true; }
+        return false;
+      }
+
+      // Contract: found in the booking@ inbox.
+      if (!byHand('contract', 'Contract')) {
+        var rank = { received: 1, to_sign: 2, signed: 3 }, best = null;
+        r.threads.forEach(function (m) { (m.docs || []).forEach(function (d) {
+          if (d.doc === 'contract' && (!best || rank[d.state] > rank[best.state])) best = Object.assign({ link: m.link }, d);
+        }); });
+        var when = best && best.at ? ' (email ' + shortDate(best.at) + ')' : '';
+        if (best && best.state === 'signed') add('contract', 'Contract', 'done', 'Signed' + when, { link: best.link, tick: true });
+        else if (best && best.state === 'to_sign') add('contract', 'Contract', past ? 'late' : 'due', 'Waiting on our signature' + when, { link: best.link, tick: true });
+        else if (best) add('contract', 'Contract', pencil ? 'later' : 'due', 'It\'s in the inbox' + when + '. Not signed yet as far as the emails show.', { link: best.link, tick: true });
+        else if (!inboxLive) add('contract', 'Contract', 'later', 'Can\'t tell yet: the booking@ inbox isn\'t connected.', { tick: true });
+        else add('contract', 'Contract', pencil || past || r.days > 60 ? 'later' : 'due', 'None found in the booking@ inbox.', { tick: true });
+      }
+
+      // On sale: there are showtimes on the website.
+      if (r.onsale) add('sale', 'On sale', 'done', r.shows + (r.shows === 1 ? ' showtime' : ' showtimes') + ' on the website' +
+        (r.sold || !past ? ', ' + r.sold + ' sold' + (r.comps ? ', ' + r.comps + ' comps' : '') : '') + '.');
+      else if (pencil) add('sale', 'On sale', 'later', 'Only pencilled in. Confirm it first.');
+      else add('sale', 'On sale', r.days <= 60 ? 'late' : 'due', 'Confirmed, but there are no tickets on the website yet.');
+
+      // Advance: the pre-show questions the comic fills in.
+      if (!started && !byHand('advance', 'Advance')) {
+        var a = r.advance, desk = a ? '../advance/booking.html#/a/' + a.id : '../advance/booking.html';
+        if (a && a.submitted) add('advance', 'Advance', 'done', 'Filled in by the comic.', { href: desk, go: 'Read it' });
+        else if (a && !a.has_email) add('advance', 'Advance', r.days <= 10 ? 'late' : 'due', 'Made, but we have no email for the comic. Add it on the booking desk and it sends itself.', { href: desk, go: 'Booking desk' });
+        else if (a && a.opened) add('advance', 'Advance', r.days <= 5 ? 'due' : 'wait', 'Opened, not finished yet.', { href: desk, go: 'Booking desk' });
+        else if (a && a.welcomed) add('advance', 'Advance', r.days <= 7 ? 'due' : 'wait', 'Sent. Not opened yet' + (r.days <= 7 ? ', and the show is close. Worth a nudge.' : '.'), { href: desk, go: 'Booking desk' });
+        else if (a) add('advance', 'Advance', r.days <= ADVANCE_DAYS ? 'wait' : 'later', r.days <= ADVANCE_DAYS ? 'Made. The welcome email goes out with the next morning run.' : 'Made. The welcome email goes out 3 weeks before.', { href: desk, go: 'Booking desk' });
+        else if (pencil || r.days > ADVANCE_DAYS) add('advance', 'Advance', 'later', 'Goes out by itself 3 weeks before the first night.', { tick: true });
+        else add('advance', 'Advance', r.days <= 10 ? 'late' : 'due', 'None yet, and we\'re inside 3 weeks. Make one on the booking desk.', { href: desk, go: 'Booking desk', tick: true });
+      }
+
+      // Host and feature: typed in here before the show (nothing else knows
+      // the lineup); afterwards the pay sheet says who it was.
+      [['host', 'Host', r.pay.hosts], ['feature', 'Feature', r.pay.features]].forEach(function (p) {
+        var k = p[0], name = (x[k] || '').trim();
+        if (name) add(k, p[1], 'done', name, { edit: k, value: name });
+        else if (hand[k] === 'na') add(k, p[1], 'na', 'Not needed for this one', { hand: true });
+        else if (p[2].length) add(k, p[1], 'done', p[2].join(', ') + ' (from the pay sheet)');
+        else add(k, p[1], started || pencil || r.days > ADVANCE_DAYS ? 'later' : r.days <= 7 ? 'late' : 'due', started ? 'Nobody written down.' : 'Nobody yet.', { edit: k, value: '', tick: 'na' });
+      });
+
+      // Ticket-count contact: someone on the weekly agent report.
+      if (!past) add('report', 'Ticket report', r.agent ? 'done' : 'later', r.agent ? 'Someone gets the weekly ticket counts for this show.' : 'Nobody is signed up for weekly ticket counts. Fine unless an agent asks.');
+
+      // W-9: needed when the pay tops $2,000.
+      if (!byHand('w9', 'W-9')) {
+        var door = Math.round(r.sold * Math.max(r.price - FEE, 0));
+        if (r.w9) add('w9', 'W-9', 'done', 'On file.');
+        else if (r.pay.w9_missing) add('w9', 'W-9', past ? 'late' : 'due', 'The pay sheet has a payout over $' + W9_OVER.toLocaleString() + ' for this run and no W-9 on file. Ask for it.', { tick: true });
+        else if (door > W9_OVER) add('w9', 'W-9', past ? 'late' : r.days <= 30 ? 'due' : 'later', 'The door is about $' + door.toLocaleString() + ' so far. Pay over $' + W9_OVER.toLocaleString() + ' needs a W-9' + (r.days <= 30 ? ': ask for it.' : ', so we\'ll need one.'), { tick: true });
+        else add('w9', 'W-9', 'later', 'Only needed if the pay tops $' + W9_OVER.toLocaleString() + (door ? ' (the door is about $' + door.toLocaleString() + ' so far).' : '.'), { tick: true });
+      }
+
+      // Emails about this show that are waiting on us.
+      var ours = r.threads.filter(function (m) { return m.waiting_on === 'us' && m.kind !== 'contract'; });
+      if (ours.length) add('mail', 'Email', 'due', ours.length === 1 ? 'Waiting on our reply: "' + ours[0].subject + '"' : ours.length + ' conversations waiting on our reply.', { link: ours[0].link });
+
+      // After the show: is everyone paid?
+      if (past && !byHand('paid', 'Paid')) {
+        if (r.pay.owed) add('paid', 'Paid', r.after > 10 ? 'late' : 'due', r.pay.owed + (r.pay.owed === 1 ? ' line' : ' lines') + ' still owed on the pay sheet.', { tick: true });
+        else if (r.pay.paid) add('paid', 'Paid', 'done', 'Everything on the pay sheet is paid.');
+        else add('paid', 'Paid', r.after > 10 ? 'late' : r.after > 3 ? 'due' : 'wait', 'Nothing on the pay sheet for this run yet.', { tick: true });
+      }
+      return items;
+    }
+
+    // ---------- drawing ----------
+    var MARK = { done: '✓', due: '!', late: '!', wait: '…', later: '', na: '' };
+    function draw() {
+      $('tabs').classList.remove('hidden');
+      document.querySelectorAll('#tabs .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.tab === tab); });
+      $('viewWeekends').classList.toggle('hidden', tab !== 'weekends');
+      $('viewRequests').classList.toggle('hidden', tab !== 'requests');
+      var note = $('inboxNote');
+      note.classList.toggle('hidden', inboxLive);
+      if (!inboxLive) note.textContent = 'The booking@ inbox isn\'t connected yet. The emails here are only the ones that were copied or forwarded through Sam, so contracts and W-9s can\'t be ticked off by themselves yet.';
+      var asks = requests(), n = asks.filter(function (q) { return bucket(q) === 'answer'; }).length;
+      $('reqCount').textContent = n; $('reqCount').classList.toggle('hidden', !n);
+      drawWeekends(); drawRequests(asks);
+    }
+
+    function runCard(r) {
+      var x = r.extra || {}, pencil = !r.onsale && x.stage === 'pencil', open = openRun === r.id;
+      var counted = r.onsale && (r.sold > 0 || r.after <= 0);      // a played run with no kept count shows no number
+      var pct = r.shows ? Math.min(100, Math.round(100 * r.sold / (SEATS * r.shows))) : 0;
+      var chips = r.items.map(function (i) {
+        return '<span class="ck ck-' + i.state + '">' + (MARK[i.state] ? MARK[i.state] + ' ' : '') + i.label + '</span>';
+      }).join('');
+      var html = '<div class="run r-' + (pencil ? 'pencil' : r.tone) + '" id="run-' + escapeHtml(r.id) + '">' +
+        '<button class="run-head" onclick="toggleRun(' + jsArg(r.id) + ')"><div class="run-top"><div><div class="run-t">' + escapeHtml(r.title) +
+        (pencil ? '<span class="pill">Pencilled</span>' : !r.onsale ? '<span class="pill">Confirmed</span>' : '') + '</div>' +
+        '<div class="run-d">' + range(r.first, r.last) + (r.shows > 1 ? ' · ' + r.shows + ' shows' : '') + ' · ' + (r.after > 0 ? away(-r.after) : r.days < 0 ? (r.after === 0 ? 'last night tonight' : 'on now') : away(r.days)) + '</div></div>' +
+        (counted ? '<div class="run-n"><b>' + r.sold + '</b> sold</div>' : '') + '</div>' +
+        (counted ? '<div class="run-bar"><i style="width:' + pct + '%"></i></div>' : '') +
+        '<div class="cks">' + chips + '</div></button>';
+      if (open) html += runBody(r);
+      return html + '</div>';
+    }
+
+    function runBody(r) {
+      var x = r.extra || {}, id = jsArg(r.id);
+      var rows = r.items.map(function (i) {
+        var acts = '';
+        if (i.link && /^https:\/\/mail\.google\.com\//.test(i.link)) acts += '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + escapeHtml(i.link) + '">Open email</a>';
+        if (i.href) acts += '<a class="btn btn-sm" href="' + escapeHtml(i.href) + '">' + escapeHtml(i.go) + '</a>';
+        if (i.hand) acts += '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg(i.k) + ',null)">Undo</button>';
+        else if (i.tick === 'na') acts += '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg(i.k) + ',\'na\')">Not needed</button>';
+        else if (i.tick) acts += '<button class="btn btn-sm" onclick="setCheck(' + id + ',' + jsArg(i.k) + ',\'yes\')">Done</button>' +
+          '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg(i.k) + ',\'na\')">Not needed</button>';
+        var body = '<b>' + i.label + '</b><div class="why">' + escapeHtml(i.why) + '</div>';
+        if (i.edit) body = '<b>' + i.label + '</b><input class="input" placeholder="Who? One name, or one per night" value="' + escapeHtml(i.value) + '" onchange="saveField(' + id + ',' + jsArg(i.edit) + ',this.value)">';
+        return '<div class="item i-' + i.state + '"><div class="dot">' + MARK[i.state] + '</div><div>' + body + '</div><div class="acts">' + acts + '</div></div>';
+      }).join('');
+      var mails = r.threads.slice(0, 6).map(function (m) {
+        var who = (m.from_name || m.from_email || '') + (m.agency ? ' · ' + m.agency : '');
+        var turn = m.waiting_on === 'us' ? 'our turn' : 'their turn';
+        var inner = escapeHtml(m.subject || '(no subject)') + '<small>' + escapeHtml(who) + ' · ' + shortDate(m.last_at) + ' · ' + turn + '</small>';
+        return /^https:\/\/mail\.google\.com\//.test(m.link || '') ? '<a class="mail" target="_blank" rel="noopener" href="' + escapeHtml(m.link) + '">' + inner + '</a>' : '<div class="mail">' + inner + '</div>';
+      }).join('');
+      var stage = '';
+      if (!r.onsale) stage = (x.stage === 'pencil' ? '<button class="btn btn-sm btn-primary" onclick="saveField(' + id + ',\'stage\',\'confirmed\')">It\'s confirmed</button>' : '') +
+        '<button class="btn btn-sm" onclick="editRun(' + id + ')">Change dates</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="dropRun(' + id + ')">Fell through</button>';
+      else stage = '<button class="btn btn-sm btn-ghost" onclick="dropRun(' + id + ')">Cancelled? Take it off</button>';
+      return '<div class="run-body">' + rows +
+        (x.contact ? '<div class="sub-h">With</div><div>' + escapeHtml(x.contact) + '</div>' : '') +
+        '<div class="sub-h">Notes</div><textarea class="input" style="min-height:64px" placeholder="Deal, show times, hotel, anything" onchange="saveField(' + id + ',\'notes\',this.value)">' + escapeHtml(x.notes || '') + '</textarea>' +
+        (mails ? '<div class="sub-h">Emails about this show</div>' + mails : '') +
+        '<div class="links">' +
+          (r.onsale ? '<a class="btn btn-sm" href="../manager/">Guest list</a><a class="btn btn-sm" href="../sales/">Sales by day</a>' : '') +
+          '<a class="btn btn-sm" href="../advance/booking.html">Booking desk</a>' + stage + '</div></div>';
+    }
+
+    function drawWeekends() {
+      // "Just played" is the last 3 weeks of runs that left a trace: tickets
+      // sold, a line on the pay sheet, or a row kept here. (A cancelled show
+      // that sold nothing leaves none.)
+      var t = today(), upcoming = runs.filter(function (r) { return r.after <= 0; });
+      var played = runs.filter(function (r) { return r.after > 0 && r.after <= 21 && (r.sold || r.pay.paid || r.pay.owed || r.extra); });
+
+      // Needs doing: one line per show with something due, overdue first, then soonest.
+      var todo = upcoming.concat(played).filter(function (r) { return r.needs.length; });
+      todo.sort(function (a, b) { return (a.tone === 'late' ? 0 : 1) - (b.tone === 'late' ? 0 : 1) || a.days - b.days; });
+      $('todoSection').classList.toggle('hidden', !todo.length);
+      $('todoNote').textContent = todo.length > 8 ? 'First 8 of ' + todo.length + ' shows' : '';
+      $('todo').innerHTML = todo.slice(0, 8).map(function (r) {
+        var first = r.needs.find(function (i) { return i.state === 'late'; }) || r.needs[0];
+        var rest = r.needs.filter(function (i) { return i !== first; }).map(function (i) { return i.label; });
+        return '<button class="' + r.tone + '" onclick="showRun(' + jsArg(r.id) + ')"><b>' + escapeHtml(r.title) + '</b><span>' + first.label + ': ' + escapeHtml(first.why) +
+          (rest.length ? ' <em>Also: ' + rest.join(', ') + '.</em>' : '') + '</span><small>' + fmt(r.first, { month: 'short', day: 'numeric' }) + '</small></button>';
+      }).join('');
+
+      $('playedSection').classList.toggle('hidden', !played.length);
+      $('played').innerHTML = played.slice().reverse().map(runCard).join('');
+
+      // Weeks run Monday to Sunday; a weekend is open when nothing is booked on its Friday or Saturday.
+      var monday = addDays(t, -((new Date(t + 'T12:00:00Z').getUTCDay() + 6) % 7));
+      var lastRun = upcoming.length ? upcoming[upcoming.length - 1].first : t;
+      var weeksOut = Math.max(26, Math.ceil((dnum(lastRun) - dnum(monday)) / 7) + 3);
+      var weeks = [];
+      for (var w = 0; w < weeksOut; w++) {
+        var mon = addDays(monday, 7 * w), fri = addDays(mon, 4), sat = addDays(mon, 5), sun = addDays(mon, 6);
+        if (sun < t) continue;
+        var mine = upcoming.filter(function (r) { return r.first >= mon && r.first <= sun; });
+        var weekend = upcoming.filter(function (r) { return r.first <= sat && r.last >= fri; });
+        weeks.push({ mon: mon, fri: fri, sat: sat, runs: mine, weekend: weekend, open: !weekend.length && sat >= t });
+      }
+      $('weeks').innerHTML = weeks.map(function (k) {
+        var cards = k.runs.map(runCard).join('');
+        if (k.open) cards += '<div class="open-wk"><span>Weekend open</span><button class="btn btn-sm btn-ghost" onclick="openSheet({first:' + jsArg(k.fri) + ',last:' + jsArg(k.sat) + '})">+ Pencil in</button></div>';
+        if (!cards) return '';     // a weekend covered by a run that started the week before
+        var label = fmt(k.fri, { month: 'short', day: 'numeric' }) + '–' + (k.fri.slice(0, 7) === k.sat.slice(0, 7) ? fmt(k.sat, { day: 'numeric' }) : fmt(k.sat, { month: 'short', day: 'numeric' }));
+        return '<div class="week" id="wk-' + k.mon + '"><div class="wk-when"><b>' + label + '</b><small>' + away(Math.max(0, dnum(k.fri) - dnum(t))) + '</small></div><div class="wk-shows">' + cards + '</div></div>';
+      }).join('');
+
+      // The strip: one square per weekend.
+      var openCount = 0;
+      $('strip').innerHTML = weeks.slice(0, 30).map(function (k) {
+        var cls = 's-open', who = 'Open';
+        if (k.weekend.length) {
+          var r = k.weekend[0], pencil = !r.onsale && (r.extra || {}).stage === 'pencil';
+          var tone = k.weekend.some(function (z) { return z.tone === 'late'; }) ? 'late' : k.weekend.some(function (z) { return z.tone === 'due'; }) ? 'due' : 'ok';
+          cls = pencil ? 's-pencil' : 's-' + tone; who = r.title;
+        } else openCount++;
+        return '<button class="sq ' + cls + '" title="' + escapeHtml(who + ' · ' + range(k.fri, k.sat)) + '" onclick="goWeek(' + jsArg(k.mon) + ')">' +
+          fmt(k.fri, { day: 'numeric' }) + '<small>' + fmt(k.fri, { month: 'short' }) + '</small></button>';
+      }).join('');
+      $('stripNote').textContent = openCount + ' open weekend' + (openCount === 1 ? '' : 's');
+    }
+
+    // ---------- requests ----------
+    // Emails filed as a request or private-event ask, plus the comics who
+    // tapped Sam's card. A manager's call on each is kept in booking_threads.
+    function requests() {
+      var byKey = {};
+      D.threads.forEach(function (t) { byKey[t.key] = t; });
+      var list = D.threads.filter(function (t) { return t.source !== 'card' && (t.kind === 'request' || t.kind === 'event'); });
+      D.cards.forEach(function (c) {
+        var saved = byKey['card:' + c.id] || {};
+        list.push({ key: 'card:' + c.id, source: 'card', kind: 'request', act: c.name, from_name: c.name, from_email: c.contact, snippet: 'Tapped Sam\'s card and asked to be booked. Reach them ' + (c.how || 'directly').toLowerCase() + '.',
+                    first_at: c.at, last_at: c.at, waiting_on: 'us', status: saved.status || null, status_by: saved.status_by, msg_count: 0 });
+      });
+      return list;
+    }
+    function bucket(q) {
+      if (q.status === 'later') return 'later';
+      if (q.status === 'pass') return 'pass';
+      if (q.status === 'pencil' || q.status === 'booked') return 'done';
+      return q.waiting_on === 'them' ? 'waiting' : 'answer';
+    }
+    function scoreFor(name) {
+      var f = fam(name); if (!f) return null;
+      return D.scores.find(function (s) { return fam(s.name) === f; }) || null;
+    }
+    function drawRequests(asks) {
+      document.querySelectorAll('#reqFilters .chip').forEach(function (c) {
+        var n = asks.filter(function (q) { return bucket(q) === c.dataset.f; }).length;
+        c.classList.toggle('on', c.dataset.f === reqFilter);
+        c.textContent = c.textContent.replace(/ \(\d+\)$/, '') + (n ? ' (' + n + ')' : '');
+      });
+      var list = asks.filter(function (q) { return bucket(q) === reqFilter; })
+        .sort(function (a, b) { return (b.last_at || '') < (a.last_at || '') ? -1 : 1; });
+      if (!list.length) { $('reqs').innerHTML = '<div class="empty"><b>Nothing here</b>' + (reqFilter === 'answer' ? 'Every ask has an answer. One must imagine the inbox empty.' : 'No requests in this pile.') + '</div>'; return; }
+      $('reqs').innerHTML = list.map(function (q) {
+        var key = jsArg(q.key), s = scoreFor(q.act), b = bucket(q);
+        var who = q.source === 'card' ? (q.from_email || '') : (q.from_name || q.from_email || '') + (q.agency ? ' · ' + q.agency : '');
+        var kind = q.source === 'card' ? 'Tap card' : q.kind === 'event' ? 'Private event' : q.agency ? 'Agent' : 'Comic';
+        var grade = s ? '<div class="grade" title="Comic Scoring System"><b>' + s.grade + '</b><small>' + (s.per_show != null ? '~' + s.per_show + ' a show' : 'CSS') + '</small></div>' : '';
+        var meta = [];
+        if (q.source !== 'card') { meta.push('Last email ' + shortDate(q.last_at)); if (q.msg_count > 1) meta.push(q.msg_count + ' emails'); meta.push(q.waiting_on === 'us' ? 'our turn' : 'their turn'); }
+        else meta.push('Tapped ' + shortDate(q.first_at));
+        if (q.status && q.status_by) meta.push({ later: 'Set aside', pass: 'Passed', pencil: 'Pencilled in', booked: 'Booked' }[q.status] + ' by ' + q.status_by);
+        var acts = '';
+        if (/^https:\/\/mail\.google\.com\//.test(q.link || '')) acts += '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + escapeHtml(q.link) + '">Open email</a>';
+        if (q.source === 'card' && /@/.test(q.from_email || '')) acts += '<a class="btn btn-sm" href="mailto:' + escapeHtml(q.from_email) + '">Email them</a>';
+        if (b !== 'done') acts += '<button class="btn btn-sm btn-primary" onclick="pencilFrom(' + key + ')">Pencil in</button>';
+        if (b === 'answer' || b === 'waiting') acts += '<button class="btn btn-sm" onclick="setStatus(' + key + ',\'later\')">Later</button><button class="btn btn-sm btn-ghost" onclick="setStatus(' + key + ',\'pass\')">Pass</button>';
+        else acts += '<button class="btn btn-sm btn-ghost" onclick="setStatus(' + key + ',null)">Back to the pile</button>';
+        return '<div class="req' + (b === 'answer' ? ' ours' : '') + '"><div class="req-top"><div><div class="req-t">' + escapeHtml(q.act || q.subject || 'Someone') +
+          '<span class="pill">' + kind + '</span></div><div class="req-who">' + escapeHtml(who) + '</div></div>' + grade + '</div>' +
+          (q.asked ? '<div class="req-ask"><span>Asked about </span>' + escapeHtml(q.asked) + '</div>' : '') +
+          (q.act && q.subject && q.source !== 'card' ? '<div class="req-meta">“' + escapeHtml(q.subject) + '”</div>' : '') +
+          (q.snippet ? '<div class="req-snip">' + escapeHtml(q.snippet) + (q.source !== 'card' && q.snippet.length >= 180 ? '…' : '') + '</div>' : '') +
+          '<div class="req-meta">' + escapeHtml(meta.join(' · ')) + '</div><div class="req-acts">' + acts + '</div></div>';
+      }).join('');
+    }
+
+    // ---------- actions ----------
+    function findRun(id) { return runs.find(function (r) { return r.id === id; }); }
+    function toggleRun(id) { openRun = openRun === id ? null : id; draw(); }
+    function showRun(id) {
+      openRun = id; tab = 'weekends'; draw();
+      var el = document.getElementById('run-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function goWeek(mon) { var el = $('wk-' + mon); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+
+    // The hand-kept row for a run is made the first time someone edits it.
+    async function saveRun(r, patch) {
+      patch.updated_by = me;
+      var res;
+      if (r.extra && r.extra.id) res = await sb.from('booking_shows').update(patch).eq('id', r.extra.id);
+      else res = await sb.from('booking_shows').insert(Object.assign({ act: r.title, first_night: r.first, last_night: r.last, stage: 'confirmed' }, patch));
+      if (res.error) { toast('Could not save: ' + res.error.message, true); return false; }
+      await load(); return true;
+    }
+    async function saveField(id, field, value) {
+      var r = findRun(id); if (!r) return;
+      var patch = {}; patch[field] = String(value).trim() || null;
+      if (await saveRun(r, patch)) toast('Saved');
+    }
+    async function setCheck(id, k, value) {
+      var r = findRun(id); if (!r) return;
+      var checks = Object.assign({}, (r.extra || {}).checks || {});
+      if (value) checks[k] = value; else delete checks[k];
+      if (await saveRun(r, { checks: checks })) toast(value ? 'Ticked' : 'Unticked');
+    }
+    async function dropRun(id) {
+      var r = findRun(id); if (!r) return;
+      if (!confirm(r.title + (r.onsale ? ' is off? It comes off this board. The website and any tickets are not touched.' : ' fell through? It comes off the board.'))) return;
+      openRun = null;
+      if (await saveRun(r, { stage: 'dropped' })) toast('Off the board');
+    }
+    function editRun(id) {
+      var r = findRun(id); if (!r || !r.extra) return;
+      openSheet({ id: r.extra.id, act: r.extra.act, first: r.extra.first_night, last: r.extra.last_night, contact: r.extra.contact, notes: r.extra.notes, stage: r.extra.stage });
+    }
+
+    async function setStatus(key, status) {
+      var q = requests().find(function (x) { return x.key === key; }); if (!q) return;
+      var row = { key: key, status: status, status_by: status ? me : null, status_at: status ? new Date().toISOString() : null };
+      var res;
+      if (q.source === 'card') res = await sb.from('booking_threads').upsert(Object.assign(row, { source: 'card', kind: 'request', act: q.act, from_name: q.from_name, from_email: q.from_email, first_at: q.first_at, last_at: q.last_at }));
+      else res = await sb.from('booking_threads').update(row).eq('key', key);
+      if (res.error) { toast('Could not save: ' + res.error.message, true); return; }
+      await load(); toast(status ? 'Moved' : 'Back in the pile');
+    }
+    function pencilFrom(key) {
+      var q = requests().find(function (x) { return x.key === key; }); if (!q) return;
+      var who = q.source === 'card' ? q.from_email : (q.from_name || '') + (q.agency ? ' (' + q.agency + ')' : '') + (q.from_email ? ', ' + q.from_email : '');
+      openSheet({ act: q.act || '', contact: fam(q.from_name) === fam(q.act) && !q.agency ? q.from_email : who, from: key, notes: q.asked ? 'Asked about ' + q.asked : '' });
+    }
+
+    // ---------- pencil-in sheet ----------
+    function openSheet(v) {
+      v = v || {}; sheetFrom = v;
+      $('sheetTitle').textContent = v.id ? 'Change dates' : 'Pencil in a date';
+      $('p_act').value = v.act || ''; $('p_first').value = v.first || ''; $('p_last').value = v.last || '';
+      $('p_contact').value = v.contact || ''; $('p_notes').value = v.notes || '';
+      document.querySelector('input[name=p_stage][value=' + (v.stage === 'confirmed' ? 'confirmed' : 'pencil') + ']').checked = true;
+      $('sheet').classList.remove('hidden');
+      (v.act ? $('p_first') : $('p_act')).focus();
+    }
+    function closeSheet() { $('sheet').classList.add('hidden'); }
+    $('sheetCancel').addEventListener('click', closeSheet);
+    $('sheet').addEventListener('click', function (e) { if (e.target === $('sheet')) closeSheet(); });
+    $('pencilForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var first = $('p_first').value, last = $('p_last').value || first;
+      if (last < first) { toast('The last night is before the first.', true); return; }
+      var row = { act: $('p_act').value.trim(), first_night: first, last_night: last, contact: $('p_contact').value.trim() || null,
+                  notes: $('p_notes').value.trim() || null, stage: document.querySelector('input[name=p_stage]:checked').value, updated_by: me };
+      $('sheetSave').disabled = true;
+      var res = sheetFrom.id ? await sb.from('booking_shows').update(row).eq('id', sheetFrom.id)
+                             : await sb.from('booking_shows').insert(Object.assign(row, { thread_key: sheetFrom.from || null }));
+      $('sheetSave').disabled = false;
+      if (res.error) { toast('Could not save: ' + res.error.message, true); return; }
+      closeSheet();
+      if (sheetFrom.from) { await setStatus(sheetFrom.from, 'pencil'); }
+      else await load();
+      openRun = fam(row.act) + '|' + first; tab = 'weekends'; draw();
+      toast(row.stage === 'confirmed' ? 'On the board' : 'Pencilled in');
+      var el = document.getElementById('run-' + openRun); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // ---------- start ----------
+    document.querySelectorAll('#tabs .chip').forEach(function (c) {
+      c.addEventListener('click', function () { tab = c.dataset.tab; location.hash = tab === 'requests' ? '#requests' : ''; draw(); window.scrollTo(0, 0); });
+    });
+    document.querySelectorAll('#reqFilters .chip').forEach(function (c) {
+      c.addEventListener('click', function () { reqFilter = c.dataset.f; draw(); });
+    });
+    $('pencilBtn').addEventListener('click', function () { openSheet({}); });
+    $('refreshBtn').addEventListener('click', async function () { await load(); toast('Up to date'); });
+
+    setupSignIn(async function (role) {
+      if (!roleAtLeast(role, OPEN_TO)) { showNoAccess(OPEN_TO, ['board']); return; }
+      var u = (await sb.auth.getUser()).data.user;
+      me = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
+      if (location.hash === '#requests') tab = 'requests';
+      $('board').classList.remove('hidden');
+      await load();
+    });
+  </script>
+</body>
+</html>

@@ -51,9 +51,9 @@ var STAFF_TOOLS = [
   // Comedy
   { id: 'mic', group: 'comedy', min: 'staff', ico: '🎲', href: '/mic/host.html', title: 'Tuesday mic',
     desc: 'Online sign-ups for the Tuesday open mic. Add the booked comics, draw the rest at random.', find: 'open mic sign up draw lineup list' },
-  // The Booking board tile goes here once its page (/booking/) is on the site:
-  // { id: 'booking', group: 'comedy', min: 'owner', ico: '🗓️', href: '/booking/', title: 'Booking board',
-  //   desc: 'Every weekend at a glance: who’s booked, what each show still needs, and new booking requests.', find: 'weekends contract w9 host feature requests calendar' },
+  // Owner-only while Sam looks it over; it drops to manager when he says so (Sam, Nov 14 2026: built for Grace).
+  { id: 'booking', group: 'comedy', min: 'owner', ico: '🗓️', href: '/booking/', title: 'Booking board',
+    desc: 'Every weekend at a glance: who’s booked, what each show still needs, and new booking requests.', find: 'weekends contract w9 host feature requests calendar' },
   { id: 'advance', group: 'comedy', min: 'manager', ico: '🎤', href: '/advance/booking.html', title: 'Booking desk',
     desc: 'Comedian advances: who’s booked, what they sent, what’s missing.', find: 'advance comic travel hotel green room' },
   { id: 'payouts', group: 'comedy', min: 'owner', ico: '💸', href: '/payouts/', title: 'Pay comics',
