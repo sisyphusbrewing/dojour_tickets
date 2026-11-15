@@ -20,8 +20,11 @@ const ALLOWED_WORKFLOWS = new Set([
   "payout_mail.yml",
   "css_score.yml",
   "voice_notes.yml",
+  "schedule_notify.yml",
 ]);
-const DOOR_WORKFLOWS = new Set(["daily_sync.yml"]);
+// Any signed-in login may start these: refreshing the guest list, and sending
+// the schedule notices that are already waiting (it sends nothing new).
+const DOOR_WORKFLOWS = new Set(["daily_sync.yml", "schedule_notify.yml"]);
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
