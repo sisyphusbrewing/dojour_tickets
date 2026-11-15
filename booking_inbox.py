@@ -355,7 +355,7 @@ def classify(thread, known_acts):
     everything = subject + " " + " ".join(p["text"] for p in people)
     names = " . ".join(p["name"] for p in real)
     # Who is it about? The subject line wins: "Lou Example - Sisyphus" is about
-    # Ian even when the email also mentions a comic we already have booked.
+    # Lou even when the email also mentions a comic we already have booked.
     known = find_known_act(subject, known_acts)
     named = None if known else subject_name(subject)
     if not known and not named:
