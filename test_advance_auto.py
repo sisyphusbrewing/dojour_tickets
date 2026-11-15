@@ -104,5 +104,52 @@ class WebsiteOnlyTest(unittest.TestCase):
         self.assertEqual([r["title"] for _, r, _, _ in todo], ["Lee Newcomer"])
 
 
+def day(n):
+    return (TODAY + timedelta(days=n)).isoformat()
+
+
+class SpreadOutRunTest(unittest.TestCase):
+    """A show whose nights are spread over more than a weekend (Sunday,
+    Wednesday, Sunday) is still one run: one advance, one email. On Nov 15
+    2026 such a show got an advance for its first night only, and the later
+    nights were about to get a second one."""
+
+    def test_nights_up_to_a_week_apart_are_one_run(self):
+        hist = website_nights([web("Lobby Example", 14), web("Lobby Example", 17), web("Lobby Example", 21)])
+        todo, _ = plan(hist, [], [], TODAY)
+        self.assertEqual([(r["title"], (r["last"] - r["first"]).days) for _, r, _, _ in todo], [("Lobby Example", 7)])
+
+    def test_advance_made_for_the_first_night_covers_the_later_nights(self):
+        hist = website_nights([web("Lobby Example", 14), web("Lobby Example", 17), web("Lobby Example", 21)])
+        adv = [{"show_name": "Lobby Example", "show_date": day(14), "show_end_date": None}]
+        todo, _ = plan(hist, adv, [], TODAY)
+        self.assertEqual(todo, [])
+
+    def test_no_second_advance_once_the_first_nights_have_played(self):
+        # Only the last night is still on sale; the advance was for the whole run.
+        hist = website_nights([web("Lobby Example", 4)])
+        for end in (day(4), None):
+            adv = [{"show_name": "Lobby Example", "show_date": day(-3), "show_end_date": end}]
+            todo, _ = plan(hist, adv, [], TODAY)
+            self.assertEqual(todo, [], end)
+
+    def test_same_act_back_weeks_later_gets_its_own_advance(self):
+        hist = website_nights([web("Pat Example", 12), web("Pat Example", 13)])
+        adv = [{"show_name": "Pat Example", "show_date": day(-20), "show_end_date": day(-19)}]
+        todo, _ = plan(hist, adv, [], TODAY)
+        self.assertEqual([r["title"] for _, r, _, _ in todo], ["Pat Example"])
+
+    def test_two_runs_of_one_act_weeks_apart_stay_two_runs(self):
+        hist = website_nights([web("Pat Example", 5), web("Pat Example", 6), web("Pat Example", 19), web("Pat Example", 20)])
+        todo, _ = plan(hist, [], [], TODAY)
+        self.assertEqual([(r["first"] - TODAY).days for _, r, _, _ in todo], [5, 19])
+
+    def test_board_not_needed_still_holds_for_the_last_night_of_a_long_run(self):
+        hist = website_nights([web("Lobby Example", 4)])
+        board = [{"act": "Lobby Example", "first_night": day(-10), "last_night": day(4), "stage": "confirmed", "checks": {"advance": "na"}}]
+        todo, _ = plan(hist, [], [], TODAY, board=board)
+        self.assertEqual(todo, [])
+
+
 if __name__ == "__main__":
     unittest.main()
