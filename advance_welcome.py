@@ -210,14 +210,15 @@ def main():
     if DRY_RUN:
         with open("welcome-preview.html", "w", encoding="utf-8") as f:
             f.write(body)
-        print(f"[DRY RUN] '{subject}' to {recipients} (bcc {bcc}); HTML in welcome-preview.html")
+        # The log is public: say how many addresses, never the addresses.
+        print(f"[DRY RUN] '{subject}' to {len(recipients)} address(es), {len(bcc or [])} copied; HTML in welcome-preview.html")
         return
     if not SMTP_USER or not SMTP_PASS:
         sys.exit("SMTP credentials missing (SMTP_USER / SMTP_PASS).")
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(FROM_EMAIL, recipients + bcc, msg.as_string())
-    print(f"Sent '{subject}' to {', '.join(recipients)}" + (" (preview)" if WELCOME_TO else ""))
+    print(f"Sent '{subject}' to {len(recipients)} address(es)" + (" (preview)" if WELCOME_TO else ""))
     if not WELCOME_TO:
         mark_sent()
 
