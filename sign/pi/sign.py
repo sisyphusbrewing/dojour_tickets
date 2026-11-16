@@ -10,9 +10,9 @@ core just for refreshing, so Wi-Fi and drawing never disturb it.
 
 What it shows (the mock-up Sam approved, Nov 12 2026): every beer and slushie
 on tap from the GoTab menu, 12 seconds each, with a little animated cartoon,
-its name, style, ABV and price. After every 3rd beer comes a picture Claude
+its name, style, ABV and price. Between beers come pictures Claude
 drew from a guest's suggestion (Supabase rpc sign_next), and at the end of a
-lap, at most once every 10 minutes, "DRAW ON THIS SIGN - SCAN THE QR AT THE BAR". Each frame is drawn
+lap, at most once every 10 minutes, "DRAW ON THIS SIGN AT SISYPHUSBREWING.COM/DRAW". Each frame is drawn
 off-screen and swapped in whole.
 
 It keeps itself up to date: every 5 minutes it compares itself with
@@ -225,13 +225,12 @@ def centered_text(img, s, y, color, z=1):
     pixel_text(img, s, (SIZE - (6 * len(s) - 1) * z) // 2, y, color, z)
 
 
-def caption_block(s, name, style="", info=""):
+def caption_block(s, name, style="", info="", room=SIZE - TEXT_Y):
     """The words under the picture: the name (big on one line if it fits,
     otherwise small on up to two), the style in blue and ABV + price, as much
-    of that as fits, centered in the rows left under the picture. A name too
-    long for any of that scrolls."""
+    of that as fits, centered in the first `room` rows under the picture. A
+    name too long for any of that scrolls."""
     name = name.upper()
-    room = SIZE - TEXT_Y
     style = style.upper() if style and len(style) <= 21 else ""
     big, small = wrap_words(name, 10), wrap_words(name, 21)
     names = []
@@ -1098,7 +1097,8 @@ def beer_screen(item):
 def plug_screen():
     """'Draw on this sign', scrolling between two marching dotted lines."""
     s = Screen()
-    msg = "DRAW ON THIS SIGN - SCAN THE QR AT THE BAR"
+    # the short address goes to the drawing page (a Shopify redirect, Sam, Nov 13 2026)
+    msg = "DRAW ON THIS SIGN AT " + DRAW_URL
     span = SIZE + len(msg) * 12
 
     def draw(img, t):
@@ -1116,6 +1116,7 @@ def lum(c):
     return sum(c) / 765
 
 
+DRAW_URL = "SISYPHUSBREWING.COM/DRAW"  # redirects to staff.sisyphusbrewing.com/sign/
 GUEST_FPS = 3  # guest pictures flip through their frames 3 times a second
 
 
@@ -1167,7 +1168,12 @@ def art_screen(a):
         s.layers.append(draw)
     # who drew it, from the name box on /sign/ (Sam, Nov 12 2026)
     who = " ".join(plain(a.get("from_name") or "").split())
-    caption_block(s, plain(a.get("caption") or ""), ("BY " + who)[:21] if who else "")
+    caption_block(s, plain(a.get("caption") or ""), ("BY " + who)[:21] if who else "", room=SIZE - TEXT_Y - 9)
+    # and how to draw your own, scrolling along the bottom row (Sam, Nov 13 2026:
+    # "Can we have the sign display a simple url")
+    url = "DRAW YOURS AT " + DRAW_URL
+    span = SIZE + 6 * len(url)
+    s.layers.append(lambda img, t: pixel_text(img, url, SIZE - int(t * 30) % span, SIZE - 8, WHITE))
     return s
 
 
@@ -1182,13 +1188,14 @@ def next_art():
 
 
 def sign_config():
-    """Seconds per picture, the slides switched off and the brightness, all set
-    by a manager on /sign/review.html."""
+    """Seconds per picture, the slides switched off, the brightness and whether
+    the sign is on at all, all set by a manager on /sign/review.html."""
     r = http.post(URL.replace("sign_next", "sign_config"), headers={"apikey": KEY, "Content-Type": "application/json"},
                   data="{}", timeout=15)
     c = r.json()
     bright = min(100, max(5, int(c.get("brightness") or BRIGHT)))
-    return min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or []), bright
+    return (min(120.0, max(2.0, float(c.get("seconds") or SHOW))), set(c.get("hidden") or []), bright,
+            c.get("on") is not False)
 
 
 def slide_key(name):
@@ -1286,15 +1293,15 @@ def to_panels(img, layout, turn_all=0):
 
 
 def playlist(beers):
-    """One lap of the sign: every beer in menu order, a guest's picture after
-    every 3rd beer, and "draw on this sign" once, at the end of the lap (Sam,
-    Nov 12 2026: every 5 beers was too often)."""
-    out = []
-    for i, beer in enumerate(beers):
+    """One lap of the sign: a guest's picture first and then after every beer,
+    and "draw on this sign" once, at the end of the lap (Sam, Nov 12 2026:
+    every 5 beers was too often). Sam, Nov 15 2026: "Prioritize showing the
+    customer ones over the beer ones", so guests get a slot after each beer,
+    not every 3rd. Drawings take turns with no waiting time (Sam, same day),
+    and a slot is skipped only when there are no approved drawings."""
+    out = [("guest", None)]
+    for beer in beers:
         out.append(("beer", beer))
-        if i % 3 == 2:
-            out.append(("guest", None))
-    if not out or out[-1][0] != "guest":
         out.append(("guest", None))
     out.append(("plug", None))
     return out
@@ -1327,6 +1334,31 @@ def main():
     matrix = open_panels()
     canvas = matrix.CreateFrameCanvas()
 
+    def stay_dark():
+        """Switched off on the review page (Sam, Nov 14 2026: "turn off taproom
+        bar digital animation sign"): black panels, a look at the setting every
+        30 seconds, and still picking up new versions of this program."""
+        nonlocal canvas
+        print("switched off on the review page", flush=True)
+        canvas.Clear()
+        canvas = matrix.SwapOnVSync(canvas)
+        checked = time.monotonic()
+        while True:
+            time.sleep(30)
+            try:
+                if sign_config()[3]:
+                    print("switched back on", flush=True)
+                    return
+            except Exception as e:  # no Wi-Fi: stay dark and keep asking
+                print("config", e, flush=True)
+            if time.monotonic() - checked > UPDATE_EVERY:
+                checked = time.monotonic()
+                try:
+                    if newer_on_site():
+                        sys.exit(0)  # the service starts the new version
+                except Exception as e:
+                    print("update check", e, flush=True)
+
     def show(screen, seconds):
         nonlocal canvas
         start = time.monotonic()
@@ -1353,6 +1385,7 @@ def main():
             except Exception as e:  # no Wi-Fi: keep the last list
                 print("menu", e, flush=True)
         shown = False
+        last_kind = None
         for kind, beer in playlist(beers):
             if time.monotonic() - update_at > UPDATE_EVERY:
                 update_at = time.monotonic()
@@ -1365,10 +1398,13 @@ def main():
             if time.monotonic() - config_at > 60:
                 config_at = time.monotonic()
                 try:
-                    seconds, hidden, bright = sign_config()
+                    seconds, hidden, bright, on = sign_config()
                     if os.getenv("SIGN_BRIGHTNESS"):
                         bright = BRIGHT
                     matrix.brightness = bright  # Sam, Nov 13 2026: "make it dimmer"
+                    if not on:
+                        stay_dark()
+                        config_at = -1e9  # fresh settings once it's back on
                 except Exception as e:  # keep the last settings
                     print("config", e, flush=True)
                 if os.getenv("SIGN_SHOW"):
@@ -1379,6 +1415,12 @@ def main():
                 plug_at = time.monotonic()
             if kind == "beer" and slide_key(beer.get("name") or "") in hidden:
                 continue
+            # One guest try per beer actually on screen: switched-off beers
+            # would otherwise leave guest slots back to back, each one a call
+            # to Supabase.
+            if kind == "guest" and last_kind == "guest":
+                continue
+            last_kind = kind
             try:
                 screen = screen_for(kind, beer)
             except Exception as e:  # no Wi-Fi for a guest's picture: skip it

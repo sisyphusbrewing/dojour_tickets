@@ -5,14 +5,21 @@ Every morning the "Automatic advances" action runs this. Sam decided on
 Nov 9 2026 that Grace shouldn't have to ask for advance links: any headliner
 run starting in the next 21 days that has no advance yet gets one.
 
-  1. Upcoming headliner shows come from show_history (every Dojour showtime;
-     the free recurring nights live only on the website, so they never show
-     up there). Recurring shows Sam listed (Magicians, Magic: The Gathering,
-     Blingo, Advice Column and the like) are skipped by name anyway.
-  2. Showtimes of the same comic within 3 days of each other are one run
-     (Fri + Sat = one advance, one email).
+  1. Upcoming headliner shows come from two lists: every showtime on sale on
+     the website (exchange_showtimes, refreshed by the sync every 4 hours)
+     and every Dojour showtime (show_history). At first this read Dojour
+     alone, because only headliners were ever listed there; with Dojour being
+     phased out, new shows are on the website only and were being missed
+     (Sam, Nov 15 2026). The house nights are kept out two ways: free website
+     showtimes never count, and the recurring shows Sam listed (Magicians,
+     Magic: The Gathering, Blingo, Advice Column and the like) are skipped by
+     name.
+  2. Showtimes of the same show within a week of each other are one run
+     (Fri + Sat = one advance, one email; so is a show that plays Sunday,
+     Wednesday and the Sunday after).
   3. A run that already has an advance (made on the booking desk or here) is
-     left alone.
+     left alone, including its later nights once the first ones have played. So is a run a manager marked on the Booking board as
+     "Advance: not needed" or as fallen through.
   4. If we know the comic's own email (from the weekly-report list, a past
      advance or the pay list; agency addresses never count, since agents
      rarely fill these in) the advance is made and the "You're booked"
@@ -49,14 +56,19 @@ CENTRAL = ZoneInfo("America/Chicago")
 DESK = "https://staff.sisyphusbrewing.com/advance/booking.html#/a/"
 
 DAYS_OUT = 21          # make the advance this many days before the first night
-RUN_GAP_DAYS = 3       # showtimes this close together are one run
+# Nights of one show up to a week apart are one run and get one advance. It
+# was 3 days, which fits a Thursday-to-Saturday comic but split a show playing
+# Sunday, Wednesday, Sunday into separate runs. (Nov 15 2026)
+RUN_GAP_DAYS = 7
+LOOK_AHEAD_DAYS = 90   # read this far ahead, so a run's last night is known
+LOOK_BACK_DAYS = 60    # advances and board rows this old can still cover a run
 AUTO_NOTE = "Made automatically"   # marks advances this script made (staff_notes)
 
 # Shows that never get an advance (Sam, Nov 9 2026: "reoccuring events like
 # Magicians, magic the gathering, blingo, advice column, etc can be skipped").
 SKIP = re.compile(
     r"cancel|postpon|magic|gathering|blingo|advice column|\bmic\b|showcase|queen.?s gambit|chess|"
-    r"trivia|class|workshop|private event", re.IGNORECASE)
+    r"trivia|class|workshop|private event|poets", re.IGNORECASE)
 
 
 def family(title):
@@ -70,9 +82,18 @@ def central_day(ts):
     return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(CENTRAL).date()
 
 
+def website_nights(showtimes):
+    """Website showtimes (exchange_showtimes rows) in the same shape as the
+    Dojour list, so both can be read together. Free showtimes are left out:
+    those are the house nights (open mics, Blingo), never a booked headliner."""
+    return [{"show_title": row.get("show_title"), "starts_at": row.get("starts_at")}
+            for row in showtimes if float(row.get("price") or 0) > 0]
+
+
 def runs(history, today):
     """[{title, family, first, last}] for headliner runs whose first night is
-    from tomorrow up to DAYS_OUT days away. history = show_history rows."""
+    from tomorrow up to DAYS_OUT days away. history = Dojour showtimes
+    (show_history rows) plus website_nights(); a show on both lists is one run."""
     nights = {}
     for row in history:
         title = (row.get("show_title") or row.get("event_title") or "").strip()
@@ -100,13 +121,24 @@ def runs(history, today):
             if (a - today).days <= DAYS_OUT]
 
 
+def covers(run, first, last=None):
+    """True when the dates first..last (ISO strings; last may be empty) belong
+    to this run: they come within RUN_GAP_DAYS of its nights. Compared against
+    the whole run, not just its first night, because once a run has started
+    only its remaining nights are still in the showtime lists."""
+    if not first:
+        return False
+    a = date.fromisoformat(first)
+    b = max(a, date.fromisoformat(last)) if last else a
+    gap = timedelta(days=RUN_GAP_DAYS)
+    return a - gap <= run["last"] and run["first"] <= b + gap
+
+
 def has_advance(run, advances):
     for a in advances:
-        if not a.get("show_date"):
-            continue
         if family(a.get("show_name")) != run["family"] and family(a.get("act_name")) != run["family"]:
             continue
-        if abs((date.fromisoformat(a["show_date"]) - run["first"]).days) <= RUN_GAP_DAYS:
+        if covers(run, a.get("show_date"), a.get("show_end_date")):
             return True
     return False
 
@@ -147,14 +179,26 @@ def contacts(run, agents, advances, payees):
     return found
 
 
-def plan(history, advances, agents, today, payees=(), past_advances=()):
+def off_on_board(run, board):
+    """True when a manager said on the Booking board that this run needs no
+    advance ("Advance: not needed") or that it fell through. board =
+    booking_shows rows."""
+    for row in board:
+        if family(row.get("act")) != run["family"] or not covers(run, row.get("first_night"), row.get("last_night")):
+            continue
+        if row.get("stage") == "dropped" or (row.get("checks") or {}).get("advance") == "na":
+            return True
+    return False
+
+
+def plan(history, advances, agents, today, payees=(), past_advances=(), board=()):
     """What today's run does. Pure, so it can be tested.
     Returns [(action, run, emails, name)] where action is 'welcome' (make it and
     send it) or 'ask' (make it, ask booking@ for a contact), plus
     [advance] rows made earlier whose email has since been added ('send')."""
     todo = []
     for run in sorted(runs(history, today), key=lambda r: r["first"]):
-        if has_advance(run, advances):
+        if has_advance(run, advances) or off_on_board(run, board):
             continue
         emails = contacts(run, agents, list(past_advances) + list(advances), payees)
         todo.append(("welcome" if emails else "ask", run, emails, None))
@@ -216,22 +260,27 @@ def ask_booking(run, advance_id):
 
 def main():
     today = datetime.now(CENTRAL).date()
-    horizon = datetime.now(timezone.utc) + timedelta(days=DAYS_OUT + 2)
-    history = sb("GET", "show_history", params={"select": "show_title,event_title,starts_at",
-                                                 "starts_at": f"gte.{datetime.now(timezone.utc).isoformat()}",
-                                                 "and": f"(starts_at.lte.{horizon.isoformat()})"})
-    advances = sb("GET", "advances", params={"select": "id,show_name,act_name,show_date,contact_email,staff_notes,welcome_sent_at",
-                                             "show_date": f"gte.{today - timedelta(days=RUN_GAP_DAYS)}"})
+    # Read well past the three weeks: only runs starting inside them get an
+    # advance, but the whole run has to be seen to know its last night.
+    horizon = datetime.now(timezone.utc) + timedelta(days=DAYS_OUT + LOOK_AHEAD_DAYS)
+    window = {"starts_at": f"gte.{datetime.now(timezone.utc).isoformat()}", "and": f"(starts_at.lte.{horizon.isoformat()})"}
+    history = sb("GET", "show_history", params={"select": "show_title,event_title,starts_at", **window})
+    history += website_nights(sb("GET", "exchange_showtimes", params={"select": "show_title,starts_at,price", **window}))
+    board = sb("GET", "booking_shows", params={"select": "act,first_night,last_night,stage,checks",
+                                               "first_night": f"gte.{today - timedelta(days=LOOK_BACK_DAYS)}"})
+    advances = sb("GET", "advances", params={"select": "id,show_name,act_name,show_date,show_end_date,contact_email,staff_notes,welcome_sent_at",
+                                             "show_date": f"gte.{today - timedelta(days=LOOK_BACK_DAYS)}"})
     agents = sb("GET", "show_agents", params={"select": "show_title,agent_name,agent_email"})
     past = sb("GET", "advances", params={"select": "show_name,act_name,show_date,contact_email",
                                          "contact_email": "not.is.null"})
     payees = sb("GET", "payees", params={"select": "name,email"})
-    todo, later = plan(history, advances, agents, today, payees, past)
+    todo, later = plan(history, advances, agents, today, payees, past, board)
 
     if not todo and not later:
         print("Nothing to do: every headliner run in the next 3 weeks already has an advance.")
     for action, run, emails, name in todo:
-        print(f"{when(run)} {run['title']}: " + (f"make advance + welcome to {', '.join(emails)}" if action == "welcome"
+        # The log is public: say how many addresses, never the addresses.
+        print(f"{when(run)} {run['title']}: " + (f"make advance + welcome to the comic ({len(emails)} address{'es' if len(emails) != 1 else ''})" if action == "welcome"
                                                 else "make advance, ask booking@ for a contact"))
         if DRY_RUN:
             continue
@@ -241,7 +290,7 @@ def main():
         else:
             ask_booking(run, adv["id"])
     for a in later:
-        print(f"{a['show_date']} {a['show_name']}: email added on the desk, sending the welcome to {a['contact_email']}")
+        print(f"{a['show_date']} {a['show_name']}: email added on the desk, sending the welcome")
         if not DRY_RUN:
             send_welcome(a["id"])
     if DRY_RUN:

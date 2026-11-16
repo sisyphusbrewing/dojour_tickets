@@ -1,0 +1,245 @@
+"""
+Sisyphus - tell staff about schedule changes, by email or text.
+
+The schedule page (schedule/index.html, staff hub > Schedule) writes a short
+notice to the schedule_outbox table whenever something affects a person: a
+week is posted, their shift changes, a shift is up for grabs, time off is
+answered. This script sends the notices nobody has been sent yet, the way
+each person picked on the schedule page under "How to reach me": email, text,
+both or neither (Sam, Nov 14 2026: "Staff should be able to choose if they
+want text or e-mail, or both").
+
+It also queues the "you work today" reminders, once a day from 9 AM Central.
+
+Run by the "Schedule notices" action every 15 minutes while we're awake, and
+right away when someone changes the schedule.
+
+Texts go through Twilio and only when the TWILIO_ACCOUNT_SID,
+TWILIO_AUTH_TOKEN and TWILIO_FROM secrets exist. Until then a person who
+picked "text" gets the same notice by email instead.
+
+Several notices for one person go out as one email, not five.
+
+The log of a GitHub Action in this repo is public, so this never prints a
+name, an email address, a phone number or what a notice says.
+
+    python schedule_notify.py
+    DRY_RUN=1 ...   shows what would be sent (addresses masked), sends nothing
+"""
+import os
+import smtplib
+import ssl
+import sys
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
+from zoneinfo import ZoneInfo
+
+import requests
+
+SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co").rstrip("/")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
+SMTP_HOST = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
+SMTP_USER = (os.environ.get("SMTP_USER") or "").strip()
+SMTP_PASS = (os.environ.get("SMTP_PASS") or "").replace(" ", "").strip()
+FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
+TWILIO_SID = (os.environ.get("TWILIO_ACCOUNT_SID") or "").strip()
+TWILIO_TOKEN = (os.environ.get("TWILIO_AUTH_TOKEN") or "").strip()
+TWILIO_FROM = (os.environ.get("TWILIO_FROM") or "").strip()
+DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
+PAGE_URL = "https://staff.sisyphusbrewing.com/schedule/"
+AUTH = {"apikey": SERVICE_KEY, "Authorization": f"Bearer {SERVICE_KEY}", "Content-Type": "application/json"}
+CENTRAL = ZoneInfo("America/Chicago")
+
+REMIND_FROM_HOUR = 9       # "you work today" goes out from 9 AM Central
+REMINDER_STALE_HOURS = 14  # a "you work today" that old is about yesterday; drop it
+GIVE_UP_DAYS = 3           # anything unsent this long is dropped, not sent late
+TEXT_MAX = 600             # keep a text to a few segments
+
+# What the email subject says for each kind of notice.
+SUBJECTS = {
+    "published": "Your schedule is posted",
+    "shift_new": "New shift for you",
+    "shift_changed": "Your shift changed",
+    "shift_off": "You're off a shift",
+    "shift_offered": "A shift is up for grabs",
+    "shift_taken": "A shift got covered",
+    "timeoff_asked": "Time off request",
+    "timeoff_approved": "Your time off was approved",
+    "timeoff_denied": "Your time off was declined",
+    "timeoff_cancelled": "A time off request was taken back",
+    "availability": "Someone changed when they can work",
+    "reminder": "You work today",
+}
+
+
+def texts_on():
+    return bool(TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM)
+
+
+def parse_time(value):
+    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+
+
+def mask(value):
+    """j***@gmail.com, ***-0100: enough to recognise in a dry run, no more."""
+    value = str(value or "")
+    if "@" in value:
+        return value[0] + "***@" + value.split("@", 1)[1]
+    return "***-" + value[-4:] if value else ""
+
+
+def plan(rows, can_text, now):
+    """Decide what to send. Pure: no network, so the tests can check every rule.
+
+    rows are the unsent notices (schedule_outbox_pending). Returns
+    (deliveries, skipped): deliveries is one entry per person per way of
+    reaching them, skipped maps a notice id to the reason it won't be sent.
+    """
+    skipped = {}
+    people = {}
+    for row in rows:
+        age = now - parse_time(row["created_at"])
+        if row["kind"] == "reminder" and age > timedelta(hours=REMINDER_STALE_HOURS):
+            skipped[row["id"]] = "too late to be useful"
+            continue
+        if age > timedelta(days=GIVE_UP_DAYS):
+            skipped[row["id"]] = "too late to be useful"
+            continue
+        by = row.get("notify_by") or "email"
+        if by == "none":
+            skipped[row["id"]] = "asked for no notices"
+            continue
+        people.setdefault(row["user_id"], []).append(row)
+
+    deliveries = []
+    for rows_for in people.values():
+        one = rows_for[0]
+        by = one.get("notify_by") or "email"
+        email = (one.get("notify_email") or "").strip()
+        phone = (one.get("notify_phone") or "").strip()
+        want_email = by in ("email", "both")
+        want_text = by in ("text", "both")
+        # Texts not switched on yet (or no number): the email carries it.
+        if want_text and (not can_text or not phone):
+            want_text = False
+            want_email = True
+        if want_email and not email:
+            want_email = False
+        ids = [r["id"] for r in rows_for]
+        if not want_email and not want_text:
+            for i in ids:
+                skipped[i] = "no email or mobile number on file"
+            continue
+        bodies = [r["body"] for r in rows_for]
+        first = (one.get("name") or "").split(" ")[0]
+        if want_email:
+            subject = SUBJECTS.get(one["kind"], "Schedule update") if len(rows_for) == 1 \
+                else f"Sisyphus schedule: {len(rows_for)} updates"
+            lines = [f"Hi {first}," if first else "Hi,", ""]
+            lines += bodies if len(bodies) == 1 else [f"- {b}" for b in bodies]
+            lines += ["", f"The schedule: {PAGE_URL}", "",
+                      "To get these by text instead, or to stop them, open that page and look under \"How to reach me\".",
+                      "", "Sisyphus"]
+            deliveries.append({"how": "email", "to": email, "ids": ids, "subject": subject, "body": "\n".join(lines)})
+        if want_text:
+            text = "Sisyphus: " + " / ".join(bodies)
+            if len(text) > TEXT_MAX:
+                text = text[:TEXT_MAX - 40].rstrip() + "... More on the schedule page."
+            deliveries.append({"how": "text", "to": "+1" + phone, "ids": ids, "body": text})
+    return deliveries, skipped
+
+
+def rpc(name):
+    r = requests.post(f"{SUPABASE_URL}/rest/v1/rpc/{name}", headers=AUTH, json={}, timeout=30)
+    if r.status_code == 404:
+        # The schedule tables aren't in the database yet. Nothing to do, and not an error.
+        print("The schedule isn't switched on yet.")
+        sys.exit(0)
+    r.raise_for_status()
+    return r.json()
+
+
+def stamp(ids, how):
+    """Mark notices handled, with how they went (or why they didn't)."""
+    if not ids:
+        return
+    r = requests.patch(f"{SUPABASE_URL}/rest/v1/schedule_outbox",
+                       params={"id": f"in.({','.join(str(i) for i in ids)})"},
+                       json={"sent_at": datetime.now(timezone.utc).isoformat(), "sent_how": how},
+                       headers={**AUTH, "Prefer": "return=minimal"}, timeout=30)
+    r.raise_for_status()
+
+
+def send_text(to, body):
+    r = requests.post(f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_SID}/Messages.json",
+                      auth=(TWILIO_SID, TWILIO_TOKEN), data={"To": to, "From": TWILIO_FROM, "Body": body}, timeout=30)
+    r.raise_for_status()
+
+
+def main():
+    now = datetime.now(timezone.utc)
+    if not DRY_RUN and now.astimezone(CENTRAL).hour >= REMIND_FROM_HOUR:
+        queued = rpc("schedule_queue_reminders")
+        if queued:
+            print(f"Queued {queued} reminder(s) for today's shifts.")
+
+    rows = rpc("schedule_outbox_pending")
+    if not rows:
+        print("Nothing to send. The boulder rests.")
+        return
+    deliveries, skipped = plan(rows, texts_on(), now)
+
+    if DRY_RUN:
+        for d in deliveries:
+            print(f"[DRY RUN] {d['how']} to {mask(d['to'])}, notices {d['ids']}:")
+            print(d.get("subject", ""))
+            print(d["body"], "\n")
+        for i, why in skipped.items():
+            print(f"[DRY RUN] notice {i} not sent: {why}")
+        return
+
+    for why in sorted(set(skipped.values())):
+        stamp([i for i, w in skipped.items() if w == why], f"not sent: {why}")
+
+    server = None
+    sent = {}      # notice id -> ways it went out
+    failed = set()
+    try:
+        for d in deliveries:
+            try:
+                if d["how"] == "email":
+                    if not SMTP_USER or not SMTP_PASS:
+                        sys.exit("SMTP credentials missing (SMTP_USER / SMTP_PASS).")
+                    if server is None:
+                        server = smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30)
+                        server.login(SMTP_USER, SMTP_PASS)
+                    msg = EmailMessage()
+                    msg["Subject"] = d["subject"]
+                    msg["From"] = f"Sisyphus Schedule <{FROM_EMAIL}>"
+                    msg["To"] = d["to"]
+                    msg.set_content(d["body"])
+                    server.send_message(msg)
+                else:
+                    send_text(d["to"], d["body"])
+                for i in d["ids"]:
+                    sent.setdefault(i, []).append(d["how"])
+            except (smtplib.SMTPException, requests.RequestException, OSError) as err:
+                # Say that it failed, never who it was for. It is tried again next run.
+                failed.update(d["ids"])
+                print(f"A {d['how']} did not go out ({type(err).__name__}); notices {d['ids']} will be retried.")
+    finally:
+        if server is not None:
+            server.quit()
+
+    # A notice is done once it went out at least one way, so nobody gets it twice.
+    by_how = {}
+    for i, hows in sent.items():
+        by_how.setdefault("+".join(sorted(set(hows))), []).append(i)
+    for how, ids in by_how.items():
+        stamp(ids, how)
+    print(f"Sent {len(sent)} notice(s) in {len(deliveries)} message(s); "
+          f"{len(skipped)} not sent; {len(failed - set(sent))} to retry.")
+
+
+if __name__ == "__main__":
+    main()

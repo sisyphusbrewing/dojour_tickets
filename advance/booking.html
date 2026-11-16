@@ -164,7 +164,7 @@
             <div class="field full"><label>Show title</label><input class="input" id="cTitle"></div>
             <div class="field full"><label>Showtimes (one per line)</label><textarea class="input" id="cTimes" style="min-height:64px"></textarea></div>
             <div class="field"><label>Ticket price</label><input class="input" id="cPrice" value="20.00" inputmode="decimal"></div>
-            <div class="field"><label>Seats</label><input class="input" id="cCap" value="90" inputmode="numeric"></div>
+            <div class="field"><label>Seats</label><input class="input" id="cCap" value="100" inputmode="numeric"></div>
           </div>
           <div class="actions"><button class="btn btn-primary" id="createGo" type="button">Publish to Shopify</button><button class="btn" id="createCancel" type="button">Never mind</button></div>
           <p class="fine" style="margin:6px 0 0">Uses their bio and headshot. Same pipeline as the door app; live in about a minute, poster follows.</p>
@@ -377,7 +377,7 @@
       var btn = $('createGo'); btn.disabled = true; btn.textContent = 'Publishing…';
       try {
         var res = await sb.functions.invoke('run-workflow', { body: { workflow: 'create_shopify_show.yml', inputs: {
-          comedian_name: title, showtimes: times.join(' | '), ticket_price: $('cPrice').value.trim() || '20.00', room_capacity: $('cCap').value.trim() || '90',
+          comedian_name: title, showtimes: times.join(' | '), ticket_price: $('cPrice').value.trim() || '20.00', room_capacity: $('cCap').value.trim() || '100',
           bio: (a.data || {}).bio || '', image_url: a.headshot_path ? publicUrl(a.headshot_path) : '' } } });
         if (res.error) { var msg = res.error.message; try { var b = await res.error.context.json(); if (b && b.error) msg = b.error; } catch (e) {} toast('Failed: ' + msg); return; }
         toast('Publishing. Live in about a minute.');

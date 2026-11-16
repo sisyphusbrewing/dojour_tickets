@@ -14,7 +14,7 @@ To skip one date (a holiday, or another show in the room), also tag it
 
 Monthly events keep the next MONTHLY_AHEAD dates listed, weekly events the
 next WEEKLY_AHEAD. New dates copy the price of the show's existing dates and
-the largest capacity among them (default 90, never more than the room's 90). Only shows with a single
+the largest capacity among them (default 100, never more than the room's 100). Only shows with a single
 "Date & Time" option are handled; anything else is reported and left alone.
 """
 import re
@@ -24,8 +24,8 @@ from show_dates import parse_show_datetime, CENTRAL_TZ
 
 MONTHLY_AHEAD = 6
 WEEKLY_AHEAD = 8
-DEFAULT_CAPACITY = 90
-ROOM_MAX = 90  # seats in the showroom
+DEFAULT_CAPACITY = 100
+ROOM_MAX = 100  # seats per show (was 90; Sam, Nov 14 2026)
 
 WEEKDAYS = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
 ORDINALS = {"1st": 1, "first": 1, "2nd": 2, "second": 2, "3rd": 3, "third": 3,
