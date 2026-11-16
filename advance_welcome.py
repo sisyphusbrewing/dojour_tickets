@@ -101,7 +101,9 @@ def build(a):
     url = TRIP_URL + a["token"]
     count = "" if days is None or days < 0 else "Tonight." if days == 0 else "Tomorrow." if days == 1 else f"{days} days out"
     hey = f"Hey {first}," if first else "Hey there,"
-    stretch = "weekend" if day and last and last > day else "night"
+    # "night" for one show, "weekend" for a Thursday-to-Sunday run, "run" when
+    # the nights are spread over more than that (Nov 15 2026).
+    stretch = "night" if not (day and last and last > day) else "weekend" if (last - day).days <= 3 else "run"
 
     def p(text, top=16, size=17, color="#ffffff"):
         return (f'<tr><td style="padding:{top}px 30px 0;font-family:{BODY};font-size:{size}px;line-height:1.5;color:{color}">{text}</td></tr>')
@@ -210,14 +212,15 @@ def main():
     if DRY_RUN:
         with open("welcome-preview.html", "w", encoding="utf-8") as f:
             f.write(body)
-        print(f"[DRY RUN] '{subject}' to {recipients} (bcc {bcc}); HTML in welcome-preview.html")
+        # The log is public: say how many addresses, never the addresses.
+        print(f"[DRY RUN] '{subject}' to {len(recipients)} address(es), {len(bcc or [])} copied; HTML in welcome-preview.html")
         return
     if not SMTP_USER or not SMTP_PASS:
         sys.exit("SMTP credentials missing (SMTP_USER / SMTP_PASS).")
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(FROM_EMAIL, recipients + bcc, msg.as_string())
-    print(f"Sent '{subject}' to {', '.join(recipients)}" + (" (preview)" if WELCOME_TO else ""))
+    print(f"Sent '{subject}' to {len(recipients)} address(es)" + (" (preview)" if WELCOME_TO else ""))
     if not WELCOME_TO:
         mark_sent()
 
