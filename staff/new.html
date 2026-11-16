@@ -14,18 +14,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="look.css">
   <link rel="stylesheet" href="hub.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
   <script src="tools.js"></script>
   <script src="news.js"></script>
 </head>
-<body class="hub-page">
+<body class="hub-page look">
   <!-- The staff home page (Sam, Nov 14 2026: "the whole staff site could use an
        overhaul to improve the user interface and functionality for the staff").
        Top to bottom it answers what someone walking in for a shift asks:
        what's on tonight, when do I work, what changed, and where is the tool
-       I need. The tools come from tools.js; this page only lays them out. -->
+       I need. The tools come from tools.js; this page only lays them out.
+       Kept plain on purpose (Sam, Nov 15 2026: "simple and easy for people to
+       read and use"): big text, one thing to tap per box, no decoration. -->
   <div id="lock" class="hidden">
     <div class="card">
       <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
@@ -46,7 +49,7 @@
       <div class="hdr">
         <a class="hdr-brand" href="./">
           <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
-          <div class="hdr-title">Staff<small id="todayLabel">&nbsp;</small></div>
+          <div class="hdr-title">Staff</div>
         </a>
         <!-- Who is signed in, with sign out and a password change. -->
         <details class="acct hidden" id="acct">
@@ -65,11 +68,11 @@
     <div class="col-l">
       <section class="hello" id="helloSection">
         <h1 id="hello">Hello.</h1>
-        <p>Pick a job, push a button. The boulder does not push itself.</p>
+        <p id="todayLabel">&nbsp;</p>
       </section>
 
-      <!-- Tonight: the shows on today, how full they are, and the three
-           things show night needs, one tap away. -->
+      <!-- Tonight: the shows on today, how many tickets each has sold, and
+           the door list one tap away. -->
       <section id="tonightSection">
         <div class="tonight" id="tonight"><p class="quiet">Checking tonight…</p></div>
       </section>
@@ -77,19 +80,21 @@
       <!-- When this login works next, and who else is on today. Stays hidden
            for logins that aren't on the schedule. -->
       <section id="shiftSection" class="hidden">
-        <a class="shift-card" href="../schedule/" data-tool="schedule">
-          <div class="ico">🕓</div>
-          <div class="shift-main"><b id="shiftHead">Your next shift</b><span id="shiftLine"></span><span class="shift-crew" id="shiftCrew"></span></div>
-          <div class="chev">›</div>
-        </a>
+        <div class="list">
+          <a class="go" href="../schedule/">
+            <div><small id="shiftHead">Your next shift</small><b id="shiftLine"></b></div><span class="chev">›</span>
+          </a>
+          <a class="go gold hidden" id="grabRow" href="../schedule/#grabs">
+            <div><b id="grabLine"></b></div><span class="chev">›</span>
+          </a>
+        </div>
       </section>
 
       <section id="toolsSection">
         <div class="band-row"><span class="band">Tools</span></div>
-        <div class="search find">
-          <input class="input" id="find" type="search" placeholder="Find a tool: door, timer, swap…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="Find a tool">
+        <div class="search find hidden" id="findBox">
+          <input class="input" id="find" type="search" placeholder="Find a tool" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" aria-label="Find a tool">
         </div>
-        <div class="usual hidden" id="usual"></div>
         <div id="groups"></div>
         <p class="quiet hidden" id="noTools">Nothing by that name. Try one word, like “door” or “menu”.</p>
       </section>
@@ -101,8 +106,8 @@
       <!-- Tickets sold for the next shows, Dojour + website (Sam, Nov 13 2026). -->
       <section id="showsSection">
         <div class="band-row"><span class="band">Coming up</span><span class="band-note">Tickets sold</span></div>
-        <div class="up-list" id="upShows"><p class="quiet">Counting…</p></div>
-        <p style="margin:8px 0 0"><button class="btn-link hidden" id="upMore"></button></p>
+        <div class="up-list list" id="upShows"><p class="quiet">Counting…</p></div>
+        <button class="btn-link hidden" id="upMore"></button>
       </section>
     </div>
 
@@ -128,8 +133,9 @@
   <div class="toast hidden" id="toast"></div>
 
   <script>
-    var SEATS = 90;            // a full room, for the bars
-    var UP_FIRST = 8;          // showtimes listed before "All upcoming shows"
+    var SEATS = 90;            // a full room, for how long each bar is drawn
+    var UP_FIRST = 5;          // nights listed before "All upcoming shows"
+    var LONG_LIST = 12;        // more tools than this and the list gets headings and a search box
     var SHARED_LOGINS = ['door', 'staff', 'recorder'];   // several people use these, so no password change here
     var myRole = 'door', myUser = null, myTools = [];
 
@@ -189,12 +195,12 @@
     });
 
     // ---------- Tools ----------
-    // Tiles come from tools.js, already narrowed to what this login can open.
-    // Typing in the box filters them; Enter opens the first match.
+    // A grid of buttons from tools.js, already narrowed to what this login can
+    // open. A short list (the everyday staff logins) is just the buttons. A
+    // long one (managers, Sam) also gets headings and a search box.
     function tileHtml(t) {
-      return '<a class="tile" data-tool="' + t.id + '" href="' + toolHref(t) + '"' + (t.out ? ' target="_blank" rel="noopener"' : '') + '>' +
-        '<div class="ico">' + t.ico + '</div><div class="tile-main"><b>' + escapeHtml(t.title) + '</b><span>' + escapeHtml(t.desc) + '</span></div>' +
-        '<div class="chev">' + (t.out ? '↗' : '›') + '</div></a>';
+      return '<a class="tile" href="' + toolHref(t) + '" title="' + escapeHtml(t.desc) + '"' + (t.out ? ' target="_blank" rel="noopener"' : '') + '>' +
+        '<i>' + t.ico + '</i><span>' + escapeHtml(t.short || t.title) + '</span></a>';
     }
     // tools.js writes links from the top of the site ("/timer/"); this page lives in /staff/.
     function toolHref(t) { return t.href.charAt(0) === '/' ? '..' + t.href : t.href; }
@@ -205,35 +211,26 @@
     }
     function drawTools(q) {
       q = q.trim().toLowerCase();
+      var long = myTools.length > LONG_LIST;
+      $('findBox').classList.toggle('hidden', !long);
       var shown = myTools.filter(function (t) { return matches(t, q); });
-      $('groups').innerHTML = STAFF_GROUPS.map(function (g) {
-        var tiles = shown.filter(function (t) { return t.group === g.id; });
-        return tiles.length ? '<h3 class="grp">' + escapeHtml(g.title) + '</h3><div class="tiles">' + tiles.map(tileHtml).join('') + '</div>' : '';
-      }).join('');
+      $('groups').innerHTML = !shown.length ? '' : long
+        ? STAFF_GROUPS.map(function (g) {
+            var tiles = shown.filter(function (t) { return t.group === g.id; });
+            return tiles.length ? '<h3 class="grp">' + escapeHtml(g.title) + '</h3><div class="tiles">' + tiles.map(tileHtml).join('') + '</div>' : '';
+          }).join('')
+        : '<div class="tiles">' + shown.map(tileHtml).join('') + '</div>';
       $('noTools').classList.toggle('hidden', shown.length > 0);
-      // "Your usual": the tools opened most on this device, once there's a pattern.
-      var use = staffToolUse();
-      var usual = q ? [] : myTools.filter(function (t) { return use[t.id] >= 2; })
-        .sort(function (a, b) { return use[b.id] - use[a.id]; }).slice(0, 4);
-      $('usual').classList.toggle('hidden', usual.length < 2);
-      $('usual').innerHTML = '<span class="usual-lbl">Your usual</span>' + usual.map(function (t) {
-        return '<a class="pill" data-tool="' + t.id + '" href="' + toolHref(t) + '"' + (t.out ? ' target="_blank" rel="noopener"' : '') + '>' +
-          '<i>' + t.ico + '</i>' + escapeHtml(t.title) + '</a>';
-      }).join('');
     }
     $('find').addEventListener('input', function () { drawTools(this.value); });
     $('find').addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       var first = document.querySelector('#groups .tile');
-      if (first) { staffToolUsed(first.dataset.tool); first.click(); }
+      if (first) first.click();
     });
-    // "/" jumps to the search box, the way it does on most sites.
+    // On a computer, "/" jumps to the search box, the way it does on most sites.
     document.addEventListener('keydown', function (e) {
-      if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); $('find').focus(); }
-    });
-    document.addEventListener('click', function (e) {
-      var a = e.target.closest ? e.target.closest('[data-tool]') : null;
-      if (a) staffToolUsed(a.dataset.tool);
+      if (e.key === '/' && !$('findBox').classList.contains('hidden') && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); $('find').focus(); }
     });
     function can(id) { return myTools.some(function (t) { return t.id === id; }); }
 
@@ -262,55 +259,54 @@
     // The working day runs until 5 AM, so a late show is still "tonight" after midnight.
     function dayKey(ms) { var d = new Date(ms - 5 * 60 * 60 * 1000); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
     function fullness(s) { return Math.min(100, Math.round(100 * s.sold / SEATS)); }
-    function soldWord(s) { return s.sold >= SEATS ? 'Full house' : s.sold + ' sold'; }
+
+    // Shows on the same night with the same name are one "night": the name
+    // once, then a line per showtime with how many tickets it has sold.
+    function nights(shows) {
+      var out = [], by = {};
+      shows.forEach(function (s) {
+        var key = dayKey(s.ts) + '|' + s.show_title;
+        if (!by[key]) { by[key] = { ts: s.ts, title: s.show_title, shows: [] }; out.push(by[key]); }
+        by[key].shows.push(s);
+      });
+      return out;
+    }
+    function nightHtml(n, word) {
+      return '<div class="night-t">' + escapeHtml(n.title) + '</div><div class="times">' + n.shows.map(function (s) {
+        return '<div class="time"><b>' + escapeHtml(showTime(s.show_date)) + '</b><div class="bar"><i style="width:' + fullness(s) + '%"></i></div>' +
+          '<span>' + s.sold + word + '</span></div>';
+      }).join('') + '</div>';
+    }
 
     function drawTonight(shows) {
       var today = dayKey(Date.now());
-      var on = shows.filter(function (s) { return dayKey(s.ts) === today; });
-      var acts = '';
-      if (can('door')) acts += '<a class="btn btn-primary" data-tool="door" href="../">Open the door list</a>';
-      if (can('timer')) acts += '<a class="btn" data-tool="timer" href="../timer/">Stage timer</a>';
-      if (can('deck')) acts += '<a class="btn" data-tool="deck" href="stream-deck.html">Deck guide</a>';
+      var on = nights(shows.filter(function (s) { return dayKey(s.ts) === today; }));
       if (on.length) {
-        $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div>' + on.map(function (s) {
-          return '<div class="tn-show"><div class="tn-top"><div><div class="tn-title">' + escapeHtml(s.show_title) + '</div>' +
-            '<div class="tn-time">' + escapeHtml(showTime(s.show_date)) + '</div></div>' +
-            '<div class="tn-num"><b>' + s.sold + '</b><small>' + (s.sold >= SEATS ? 'full house' : 'sold') + '</small></div></div>' +
-            '<div class="up-bar"><i style="width:' + fullness(s) + '%"></i></div></div>';
-        }).join('') + '<div class="tn-acts">' + acts + '</div>';
+        $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div>' + on.map(function (n) { return nightHtml(n, ' sold'); }).join('') +
+          (can('door') ? '<a class="btn" href="../">Open the door list</a>' : '');
         return;
       }
       var next = shows[0];
       $('tonight').className = 'tonight dark';
-      $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div><div class="tn-title">No show tonight.</div>' +
+      $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div><div class="night-t">No show tonight.</div>' +
         (next ? '<div class="tn-next">Next up: <b>' + escapeHtml(next.show_title) + '</b>, ' + escapeHtml(next.show_date.replace(' • ', ' at ')) +
-          ' · ' + soldWord(next).toLowerCase() + '</div>'
-              : '<div class="tn-next">Nothing on sale right now.</div>') +
-        (acts ? '<div class="tn-acts">' + acts.replace('btn btn-primary', 'btn') + '</div>' : '');
+          ' · ' + next.sold + ' sold</div>'
+              : '<div class="tn-next">Nothing on sale right now.</div>');
     }
 
     function drawUpcoming(shows) {
-      if (!shows.length) { $('upShows').innerHTML = '<p class="quiet">No upcoming shows on sale.</p>'; return; }
-      function row(s) {
-        var bits = ['Website ' + s.web, 'Dojour ' + s.dojour];
-        if (Number(s.comps)) bits.push('Comps ' + s.comps);
-        return '<div class="up' + (s.sold >= SEATS ? ' full' : '') + '"><div class="up-top"><div class="up-t">' + escapeHtml(s.show_title) + '</div>' +
-          '<div class="up-n"><b>' + s.sold + '</b>' + (s.sold >= SEATS ? ' · full' : '') + '</div></div>' +
-          '<div class="up-d">' + escapeHtml(showTime(s.show_date)) + '<span>' + bits.join(' · ') + '</span></div>' +
-          '<div class="up-bar"><i style="width:' + fullness(s) + '%"></i></div></div>';
-      }
+      // Tonight has its own box at the top, so this list starts tomorrow.
+      var today = dayKey(Date.now());
+      var list = nights(shows.filter(function (s) { return dayKey(s.ts) !== today; }));
+      if (!list.length) { $('upShows').innerHTML = '<p class="quiet">No other shows on sale yet.</p>'; $('upMore').classList.add('hidden'); return; }
       var open = false;
       function draw() {
-        var list = open ? shows : shows.slice(0, UP_FIRST), html = '', last = '';
-        list.forEach(function (s) {
-          // One heading per day, so a two-show Friday reads as one night.
-          var day = new Date(s.ts).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-          if (day !== last) { html += '<div class="up-day">' + day + '</div>'; last = day; }
-          html += row(s);
-        });
-        $('upShows').innerHTML = html;
-        $('upMore').classList.toggle('hidden', shows.length <= UP_FIRST);
-        $('upMore').textContent = open ? 'Show fewer' : 'All upcoming shows (' + shows.length + ')';
+        $('upShows').innerHTML = (open ? list : list.slice(0, UP_FIRST)).map(function (n) {
+          var day = new Date(n.ts).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+          return '<div class="night"><div class="night-d">' + day + '</div>' + nightHtml(n, '') + '</div>';
+        }).join('');
+        $('upMore').classList.toggle('hidden', list.length <= UP_FIRST);
+        $('upMore').textContent = open ? 'Show fewer' : 'All upcoming shows';
       }
       $('upMore').onclick = function () { open = !open; draw(); };
       draw();
@@ -337,19 +333,22 @@
       if (res.error) return;
       var mine = (res.data || []).filter(function (s) { return s.user_id === myUser.id; });
       var grabs = (res.data || []).filter(function (s) { return s.user_id !== myUser.id && (!s.user_id || s.up_for_grabs); });
-      if (!mine.length && !grabs.length && !row.on_schedule) return;
+      // A login that isn't on the schedule (Sam's, the shared ones) gets no shift box.
+      if (!mine.length && !row.on_schedule) return;
       var next = mine[0];
       if (next) {
         var d = new Date(next.work_date + 'T12:00:00');
         var days = Math.round((d - new Date(today + 'T12:00:00')) / 86400000);
         var when = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         $('shiftHead').textContent = days === 0 ? 'You work today' : 'Your next shift';
-        $('shiftLine').textContent = when + ', ' + clock(next.start_time) + ' to ' + clock(next.end_time) + ' · ' + next.position;
+        $('shiftLine').textContent = (days === 0 ? '' : when + ', ') + clock(next.start_time) + ' to ' + clock(next.end_time) + ' · ' + next.position;
       } else {
-        $('shiftHead').textContent = 'Schedule';
-        $('shiftLine').textContent = 'No shifts on the schedule for you yet.';
+        $('shiftHead').textContent = 'Your next shift';
+        $('shiftLine').textContent = 'Nothing on the schedule for you yet';
       }
-      if (grabs.length) $('shiftCrew').textContent = grabs.length + ' shift' + (grabs.length > 1 ? 's' : '') + ' up for grabs';
+      // A shift nobody has, or one someone can't work: one tap to go take it.
+      $('grabRow').classList.toggle('hidden', !grabs.length || !row.on_schedule);
+      $('grabLine').textContent = grabs.length + ' shift' + (grabs.length > 1 ? 's' : '') + ' up for grabs';
       $('shiftSection').classList.remove('hidden');
     }
   </script>

@@ -61,6 +61,12 @@ Dojour gotchas, learned the hard way:
   login that may open it. A staff page gets the top bar with one line:
   `<script src="/staff/nav.js"></script>`. Don't put the bar on pages
   customers or comics see (exchange, payme, the Shopify embeds).
+- **`staff/look.css` is the simpler look** (Sam, Nov 15 2026: "simple and
+  easy for people to read and use"). A page uses it by loading it after
+  `staff.css` and putting `class="look"` on its `<body>`. Build new staff
+  pages on it: big plain text, plain headings, one box per list with thin
+  lines between rows, one bright button per box. The staff home page and the
+  Schedule use it; older tools move over one at a time, checked on a phone.
 - **`schedule/`** is the staff schedule that replaces When I Work (Sam, Nov 14
   2026). The rules (who sees drafts, who can take a shift, who gets told)
   live in the database, in `supabase/migrations/20261115040000_staff_schedule.sql`;

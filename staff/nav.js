@@ -53,8 +53,10 @@
     var find = nav.querySelector('.snav-find'), list = nav.querySelector('.snav-list');
     // What this login can open: the staff home page remembers it on each
     // device; a page that has the database connection loaded asks afresh.
-    var role = 'door', voice = false;
-    try { role = localStorage.getItem('staffRoleSeen') || 'door'; voice = !!localStorage.getItem('staffVoiceSeen'); } catch (e) {}
+    // A device that has never opened the staff home page gets the everyday
+    // staff list; a tool this login can't open simply says so when tapped.
+    var role = 'staff', voice = false;
+    try { role = localStorage.getItem('staffRoleSeen') || 'staff'; voice = !!localStorage.getItem('staffVoiceSeen'); } catch (e) {}
 
     function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     function href(t) { return t.href.charAt(0) === '/' ? base + t.href.slice(1) : t.href; }
@@ -72,7 +74,7 @@
       list.innerHTML = STAFF_GROUPS.map(function (g) {
         var mine = tools.filter(function (t) { return t.group === g.id; });
         return mine.length ? '<div class="snav-grp">' + esc(g.title) + '</div>' + mine.map(function (t) {
-          return '<a class="snav-tool' + (isHere(t) ? ' here' : '') + '" data-id="' + t.id + '" href="' + esc(href(t)) + '"' +
+          return '<a class="snav-tool' + (isHere(t) ? ' here' : '') + '" href="' + esc(href(t)) + '"' +
             (t.out ? ' target="_blank" rel="noopener"' : '') + '><i>' + t.ico + '</i>' + esc(t.title) + '</a>';
         }).join('') : '';
       }).join('') || '<p class="snav-none">Nothing by that name.</p>';
@@ -87,16 +89,16 @@
     find.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { var first = list.querySelector('.snav-tool'); if (first) first.click(); }
     });
-    list.addEventListener('click', function (e) {
-      var a = e.target.closest('.snav-tool');
-      if (a && window.staffToolUsed) staffToolUsed(a.dataset.id);
-    });
     document.addEventListener('click', function (e) { if (!nav.contains(e.target)) open(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });
 
     var db = window.sb || window.supabaseClient;
-    if (db && db.rpc) {
-      Promise.resolve(db.rpc('my_role')).then(function (r) {
+    if (db && db.rpc && db.auth) {
+      // Only ask once someone is signed in; a signed-out page has no role to ask about.
+      db.auth.getSession().then(function (res) {
+        if (!res.data || !res.data.session) return null;
+        return db.rpc('my_role');
+      }).then(function (r) {
         if (r && r.data) { role = r.data; try { localStorage.setItem('staffRoleSeen', role); } catch (e) {} }
       }).catch(function () {});
     }
