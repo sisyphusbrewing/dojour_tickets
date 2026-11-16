@@ -245,10 +245,11 @@
     //   threads   conversations in the booking@ inbox (booking_inbox.py)
     // Live ticket counts come from staff_show_counts(), same as the staff page.
     // ---------------------------------------------------------------------
-    // Who can open the board. Owner-only while Sam looks it over (Nov 15 2026).
-    // To hand it to Grace, change this to 'manager', and the same on the
-    // Booking board tile in staff/tools.js.
-    var OPEN_TO = 'owner';
+    // Who can open the board: managers and the owner. It was owner-only while
+    // Sam looked it over; he opened it to Grace on Nov 15 2026 ("send this to
+    // her and make it live"). The Booking board tile in staff/tools.js carries
+    // the same setting.
+    var OPEN_TO = 'manager';
     var SEATS = 90;                 // seats per showtime, for the sold bar
     var ADVANCE_DAYS = 21;          // advances go out three weeks before
     var W9_OVER = 2000;             // Sam, Nov 13 2026: pay over $2,000 needs a W-9
