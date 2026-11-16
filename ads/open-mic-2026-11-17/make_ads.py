@@ -50,7 +50,7 @@ def make(w, h, name):
     # Below: the hook.
     y = y0 + bh + (50 if h > w else 30)
     lines = [("NAMES DRAWN FROM A HAT.", 50, WHITE), ("ANYONE COULD GO UP.", 50, WHITE),
-             ("COMICS: SIGN UP ONLINE BY 5 PM", 32, PALE)]
+             ("COMICS: SIGN UP ONLINE BY 6:30 PM", 32, PALE)]
     for text, size, col in lines:
         spaced(d, w / 2, y, text, fit(d, text, size, 4, safe), col, 4)
         y += size + 24
