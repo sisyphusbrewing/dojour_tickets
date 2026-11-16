@@ -40,6 +40,10 @@
     var read = ups.data.filter(function (n) { return seen[n.id]; });
     $('news').innerHTML = unread.length ? unread.map(function (n) { return noteHtml(n, false); }).join('')
       : '<p class="all-caught">You’re all caught up.</p>';
+    // Lets a page lay out "nothing new" differently (the staff home page moves
+    // the whole section down the page once everything is read).
+    $('news').classList.toggle('caught', !unread.length);
+    $('newsSection').classList.toggle('caught', !unread.length);
     $('older').innerHTML = read.map(function (n) { return noteHtml(n, true); }).join('');
     $('olderToggle').classList.toggle('hidden', !read.length);
     $('olderToggle').textContent = 'Earlier updates (' + read.length + ')';

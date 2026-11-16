@@ -74,7 +74,7 @@
       list.innerHTML = STAFF_GROUPS.map(function (g) {
         var mine = tools.filter(function (t) { return t.group === g.id; });
         return mine.length ? '<div class="snav-grp">' + esc(g.title) + '</div>' + mine.map(function (t) {
-          return '<a class="snav-tool' + (isHere(t) ? ' here' : '') + '" data-id="' + t.id + '" href="' + esc(href(t)) + '"' +
+          return '<a class="snav-tool' + (isHere(t) ? ' here' : '') + '" href="' + esc(href(t)) + '"' +
             (t.out ? ' target="_blank" rel="noopener"' : '') + '><i>' + t.ico + '</i>' + esc(t.title) + '</a>';
         }).join('') : '';
       }).join('') || '<p class="snav-none">Nothing by that name.</p>';
@@ -88,10 +88,6 @@
     find.addEventListener('input', draw);
     find.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { var first = list.querySelector('.snav-tool'); if (first) first.click(); }
-    });
-    list.addEventListener('click', function (e) {
-      var a = e.target.closest('.snav-tool');
-      if (a && window.staffToolUsed) staffToolUsed(a.dataset.id);
     });
     document.addEventListener('click', function (e) { if (!nav.contains(e.target)) open(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });

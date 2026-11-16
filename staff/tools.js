@@ -3,8 +3,10 @@
 // menu from it, so a new tool is added in exactly one place: here.
 //
 // For each tool:
-//   id     short name, never reused (it is how "Your usual" remembers a tool)
-//   title  what the tile says
+//   id     short name, never reused
+//   title  what it is called
+//   short  a shorter name for its button on the staff home page, when the
+//          title is too long to fit on a phone (most tools don't need one)
 //   desc   one plain sentence: what it is for
 //   href   where it opens. Start with "/" for a page on this site.
 //   min    the lowest login that can open it: door, staff, manager or owner
@@ -27,9 +29,9 @@ var STAFF_TOOLS = [
     desc: 'Tonight’s guest list and check-in.', find: 'guest list check in tickets will call names' },
   { id: 'timer', group: 'show', min: 'staff', ico: '⏱️', href: '/timer/', title: 'Stage timer',
     desc: 'The light the comic sees. Started from the Stream Deck.', find: 'clock light time' },
-  { id: 'deck', group: 'show', min: 'staff', ico: '🎛️', href: '/staff/stream-deck.html', title: 'Stream Deck guide',
+  { id: 'deck', group: 'show', min: 'staff', ico: '🎛️', href: '/staff/stream-deck.html', title: 'Stream Deck guide', short: 'Deck guide',
     desc: 'What every button and knob at the bar does.', find: 'buttons sound lights music mic volume av' },
-  { id: 'crash', group: 'show', min: 'staff', ico: '🧯', href: '/av/if-it-crashes.html', title: 'If the show computer restarts',
+  { id: 'crash', group: 'show', min: 'staff', ico: '🧯', href: '/av/if-it-crashes.html', title: 'If the show computer restarts', short: 'Computer crashed',
     desc: 'Get sound and lights back, step by step.', find: 'crash broken no sound help pc companion' },
   { id: 'supplies', group: 'show', min: 'staff', ico: '📦', href: '/supplies/', title: 'Supplies',
     desc: 'The stock sheet. Count it, and booking@ hears when something runs low.', find: 'stock inventory order low napkins count' },
@@ -58,7 +60,7 @@ var STAFF_TOOLS = [
     desc: 'Comedian advances: who’s booked, what they sent, what’s missing.', find: 'advance comic travel hotel green room' },
   { id: 'payouts', group: 'comedy', min: 'owner', ico: '💸', href: '/payouts/', title: 'Pay comics',
     desc: 'Who we owe. Tap Pay, send it, tap Paid.', find: 'pay venmo paypal check owe settlement' },
-  { id: 'payme', group: 'comedy', min: 'manager', ico: '🙋', href: '/payme/', title: 'Comic pay request form',
+  { id: 'payme', group: 'comedy', min: 'manager', ico: '🙋', href: '/payme/', title: 'Comic pay request form', short: 'Pay request form',
     desc: 'Send this to a comic who needs paying. Their request shows up on Pay comics.', find: 'pay request w9 form' },
   { id: 'inbox', group: 'comedy', min: 'owner', ico: '🪨', href: 'https://claude.ai/artifact/LFjnAQcjgGrr1QghpTvj3C', out: true, title: 'Boulder Inbox',
     desc: 'Sam’s email game. One email at a time: archive, reply, or send to booking@.', find: 'email inbox' },
@@ -72,7 +74,7 @@ var STAFF_TOOLS = [
   // Bar & beer
   { id: 'printmenu', group: 'bar', min: 'staff', ico: '🖨️', href: '/menu/print.html', title: 'Print menu',
     desc: 'Today’s taps on one page, straight from GoTab.', find: 'beer list taps paper' },
-  { id: 'tvmenu', group: 'bar', min: 'staff', ico: '📺', href: 'https://www.sisyphusbrewing.com/pages/tv-menu', out: true, title: 'TV menu board',
+  { id: 'tvmenu', group: 'bar', min: 'staff', ico: '📺', href: 'https://www.sisyphusbrewing.com/pages/tv-menu', out: true, title: 'TV menu board', short: 'TV menu',
     desc: 'What the taproom TV is showing.', find: 'tv screen beer list taps' },
   { id: 'brewing', group: 'bar', min: 'manager', ico: '🍺', href: '/brewing/', title: 'Batch log',
     desc: 'Tanks, batches and recipes.', find: 'brew tanks recipes fermenter' }
@@ -88,17 +90,4 @@ function staffToolsFor(role, canVoice) {
     if (t.flag === 'voice' && !canVoice) return false;
     return true;
   });
-}
-
-// "Your usual": each device remembers which tools get opened on it, so the
-// ones a person actually uses float to the top of their staff page.
-function staffToolUsed(id) {
-  try {
-    var use = JSON.parse(localStorage.getItem('staffToolUse') || '{}');
-    use[id] = (use[id] || 0) + 1;
-    localStorage.setItem('staffToolUse', JSON.stringify(use));
-  } catch (e) {}
-}
-function staffToolUse() {
-  try { return JSON.parse(localStorage.getItem('staffToolUse') || '{}') || {}; } catch (e) { return {}; }
 }
