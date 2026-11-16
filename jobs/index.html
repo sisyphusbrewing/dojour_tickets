@@ -35,6 +35,20 @@
   </header>
 
   <main class="wrap">
+    <!-- Hiring is closed (Sam, Nov 16 2026: "We can close down the bartender
+         application page now"). The Shopify Jobs page is unpublished and the
+         form below is hidden. To hire again, set JOBS_OPEN = true in the
+         script at the bottom and republish the Shopify page. -->
+    <section id="viewClosed" class="hidden">
+      <div class="done">
+        <div class="band-wrap"><span class="band">Not hiring right now</span></div>
+        <p class="done-big">Thanks for looking. We're not hiring right now.</p>
+        <p>The bartender application is closed. Come have a beer and see a show instead.</p>
+        <p><a class="btn btn-primary" href="https://www.sisyphusbrewing.com/pages/events" target="_top">See the shows</a></p>
+        <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+      </div>
+    </section>
+
     <section id="viewForm">
       <div class="post">
         <div class="show-eyebrow">Now hiring · 2 bartenders</div>
@@ -91,6 +105,12 @@
     var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
     var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
     var $ = function (id) { return document.getElementById(id); };
+    // Flip to true to take applications again.
+    var JOBS_OPEN = false;
+    if (!JOBS_OPEN) {
+      $('viewForm').remove();
+      $('viewClosed').classList.remove('hidden');
+    }
     var ROLE = new URLSearchParams(location.search).get('role') || 'bartender';
 
     // Embedded in sisyphusbrewing.com/pages/jobs: the site has its own header,
@@ -115,6 +135,7 @@
       else ctl = '<input class="input" type="' + (f.type || 'text') + '"' + attrs + '>';
       return '<div class="field' + (f.full ? ' full' : '') + '"><label for="' + id + '">' + esc(f.label) + (f.req ? ' <span class="req">*</span>' : '') + '</label>' + ctl + (f.help ? '<div class="help">' + esc(f.help) + '</div>' : '') + '</div>';
     }
+    if (JOBS_OPEN) {
     $('sections').innerHTML = JOB_SECTIONS.map(function (s) {
       return '<div class="band-wrap"><span class="band">' + esc(s.title) + '</span></div><div class="card"><div class="grid">' + s.fields.map(fieldHtml).join('') + '</div></div>';
     }).join('');
@@ -185,6 +206,7 @@
         fail((ex && ex.message) || 'Something broke. Try again, or email booking@sisyphusbrewing.com.');
       }
     });
+    }
   </script>
 </body>
 </html>
