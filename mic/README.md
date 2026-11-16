@@ -8,7 +8,7 @@ the online sign-ups (Sam, Nov 9 2026).
   sisyphusbrewing.com/pages/open-mic (iframe, sends its height with
   `micHeight`) and works on its own at staff.sisyphusbrewing.com/mic/.
   It calls `mic_signup()`, which puts the comic in for the next Tuesday.
-  Sign-ups for a Tuesday close at 5 PM Central that day, then roll to the
+  Sign-ups for a Tuesday close at 6:30 PM Central that day (moved from 5 PM, Sam, Nov 16 2026), then roll to the
   next week. One per email per week.
 - `host.html` (staff login) is the host screen: pick the Tuesday, add the
   comics booked ahead, set how many open spots, tap Draw names. Booked comics
