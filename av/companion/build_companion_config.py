@@ -432,6 +432,7 @@ CUSTOM_VARIABLES = {
     "door_left": ("Door count: guests not checked in yet (-1 = no show to count)", -1),
     "door_total": ("Door count: tickets for that show", 0),
     "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
+    "music_out": ("Music: 1 while it is faded out for a show (START SHOW, or the FADE OUT key)", 0),
 }
 
 
@@ -719,8 +720,8 @@ def reset_sound_key():
 
 # --------------------------------------------------------------------------
 # Music: Spotify on the office PC, playing into the mixer's MUSIC channel.
-# Tonight's test build presses the PC's own media keys (play/pause, next, previous), so the
-# deck cannot yet show the song or know whether it is playing.
+# The deck presses the PC's own media keys (play/pause, next, previous), so it cannot yet
+# show the song or know whether it is playing.
 # --------------------------------------------------------------------------
 MEDIA_PLAY_PAUSE, MEDIA_NEXT, MEDIA_PREVIOUS = 179, 176, 177  # Windows media key codes
 
@@ -740,6 +741,37 @@ def play_pause():
     return [media_key(MEDIA_PLAY_PAUSE), music_unmute()]
 
 
+# Music follows the show (Sam, Nov 13 2026: "the music didn't automatically turn down when I
+# hit start show"). START SHOW fades the MUSIC channel out on the mixer and END SHOW fades it
+# back to where it was. It is done on the mixer, not by pausing Spotify, because the deck can
+# only "press play/pause" on the PC: if Spotify were already paused, that would start it.
+# The mixer module remembers the level (its own "store" and "recall"), and music_out says the
+# music is out, so the MUSIC knob and END SHOW know to bring it back.
+MUSIC_OUT = "$(custom:music_out) == 1"
+MUSIC_FADE_MS = 3000   # the same 3 seconds the room lights take
+
+
+def music_fade_out():
+    """Remember the MUSIC level, then fade it to silence. Never run this while the music is
+    already out: it would remember silence as the level to come back to."""
+    return [action(XAIR, "fad_s", store="me", **MUSIC["strip"]),
+            action(XAIR, "fad", fad="0.0", duration=MUSIC_FADE_MS, faderLim=True, **MUSIC["strip"]),
+            set_number("music_out", 1)]
+
+
+def music_bring_back(ms=MUSIC_FADE_MS):
+    """Fade MUSIC back to the level it had before music_fade_out()."""
+    return [action(XAIR, "fad_r", store="me", duration=ms, faderLim=True, **MUSIC["strip"]),
+            music_unmute(), set_number("music_out", 0)]
+
+
+def music_fade_key():
+    """MUSIC screen: the same fade by hand, for a night that doesn't use START SHOW."""
+    return button("FADE\\nMUSIC\\nOUT", bgcolor=0x16324A,
+                  steps=[music_fade_out(), music_bring_back()], step_expression=f"{MUSIC_OUT} ? 2 : 1",
+                  feedbacks=[when(MUSIC_OUT, bgcolor=0xB06000, color=WHITE, text="MUSIC OUT\\ntap to\\nbring back")])
+
+
 # --------------------------------------------------------------------------
 # The four knobs and the touch-screen tile above each: MIC, MUSIC, LIGHTS, CLOCK.
 # The same on HOME and SHOW, so a knob never changes what it does mid-night.
@@ -749,9 +781,9 @@ MIC = CHANNEL(1)  # the stage mic. Mics 2-4 are on the MIC page, each on its own
 
 
 def main_controls():
-    def level_knob(source, push):
+    def level_knob(source, push=(), **steps):
         fade = dict(duration=0, faderLim=True, **source["strip"])  # never push past 0 dB
-        return button("", press=push,
+        return button("", press=push, **steps,
                       turn_right=[action(XAIR, source["fader_action"], ticks="2", **fade)],
                       turn_left=[action(XAIR, source["fader_action"], ticks="-2", **fade)])
 
@@ -764,8 +796,12 @@ def main_controls():
                        feedbacks=[is_muted(MIC, "MIC IS OFF\\npush knob\\nto turn on")]),
         (3, 0): level_knob(MIC, [action(XAIR, "mute", mute="2", **MIC["mute_strip"])]),
         (2, 1): button("MUSIC\\nvolume $(xair:f_ch3_p)\\npush = play/pause", press=[go(PAGE_MUSIC)], bgcolor=0x16324A,
-                       feedbacks=[is_muted(MUSIC, "MUSIC MUTED\\npush knob\\nto turn on")]),
-        (3, 1): level_knob(MUSIC, play_pause()),
+                       feedbacks=[when(MUSIC_OUT, bgcolor=DARK, color=WHITE, text="MUSIC OUT\\nFOR SHOW\\npush = back"),
+                                  is_muted(MUSIC, "MUSIC MUTED\\npush knob\\nto turn on")]),
+        # Push = play/pause, except while the music is out for the show: then one push brings
+        # it back (walk-on music) and the next push is play/pause again.
+        (3, 1): level_knob(MUSIC, steps=[play_pause(), music_bring_back(1000)],
+                           step_expression=f"{MUSIC_OUT} ? 2 : 1"),
         (2, 2): button("LIGHTS\\n$(custom:house_tables)%\\npush = on/off", press=[go(PAGE_LIGHTS)], bgcolor=DARK,
                        feedbacks=[when("$(custom:house_tables) > 0", bgcolor=0x6A5A30, color=WHITE)]),
         (3, 2): button("", press=[house(f"toggle?zone={z}") for z in both],
@@ -816,9 +852,12 @@ def home_page():
             (0, 0): look_key("DAYTIME", "day", look_daytime(), 0xB08A2E),
             (0, 1): look_key("PRE-SHOW", "pre", look_preshow(), 0x8A6400),
             # If the show look is already on (the deck restarted mid-show), a tap only opens
-            # the SHOW screen; it does not run the look again.
+            # the SHOW screen; it does not run the look again. The music fades out with the
+            # lights, unless it was already faded out by hand (third choice).
             (0, 2): button(START_SHOW_TEXT, expression=True, bgcolor=SHOW_COLOR,
-                           steps=[look_show() + [go(PAGE_SHOW)], [go(PAGE_SHOW)]], step_expression=SHOW_IS_ON_STEP,
+                           steps=[look_show() + music_fade_out() + [go(PAGE_SHOW)], [go(PAGE_SHOW)],
+                                  look_show() + [go(PAGE_SHOW)]],
+                           step_expression=f"$(custom:room_look) == 'show' ? 2 : ({MUSIC_OUT} ? 3 : 1)",
                            feedbacks=[when(look_is("show"), bgcolor=RED, color=WHITE)]),
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
             (1, 0): god_mic_key(),
@@ -858,15 +897,17 @@ def show_page():
 
 def end_show_page():
     """"Are you sure?" NO sits where END SHOW was, so a double tap on END SHOW cancels itself.
-    YES brings the pre-show look back (which stops the recording), stops the comic clock and
-    returns to HOME."""
+    YES brings the pre-show look back (which stops the recording), stops the comic clock,
+    fades the music back in if it is still out, and returns to HOME."""
     return {
         "name": "END SHOW?",
         "controls": {
             (0, 0): button("END THE\\nSHOW?", bgcolor=BLACK),
             (0, 3): button("NO\\nGO BACK", bgcolor=BACK_GREY, press=[go(PAGE_SHOW)]),
             (1, 1): button("YES\\nEND SHOW\\nlights up", bgcolor=RED,
-                           press=look_preshow() + clock_stop() + [go(PAGE_HOME)]),
+                           steps=[look_preshow() + clock_stop() + [go(PAGE_HOME)],
+                                  look_preshow() + clock_stop() + music_bring_back() + [go(PAGE_HOME)]],
+                           step_expression=f"{MUSIC_OUT} ? 2 : 1"),
             **main_controls(),
         },
     }
@@ -897,6 +938,7 @@ def music_page():
             (0, 1): button("PLAY /\\nPAUSE", bgcolor=0x16324A, press=play_pause()),
             (0, 2): button("NEXT\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_NEXT)]),
             (0, 3): button("LAST\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_PREVIOUS)]),
+            (1, 1): music_fade_key(),
             **main_controls(),
         },
     }

@@ -40,7 +40,11 @@ from pathlib import Path
 SUPABASE_URL = "https://idsdwkubqnavkazlteis.supabase.co"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ"  # public anon key, same as staff.js
 LOGIN = "recorder@sisyphusbrewing.com"
-COMPANION = "http://127.0.0.1:8000"
+# Where Companion answers on the office PC. It listens on the PC's network address only,
+# not on 127.0.0.1 (found Nov 14 2026 when a check from the PC itself got no answer), so
+# that address comes first; it is the same one import-config.ps1 uses. If the PC's address
+# ever changes, put COMPANION_URL=http://<address>:8000 in recordings.env.
+COMPANION_ADDRESSES = ["http://192.168.86.42:8000", "http://127.0.0.1:8000"]
 EVERY = 30                        # seconds between readings
 STILL_NEXT = timedelta(hours=1)   # a show stays "the next show" until it has been going this long
 SIGN_IN_EVERY = 45 * 60           # the sign-in lasts an hour; renew before it runs out
@@ -133,13 +137,40 @@ def sign_in():
     return {"apikey": ANON_KEY, "Authorization": "Bearer " + token}
 
 
+def companion_addresses():
+    """Addresses to try for Companion: the one in recordings.env if there is one, then the usual ones."""
+    wanted = [os.environ.get("COMPANION_URL", "").strip().rstrip("/")] + COMPANION_ADDRESSES
+    return [a for i, a in enumerate(wanted) if a and a not in wanted[:i]]
+
+
+_answered = None   # the address Companion answered on last time, tried first next time
+
+
 def tell_deck(reading, now):
+    """Write the four door_* variables. Tries each address until Companion answers on one.
+    An answer that is an error (404: the deck doesn't have these variables yet) is not a
+    reason to try elsewhere; it is passed up so the log says what is wrong."""
+    global _answered
     values = {"door_show": reading["show"] if reading else "",
               "door_left": reading["left"] if reading else -1,
               "door_total": reading["total"] if reading else 0,
               "door_at": int(now.timestamp())}
-    for name, value in values.items():
-        call(f"{COMPANION}/api/custom-variable/{name}/value?value={urllib.parse.quote(str(value))}", timeout=5)
+    addresses = companion_addresses()
+    if _answered in addresses:
+        addresses.remove(_answered)
+        addresses.insert(0, _answered)
+    nobody_home = None
+    for address in addresses:
+        try:
+            for name, value in values.items():
+                call(f"{address}/api/custom-variable/{name}/value?value={urllib.parse.quote(str(value))}", timeout=5)
+            _answered = address
+            return address
+        except urllib.error.HTTPError:
+            raise
+        except OSError as e:   # nothing listening at this address
+            nobody_home = e
+    raise OSError(f"Companion did not answer on {' or '.join(addresses)}: {nobody_home}")
 
 
 def log(message):
