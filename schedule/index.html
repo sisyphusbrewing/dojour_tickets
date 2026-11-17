@@ -91,6 +91,7 @@
         <div id="mgrStatus"></div>
         <div class="mgr-acts">
           <button class="btn btn-primary hidden" id="postBtn"></button>
+          <button class="btn hidden" id="fillBtn">Fill the usual week</button>
           <button class="btn" id="copyBtn">Copy last week</button>
         </div>
       </section>
@@ -100,6 +101,20 @@
       <p class="quiet hidden" id="weekNone"></p>
       <button class="btn-link hidden" id="earlierBtn"></button>
       <div class="hours hidden" id="hours"></div>
+
+      <!-- Managers: the usual week, the template a week is built from (Sam, Nov
+           17 2026: "see what our schedules were like before and we can use
+           that as the template going forward"). "Fill the usual week" above
+           puts these shifts on the week on screen as drafts. Who is on them
+           is kept in the database, never in this repo. -->
+      <details class="fold hidden" id="usualFold"><summary>The usual week</summary>
+        <div class="usual stack">
+          <p class="help" style="margin:0">“Fill the usual week” puts these shifts on the week you’re looking at as drafts. A day that already has a shift is left alone, and a shift is left open when its person has that day off.</p>
+          <div id="usualList"></div>
+          <p class="help" style="margin:14px 0 0">To change the usual week, get a week the way a normal one should look, then save it here.</p>
+          <div><button class="btn" id="usualSave" type="button">Save this week as the usual week</button></div>
+        </div>
+      </details>
 
       <!-- Managers: the numbers behind "Needs 3 people" on each day (Sam, Nov 17
            2026: "The scheduler should read the calendar for upcoming events and

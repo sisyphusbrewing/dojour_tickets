@@ -21,6 +21,10 @@ var shifts = [], timeOff = [], avail = [], showsByDay = {};
 // loaded for; needsOff is set when the database doesn't have that part yet.
 var needs = {}, needRules = null, needsFor = null, needsOff = false, needDay = null;
 var view = 'all', showPast = false, editing = null;
+// The usual week (managers): the shifts a normal week has and who usually
+// works each. Stays null until loaded, and when the database doesn't have
+// that part yet, so the page carries on as it did.
+var usual = null;
 
 // ---------- Small helpers ----------
 function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
@@ -75,7 +79,7 @@ setupSignIn(async function (r) {
   $('page').classList.remove('hidden');
   $('tabs').classList.remove('hidden');
   await loadPeople();
-  await Promise.all([loadWeek(), loadShows(), loadSide(), loadNotices()]);
+  await Promise.all([loadWeek(), loadShows(), loadSide(), loadNotices(), loadUsual()]);
   drawWeek();
 });
 
@@ -381,7 +385,8 @@ function drawManagerBar() {
   // Days still to come this week that have fewer people on than they need.
   var shortDays = Object.keys(needs).filter(function (d) { var n = needs[d]; return n.people != null && onDay(d) < n.people; }).length;
   if (shortDays) bits.push('<b>' + shortDays + ' day' + (shortDays > 1 ? 's' : '') + '</b> still need' + (shortDays > 1 ? '' : 's') + ' people.');
-  if (!shifts.length) bits.push('Nothing on this week yet. Add shifts with “+ Shift”, or copy last week and adjust.');
+  if (!shifts.length) bits.push(usual && usual.length ? 'Nothing on this week yet. Fill the usual week and adjust, or add shifts one at a time.'
+    : 'Nothing on this week yet. Add shifts with “+ Shift”, or copy last week and adjust.');
   else {
     bits.push(drafts ? '<b>' + drafts + ' draft shift' + (drafts > 1 ? 's' : '') + '</b> only managers can see.' : 'Everything on this week is posted.');
     if (open) bits.push(open + ' open shift' + (open > 1 ? 's' : '') + ' with nobody on ' + (open > 1 ? 'them' : 'it') + '.');
@@ -390,6 +395,7 @@ function drawManagerBar() {
   $('postBtn').classList.toggle('hidden', !drafts);
   $('postBtn').textContent = 'Post ' + drafts + ' shift' + (drafts > 1 ? 's' : '');
   drawRules();
+  drawUsual();
   // Hours per person this week, drafts included, so nobody is over or under.
   var by = {};
   shifts.forEach(function (s) { if (s.user_id) by[s.user_id] = (by[s.user_id] || 0) + hoursOf(s); });
@@ -530,6 +536,67 @@ $('copyBtn').addEventListener('click', async function () {
   if (ins.error) return fail(ins);
   toast('Copied. Adjust, then post.');
   await loadWeek(); drawWeek();
+});
+
+// ---------- Managers: the usual week ----------
+// The template a week is built from (Sam, Nov 17 2026: "see what our schedules
+// were like before and we can use that as the template going forward"). The
+// database keeps it and does the filling: it leaves alone the days that are
+// over, already have a shift or are set by hand to nobody, and leaves a shift
+// open when its person is off. This page shows it and asks.
+async function loadUsual() {
+  if (!isMgr) return;
+  var r = await sb.rpc('schedule_usual');
+  usual = r.error || !Array.isArray(r.data) ? null : r.data;
+}
+function drawUsual() {
+  var on = isMgr && usual !== null;
+  var over = iso(addDays(weekStart, 6)) < todayIso();
+  $('usualFold').classList.toggle('hidden', !on);
+  $('fillBtn').classList.toggle('hidden', !(on && usual.length) || over);
+  // The one bright button: Post when there are drafts, Fill when the week is empty.
+  $('fillBtn').classList.toggle('btn-primary', !shifts.length);
+  if (!on) return;
+  var html = [1, 2, 3, 4, 5, 6, 0].map(function (dow) {
+    var list = usual.filter(function (u) { return u.weekday === dow; });
+    if (!list.length) return '';
+    return '<div class="uday"><b>' + DAY_LONG[dow] + '</b><div class="ulines">' + list.map(function (u) {
+      var more = (u.position && u.position !== 'Bar' ? ' · ' + escapeHtml(u.position) : '') + (u.note ? ' · ' + escapeHtml(u.note) : '');
+      return '<div class="uline' + (u.user_id ? '' : ' open') + '"><span>' + span(u) + '</span><span>' +
+        (u.user_id ? escapeHtml(who(u.user_id)) : 'Open shift') + more + '</span></div>';
+    }).join('') + '</div></div>';
+  }).join('');
+  $('usualList').innerHTML = usual.length ? '<div class="list">' + html + '</div>'
+    : '<p class="quiet" style="margin:0">No usual week is saved yet.</p>';
+  $('usualSave').disabled = !shifts.length;
+}
+// What filling did, in a sentence.
+function fillWord(d) {
+  var n = d.added || 0, open = (d.open || []).length;
+  if (!n) return (d.days_closed || []).length && !(d.days_kept || []).length ? 'Nothing added. The days left this week are closed.'
+    : 'Nothing added. The days left this week already have shifts.';
+  return 'Added ' + n + ' draft' + (n > 1 ? 's' : '') + '. ' +
+    (open ? open + (open > 1 ? ' are open: their people are off.' : ' is open: its person is off.') : 'Adjust, then post.');
+}
+$('fillBtn').addEventListener('click', async function () {
+  if (!confirm('Put the usual week on ' + $('weekLabel').textContent + ' as drafts?\n\nA day that already has a shift is left alone. Nobody is told until you post.')) return;
+  this.disabled = true;
+  var r = await sb.rpc('schedule_usual_fill', { p_week: iso(weekStart) });
+  this.disabled = false;
+  if (r.error) return fail(r);
+  await loadWeek(); drawWeek();
+  toast(fillWord(r.data || {}), !(r.data && r.data.added));
+});
+$('usualSave').addEventListener('click', async function () {
+  if (!shifts || !shifts.length) return;
+  if (!confirm('Make ' + $('weekLabel').textContent + ' the usual week?\n\nIts ' + shifts.length + ' shift' + (shifts.length > 1 ? 's' : '') +
+      ', with the people on them, take the place of the usual week saved now.')) return;
+  this.disabled = true;
+  var r = await sb.rpc('schedule_usual_save', { p_week: iso(weekStart) });
+  this.disabled = false;
+  if (r.error) return fail(r);
+  await loadUsual(); drawUsual();
+  toast('Saved. This is the usual week now.');
 });
 
 // ---------- Time off, availability ----------
