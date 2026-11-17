@@ -66,7 +66,7 @@ var STAFF_TOOLS = [
 
   // Comedy
   { id: 'mic', group: 'comedy', min: 'staff', ico: '🎲', href: '/mic/host.html', title: 'Tuesday mic',
-    desc: 'Online sign-ups for the Tuesday open mic. Add the booked comics, draw the rest at random.', find: 'open mic sign up draw lineup list' },
+    desc: 'Tuesday open mic: set the host, send them the link for their 4 guaranteed comics, and see the lineup. First-timers plus 12 drawn names go on at 6:30.', find: 'open mic sign up draw lineup list' },
   // Built for Grace (Sam, Nov 14 2026); open to managers since Nov 15 2026.
   { id: 'booking', group: 'comedy', min: 'manager', ico: '🗓️', href: '/booking/', title: 'Booking board',
     desc: 'Every weekend at a glance: who’s booked, what each show still needs, and new booking requests.', find: 'weekends contract w9 host feature requests calendar' },

@@ -27,6 +27,9 @@
     .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
     .done-big { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 28px; color: #fff; margin: 8px 0 10px; }
     .camus { color: var(--gray); font-style: italic; margin-top: 18px; }
+    .tonight { margin-bottom: 22px; }
+    .tonight ol { font-size: 20px; line-height: 1.6; color: #fff; margin: 0; padding-left: 32px; }
+    .tonight .first { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: var(--slate); color: #fff; border-radius: 6px; padding: 3px 6px 1px; margin-left: 6px; vertical-align: 3px; }
     .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 18px 16px 28px; }
   </style>
 </head>
@@ -41,6 +44,15 @@
   </header>
 
   <main class="wrap">
+    <!-- Tonight's running order, posted here by itself at 6:35 PM (Sam, Nov 17 2026). -->
+    <section id="viewTonight" class="tonight hidden">
+      <div class="eyebrow">Tonight · 7 PM · Comedy club</div>
+      <h1>Tonight's lineup</h1>
+      <p class="lead" id="tonightHost"></p>
+      <div class="card"><ol id="tonightList"></ol></div>
+      <p style="margin-top:10px">Didn't hear your name? You're in the room anyway. Sign up below for next week.</p>
+    </section>
+
     <section id="viewForm">
       <div class="eyebrow">Free · 7 PM · Comedy club</div>
       <h1>Tuesday Open Mic</h1>
@@ -92,6 +104,22 @@
       var p = iso.split('-').map(Number);
       return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     }
+    // From 6:35 PM on a mic night the database hands back the running order.
+    function showTonight() {
+      sb.rpc('mic_public_lineup').then(function (r) {
+        var d = r.data;
+        if (!d || !d.lineup || !d.lineup.length) return;
+        $('tonightHost').textContent = d.host_name ? 'Hosted by ' + d.host_name + '.' : '';
+        // First-timers always get up and are marked (Sam, Nov 17 2026).
+        $('tonightList').innerHTML = d.lineup.map(function (x) {
+          var li = document.createElement('li'); li.textContent = x.name;
+          return li.outerHTML.replace('</li>', x.first ? ' <span class="first">First time</span></li>' : '</li>');
+        }).join('');
+        $('viewTonight').classList.remove('hidden');
+      });
+    }
+    showTonight();
+    setInterval(function () { if (!document.hidden) showTonight(); }, 60000);
     sb.rpc('mic_next_date').then(function (r) { if (r.data) $('micDate').textContent = niceDate(r.data); });
 
     try { var saved = JSON.parse(localStorage.getItem('mic-me') || 'null'); if (saved) { $('f_name').value = saved.name || ''; $('f_email').value = saved.email || ''; $('f_phone').value = saved.phone || ''; } } catch (e) {}
