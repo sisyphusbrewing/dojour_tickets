@@ -11,6 +11,7 @@ them on a throwaway Postgres, never on the real database.
     psql -d t -c "alter default privileges in schema public grant all on tables to anon, authenticated"
     psql -d t -f supabase/tests/supply_reorders/stub.sql
     psql -d t -f supabase/migrations/20261117220000_supply_reorders.sql
+    psql -d t -f supabase/migrations/20261117230000_supply_reorders_by_flavor.sql
     psql -d t -A -t -f supabase/tests/supply_reorders/scenario.sql
 
 Every check line should say `ok`. The steps that are meant to be refused
