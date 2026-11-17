@@ -49,6 +49,25 @@ class AudioSets(unittest.TestCase):
     def test_no_intros_in_a_short_file_is_one_set(self):
         self.assertEqual(len(sas.audio_sets(talk(0, 1800), 1800, KNOWN)), 1)
 
+    def test_intro_without_everybody_counts_for_a_known_comic(self):
+        # Sat Nov 14 6 PM: "Please give it up for Gabby Bryan." and no "everybody" after it.
+        segs = talk(0, 600) + [{"start": 600, "end": 604, "text": "Please give it up for Gabby Bryan."}] + talk(610, 4000)
+        sets = sas.audio_sets(segs, 4100, KNOWN + ["Gabby Bryan"])
+        self.assertEqual([(a, n) for a, _, n in sets][-1], (600, "Gabby Bryan"))
+
+    def test_give_it_up_for_a_stranger_is_not_an_intro(self):
+        segs = talk(0, 600) + [{"start": 600, "end": 604, "text": "Give it up for Pete Behind The Bar."}] + talk(610, 1800)
+        self.assertEqual(len(sas.audio_sets(segs, 1800, KNOWN)), 1)
+
+    def test_same_comic_introduced_twice_is_one_set(self):
+        # Sat Nov 14 8 PM: Whisper heard "Lahiru" then "Lehiro" and made two clips of one set.
+        segs = talk(0, 300)
+        segs += [{"start": 300, "end": 304, "text": "Make some noise for Lahiru Perera, everybody"}] + talk(310, 700)
+        segs += [{"start": 700, "end": 704, "text": "Keep it going, welcome Lehiro Perera, everybody"}] + talk(710, 1100)
+        segs += [{"start": 1100, "end": 1104, "text": "Please give it up for Mike Lester, everybody"}] + talk(1110, 1800)
+        sets = sas.audio_sets(segs, 1800, KNOWN)
+        self.assertEqual([(a, b) for a, b, _ in sets][1:], [(300, 1100), (1100, 1800)])
+
     def test_fix_name_snaps_whisper_spellings(self):
         self.assertEqual(sas.fix_name("Ahmaq Alaf", KNOWN), "Ahmed Khalaf")
         self.assertEqual(sas.fix_name("Dave Chappelle", KNOWN), "Dave Chappelle")  # not on the list: left alone
@@ -58,3 +77,25 @@ class AudioSets(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TimerCoverage(unittest.TestCase):
+    """Nov 13 2026: one stage-timer press for the first comic only, and the cutter called that set the
+    headliner. Presses that don't cover the show mean: find the sets from the audio instead."""
+
+    def setUp(self):
+        from datetime import datetime, timedelta, timezone
+        self.t0 = datetime(2030, 1, 1, 2, 0, tzinfo=timezone.utc)
+        self.m = lambda minutes: self.t0 + timedelta(minutes=minutes)
+
+    def test_one_short_press_is_not_trusted(self):
+        sets = [(self.m(5), self.m(32), None)]
+        self.assertFalse(sas.timer_covers_show(sets, self.t0, self.m(100)))
+
+    def test_presses_for_every_comic_are_trusted(self):
+        sets = [(self.m(5), self.m(20), None), (self.m(20), self.m(35), None), (self.m(35), self.m(95), None)]
+        self.assertTrue(sas.timer_covers_show(sets, self.t0, self.m(100)))
+
+    def test_two_short_presses_in_a_long_show_are_not_trusted(self):
+        sets = [(self.m(5), self.m(15), None), (self.m(15), self.m(25), None)]
+        self.assertFalse(sas.timer_covers_show(sets, self.t0, self.m(100)))
