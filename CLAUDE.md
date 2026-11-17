@@ -26,6 +26,11 @@ staff web pages, and the scheduled jobs that email people.
 - **`theme/`** is a partial copy of Shopify theme files for reference and for
   building a duplicate theme. It is not the live site.
 - **`tools/`** holds one-off diagnostics (read-only probes).
+- **Website pages kept here:** `mic/shopify-page.html` (Open Mic page) and
+  `pages/*.html` hold the text of Shopify pages (Online Store > Pages, not
+  the theme). Merging a change pushes it live through `shopify_pages.py`
+  (workflow "Shopify pages"). Edit the file, not the page in Shopify, or the
+  next merge overwrites the edit.
 
 ## The ticket flow (the core of the repo)
 
@@ -107,7 +112,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.
