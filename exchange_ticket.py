@@ -30,7 +30,9 @@ Money (Sam: no refunds unless a show is cancelled or rescheduled):
 
 rewrites `exchange_showtimes`, the list of upcoming showtimes (price, seats
 left) the page offers. The sync runs it every 4 hours and every swap runs it
-again.
+again. The staff site reads the same list as its show calendar ("Tonight" on
+the staff home page, the Schedule), so a showtime stays on it for a few hours
+after it starts; see KEEP_STARTED_HOURS.
 
 Needs SHOPIFY_* (with the write_order_edits scope), SUPABASE_URL / SUPABASE_KEY
 (service key) and the box office SMTP secrets. DRY_RUN=1 checks everything and
@@ -53,6 +55,14 @@ from show_dates import parse_show_datetime, CENTRAL_TZ
 # Swaps close this long before the original show, and the new show must be at
 # least this far off too. The edge function uses the same number.
 CUTOFF_HOURS = 48   # Sam, Oct 30 2026
+
+# A showtime stays on the list this long after it starts. The staff home page
+# ("Tonight") and the Schedule read the list as the calendar, and a show that
+# dropped off it the minute it began would turn "Tonight" into "No show
+# tonight" in the middle of the show (Sam, Nov 17 2026: "There is a show
+# tonight - the free mic"). Customers see no difference: swaps close
+# CUTOFF_HOURS before a show, so a started one is never offered or swapped.
+KEEP_STARTED_HOURS = 6
 
 CREDIT_TITLE = "Exchange credit (no refund)"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
@@ -120,7 +130,15 @@ def refresh_showtimes(shop):
         sb("POST", "exchange_showtimes?on_conflict=variant_id", json=rows,
            headers={"Prefer": "resolution=merge-duplicates,return=minimal"})
     keep = ",".join(str(r["variant_id"]) for r in rows) or "0"
-    sb("DELETE", f"exchange_showtimes?variant_id=not.in.({keep})", headers={"Prefer": "return=minimal"})
+    # Take off what the website no longer has: a showtime still to come that
+    # isn't on sale anymore, and one that started more than KEEP_STARTED_HOURS
+    # ago. One that has just started stays, as it was last saved, until its
+    # night is over.
+    stamp = "%Y-%m-%dT%H:%M:%SZ"
+    over = now - timedelta(hours=KEEP_STARTED_HOURS)
+    sb("DELETE", f"exchange_showtimes?variant_id=not.in.({keep})"
+                 f"&or=(starts_at.gt.{now.strftime(stamp)},starts_at.lt.{over.strftime(stamp)})",
+       headers={"Prefer": "return=minimal"})
     print(f"Saved {len(rows)} upcoming showtimes for exchanges.")
 
 

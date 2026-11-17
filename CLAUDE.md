@@ -75,7 +75,15 @@ Dojour gotchas, learned the hard way:
 - **The staff home page is `staff/index.html`** (live since Nov 17 2026, Sam:
   "Let's launch the new staff portal and the scheduler"): tonight's show,
   your next shift, What's new, the tools, what's coming up. `staff/new.html`
-  was its preview and now only forwards there.
+  was its preview and now only forwards there. "Tonight" and "Coming up" put
+  two lists together: the show calendar (`schedule_needs()`, the same one the
+  Schedule reads, free nights included) and ticket totals
+  (`staff_show_counts()`). A free night is a show night and reads "Free"
+  (Sam, Nov 17 2026: "There is a show tonight - the free mic", when the page
+  only knew shows that had sold a ticket). The shared door login isn't given
+  the calendar, so it sees ticketed shows only. `exchange_ticket.py --refresh`
+  keeps a showtime on the calendar for six hours after it starts, so tonight's
+  show doesn't drop off the page in the middle of the show.
 - **`staff/look.css` is the simpler look** (Sam, Nov 15 2026: "simple and
   easy for people to read and use"). A page uses it by loading it after
   `staff.css` and putting `class="look"` on its `<body>`. Build new staff

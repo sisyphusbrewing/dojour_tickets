@@ -1,6 +1,7 @@
 """Quick checks for exchange_ticket's swap logic with a fake Shopify and Supabase (python -m unittest)."""
+import re
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 import exchange_ticket as ex
@@ -139,6 +140,65 @@ class SwapTest(unittest.TestCase):
         self.checked_in = 1
         with self.assertRaises(ex.Refused):
             ex.exchange(FakeShop(variant(), order()), dict(REQ))
+
+
+class RefreshShowtimes(unittest.TestCase):
+    """The list of showtimes is also the staff site's show calendar: tonight's
+    show must stay on it while the show is on (Sam, Nov 17 2026: "There is a
+    show tonight - the free mic")."""
+
+    def setUp(self):
+        self.now = datetime.now(timezone.utc)
+        # The website right now: one show still to come, and tonight's free
+        # mic, which started an hour ago (Shopify still lists it).
+        self.site = {11: self.now + timedelta(days=3), 12: self.now - timedelta(hours=1)}
+        # What the list held before this run.
+        self.table = {11: self.now + timedelta(days=3),        # still on sale
+                      12: self.now - timedelta(hours=1),       # tonight's show, an hour in
+                      13: self.now - timedelta(hours=7),       # last night's show
+                      14: self.now + timedelta(days=9)}        # taken off the website
+        def products(shop):
+            return [{"id": "gid://shopify/Product/5", "title": "Tuesday Open Mic",
+                     "variants": {"nodes": [{"id": f"gid://shopify/ProductVariant/{v}", "price": "0.00",
+                                             "inventoryQuantity": 40} for v in self.site]}}]
+        self.calls = []
+        for name, value in (("fetch_active_products", products), ("is_show", lambda p: True),
+                            ("skip_reason", lambda p: None), ("date_text", lambda v: v["id"]),
+                            ("parse_show_datetime", lambda text, require_time=True: self.site[int(text.rsplit("/", 1)[-1])]),
+                            ("sb", lambda method, path, **kw: self.calls.append((method, path, kw.get("json")))),
+                            ("DRY_RUN", False)):
+            mock.patch.object(ex, name, value).start()
+        self.addCleanup(mock.patch.stopall)
+
+    def left_after(self):
+        """Runs the refresh, then does to self.table what its DELETE asks for."""
+        ex.refresh_showtimes(shop=None)
+        deletes = [path for method, path, _ in self.calls if method == "DELETE"]
+        self.assertEqual(len(deletes), 1)
+        got = re.fullmatch(r"exchange_showtimes\?variant_id=not\.in\.\(([\d,]+)\)"
+                           r"&or=\(starts_at\.gt\.([^,)]+),starts_at\.lt\.([^,)]+)\)", deletes[0])
+        self.assertTrue(got, deletes[0])
+        keep = {int(v) for v in got.group(1).split(",")}
+        after, before = (datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) for t in got.group(2, 3))
+        return sorted(v for v, starts in self.table.items() if v in keep or not (starts > after or starts < before))
+
+    def test_a_show_that_has_started_stays_until_its_night_is_over(self):
+        self.assertEqual(self.left_after(), [11, 12])
+
+    def test_a_started_show_is_not_saved_again_or_offered(self):
+        ex.refresh_showtimes(shop=None)
+        saved = [row["variant_id"] for method, _, rows in self.calls if method == "POST" for row in rows]
+        self.assertEqual(saved, [11])
+
+    def test_nothing_on_the_website_still_keeps_tonight(self):
+        self.site = {12: self.now - timedelta(hours=1)}
+        self.table.pop(14)
+        self.assertEqual(self.left_after(), [12])
+        self.assertFalse([c for c in self.calls if c[0] == "POST"])
+
+    def test_the_filter_has_no_plus_sign_to_be_read_as_a_space(self):
+        ex.refresh_showtimes(shop=None)
+        self.assertNotIn("+", [path for method, path, _ in self.calls if method == "DELETE"][0])
 
 
 if __name__ == "__main__":
