@@ -1,4 +1,5 @@
--- Checks for the tap gift cards (20261118000000_gift_cards.sql).
+-- Checks for the tap gift cards (20261118000000_gift_cards.sql and
+-- 20261118010000_gift_staff_load.sql).
 -- Each check prints ok or FAIL. Steps that are meant to be refused say how
 -- many ERRORs to expect just above them.
 \set ON_ERROR_STOP 0
@@ -44,12 +45,11 @@ reset role; set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
 select case when (gift_card_spend((select code from c where number = 1), 12.50, 'Two beers')->>'balance')::numeric = 37.50
   then 'ok' else 'FAIL' end || ' staff takes $12.50 off, $37.50 left';
-\echo 'expect 3 ERRORs: staff cannot load, cannot spend more than is left, cannot list'
-select gift_card_load((select code from c where number = 1), 20);
+\echo 'expect 2 ERRORs: staff cannot spend more than is left, cannot list'
 select gift_card_spend((select code from c where number = 1), 40);
 select gift_cards_list();
 select case when jsonb_array_length(v->'moves') = 2 and (v->'moves'->0->>'can_undo')::boolean
-            and not (v->'moves'->1->>'can_undo')::boolean and not (v->>'can_load')::boolean
+            and not (v->'moves'->1->>'can_undo')::boolean and (v->>'can_load')::boolean
   then 'ok' else 'FAIL' end || ' staff see the history and can undo only their own'
   from (select gift_card_look((select code from c where number = 1)) v) x;
 select case when gift_card_find(1) = (select code from c where number = 1) then 'ok' else 'FAIL' end || ' staff find a card by its number';
@@ -72,8 +72,9 @@ select gift_card_undo((select (gift_card_look((select code from c where number =
 
 -- The door login (shared, used by comics) is a guest here.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000005', false);
-\echo 'expect 1 ERROR: the door login cannot spend'
+\echo 'expect 2 ERRORs: the door login cannot spend or load'
 select gift_card_spend((select code from c where number = 1), 5);
+select gift_card_load((select code from c where number = 1), 5);
 select case when (gift_card_look((select code from c where number = 1))->'moves') is null then 'ok' else 'FAIL' end || ' door login sees no history';
 
 -- Two at once can't both spend the last dollars: the card is locked while one writes.
@@ -99,6 +100,14 @@ select case when (gift_card_look((select code from c where number = 3))->>'balan
 \echo 'expect 1 ERROR: a switched-off card cannot be spent'
 select gift_card_spend((select code from c where number = 2), 1);
 
+-- Staff can put money on too (Sam, Nov 17 2026), and undo it.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
+select case when (gift_card_load((select code from c where number = 3), 20, 'Sold at the bar')->>'balance')::numeric = 45
+  then 'ok' else 'FAIL' end || ' staff puts $20 on card 3, $45';
+select case when (gift_card_undo((select (gift_card_look((select code from c where number = 3))->'moves'->0->>'id')::bigint))->>'balance')::numeric = 25
+  then 'ok' else 'FAIL' end || ' and undoes it, back to $25';
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
+
 -- Totals: sold $50 + $25 = $75 (the moved money isn't a sale); spent $50 net of the undo; $25 still out.
 select case when (r->>'sold')::numeric = 75 and (r->>'spent')::numeric = 50 then 'ok' else 'FAIL' end || ' report: $75 sold, $50 spent'
   from (select gift_card_report((now() at time zone 'America/Chicago')::date - 1, (now() at time zone 'America/Chicago')::date) r) x;
@@ -110,4 +119,4 @@ reset role;
 update gift_card_moves set amount = 1000 where id = 1;
 delete from gift_card_moves where id = 1;
 update gift_cards set active = true where number = 2;
-select case when count(*) = 7 then 'ok' else 'FAIL' end || ' seven rows in the history, none lost' from gift_card_moves;
+select case when count(*) = 9 then 'ok' else 'FAIL' end || ' nine rows in the history, none lost' from gift_card_moves;

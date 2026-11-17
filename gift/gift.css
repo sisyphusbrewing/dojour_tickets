@@ -57,3 +57,9 @@
 
 #lock .card { max-width: 380px; width: 100%; }
 #lock img { display: block; height: 64px; margin: 0 auto 10px; }
+
+/* The bar phone: waiting for a card. */
+.reader { margin-top: 24px; text-align: center; padding: 28px 18px; }
+.reader-ico { font-family: var(--head); font-size: 44px; color: var(--slate-light); letter-spacing: -.05em; transform: scaleY(1.3); }
+.reader h2 { margin-top: 10px !important; font-size: 22px !important; }
+.reader .btn { margin-top: 16px; width: 100%; }

@@ -48,6 +48,7 @@ async function start() {
   } else if (isStaff()) {
     $('homeLink').href = '/staff/';
     show('homeView', true);
+    startReader(false);
     if (isMgr()) { show('mgrPart', true); loadCards(); loadReport(); }
   } else {
     // Opened with no card and nobody signed in: this is the staff side.
@@ -84,6 +85,7 @@ function drawCard() {
   var staff = !!card.staff;
   show('guestNote', !staff);
   show('staffActs', staff);
+  if (staff) show('nextBtn', true);
   if (!staff) return;
   show('spendBtn', card.active);
   show('loadBtn', card.active && card.can_load);
@@ -271,6 +273,74 @@ $('offForm').addEventListener('submit', async function (e) {
   $('offSheet').close();
   toast('Card #' + offNumber + ' switched off' + (r.data.to ? ', ' + money(r.data.moved) + ' moved to #' + r.data.to : '') + '.');
   loadCards(); loadReport();
+});
+
+// ---------- The bar phone: read cards while the page is open ----------
+// Android Chrome can read an NFC card from inside the page (Web NFC). Then a
+// phone kept at the bar opens each card here, without a new tab, and the
+// next card simply replaces the last. iPhones can't do this from a web page;
+// there a tap opens the card's link in Safari, which works too.
+var reader = null, reading = false;
+async function startReader(fromButton) {
+  if (!('NDEFReader' in window) || !isStaff()) return;
+  show('reader', true);
+  if (reading) return;
+  if (!fromButton) {
+    // The first time, Chrome asks permission, and only after a button press.
+    var ok = false;
+    try { ok = (await navigator.permissions.query({ name: 'nfc' })).state === 'granted'; } catch (e) {}
+    if (!ok) { show('readerStart', true); $('readerSub').textContent = 'Press the button once, then allow NFC.'; return; }
+  }
+  try {
+    reader = new NDEFReader();
+    await reader.scan();
+    reading = true;
+    show('readerStart', false);
+    $('readerSub').textContent = 'The card opens here. Keep this page open at the bar.';
+    reader.onreading = function (ev) {
+      var found = null;
+      ev.message.records.forEach(function (r) {
+        if (found || (r.recordType !== 'url' && r.recordType !== 'absolute-url')) return;
+        try {
+          var u = new URL(new TextDecoder().decode(r.data));
+          if (u.pathname.replace(/\/+$/, '') === '/gift' && u.searchParams.get('c')) found = u.searchParams.get('c').toLowerCase();
+        } catch (e) {}
+      });
+      if (!found) { chime(false); toast('That isn’t one of our gift cards.', true); return; }
+      openCode(found);
+    };
+    reader.onreadingerror = function () { toast('Couldn’t read that. Hold it still a moment longer.', true); };
+  } catch (e) {
+    show('readerStart', true);
+    $('readerSub').textContent = 'NFC is off or not allowed. Turn on NFC in the phone’s settings, then press the button.';
+  }
+}
+$('readerStart').addEventListener('click', function () { startReader(true); });
+
+// Open a card in this page (the bar phone), without loading a new page.
+async function openCode(c, fromBack) {
+  if (document.querySelector('dialog[open]')) document.querySelectorAll('dialog[open]').forEach(function (d) { d.close(); });
+  code = c; card = null; lastMove = null;
+  show('done', false); show('homeView', false); show('notFound', false);
+  if (!fromBack) { try { history.pushState({ c: c }, '', '/gift/?c=' + encodeURIComponent(c)); } catch (e) {} }
+  chime(true);
+  await loadCard();
+  window.scrollTo(0, 0);
+}
+function backHome(fromBack) {
+  code = null; card = null;
+  show('cardView', false); show('notFound', false); show('done', false);
+  show('homeView', true);
+  if (fromBack !== true) { try { history.pushState({}, '', '/gift/'); } catch (e) {} }
+  startReader(false);
+  if (isMgr()) { loadCards(); loadReport(); }
+  window.scrollTo(0, 0);
+}
+$('nextBtn').addEventListener('click', backHome);
+window.addEventListener('popstate', function () {
+  var c = null;
+  try { c = new URLSearchParams(location.search).get('c'); } catch (e) {}
+  if (c && isStaff()) openCode(c.toLowerCase(), true); else if (!c && isStaff()) backHome(true);
 });
 
 // ---------- Sign in (staff) ----------
