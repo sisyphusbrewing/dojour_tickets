@@ -124,6 +124,16 @@ section { margin-top: 14px; }
 .fold { margin-top: 22px; max-width: 980px; }
 .fold summary { cursor: pointer; color: var(--slate-light); font-weight: 700; padding: 6px 0; }
 .fold .list, .fold .quiet { margin-top: 8px; }
+/* The usual week (managers): one row per day, its shifts down the right. */
+.usual { margin-top: 8px; max-width: 620px; }
+.uday { display: grid; grid-template-columns: 104px minmax(0, 1fr); column-gap: 12px; align-items: start; }
+.uday > b { line-height: 1.35; }
+.ulines { display: grid; gap: 8px; }
+.uline { display: flex; flex-wrap: wrap; gap: 0 12px; line-height: 1.35; }
+.uline span:first-child { font-weight: 600; flex: 0 0 auto; min-width: 150px; }
+.uline span + span { color: var(--muted); overflow-wrap: anywhere; }
+.uline.open span + span { color: #f0d9a8; }
+@media (max-width: 359px) { .uday { grid-template-columns: 88px minmax(0, 1fr); } }
 /* The numbers behind "Needs 3 people": a sentence, then a small number box. */
 .rules { margin-top: 8px; max-width: 620px; }
 .rule { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
