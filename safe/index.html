@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Say Something · Sisyphus</title>
+  <meta name="description" content="Something at Sisyphus not feel right? Tell us. You can leave your name off.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <link rel="stylesheet" href="safe.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="look">
+  <!-- "Say something": report unsafe behavior (Sam, Nov 17 2026: "Let's make
+       some thing for the Green Room where people can tap or go to a website
+       if they need to report unsafe behavior").
+
+       Who it is for: comics, hosts, door people and staff. Opened from the
+       tag in the Green Room (?via=tag), the QR code on the sign (?via=qr), or
+       the link.
+
+       What it does: one short form, no login, name optional. The report is
+       saved (safety_report() in supabase/migrations/20261117270000_safety_reports.sql)
+       and emailed to Sam, Grace, or both, whichever the reporter picks
+       (safety_notify.py), so someone can report about either of them.
+
+       Nothing about the phone is kept and nothing is remembered on it, since
+       a phone in the Green Room may be passed around. The page says so; keep
+       it true. No staff top bar: comics see this page. -->
+  <header>
+    <div class="wrap hdr">
+      <div class="hdr-brand">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Say something</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewForm">
+      <p class="lead">If someone here made you feel unsafe, or crossed a line with you or someone else, tell us. You don't have to give your name.</p>
+
+      <div class="now">
+        <div><b>In danger right now?</b> Call 911, then tell whoever is behind the bar.</div>
+        <a class="btn btn-big call" href="tel:911">Call 911</a>
+      </div>
+
+      <form id="safeForm" novalidate>
+        <div class="field top">
+          <label for="f_what">What happened?</label>
+          <textarea class="input" id="f_what" rows="6" maxlength="8000" placeholder="As much or as little as you want to say."></textarea>
+        </div>
+
+        <div class="band-row"><span class="band">When?</span></div>
+        <div class="chips" id="whenChips">
+          <button type="button" class="chip" data-when="tonight">Tonight</button>
+          <button type="button" class="chip" data-when="other">Another day</button>
+        </div>
+        <div class="field hidden" id="dayBox"><label for="f_day">Which day?</label>
+          <input class="input" id="f_day" type="date"></div>
+
+        <div class="band-row"><span class="band">Where?</span></div>
+        <div class="chips" id="placeChips">
+          <button type="button" class="chip">Green room</button>
+          <button type="button" class="chip">Stage</button>
+          <button type="button" class="chip">Showroom</button>
+          <button type="button" class="chip">Bar or taproom</button>
+          <button type="button" class="chip">Outside</button>
+          <button type="button" class="chip">Online or by text</button>
+          <button type="button" class="chip">Somewhere else</button>
+        </div>
+
+        <div class="field top">
+          <label for="f_who">Who was involved? <span class="opt">(if you want to say)</span></label>
+          <input class="input" id="f_who" maxlength="1000" placeholder="A name, or what they looked like">
+        </div>
+
+        <div class="band-row"><span class="band">Who should read this?</span></div>
+        <div class="list" id="toList">
+          <label class="pick"><input type="radio" name="to" value="both" checked>
+            <span><b>Sam and Grace</b><small>Sam owns Sisyphus. Grace books the shows.</small></span></label>
+          <label class="pick"><input type="radio" name="to" value="sam">
+            <span><b>Only Sam</b></span></label>
+          <label class="pick"><input type="radio" name="to" value="grace">
+            <span><b>Only Grace</b></span></label>
+        </div>
+
+        <div class="band-row"><span class="band">You</span><span class="band-note quiet">Both optional</span></div>
+        <div class="card stack">
+          <div class="field"><label for="f_name">Your name</label>
+            <input class="input" id="f_name" maxlength="120" autocomplete="off"></div>
+          <div class="field"><label for="f_contact">How can we reach you?</label>
+            <input class="input" id="f_contact" maxlength="200" autocomplete="off" placeholder="Phone or email">
+            <div class="help">Leave both empty to stay anonymous. Leave a way to reach you if you'd like us to follow up.</div></div>
+        </div>
+
+        <p class="quiet private">We don't keep anything about your phone or where you sent this from, and this page doesn't remember what you typed.</p>
+
+        <div class="send">
+          <div class="err hidden" id="formError" role="alert"></div>
+          <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Send it</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="card done">
+        <h2>Thank you for telling us.</h2>
+        <p id="doneLine"></p>
+        <p id="doneBack"></p>
+        <p class="warn hidden" id="doneWarn">The email to let us know didn't go out just now. If it's urgent, please tell whoever is behind the bar.</p>
+        <button class="btn btn-big" id="anotherBtn" type="button">Send another</button>
+      </div>
+    </section>
+
+    <div class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis</div>
+  </main>
+
+  <script src="safe.js"></script>
+</body>
+</html>

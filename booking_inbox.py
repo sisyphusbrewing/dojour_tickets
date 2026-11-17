@@ -86,7 +86,7 @@ NOISE = re.compile(
     re.I)
 # Our own automatic emails, by subject.
 OUR_AUTOMATIC = re.compile(
-    r"^(your (vip|tickets|login)|supplies|what'?s new|voice note|pay request|ticket (report|count) for|"
+    r"^(your (vip|tickets|login)|supplies|safety report|what'?s new|voice note|pay request|ticket (report|count) for|"
     r"today'?s ticket count|weekly ticket|new job application|sign picture|recording)", re.I)
 
 CONTRACT_WORDS = re.compile(r"\b(contract|agreement|deal memo|dealmemo|offer letter|booking confirmation|rider)\b", re.I)

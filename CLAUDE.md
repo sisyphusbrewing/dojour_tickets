@@ -190,6 +190,18 @@ Dojour gotchas, learned the hard way:
   booking@ copied, replies to Sam. Rules in
   `supabase/migrations/20261117220000_supply_reorders.sql`, checks in
   `supabase/tests/supply_reorders/`.
+- **`safe/`** is "Say something", for reporting unsafe behavior (Sam, Nov 17
+  2026: "Let's make some thing for the Green Room where people can tap or go
+  to a website if they need to report unsafe behavior"). No login, name
+  optional, no staff top bar. Opened by the NFC tag on the Green Room sign
+  (`?via=tag`), its QR code (`?via=qr`) or the link. `safety_report()` saves
+  it (`supabase/migrations/20261117270000_safety_reports.sql`; only the
+  owner login and the service key can read reports) and `job-applied` kind
+  `safety` starts `safety_notify.py`, which emails Sam (sam@), Grace
+  (booking@) or both, the reporter's pick, so someone can report about
+  either of them. The Booking board skips these emails. The page promises
+  nothing about the phone is kept (no address, nothing saved on the phone):
+  keep that true. The sign is made by `safe/make_sign.py`.
 - This repo is public, so are its Actions logs. Scripts must not print staff
   names, email addresses, phone numbers or message text.
 
@@ -213,7 +225,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages test_pay_request_notify test_supply_orders`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.

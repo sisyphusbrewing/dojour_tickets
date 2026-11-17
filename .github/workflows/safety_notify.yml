@@ -1,0 +1,36 @@
+name: Safety report
+
+# Someone reported unsafe behavior on the Green Room page (safe/index.html;
+# Sam, Nov 17 2026). The "job-applied" Supabase function starts this, and it
+# emails the report to Sam, Grace, or both, whichever the reporter picked
+# (safety_notify.py). The log never shows anything about the report.
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_id:
+        description: 'safety_reports.id to email'
+        required: true
+        type: string
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Email the report
+        env:
+          REPORT_ID: ${{ inputs.report_id }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          SAFETY_SAM_TO: ${{ vars.SAFETY_SAM_TO }}
+          SAFETY_GRACE_TO: ${{ vars.SAFETY_GRACE_TO }}
+        run: python safety_notify.py
