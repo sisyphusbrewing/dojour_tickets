@@ -165,7 +165,7 @@ declare v_net cidr := public.clock_caller_net();
 begin
   if not public.is_manager() then raise exception 'Managers only.'; end if;
   if v_net is null then raise exception 'Couldn''t tell which network this phone is on. Try again in a minute.'; end if;
-  update public.clock_settings set club_nets = array[v_net];
+  update public.clock_settings set club_nets = array[v_net] where id;   -- the one row there is
   return public.clock_wifi();
 end $$;
 
@@ -175,7 +175,7 @@ create or replace function public.clock_wifi_off()
 returns jsonb language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_manager() then raise exception 'Managers only.'; end if;
-  update public.clock_settings set club_nets = '{}';
+  update public.clock_settings set club_nets = '{}' where id;   -- the one row there is
   return public.clock_wifi();
 end $$;
 

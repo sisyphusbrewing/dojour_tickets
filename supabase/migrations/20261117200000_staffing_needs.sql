@@ -177,7 +177,8 @@ begin
     raise exception 'One of those numbers is out of range. People are 0 to 9, tickets 1 to 500, minutes 0 to 360.'; end if;
   update public.staffing_settings
      set open_people = p_open, show_extra = p_show, free_extra = p_free, full_extra = p_full, full_at = p_full_at,
-         lead_minutes = p_lead, updated_by = public.schedule_name(auth.uid()), updated_at = now();
+         lead_minutes = p_lead, updated_by = public.schedule_name(auth.uid()), updated_at = now()
+   where id;      -- the one row there is; said out loud so Supabase's editor doesn't stop on it
 end $$;
 
 -- Managers: set one day's number by hand, or (p_people empty) go back to what
