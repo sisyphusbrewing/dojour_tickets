@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Worked the Door · Sisyphus</title>
+  <meta name="description" content="Worked the door at Sisyphus? Send in the night so you get paid.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <link rel="stylesheet" href="doorshift.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="look">
+  <!-- "I worked the door" (Sam, Nov 17 2026: "We need a seperate form where
+       people can submit if they worked the door").
+
+       Who it is for: the people who check tickets at the door on a show night.
+       They are mostly comics, not on the time clock or the payroll, and have
+       no login of their own, so this page needs no sign-in (like payme/).
+
+       What it does: pick the night, leave a name and a Venmo username, send.
+       Each one lands on the pay sheet (payouts/) under "Asking to be paid",
+       marked "Door", for Sam to approve and pay, and booking@ gets an email.
+       It uses the same database call as payme/ (pay_request), so there is no
+       table of its own.
+
+       No staff top bar here: comics see this page. -->
+  <header>
+    <div class="wrap hdr">
+      <div class="hdr-brand">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Worked the door?</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewForm">
+      <p class="lead">Send in the night you worked, so you get paid for it.</p>
+
+      <form id="doorForm" novalidate>
+        <div class="band-row"><span class="band">Which night?</span></div>
+        <div class="list" id="nights"><div class="quiet">Loading the last few nights…</div></div>
+        <button class="btn-link hidden" id="moreBtn" type="button">Earlier nights</button>
+
+        <div class="card other hidden" id="otherBox">
+          <div class="field"><label for="f_day">The day you worked</label>
+            <input class="input" id="f_day" type="date"></div>
+          <div class="field"><label for="f_show">The show or event</label>
+            <input class="input" id="f_show" maxlength="120" placeholder="Who was on?"></div>
+        </div>
+
+        <div class="band-row"><span class="band">Who gets paid?</span></div>
+        <div class="card stack">
+          <div class="field"><label for="f_name">Your name</label>
+            <input class="input" id="f_name" maxlength="120" autocomplete="name" required></div>
+          <div class="field"><label for="f_handle">Venmo username</label>
+            <input class="input" id="f_handle" maxlength="60" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="@yourname" required>
+            <div class="help">The one after the @. Sam pays door shifts on Venmo.</div></div>
+          <label class="check"><input type="checkbox" id="f_keep"> Remember me on this phone</label>
+        </div>
+
+        <div class="send">
+          <p class="quiet hidden" id="againNote"></p>
+          <div class="err hidden" id="formError" role="alert"></div>
+          <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Send it</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="viewDone" class="hidden">
+      <div class="card done">
+        <h2 id="doneHead">Got it.</h2>
+        <p id="doneLine"></p>
+        <p class="quiet">Sam pays door shifts on Venmo. Questions: <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a>.</p>
+        <button class="btn btn-primary btn-big" id="anotherBtn" type="button">Add another night</button>
+      </div>
+    </section>
+
+    <div class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis</div>
+  </main>
+
+  <script src="doorshift.js"></script>
+</body>
+</html>

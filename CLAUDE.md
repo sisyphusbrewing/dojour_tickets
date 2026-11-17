@@ -145,6 +145,21 @@ Dojour gotchas, learned the hard way:
   Clocking out never waits on it. Its notices ride the schedule's
   outbox (kinds starting `clock_`). Check rule changes with
   `supabase/tests/time_clock/` before applying them.
+- **`doorshift/`** is the "I worked the door" form (Sam, Nov 17 2026: "We
+  need a seperate form where people can submit if they worked the door"). The
+  people at the door are mostly comics, not on the time clock or the payroll,
+  and have no login of their own, so the page needs none (like `payme/`) and
+  has no staff top bar. They pick the night, leave a name and a Venmo
+  username, and it lands on the pay sheet (`payouts/`, owner only) under
+  "Asking to be paid", marked Door. The form asks for no amount and sends
+  none: what a door shift pays is Sam's to type when he approves, and the
+  sheet offers what the last door shift on it was paid. Keep pay rates out of
+  this repo; it is public. One per night; the pay sheet never mixes a door
+  shift up with a comic's pay for the same show. It has no
+  table of its own: it uses `pay_request()` and `pay_shows()`, the same two
+  database calls as `payme/`, and booking@ gets the same email
+  (`pay_request_notify.py`, worded for a door shift). The Door page links to
+  it.
 - **`booking/`** is the Booking board (Sam, Nov 14 2026, built for Grace):
   every weekend at a glance, what each show still needs (contract, W-9, host,
   feature, advance, emails) and the booking requests waiting for an answer.
@@ -190,7 +205,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages test_supply_orders`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages test_pay_request_notify test_supply_orders`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.
