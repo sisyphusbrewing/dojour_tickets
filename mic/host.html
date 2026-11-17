@@ -27,7 +27,7 @@
     .who:first-child { border-top: 0; }
     .who-name { font-weight: 700; font-size: 17px; color: #fff; }
     .who-sub { color: var(--gray); font-size: 13px; margin-top: 2px; word-break: break-all; }
-    .who-acts { display: flex; gap: 6px; flex-shrink: 0; }
+    .who-acts { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
     .slot { display: inline-block; min-width: 28px; color: var(--slate-light); font-family: var(--head); font-weight: 700; }
     .tag1 { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: var(--slate); color: #fff; border-radius: 6px; padding: 3px 6px 1px; margin-left: 6px; vertical-align: 2px; }
     .drawrow { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
@@ -118,7 +118,7 @@
         <button class="btn btn-primary" type="button" id="drawBtn">Draw names</button>
         <button class="btn" type="button" id="undoBtn">Undo the draw</button>
       </div>
-      <p class="muted" style="margin:10px 0 0" id="drawHelp">At 6:30 PM, when online sign-ups close, 12 spots fill by themselves: first-timers first, then names drawn from everyone else. Draw names does it now instead, with this many spots. Drawn comics are spread between the guaranteed ones: a few drawn, then a guaranteed comic, and so on.</p>
+      <p class="muted" style="margin:10px 0 0" id="drawHelp">At 6:30 PM, when online sign-ups close, 12 spots fill by themselves: first-timers first, then names drawn from everyone else. At least 3 of the 12 go to women when enough signed up: the page guesses from first names ("Woman ✓"), so fix any wrong guess before 6:30. Draw names does it now instead, with this many spots. Drawn comics are spread between the guaranteed ones: a few drawn, then a guaranteed comic, and so on.</p>
     </div>
 
     <div class="band-row"><span class="band">Signed up</span></div>
@@ -203,7 +203,9 @@
       $('hatNote').textContent = waiting + ' in the hat';
       $('hat').innerHTML = rows.length ? rows.filter(function (r) { return r.status !== 'booked'; }).map(function (r) {
         var label = { hat: 'In the hat', drawn: 'Drawn', not_drawn: 'Not drawn' }[r.status];
-        var acts = '<span class="muted" style="align-self:center">' + label + '</span>' + (r.status !== 'drawn' ? btn('Book', 'book', r.id) : '') + btn('✕', 'cancel', r.id, ' btn-danger');
+        // "Woman" is a guess from the first name (Sam, Nov 17 2026); tap to fix it before the draw.
+        var w = r.status === 'hat' ? btn(r.women_spot ? 'Woman ✓' : 'Woman?', 'flipWoman', r.id, r.women_spot ? ' btn-primary' : ' btn-ghost') : '';
+        var acts = (r.status === 'hat' ? '' : '<span class="muted" style="align-self:center">' + label + '</span>') + w + (r.status !== 'drawn' ? btn('Book', 'book', r.id) : '') + btn('✕', 'cancel', r.id, ' btn-danger');
         return person(r, acts);
       }).join('') : '<div class="muted">No sign-ups for this Tuesday yet.</div>';
     }
@@ -218,6 +220,7 @@
       if (!r.email) { if (!confirm('Remove ' + r.name + ' from the lineup?')) return; await save(id, { status: 'cancelled', slot: null }); }
       else await save(id, { status: 'hat', slot: null });
       await renumber(); load(); };
+    window.flipWoman = async function (id) { var r = rows.find(function (x) { return x.id === id; }); if (r && await save(id, { women_spot: !r.women_spot })) load(); };
     window.cancel = async function (id) { var r = rows.find(function (x) { return x.id === id; }); if (r && confirm('Take ' + r.name + ' off the list?')) { await save(id, { status: 'cancelled', slot: null }); await renumber(); load(); } };
 
     // Running order lives in the database (mic_renumber): drawn names in

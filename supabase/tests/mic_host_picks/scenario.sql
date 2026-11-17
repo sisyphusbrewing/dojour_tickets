@@ -76,3 +76,18 @@ set role anon;
 select case when (select bool_or((x->>'first')::boolean) from jsonb_array_elements(mic_host_get('tok_today_aaaaaaaaaaaaaaaa')->'lineup') x) then 'ok' else 'FAIL' end as "host page marks first-timers";
 select case when coalesce(mic_public_lineup()::text, '') not like '%@%' then 'ok' else 'FAIL' end as "public lineup: no emails";
 reset role;
+
+-- Women's spots: a fresh Tuesday a week out, 20 in the hat, 4 ticked the box,
+-- no first-timers. Every draw must put at least 3 of them on.
+insert into mic_signups (mic_date, name, email, status, women_spot)
+  select today + 7, 'W ' || g, 'w' || g || '@x.co', 'hat', g <= 4 from t_ctx, generate_series(1, 20) g;
+set request.jwt.claim.role = 'authenticated';
+select mic_draw(today + 7, 12, true) is not null from t_ctx;
+reset request.jwt.claim.role;
+select case when count(*) filter (where women_spot) >= 3 and count(*) = 12 then 'ok' else 'FAIL' end as "women: at least 3 of 12"
+  from mic_signups, t_ctx where mic_date = today + 7 and status = 'drawn';
+-- The name guess.
+select case when mic_guess_woman('Stephanie Smith') and mic_guess_woman('Joslyne X') and not mic_guess_woman('Greg Y')
+             and not mic_guess_woman('Joshua Z') and not mic_guess_woman(null) then 'ok' else 'FAIL' end as "guess by first name";
+insert into mic_signups (mic_date, name, email, status) select today + 14, 'Elizabeth Q', 'eq@x.co', 'hat' from t_ctx;
+select case when women_spot then 'ok' else 'FAIL' end as "new sign-up gets the guess" from mic_signups where email = 'eq@x.co';

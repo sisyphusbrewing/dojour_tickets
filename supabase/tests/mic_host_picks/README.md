@@ -12,6 +12,7 @@ This runs them on a throwaway Postgres, never on the real database.
     psql -d t -f supabase/migrations/20261117240000_mic_host_picks.sql
     psql -d t -f supabase/migrations/20261117250000_mic_first_timers.sql
     psql -d t -f supabase/migrations/20261117260000_mic_twelve_total.sql
+    psql -d t -f supabase/migrations/20261117270000_mic_women_spots.sql
     psql -d t -A -t -f supabase/tests/mic_host_picks/scenario.sql
 
 Every check line should say `ok`. Six steps at the end are meant to be
