@@ -10,6 +10,9 @@
 update staff_roles set display_name = 'Grace' where user_id = '00000000-0000-0000-0000-000000000002';
 
 select case when count(*) = 6 then 'ok' else 'FAIL' end || ' six buttons to start' from supply_reorders;
+select case when public.reorder_email_body('Hi,', 'We need:', '[{"qty":1,"unit":"cases","item":"Parmesan pretzels"},{"qty":2,"unit":"cases","item":"Dill Ranch pretzels"},{"qty":1,"unit":"","item":"Blueberry Mint"}]', null, 'Sam')
+  = E'Hi,\n\nWe need:\n1 case Parmesan pretzels\n2 cases Dill Ranch pretzels\n1 Blueberry Mint\n\nThanks much!\nSam'
+  then 'ok' else 'FAIL' end || ' one case, two cases';
 
 -- The email text, built from the parts.
 select case when public.reorder_email_body('Hey Andy,', 'We need:',
@@ -23,7 +26,7 @@ set role authenticated;
 -- Staff can see the buttons and the preview, but not send.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
 select case when count(*) = 6 then 'ok' else 'FAIL' end || ' staff see the buttons' from supply_reorders;
-select case when body like E'Hi there,\n\nCan we get a snack order%1 case of each pretzel flavor%' then 'ok' else 'FAIL' end || ' staff see the pretzel preview'
+select case when body like E'Hi there,\n\nCan we get a snack order%1 case Parmesan pretzels\n1 case Zesty Herb%' then 'ok' else 'FAIL' end || ' staff see the pretzel preview'
   from reorder_preview((select id from supply_reorders where label = 'Pretzels'));
 \echo 'expect 1 ERROR: staff cannot send'
 select place_reorder((select id from supply_reorders where label = 'Pretzels'));
@@ -57,7 +60,7 @@ select case when body not like '%Free money%' and body like '%5 kegs Sisyphus 10
   from place_reorder((select id from supply_reorders where label = 'Seltzer kegs'), '[{"item":"Free money","qty":99}]');
 
 \echo 'expect 1 ERROR: every count zero'
-select place_reorder((select id from supply_reorders where label = 'Pretzels'), '[{"item":"pretzel flavor","qty":0}]');
+select place_reorder((select id from supply_reorders where label = 'Pretzels'), '[{"item":"Parmesan pretzels","qty":0},{"item":"Zesty Herb pretzels","qty":0},{"item":"Dill Ranch pretzels","qty":0},{"item":"Tangy Mustard pretzels","qty":0},{"item":"Cheddar Sour Cream pretzels","qty":0}]');
 
 \echo 'expect 1 ERROR: managers cannot change a button straight in the table'
 update supply_reorders set to_email = 'someone@example.com' where label = 'Pretzels';

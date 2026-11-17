@@ -156,7 +156,8 @@ Dojour gotchas, learned the hard way:
   the usual order email to one vendor (pretzels Von Hanson's, jerky Ye Olde
   Butcher Shoppe, sodas and Liquid Death Capitol Beverage, syrups Sweet Haven,
   seltzer ABV, kombucha J's), kept in `supply_reorders`. A manager taps Order,
-  changes counts, taps Send; `place_reorder()` writes `supply_orders` (only
+  ticks each kind in or out (each pretzel flavor, each soda) and changes
+  counts with − and +, taps Send; `place_reorder()` writes `supply_orders` (only
   counts change, never items or addresses; the same order twice in three days
   asks first) and `supply_notify.py` emails it from ticketing@ with sam@ and
   booking@ copied, replies to Sam. Rules in
