@@ -6,8 +6,9 @@ both: a QR code (opens /safe/?via=qr) and a square spot for an NFC tag (write
 https://staff.sisyphusbrewing.com/safe/?via=tag onto the tag with NFC Tools
 and stick it in the middle of the squares). Nothing secret is on it.
 
-   python3 safe/make_sign.py <out.pdf>
-One letter-size page.
+   python3 safe/make_sign.py <out.pdf> [letter|11x17|18x24]
+One page. The poster sizes are the letter sign scaled up to fit, centered
+(Sam, Nov 17 2026: "Send that sign in poster format for Grace to print out").
 """
 import sys
 
@@ -39,12 +40,23 @@ def qr(c, x, y, size):
     renderPDF.draw(d, c, x, y)
 
 
-def main(out):
+SIZES = {"letter": letter, "11x17": (11 * 72, 17 * 72), "18x24": (18 * 72, 24 * 72)}
+
+
+def main(out, size="letter"):
     pdfmetrics.registerFont(TTFont("B", FONTS + "LiberationSans-Bold.ttf"))
     pdfmetrics.registerFont(TTFont("R", FONTS + "LiberationSans-Regular.ttf"))
+    page_w, page_h = SIZES[size]
     W, H = letter
-    c = canvas.Canvas(out, pagesize=letter)
+    c = canvas.Canvas(out, pagesize=(page_w, page_h))
     c.setTitle("Say something - Green Room sign")
+    # Draw the letter-size sign, scaled to fill the page. The top band runs
+    # the full width of the page.
+    k = min(page_w / W, page_h / H)
+    c.setFillColorRGB(*SLATE)
+    c.rect(0, page_h - (page_h - H * k) / 2 - 120 * k, page_w, 120 * k + (page_h - H * k) / 2 + 1, stroke=0, fill=1)
+    c.translate((page_w - W * k) / 2, (page_h - H * k) / 2)
+    c.scale(k, k)
     cx = W / 2
 
     # Top band in the slate blue.
@@ -111,4 +123,4 @@ def main(out):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "letter")
