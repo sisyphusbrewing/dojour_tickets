@@ -18,8 +18,9 @@ the online sign-ups (Sam, Nov 9 2026).
   staff type the night's host; that makes a private link to `picks.html`
   ("Send the link" opens the phone's share sheet). The host types up to 4
   comics there, 5 to 7 minutes each, no login, and can change them all day.
-- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, 12 names
-  are drawn at random by themselves, once (the staff page or the host's page,
+- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, every
+  first-timer goes on the lineup ("the first timers automatically get up and
+  should be identified online") and 12 more names are drawn at random, once (the staff page or the host's page,
   whichever is open, asks the database for it; `mic_draw()` only allows it
   from 6:30 on the day). Draw names on `host.html` still works by hand.
 - Running order: the host opens, then a block of drawn names, then a

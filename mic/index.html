@@ -29,6 +29,7 @@
     .camus { color: var(--gray); font-style: italic; margin-top: 18px; }
     .tonight { margin-bottom: 22px; }
     .tonight ol { font-size: 20px; line-height: 1.6; color: #fff; margin: 0; padding-left: 32px; }
+    .tonight .first { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: var(--slate); color: #fff; border-radius: 6px; padding: 3px 6px 1px; margin-left: 6px; vertical-align: 3px; }
     .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 18px 16px 28px; }
   </style>
 </head>
@@ -109,7 +110,11 @@
         var d = r.data;
         if (!d || !d.lineup || !d.lineup.length) return;
         $('tonightHost').textContent = d.host_name ? 'Hosted by ' + d.host_name + '.' : '';
-        $('tonightList').innerHTML = d.lineup.map(function (n) { var li = document.createElement('li'); li.textContent = n; return li.outerHTML; }).join('');
+        // First-timers always get up and are marked (Sam, Nov 17 2026).
+        $('tonightList').innerHTML = d.lineup.map(function (x) {
+          var li = document.createElement('li'); li.textContent = x.name;
+          return li.outerHTML.replace('</li>', x.first ? ' <span class="first">First time</span></li>' : '</li>');
+        }).join('');
         $('viewTonight').classList.remove('hidden');
       });
     }

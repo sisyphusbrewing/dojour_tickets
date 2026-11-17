@@ -117,7 +117,7 @@
         <button class="btn btn-primary" type="button" id="drawBtn">Draw names</button>
         <button class="btn" type="button" id="undoBtn">Undo the draw</button>
       </div>
-      <p class="muted" style="margin:10px 0 0" id="drawHelp">12 names are drawn by themselves at 6:30 PM, when online sign-ups close. Draw names does it now instead. Drawn comics are spread between the guaranteed ones: a few drawn, then a guaranteed comic, and so on.</p>
+      <p class="muted" style="margin:10px 0 0" id="drawHelp">At 6:30 PM, when online sign-ups close, every first-timer goes on and 12 more names are drawn, by themselves. Draw names does it now instead (first-timers plus this many). Drawn comics are spread between the guaranteed ones: a few drawn, then a guaranteed comic, and so on.</p>
     </div>
 
     <div class="band-row"><span class="band">Signed up</span></div>
@@ -187,7 +187,7 @@
       var line = booked.concat(drawn);
       $('summary').textContent = niceDate(micDate, true) + ' · 7 PM';
       line = rows.filter(function (r) { return r.status === 'booked' || r.status === 'drawn'; }).sort(bySlot);
-      $('lineup').innerHTML = line.map(function (r) { return '<li>' + esc(r.name) + (r.host_pick ? ' <span class="pick">guaranteed</span>' : r.status === 'drawn' ? ' <span class="how">drawn</span>' : ' <span class="how">booked</span>') + '</li>'; }).join('');
+      $('lineup').innerHTML = line.map(function (r) { return '<li>' + esc(r.name) + (r.host_pick ? ' <span class="pick">guaranteed</span>' : r.status === 'drawn' ? (r.first_time ? ' <span class="tag1">First time</span>' : ' <span class="how">drawn</span>') : ' <span class="how">booked</span>') + '</li>'; }).join('');
       $('hostLine').textContent = host ? 'Host: ' + host.host_name + ' (opens the show)' : '';
       $('hostLine').classList.toggle('hidden', !host);
       if (document.activeElement !== $('hostName')) $('hostName').value = host ? host.host_name : '';
@@ -273,7 +273,7 @@
     });
     $('copyBtn').addEventListener('click', function () {
       var line = rows.filter(function (r) { return r.status === 'booked' || r.status === 'drawn'; }).sort(bySlot);
-      var text = 'Tuesday Mic, ' + niceDate(micDate, true) + (host ? '\nHost: ' + host.host_name : '') + '\n' + line.map(function (r, i) { return (i + 1) + '. ' + r.name; }).join('\n');
+      var text = 'Tuesday Mic, ' + niceDate(micDate, true) + (host ? '\nHost: ' + host.host_name : '') + '\n' + line.map(function (r, i) { return (i + 1) + '. ' + r.name + (r.first_time && !r.host_pick ? ' (first time)' : ''); }).join('\n');
       navigator.clipboard.writeText(text).then(function () { toast('Lineup copied'); }, function () { toast('Could not copy', true); });
     });
 

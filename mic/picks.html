@@ -53,7 +53,7 @@
       <div class="eyebrow" id="when">Tuesday Open Mic</div>
       <h1 id="hello">Your four comics</h1>
       <p class="lead">Who gets the guaranteed spots? Four comics, 5 to 7 minutes each, in the order you want them up.</p>
-      <p>The rest of the lineup is 12 names drawn from the online sign-ups at 6:30. Your four are spread through it: a few drawn comics, then one of yours, and so on, so the room gets a strong set every few spots. You can come back to this link and change your four any time before the mic.</p>
+      <p>The rest of the lineup is everyone who signed up as a first-timer plus 12 names drawn from the other sign-ups at 6:30. Your four are spread through it: a few drawn comics, then one of yours, and so on, so the room gets a strong set every few spots. You can come back to this link and change your four any time before the mic.</p>
 
       <form id="pickForm" class="card stack" style="margin-top:16px" novalidate>
         <div class="num"><b>1</b><input class="input" id="p1" maxlength="80" placeholder="Name" autocomplete="off" aria-label="First comic"></div>
@@ -69,7 +69,7 @@
         <p id="lineupHost" style="margin:6px 0 8px;color:#fff"></p>
         <div class="card"><ol class="lineup" id="lineup"></ol></div>
       </div>
-      <p id="drawNote" style="margin-top:14px;font-size:14px;color:var(--gray)">At 6:30 PM, 12 names are drawn from the online sign-ups. The full running order shows up right here then: a few drawn comics, then one of yours, and so on.</p>
+      <p id="drawNote" style="margin-top:14px;font-size:14px;color:var(--gray)">At 6:30 PM, the first-timers and 12 names drawn from the online sign-ups go on. The full running order shows up right here then: a few drawn comics, then one of yours, and so on.</p>
       <p style="margin-top:6px;font-size:14px;color:var(--gray)">7 PM, comedy club, 712 Ontario Ave W.</p>
     </section>
 
@@ -110,7 +110,7 @@
       if (!d.drawn) return;
       $('lineupHost').textContent = d.host_name + ' opens the show.';
       $('lineup').innerHTML = (d.lineup || []).map(function (x) {
-        return '<li>' + esc(x.name) + (x.how === 'host' ? ' <span class="tag">yours</span>' : '') + '</li>';
+        return '<li>' + esc(x.name) + (x.how === 'host' ? ' <span class="tag">yours</span>' : '') + (x.first ? ' <span class="tag">first time</span>' : '') + '</li>';
       }).join('');
     }
 
