@@ -30,32 +30,32 @@ set role anon;
 select case when mic_draw(today - 7)->>'drawn' = '0' and mic_draw(today + 7)->>'drawn' = '0' then 'ok' else 'FAIL' end as "auto draw: not on other days" from t_ctx;
 reset role;
 
--- Draw by hand (staff): both first-timers plus 12 of the other 13.
+-- Draw by hand (staff), 12 spots: both first-timers plus 10 of the other 13.
 set request.jwt.claim.role = 'authenticated';
-select case when (mic_draw(today, 12, true)->>'drawn')::int = 14 then 'ok' else 'FAIL' end as "draw: 12 drawn + 2 first-timers" from t_ctx;
+select case when (mic_draw(today, 12, true)->>'drawn')::int = 12 then 'ok' else 'FAIL' end as "draw: 12 in all" from t_ctx;
 select case when (mic_draw(today, 12, true)->>'drawn')::int = 0 then 'ok' else 'FAIL' end as "draw: second draw does nothing" from t_ctx;
 reset request.jwt.claim.role;
-select case when count(*) = 1 then 'ok' else 'FAIL' end as "draw: 1 not drawn" from mic_signups where status = 'not_drawn';
+select case when count(*) = 3 then 'ok' else 'FAIL' end as "draw: 3 not drawn" from mic_signups where status = 'not_drawn';
 select case when count(*) = 2 then 'ok' else 'FAIL' end as "draw: first-timers all up" from mic_signups where first_time and status = 'drawn';
--- 4 prebooked, 14 drawn: blocks of 3, 4, 3, 4.
+-- 4 prebooked, 12 drawn: blocks of 3.
 select case when string_agg(case when status = 'drawn' then 'R' else left(name, 1) || right(name, 1) end, ' ' order by slot)
-                 = 'R R R PD R R R R PA R R R PB R R R R Sd' then 'ok'
+                 = 'R R R PD R R R PA R R R PB R R R Sd' then 'ok'
             else 'FAIL ' || string_agg(case when status = 'drawn' then 'R' else name end, ' ' order by slot) end
   as "order: blocks of drawn names, each closed by a prebooked comic"
   from mic_signups where status in ('booked', 'drawn');
-select case when array_agg(slot order by slot) = array(select generate_series(1, 18)) then 'ok' else 'FAIL' end as "order: slots 1 to 18"
+select case when array_agg(slot order by slot) = array(select generate_series(1, 16)) then 'ok' else 'FAIL' end as "order: slots 1 to 16"
   from mic_signups where status in ('booked', 'drawn');
 create temp table t_drawn as select id, slot from mic_signups where status = 'drawn';
 -- Host changes picks after the draw: drawn names keep their relative order.
 set role anon;
 select mic_host_save('tok_today_aaaaaaaaaaaaaaaa', array['Pick A', 'Pick B', 'Pick C', 'Pick D']) is not null;
-select case when jsonb_array_length(mic_host_get('tok_today_aaaaaaaaaaaaaaaa')->'lineup') = 19
+select case when jsonb_array_length(mic_host_get('tok_today_aaaaaaaaaaaaaaaa')->'lineup') = 17
             and mic_host_get('tok_today_aaaaaaaaaaaaaaaa')->>'drawn' = 'true' then 'ok' else 'FAIL' end as "get: host sees full lineup after draw";
 reset role;
 select case when (select array_agg(id order by slot) from mic_signups where status = 'drawn')
                = (select array_agg(id order by slot) from t_drawn) then 'ok' else 'FAIL' end as "redo picks: drawn order kept";
--- 5 prebooked now (4 picks + staff-booked), 14 drawn: blocks of 2, 3, 3, 3, 3.
-select case when string_agg(case when status = 'drawn' then 'R' else right(name, 1) end, '' order by slot) = 'RRARRRBRRRCRRRDRRRd'
+-- 5 prebooked now (4 picks + staff-booked), 12 drawn: blocks of 2, 2, 3, 2, 3.
+select case when string_agg(case when status = 'drawn' then 'R' else right(name, 1) end, '' order by slot) = 'RRARRBRRRCRRDRRRd'
             then 'ok' else 'FAIL ' || string_agg(case when status = 'drawn' then 'R' else right(name, 1) end, '' order by slot) end
   as "redo picks: still interleaved" from mic_signups where status in ('booked', 'drawn');
 
