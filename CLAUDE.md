@@ -95,10 +95,22 @@ Dojour gotchas, learned the hard way:
   by hand (Actions > Schedule notices > Run workflow). It sends nothing
   between 1 and 8 AM Central. Check rule changes with
   `supabase/tests/staff_schedule/` before applying them.
+- **The Schedule says how many people each day needs** (Sam, Nov 17 2026:
+  "The scheduler should read the calendar for upcoming events and then say
+  how many people we need to schedule because of it"). The calendar is
+  `exchange_showtimes`, the website's upcoming showtimes (free nights are on
+  it at $0), rewritten by the sync every four hours. `schedule_needs()` in
+  `supabase/migrations/20261117200000_staffing_needs.sql` works out each
+  day's number: people on while we're open, more for a ticketed show or a
+  free event, counted from 90 minutes before. Managers see "Needs 3 people, 1
+  scheduled" on each day, can change the numbers in a box under the week, and
+  can set one day by hand (a holiday, a private party). The starting numbers
+  came from three months of When I Work clock-ins and are Sam's to change.
+  Checks: `supabase/tests/staffing_needs/`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones"). It
   replaces When I Work's time clock and the "Tip Tracker" Google Sheet: an
-  NFC sticker at the bar that clocks a phone in or out when the phone is held
+  NFC tag at the bar that clocks a phone in or out when the phone is held
   to it (Sam, Nov 17 2026: "I would rather do nfc tap for clock in and out vs
   QR code"; the page's one big button does the same for a phone that can't
   tap), the night's credit tips typed per shift, "My
@@ -112,7 +124,13 @@ Dojour gotchas, learned the hard way:
   (`clock_settings`), never in this repo. A tap clocks in at once (undo for
   two minutes) and clocks out after a four-second "Not yet" wait; nothing
   happens by itself within two minutes of the last punch, so a double read
-  can't undo it. Its notices ride the schedule's
+  can't undo it. Without the tag, the big button only works on the club
+  wifi (Sam, Nov 17 2026: "People can also clock in and out on their phone
+  but they have to be connected to our wifi to do so"): the database compares
+  where the request came from with the club's network, which a manager sets
+  once from the Payroll tab ("The club wifi") while standing in the club.
+  Until that is set the rule is off. That rule is in
+  `supabase/migrations/20261117210000_clock_wifi.sql`. Its notices ride the schedule's
   outbox (kinds starting `clock_`). Check rule changes with
   `supabase/tests/time_clock/` before applying them.
 - **`booking/`** is the Booking board (Sam, Nov 14 2026, built for Grace):

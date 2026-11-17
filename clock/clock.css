@@ -47,3 +47,9 @@
 .pname { font-weight: 700; margin: 18px 0 6px; }
 .big-num { font-size: 26px !important; font-weight: 700; text-align: center; }
 #stickerLink { flex: 1 1 auto; min-width: 0; font-size: 15px; }
+
+/* Off the club wifi: the button is greyed and a line says what to do instead. */
+.punch-wifi { color: #f0d9a8; font-size: 15px; line-height: 1.4; margin: 12px 0 0; }
+.punch-btn.dim { opacity: .5; }
+.wifi-state { color: var(--white); font-weight: 600; }
+.wifi-state.good { color: var(--ok); }
