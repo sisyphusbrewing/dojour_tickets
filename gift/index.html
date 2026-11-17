@@ -27,7 +27,7 @@
          - A guest's phone (nobody signed in, or the shared door login): the
            card's number and what's left on it. Nothing else.
          - A staff phone, signed in: the balance, "Take off" (any staff) and
-           "Put on" (managers and the owner), undo for two minutes, and the
+           "Put on" (any staff, Sam's pick on Nov 17 2026), undo for two minutes, and the
            card's history.
        Opened with no card (from the staff home tile): type a card's number,
        and for managers the list of every card, the link to write on a new
@@ -35,7 +35,7 @@
 
        GoTab can't read these cards, so staff ring things in GoTab as usual:
          Selling a card: ring the "Gift card" item for the amount, take the
-           payment, then a manager taps the card and puts that amount on.
+           payment, then tap the card and put that amount on.
          Paying with a card: tap the card, take the tab total off, then close
            the tab in GoTab with the "Gift card" payment.
 
@@ -74,6 +74,7 @@
           <button class="btn-link hidden" id="undoBtn" type="button">That was a mistake, undo it</button>
         </div>
         <div class="warn hidden" id="offNote"></div>
+        <button class="btn btn-ghost hidden" id="nextBtn" type="button" style="margin-top:12px;width:100%">Next card</button>
         <h2 class="sub" style="margin-top:28px">History</h2>
         <div class="list" id="moves"></div>
       </div>
@@ -86,6 +87,15 @@
 
     <!-- ===== Staff, opened without a card ===== -->
     <section id="homeView" class="hidden">
+      <!-- The bar phone (Sam, Nov 17 2026: "We would need this to be a stand
+           alone machine I think so folks could add/subtract to it easily").
+           On Android Chrome the page reads cards itself while it stays open. -->
+      <div class="card reader hidden" id="reader">
+        <div class="reader-ico" aria-hidden="true">)))</div>
+        <h2 id="readerTitle">Hold a gift card to the back of this phone</h2>
+        <p class="quiet" id="readerSub">The card opens here. Keep this page open at the bar.</p>
+        <button class="btn btn-primary btn-big hidden" id="readerStart" type="button">Start reading cards</button>
+      </div>
       <form class="card stack" id="findForm">
         <h2>Open a card</h2>
         <p class="quiet">Hold the card to the top of your phone. If it won’t tap, type the number on its back.</p>

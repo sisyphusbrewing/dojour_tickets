@@ -209,8 +209,10 @@ Dojour gotchas, learned the hard way:
   cards now with the NFC chip writing ability"; spent at the club only, not
   on the website, Sam's pick). Each blank NFC card carries one link,
   `/gift/?c=<32 random letters>`, written with NFC Tools. A guest's tap shows
-  the balance only; a signed-in staff phone can Take off, a manager or the
-  owner can Put on, each can undo their own change for two minutes. The
+  the balance only; any signed-in staff login can Take off and Put on (Sam,
+  Nov 17 2026: staff sell cards at night on a phone kept at the bar, where
+  Android Chrome reads each card into the open page), each can undo their
+  own change for two minutes. The
   balance is the sum of `gift_card_moves`; nothing there is ever changed or
   deleted (a trigger refuses it), and a lost card is switched off with its
   money moved to another card. GoTab can't read the cards: staff ring the
