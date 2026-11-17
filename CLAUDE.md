@@ -30,7 +30,10 @@ staff web pages, and the scheduled jobs that email people.
   `pages/*.html` hold the text of Shopify pages (Online Store > Pages, not
   the theme). Merging a change pushes it live through `shopify_pages.py`
   (workflow "Shopify pages"). Edit the file, not the page in Shopify, or the
-  next merge overwrites the edit.
+  next merge overwrites the edit. As of Nov 17 2026 the repo's Shopify app
+  lacks the `read_content`/`write_content` scopes, so that workflow fails
+  with ACCESS_DENIED; until Sam adds them, push the same text with the
+  Shopify connector (`pageUpdate`) and check the live page matches the file.
 
 ## The ticket flow (the core of the repo)
 
