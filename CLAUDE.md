@@ -66,9 +66,16 @@ Dojour gotchas, learned the hard way:
 - **`staff/tools.js` is the one list of staff tools.** The staff home page
   draws its tiles from it and the top bar (`staff/nav.js`) draws its "All
   tools" menu from it. A new tool is one new entry there, with the lowest
-  login that may open it. A staff page gets the top bar with one line:
+  login that may open it. A tool that opens to more people on a set day
+  takes `opens` (the day) and `early` (who may use it before then); the
+  Clock is a manager's tool until Mon Nov 30 2026 and everyone's from then.
+  A staff page gets the top bar with one line:
   `<script src="/staff/nav.js"></script>`. Don't put the bar on pages
   customers or comics see (exchange, payme, the Shopify embeds).
+- **The staff home page is `staff/index.html`** (live since Nov 17 2026, Sam:
+  "Let's launch the new staff portal and the scheduler"): tonight's show,
+  your next shift, What's new, the tools, what's coming up. `staff/new.html`
+  was its preview and now only forwards there.
 - **`staff/look.css` is the simpler look** (Sam, Nov 15 2026: "simple and
   easy for people to read and use"). A page uses it by loading it after
   `staff.css` and putting `class="look"` on its `<body>`. Build new staff
@@ -80,7 +87,13 @@ Dojour gotchas, learned the hard way:
   live in the database, in `supabase/migrations/20261115040000_staff_schedule.sql`;
   the page only shows and asks. Every change that affects someone writes a
   row to `schedule_outbox`; `schedule_notify.py` sends those by email or text,
-  whichever that person picked. Check rule changes with
+  whichever that person picked. GitHub drops most runs of a job that is
+  scheduled every few minutes here (it started "Schedule notices" 2 to 4
+  times a day instead of 68), so that workflow is one long run that looks
+  every two minutes and starts its own next run when it ends, with the
+  schedule as a backup. Pages don't start it. If notices stop, start it once
+  by hand (Actions > Schedule notices > Run workflow). It sends nothing
+  between 1 and 8 AM Central. Check rule changes with
   `supabase/tests/staff_schedule/` before applying them.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones"). It

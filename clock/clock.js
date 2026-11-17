@@ -90,8 +90,6 @@ function parseMoney(v) {
   return /^\d+(\.\d{1,2})?$|^\.\d{1,2}$/.test(t) ? Number(t) : NaN;
 }
 function fail(r, what) { toast((r && r.error && r.error.message) || what || 'That didn’t save. Try again.', true); }
-// Send the waiting notices now instead of at the next 15-minute run (best effort).
-function nudge() { setTimeout(function () { runWorkflow('schedule_notify.yml', {}); }, 4000); }
 function tags(p) {
   var t = '';
   if (p.in_typed) t += '<span class="tag">Written in</span>';
@@ -382,7 +380,6 @@ $('leftForm').addEventListener('submit', async function (e) {
   if (r.error) return fail(r);
   st = r.data;
   $('leftDialog').close();
-  nudge();
   toast('Saved. A manager can see it was typed in.');
   drawClock();
   if (tabNow() === 'hours') loadMine();
@@ -437,7 +434,6 @@ $('shiftForm').addEventListener('submit', async function (e) {
   $('sfSave').disabled = false;
   if (r.error) return fail(r);
   $('shiftDialog').close();
-  nudge();
   toast('Saved.');
   if (formMode === 'mine') { st = r.data; drawClock(); loadMine(); } else { loadPayroll(); loadStatus(); }
 });
@@ -446,7 +442,6 @@ $('sfRemove').addEventListener('click', async function () {
   var r = await sb.rpc('clock_fix', { p_id: editing.id, p_user: null, p_date: null, p_in: null, p_out: null, p_tips: null, p_remove: true });
   if (r.error) return fail(r);
   $('shiftDialog').close();
-  nudge();
   toast('Removed.');
   loadPayroll(); loadStatus();
 });
