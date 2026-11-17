@@ -33,7 +33,10 @@
            clocked in or out (Sam, Nov 17 2026: "I would rather do nfc tap
            for clock in and out vs QR code"). The one big button does the
            same for a phone that can't tap, but only on the club wifi. Then
-           type the night's credit tips.
+           type the night's credit tips. Clocking in first walks the person
+           through any "What's new" updates they haven't read (Sam, Nov 17
+           2026: "they should have to click through the updates before they
+           can clock in").
          - My hours: my shifts and tips for the two-week pay period.
          - Payroll (managers): hours and tips per person, last name first, in
            the shape Sam types into ADP. Sam marks each payroll as submitted,
@@ -85,6 +88,7 @@
         <button class="btn punch-btn hidden" id="punchBtn" type="button">Clock in</button>
         <p class="punch-bar hidden" id="atBar">✓ At the bar</p>
         <p class="punch-wifi hidden" id="wifiNote"></p>
+        <p class="punch-news hidden" id="newsNote"></p>
         <button class="btn-link" id="otherBtn" type="button"></button>
       </section>
 
@@ -210,6 +214,23 @@
         <button class="btn btn-ghost" type="button" id="sfCancel">Cancel</button>
       </div>
     </form>
+  </dialog>
+  <!-- Read the updates first (Sam, Nov 17 2026: "When employees clock in on
+       the app now (either with tap or with their login) they should have to
+       click through the updates before they can clock in"). Clocking in
+       shows each "What's new" update this person hasn't read, one at a time.
+       "Got it" on the last one clocks them in. -->
+  <dialog id="newsDialog" class="sheet">
+    <div class="stack">
+      <p class="help" id="newsCount" style="margin:0"></p>
+      <h2 id="newsTitle"></h2>
+      <p class="help" id="newsWhen" style="margin:0"></p>
+      <p class="news-body" id="newsBody"></p>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="button" id="newsGot">Got it</button>
+        <button class="btn btn-ghost" type="button" id="newsNot">Not now</button>
+      </div>
+    </div>
   </dialog>
   <div class="toast hidden" id="toast"></div>
 
