@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Host picks · Tuesday Open Mic · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* The Tuesday open mic host's page (Sam, Nov 17 2026: "send them a link to
+       submit 4 names for people that will each get 5-7 minutes as guaranteed
+       spots"). Staff make the link on mic/host.html; the host needs no login.
+       The names go to the top of the lineup through mic_host_save(). */
+    main { padding-top: 18px; padding-bottom: 32px; }
+    h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 32px; line-height: 1.05; margin: 4px 0 10px; }
+    .eyebrow { color: var(--slate-light); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+    .lead { color: #fff; font-size: 19px; line-height: 1.4; margin: 0 0 10px; }
+    p { color: #d9d6d6; font-size: 16px; line-height: 1.5; margin: 0 0 10px; }
+    .num { display: flex; gap: 10px; align-items: center; }
+    .num b { font-family: var(--head); font-size: 22px; color: var(--slate-light); width: 22px; text-align: right; }
+    .num .input { flex: 1; font-size: 18px; }
+    .ok { color: #9fd49f; font-weight: 700; font-size: 16px; }
+    .lineup { font-size: 19px; line-height: 1.6; color: #fff; margin: 0; padding-left: 30px; }
+    .lineup .tag { color: var(--slate-light); font-size: 13px; font-weight: 700; }
+    .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 18px 16px 28px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hdr" style="padding:12px 16px">
+      <div class="hdr-brand">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+        <div class="hdr-title">Open Mic<small>Sisyphus · Minneapolis</small></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="viewLoading"><p>Loading…</p></section>
+
+    <section id="viewBad" class="hidden">
+      <h1>Link not found</h1>
+      <p>This link doesn't work. Ask Sisyphus to send you a new one.</p>
+    </section>
+
+    <section id="viewForm" class="hidden">
+      <div class="eyebrow" id="when">Tuesday Open Mic</div>
+      <h1 id="hello">Your four comics</h1>
+      <p class="lead">Who gets the guaranteed spots? Four comics, 5 to 7 minutes each, in the order you want them up.</p>
+      <p>They go first on the lineup. Everyone else comes from the names drawn out of the hat. You can come back to this link and change them any time before the mic.</p>
+
+      <form id="pickForm" class="card stack" style="margin-top:16px" novalidate>
+        <div class="num"><b>1</b><input class="input" id="p1" maxlength="80" placeholder="Name" autocomplete="off" aria-label="First comic"></div>
+        <div class="num"><b>2</b><input class="input" id="p2" maxlength="80" placeholder="Name" autocomplete="off" aria-label="Second comic"></div>
+        <div class="num"><b>3</b><input class="input" id="p3" maxlength="80" placeholder="Name" autocomplete="off" aria-label="Third comic"></div>
+        <div class="num"><b>4</b><input class="input" id="p4" maxlength="80" placeholder="Name" autocomplete="off" aria-label="Fourth comic"></div>
+        <div class="err hidden" id="formError"></div>
+        <div class="ok hidden" id="savedNote"></div>
+        <button class="btn btn-primary btn-big" id="saveBtn" type="submit">Send the names</button>
+      </form>
+      <div id="lineupBox" class="hidden" style="margin-top:22px">
+        <div class="eyebrow">Tonight's running order</div>
+        <p id="lineupHost" style="margin:6px 0 8px;color:#fff"></p>
+        <div class="card"><ol class="lineup" id="lineup"></ol></div>
+      </div>
+      <p id="drawNote" style="margin-top:14px;font-size:14px;color:var(--gray)">At 6:30 PM, 12 names are drawn from the online sign-ups. The full running order shows up right here then: a few drawn comics, then one of yours, and so on.</p>
+      <p style="margin-top:6px;font-size:14px;color:var(--gray)">7 PM, comedy club, 712 Ontario Ave W.</p>
+    </section>
+
+    <section id="viewOver" class="hidden">
+      <h1>That mic is over</h1>
+      <p id="overText"></p>
+    </section>
+  </main>
+
+  <footer class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis</footer>
+
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    var token = new URLSearchParams(location.search).get('k') || '';
+    var fields = ['p1', 'p2', 'p3', 'p4'];
+
+    function niceDate(iso) {
+      var p = iso.split('-').map(Number);
+      return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+    function show(id) {
+      ['viewLoading', 'viewBad', 'viewForm', 'viewOver'].forEach(function (v) { $(v).classList.toggle('hidden', v !== id); });
+    }
+
+    function centralNow() {
+      var p = {}; new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+      return { date: p.year + '-' + p.month + '-' + p.day, mins: (+p.hour) * 60 + (+p.minute) };
+    }
+    function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+    var loadedOnce = false;
+    function drawLineup(d) {
+      $('lineupBox').classList.toggle('hidden', !d.drawn);
+      $('drawNote').classList.toggle('hidden', !!d.drawn);
+      if (!d.drawn) return;
+      $('lineupHost').textContent = d.host_name + ' opens the show.';
+      $('lineup').innerHTML = (d.lineup || []).map(function (x) {
+        return '<li>' + esc(x.name) + (x.how === 'host' ? ' <span class="tag">yours</span>' : '') + '</li>';
+      }).join('');
+    }
+
+    async function load() {
+      if (token.length < 20) return show('viewBad');
+      var r = await sb.rpc('mic_host_get', { p_token: token });
+      if (r.error || !r.data) return show('viewBad');
+      var d = r.data;
+      if (!d.open) { $('overText').textContent = 'The ' + niceDate(d.mic_date) + ' mic has happened. Thanks for hosting.'; return show('viewOver'); }
+      $('when').textContent = 'Tuesday Open Mic · ' + niceDate(d.mic_date);
+      var first = (d.host_name || '').split(' ')[0];
+      $('hello').textContent = first ? 'Hi ' + first + '. Your four comics.' : 'Your four comics';
+      if (!loadedOnce) {
+        (d.picks || []).forEach(function (n, i) { if (fields[i]) $(fields[i]).value = n; });
+        if ((d.picks || []).length) { $('saveBtn').textContent = 'Save changes'; }
+        loadedOnce = true;
+      }
+      drawLineup(d);
+      show('viewForm');
+      // The 6:30 draw: the database does it once, from 6:30 on the day.
+      var now = centralNow();
+      if (!d.drawn && now.date === d.mic_date && now.mins >= 18 * 60 + 30) {
+        var r2 = await sb.rpc('mic_draw', { p_date: d.mic_date });
+        if (r2.data && r2.data.drawn) return load();
+      }
+    }
+    setInterval(function () { if (loadedOnce && !document.hidden) load(); }, 30000);
+
+    $('pickForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var err = $('formError'), ok = $('savedNote'), btn = $('saveBtn');
+      err.classList.add('hidden'); ok.classList.add('hidden');
+      var names = fields.map(function (f) { return $(f).value.trim(); }).filter(Boolean);
+      if (!names.length) { err.textContent = 'Type at least one name.'; err.classList.remove('hidden'); $('p1').focus(); return; }
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        var r = await sb.rpc('mic_host_save', { p_token: token, p_names: names });
+        if (r.error) throw r.error;
+        fields.forEach(function (f, i) { $(f).value = names[i] || ''; });
+        ok.textContent = 'Got them. ' + names.length + (names.length === 1 ? ' comic is' : ' comics are') + ' on the lineup, in this order.';
+        ok.classList.remove('hidden');
+        btn.textContent = 'Save changes';
+        load();
+      } catch (ex) {
+        err.textContent = (ex && ex.message) || 'Something broke. Try again in a minute.';
+        err.classList.remove('hidden');
+        btn.textContent = 'Send the names';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

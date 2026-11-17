@@ -14,7 +14,20 @@ the online sign-ups (Sam, Nov 9 2026).
   comics booked ahead, set how many open spots, tap Draw names. Booked comics
   go first, drawn ones after; Undo puts everyone back in the hat. Copy lineup
   puts the running order on the clipboard.
-- Data: `public.mic_signups`, migration
-  `supabase/migrations/20261110003000_mic_signups.sql`.
+- The host and the 4 guaranteed spots (Sam, Nov 17 2026): on `host.html`
+  staff type the night's host; that makes a private link to `picks.html`
+  ("Send the link" opens the phone's share sheet). The host types up to 4
+  comics there, 5 to 7 minutes each, no login, and can change them all day.
+- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, 12 names
+  are drawn at random by themselves, once (the staff page or the host's page,
+  whichever is open, asks the database for it; `mic_draw()` only allows it
+  from 6:30 on the day). Draw names on `host.html` still works by hand.
+- Running order: the host opens, then a block of drawn names, then a
+  guaranteed comic, then another block, and so on (12 drawn and 4 guaranteed
+  = 3, guaranteed, 3, guaranteed...). `mic_renumber()` keeps it that way when
+  anything changes. The host's page shows the whole order after the draw.
+- Data: `public.mic_signups`, `public.mic_hosts`, `public.mic_draws`;
+  migrations `supabase/migrations/20261110003000_mic_signups.sql` and
+  `20261117240000_mic_host_picks.sql`. Checks: `supabase/tests/mic_host_picks/`.
 
 No emails go out yet; comics find out at the mic.
