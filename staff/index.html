@@ -71,8 +71,8 @@
         <p id="todayLabel">&nbsp;</p>
       </section>
 
-      <!-- Tonight: the shows on today, how many tickets each has sold, and
-           the door list one tap away. -->
+      <!-- Tonight: the shows on today, free ones too, how many tickets each
+           has sold, and the door list one tap away. -->
       <section id="tonightSection">
         <div class="tonight" id="tonight"><p class="quiet">Checking tonight…</p></div>
       </section>
@@ -108,7 +108,8 @@
     <div class="col-r">
       <section id="newsSection"></section>
 
-      <!-- Tickets sold for the next shows, Dojour + website (Sam, Nov 13 2026). -->
+      <!-- The next shows and the tickets sold for each, Dojour + website
+           (Sam, Nov 13 2026). Free nights are listed too, marked "Free". -->
       <section id="showsSection">
         <div class="band-row"><span class="band">Coming up</span><span class="band-note">Tickets sold</span></div>
         <div class="up-list list" id="upShows"><p class="quiet">Counting…</p></div>
@@ -240,25 +241,67 @@
     function can(id) { return myTools.some(function (t) { return t.id === id; }); }
 
     // ---------- Tonight + coming up ----------
-    // Ticket totals come from staff_show_counts(), which leaves out Sam's own
-    // Dojour holds (no buyer email) because those aren't sales. Sold means
-    // website + Dojour together; comps are counted apart.
+    // Two lists are read and put together:
+    //  - The calendar: every showtime on the website for the next two months,
+    //    free nights and shows nobody has bought a ticket for yet included.
+    //    It is the same list the Schedule reads. (Sam, Nov 17 2026: "There is
+    //    a show tonight - the free mic", when this box said "No show tonight"
+    //    on an open mic night. It only knew shows that had sold a ticket.)
+    //  - Ticket totals from staff_show_counts(), which leaves out Sam's own
+    //    Dojour holds (no buyer email) because those aren't sales. Sold means
+    //    website + Dojour together; comps are counted apart.
+    // A show on both lists is one show, with its ticket total.
+    var CAL_DAYS = 62;         // how far ahead the calendar is read (the most the database hands over at once)
+    var KEEP_MS = 3 * 60 * 60 * 1000;     // a show stays listed for 3 hours after it starts
+
+    // The calendar's showtimes, in the same shape as a ticket total, or null
+    // when it can't be had. The database gives it to staff logins and up; the
+    // shared door login isn't asked, and keeps the ticket list alone.
+    async function loadCalendar() {
+      if ((STAFF_RANK[myRole] || 1) < STAFF_RANK.staff) return null;
+      var from = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });     // 2026-11-17
+      var f = from.split('-');
+      var to = new Date(Date.UTC(+f[0], +f[1] - 1, +f[2] + CAL_DAYS)).toISOString().slice(0, 10);
+      var r = await sb.rpc('schedule_needs', { p_from: from, p_to: to });
+      if (r.error || !r.data) return null;
+      var out = [];
+      (r.data.days || []).forEach(function (d) {
+        (d.events || []).forEach(function (e) {
+          var tm = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(e.time || ''), p = String(d.day).split('-');
+          if (!tm || p.length !== 3) return;
+          var at = new Date(+p[0], +p[1] - 1, +p[2], (+tm[1] % 12) + (/pm/i.test(tm[3]) ? 12 : 0), +tm[2]);
+          out.push({ show_title: String(e.title || '').trim(), ts: at.getTime(), free: !!e.free, sold: Number(e.sold) || 0,
+            // Written the way ticket totals write it: "Tue, Nov 17 • 7:00 PM".
+            show_date: at.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' • ' + e.time });
+        });
+      });
+      return out;
+    }
+
     async function loadShows() {
-      var r = await sb.rpc('staff_show_counts');
+      var got = await Promise.all([sb.rpc('staff_show_counts'), loadCalendar().catch(function () { return null; })]);
+      var r = got[0], calendar = got[1];
       if (r.error) {
         $('tonight').innerHTML = '<p class="quiet">Could not load tonight’s shows.</p>';
         $('upShows').innerHTML = '<p class="quiet">Could not load ticket counts.</p>';
         return;
       }
-      var now = Date.now(), shows = [];
+      var now = Date.now(), shows = [], have = {};
       (r.data || []).forEach(function (s) {
         var ts = parseShowDateToMillis(s.show_date);
-        if (!ts || ts < now - 3 * 60 * 60 * 1000) return;     // drop past shows (3 h after start)
+        if (!ts || ts < now - KEEP_MS) return;                // drop past shows
         if (/^\s*canceled/i.test(s.show_title)) return;
         s.ts = ts; s.sold = Number(s.web) + Number(s.dojour); shows.push(s);
+        have[String(s.show_title).trim() + '|' + ts] = s;
+      });
+      (calendar || []).forEach(function (e) {
+        if (e.ts < now - KEEP_MS || /^\s*canceled/i.test(e.show_title)) return;
+        var s = have[e.show_title + '|' + e.ts];
+        if (s) { s.free = e.free; return; }                   // already listed, with its ticket total
+        shows.push(e);
       });
       shows.sort(function (a, b) { return a.ts - b.ts; });
-      drawTonight(shows);
+      drawTonight(shows, !!calendar);
       drawUpcoming(shows);
     }
     // The working day runs until 5 AM, so a late show is still "tonight" after midnight.
@@ -276,26 +319,36 @@
       });
       return out;
     }
+    // A free night with no tickets out (the open mic, the Thursday showcase)
+    // has nothing to count: its line says "Free" where the number would be.
+    function noTickets(s) { return s.free && !s.sold; }
     function nightHtml(n, word) {
       return '<div class="night-t">' + escapeHtml(n.title) + '</div><div class="times">' + n.shows.map(function (s) {
-        return '<div class="time"><b>' + escapeHtml(showTime(s.show_date)) + '</b><div class="bar"><i style="width:' + fullness(s) + '%"></i></div>' +
-          '<span>' + s.sold + word + '</span></div>';
+        return '<div class="time"><b>' + escapeHtml(showTime(s.show_date)) + '</b>' + (noTickets(s) ? '<em>Free</em>'
+          : '<div class="bar"><i style="width:' + fullness(s) + '%"></i></div><span>' + s.sold + word + '</span>') + '</div>';
       }).join('') + '</div>';
     }
 
-    function drawTonight(shows) {
+    // "calendar" says whether the calendar could be read. Without it only
+    // shows that have sold a ticket are known, so an empty night can't be
+    // called "no show": a free one might be on.
+    function drawTonight(shows, calendar) {
       var today = dayKey(Date.now());
-      var on = nights(shows.filter(function (s) { return dayKey(s.ts) === today; }));
+      var mine = shows.filter(function (s) { return dayKey(s.ts) === today; });
+      var on = nights(mine);
       if (on.length) {
+        // The door list is for a night with tickets; a free night has no list.
+        var list = can('door') && !mine.every(noTickets);
+        $('tonight').className = 'tonight';
         $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div>' + on.map(function (n) { return nightHtml(n, ' sold'); }).join('') +
-          (can('door') ? '<a class="btn" href="../">Open the door list</a>' : '');
+          (list ? '<a class="btn" href="../">Open the door list</a>' : '');
         return;
       }
       var next = shows[0];
       $('tonight').className = 'tonight dark';
-      $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div><div class="night-t">No show tonight.</div>' +
+      $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div><div class="night-t">' + (calendar ? 'No show tonight.' : 'No ticketed show tonight.') + '</div>' +
         (next ? '<div class="tn-next">Next up: <b>' + escapeHtml(next.show_title) + '</b>, ' + escapeHtml(next.show_date.replace(' • ', ' at ')) +
-          ' · ' + next.sold + ' sold</div>'
+          ' · ' + (noTickets(next) ? 'free' : next.sold + ' sold') + '</div>'
               : '<div class="tn-next">Nothing on sale right now.</div>');
     }
 

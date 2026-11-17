@@ -50,6 +50,8 @@
 .time { display: grid; grid-template-columns: 72px minmax(0, 1fr) 68px; align-items: center; gap: 10px; }
 .time b { font-weight: 600; white-space: nowrap; }
 .time span { text-align: right; font-weight: 700; white-space: nowrap; }
+/* A free night has no tickets to count: "Free" sits where the number would be. */
+.time em { grid-column: 3; text-align: right; font-style: normal; font-weight: 700; white-space: nowrap; }
 .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--slate-light); border-radius: 3px; }
 
