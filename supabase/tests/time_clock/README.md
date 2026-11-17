@@ -30,3 +30,26 @@ say `ok`. Some steps are meant to be refused (a staff login reading payroll,
 changing hours that were already paid, and so on); the line above each says
 how many `ERROR`s to expect. An `ERROR` anywhere else is a real problem.
 The last block prints every notice that was written, to read through.
+
+## The club wifi rule
+
+`supabase/migrations/20261117210000_clock_wifi.sql` adds one rule: without the
+tag at the bar, the big button only clocks someone in or out from the club's
+wifi (Sam, Nov 17 2026: "they have to be connected to our wifi to do so").
+`wifi.sql` checks it on a fresh throwaway database: the same steps as above,
+then
+
+    psql -d t -f supabase/migrations/20261117210000_clock_wifi.sql
+    psql -d t -A -t -f supabase/tests/time_clock/wifi.sql
+
+It walks: the rule is off until a manager sets the club wifi, a manager sets
+it from the club, the button works on the wifi and is refused off it (with
+nothing written), the tag works on any connection, writing a shift in by hand
+still works from home, a made-up address doesn't get past the real one, a new
+long (IPv6) address replaces the old one and covers every phone on that wifi,
+and a manager switching the rule off. The addresses in it are made-up example
+ones. Eight steps are meant to be refused; the rest print `ok`.
+
+`scenario.sql` above should give the same answers with the wifi file loaded
+as without it, because the rule is off until someone sets the club wifi.
+

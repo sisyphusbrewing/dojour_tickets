@@ -100,6 +100,23 @@
       <p class="quiet hidden" id="weekNone"></p>
       <button class="btn-link hidden" id="earlierBtn"></button>
       <div class="hours hidden" id="hours"></div>
+
+      <!-- Managers: the numbers behind "Needs 3 people" on each day (Sam, Nov 17
+           2026: "The scheduler should read the calendar for upcoming events and
+           then say how many people we need to schedule because of it"). -->
+      <details class="fold hidden" id="needFold"><summary>How many people a day needs</summary>
+        <form id="rulesForm" class="card stack rules">
+          <p class="help" style="margin:0">The Schedule reads the show calendar and works out each day’s number from these. Change them whenever they’re wrong.</p>
+          <div class="rule"><label for="rOpen">When we’re open: people on at a time</label><input class="input" id="rOpen" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rShow">A night with a ticketed show: this many more</label><input class="input" id="rShow" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rFree">A night with a free event (open mic, showcase, Blingo): this many more</label><input class="input" id="rFree" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rFullAt">A full room is a show with this many tickets sold</label><input class="input" id="rFullAt" type="number" inputmode="numeric" min="1" max="500" required></div>
+          <div class="rule"><label for="rFull">A full room: this many more again</label><input class="input" id="rFull" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rLead">The extra people start this many minutes before the show</label><input class="input" id="rLead" type="number" inputmode="numeric" min="0" max="360" required></div>
+          <p class="help" style="margin:0">A day that runs longer than 8 hours counts twice: an opener and a closer. A free event on the same night as a ticketed show doesn’t add again. For one odd day (a holiday, a private party), tap that day’s number in the week.</p>
+          <button class="btn btn-primary" type="submit" id="rulesSave">Save</button>
+        </form>
+      </details>
     </div>
 
     <!-- ===== Time off ===== -->
@@ -183,6 +200,20 @@
         <button class="btn hidden" type="button" id="sfAgain">Save and add another</button>
         <button class="btn btn-danger hidden" type="button" id="sfRemove">Remove</button>
         <button class="btn btn-ghost" type="button" id="sfCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <!-- Managers: set one day's number by hand. -->
+  <dialog id="needDialog" class="sheet">
+    <form id="needForm" class="stack" method="dialog">
+      <h2 id="needTitle">People needed</h2>
+      <p class="help" id="needWhy" style="margin:0"></p>
+      <div class="field"><label for="needPeople">People needed this day</label><input class="input" id="needPeople" type="number" inputmode="numeric" min="0" max="40" required></div>
+      <div class="field"><label for="needNote">Why (optional)</label><input class="input" id="needNote" maxlength="120" placeholder="Private party in the back room"></div>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="needSave">Save</button>
+        <button class="btn hidden" type="button" id="needUsual">Go back to the usual</button>
+        <button class="btn btn-ghost" type="button" id="needCancel">Cancel</button>
       </div>
     </form>
   </dialog>

@@ -161,6 +161,8 @@ async function loadStatus() {
   var r = await sb.rpc('clock_status');
   st = r.error ? null : r.data;
   if (st && !nameOf[me.id]) nameOf[me.id] = st.name;
+  // Managers get "The club wifi" under Payroll once the database has that part.
+  $('wifiFold').classList.toggle('hidden', !(isMgr && st && st.wifi));
   drawClock();
 }
 
@@ -184,13 +186,23 @@ function drawClock() {
   // when the sticker carries a link that has since been changed.
   $('atBar').classList.toggle('hidden', !(st.on_schedule && (stickerOk === false || freshCode())));
   $('atBar').classList.toggle('old', stickerOk === false);
-  $('atBar').textContent = stickerOk === false ? 'This sticker has an old link, so this doesn’t count as “at the bar”. Tell a manager.' : '✓ At the bar';
+  $('atBar').textContent = stickerOk === false ? 'This tag has an old link, so this doesn’t count as “at the bar”. Tell a manager.' : '✓ At the bar';
   btn.classList.toggle('hidden', !st.on_schedule || (fresh && !leaving));
   other.classList.toggle('hidden', !st.on_schedule || leaving);
+  // Off the club wifi the button won't clock anyone (Sam, Nov 17 2026: "People
+  // can also clock in and out on their phone but they have to be connected to
+  // our wifi to do so"), so the page says so before it is tapped. A tap on
+  // the tag works on any connection. The database decides; this is only the
+  // heads-up, and it is quiet until a manager has set the club wifi.
+  var offWifi = !!st.on_schedule && st.wifi === 'off' && !freshCode() && !leaving && !fresh;
+  $('wifiNote').classList.toggle('hidden', !offWifi);
+  if (offWifi) $('wifiNote').textContent = 'You’re not on the club wifi, so the button won’t clock you ' + (open ? 'out' : 'in') +
+    '. Join the wifi, or hold your phone to the tag at the bar.';
+  btn.classList.toggle('dim', offWifi);
   if (!st.on_schedule) {
-    $('state').textContent = stickerOk === true ? '✓ This sticker works' : stickerOk === false ? 'This sticker has an old link' : 'Nothing to clock';
+    $('state').textContent = stickerOk === true ? '✓ This tag works' : stickerOk === false ? 'This tag has an old link' : 'Nothing to clock';
     $('stateSub').textContent = stickerOk === true ? 'Staff who tap it are clocked in or out. This login isn’t on the schedule, so it has nothing to clock.'
-      : stickerOk === false ? 'Write today’s link onto it. The link is under Payroll, “The tap sticker for the bar”.'
+      : stickerOk === false ? 'Write today’s link onto it. The link is under Payroll, “The tag at the bar”.'
       : 'This login isn’t on the schedule. A manager can add it on the Schedule page, under My settings.';
   } else if (open) {
     var planned = st.shift ? '<br><span class="quiet">Scheduled ' + escapeHtml(sched(st.shift)) + '</span>' : '';
@@ -245,8 +257,14 @@ async function punch(byTap) {
   if (r.error) {
     busy = false; btn.disabled = false;
     if (!byTap) chime(false);
+    // Refused for not being on the club wifi even though a tag's code was
+    // sent: a good code is never refused for that, so the tag has an old link.
+    if (r.error.hint === 'wifi' && code) stickerOk = false;
     drawClock();
-    return fail(r, 'That didn’t go through. Check the wifi and tap again.');
+    fail(r, 'That didn’t go through. Check the wifi and tap again.');
+    // They may have joined the wifi since the page last asked.
+    if (r.error.hint === 'wifi') loadStatus();
+    return;
   }
   st = r.data;
   // The database says whether the code on the sticker was the right one.
@@ -597,6 +615,41 @@ $('undoBtn').addEventListener('click', async function () {
   if (r.error) return fail(r);
   toast('Taken back.');
   loadPayroll();
+});
+
+// ---------- Managers: the club wifi ----------
+// The big button only works on the club wifi. The database knows the club's
+// network because a manager, standing in the club on the wifi, taps "This is
+// the club wifi" once. Until then the rule is off.
+function drawWifi(w) {
+  var s = w && w.state;
+  $('wifiState').textContent = s === 'on' ? '✓ The rule is on, and this phone is on the club wifi.'
+    : s === 'off' ? 'The rule is on. This phone is not on the club wifi right now.'
+    : 'The rule is off: nobody has set the club wifi yet, so the button works from anywhere.';
+  $('wifiState').classList.toggle('good', s === 'on');
+  $('wifiOff').classList.toggle('hidden', !s || s === 'unset');
+}
+$('wifiFold').addEventListener('toggle', async function () {
+  if (!this.open) return;
+  var r = await sb.rpc('clock_wifi');
+  if (r.error) return fail(r);
+  drawWifi(r.data);
+});
+$('wifiHere').addEventListener('click', async function () {
+  if (!confirm('Only do this in the club, with this phone on the club wifi.\n\nFrom then on the Clock in button only works on this network. The tag works anywhere.')) return;
+  var r = await sb.rpc('clock_wifi_here');
+  if (r.error) return fail(r);
+  drawWifi(r.data);
+  toast('Saved. This is the club wifi.');
+  loadStatus();
+});
+$('wifiOff').addEventListener('click', async function () {
+  if (!confirm('Switch the wifi rule off?\n\nThe Clock in button will work from anywhere until someone sets the club wifi again.')) return;
+  var r = await sb.rpc('clock_wifi_off');
+  if (r.error) return fail(r);
+  drawWifi(r.data);
+  toast('The wifi rule is off.');
+  loadStatus();
 });
 
 // The sticker link is only fetched when a manager opens that fold.

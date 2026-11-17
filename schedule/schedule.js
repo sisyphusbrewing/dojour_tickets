@@ -16,6 +16,10 @@ var role = 'door', me = null, isMgr = false, myRow = null;
 var people = [], nameOf = {};
 var weekStart = null;                 // the Monday of the week on screen, as a Date at noon
 var shifts = [], timeOff = [], avail = [], showsByDay = {};
+// What the show calendar has on each day of the week on screen and, for
+// managers, how many people each day needs. needsFor is the week they were
+// loaded for; needsOff is set when the database doesn't have that part yet.
+var needs = {}, needRules = null, needsFor = null, needsOff = false, needDay = null;
 var view = 'all', showPast = false, editing = null;
 
 // ---------- Small helpers ----------
@@ -115,10 +119,35 @@ async function loadPeople() {
 }
 
 async function loadWeek() {
-  var r = await sb.from('shifts').select('*').gte('work_date', iso(weekStart)).lte('work_date', iso(addDays(weekStart, 6)))
-    .order('work_date').order('start_time');
+  var got = await Promise.all([
+    sb.from('shifts').select('*').gte('work_date', iso(weekStart)).lte('work_date', iso(addDays(weekStart, 6)))
+      .order('work_date').order('start_time'),
+    needsFor === iso(weekStart) ? null : loadNeeds()
+  ]);
+  var r = got[0];
   if (r.error) { shifts = null; return; }
   shifts = r.data || [];
+}
+
+// The calendar and the numbers (Sam, Nov 17 2026: "The scheduler should read
+// the calendar for upcoming events and then say how many people we need to
+// schedule because of it"). The database reads the website's list of upcoming
+// shows and works each day's number out; this page only shows it. Everyone
+// gets the day's events, free nights included; only managers get the numbers.
+async function loadNeeds() {
+  if (needsOff) return;
+  var from = iso(weekStart);
+  var r = await sb.rpc('schedule_needs', { p_from: from, p_to: iso(addDays(weekStart, 6)) });
+  needs = {};
+  if (r.error || !r.data) {
+    // Not in the database yet: carry on as before and stop asking.
+    if (r.error && (r.error.code === 'PGRST202' || r.error.code === '42883')) needsOff = true;
+    needsFor = null;
+    return;
+  }
+  needsFor = from;
+  needRules = r.data.rules || null;
+  (r.data.days || []).forEach(function (d) { needs[d.day] = d; });
 }
 
 // Shows on each day, so whoever builds the week can see a two-show Friday coming.
@@ -177,14 +206,106 @@ function shiftHtml(s, today) {
 }
 
 // The shows on a day, each name once: "The Dose · 7:00 PM, 78 sold · 9:30 PM, 40 sold".
+// They come from the calendar when the database has it (free nights too:
+// "Thursday Showcase 8:00 PM, free"), and from the ticket counts otherwise.
 function showsHtml(day) {
-  var by = {}, order = [];
-  (showsByDay[day] || []).forEach(function (x) {
+  var by = {}, order = [], n = needs[day];
+  var list = n && n.events && n.events.length ? n.events : (showsByDay[day] || []);
+  list.forEach(function (x) {
     if (!by[x.title]) { by[x.title] = []; order.push(x.title); }
-    by[x.title].push(escapeHtml(x.time) + ', ' + x.sold + ' sold');
+    by[x.title].push(escapeHtml(x.time) + (x.free ? ', free' : ', ' + x.sold + ' sold'));
   });
   return order.map(function (t) { return '<div class="dshow"><b>' + escapeHtml(t) + '</b> ' + by[t].join(' · ') + '</div>'; }).join('');
 }
+
+// ---------- Managers: how many people a day needs ----------
+// Minutes after midnight as a clock time: 1050 is "5:30 PM".
+function clockM(m) {
+  m = ((m % 1440) + 1440) % 1440;
+  if (m === 0) return 'midnight';
+  var h = Math.floor(m / 60), mm = m % 60;
+  return ((h + 11) % 12 + 1) + (mm ? ':' + ('0' + mm).slice(-2) : '') + (h < 12 ? ' AM' : ' PM');
+}
+function peopleWord(n) { return n + (n === 1 ? ' person' : ' people'); }
+// How many people are on a day so far. A shift with nobody on it doesn't count.
+function onDay(day) { return shifts.filter(function (s) { return s.work_date === day && s.user_id; }).length; }
+// Why a day needs what it needs, in a sentence, from the pieces the database sends.
+function needWhy(n) {
+  if (n.set) return 'Set by hand' + (n.set.note ? ': ' + n.set.note : '') + '. The usual would be ' + n.rule_people + '.';
+  return (n.parts || []).map(function (p) {
+    if (p.why === 'open') return p.people + (p.split ? ' for open hours (an opener and a closer)' : ' for open hours');
+    if (p.why === 'closed') return p.people + ' to run the bar (we’re closed that day)';
+    if (p.why === 'show') return p.people + ' more from ' + clockM(p.from) + ' for ' + p.title + (p.full ? ' (a full room)' : '');
+    if (p.why === 'free') return p.people + ' more from ' + clockM(p.from) + ' for ' + p.title;
+    return '';
+  }).filter(Boolean).join(', ');
+}
+// The line under a day's shows: "Needs 3 people, 1 scheduled" and why. Tap it
+// to set that one day by hand. Only managers, only days still to come.
+function needHtml(day) {
+  var n = needs[day];
+  if (!isMgr || view !== 'all' || !n || n.people == null) return '';
+  var on = onDay(day);
+  if (!n.people && !on && !n.set) return '';
+  var short = on < n.people;
+  var head = short ? 'Needs ' + peopleWord(n.people) + ', ' + on + ' scheduled'
+    : !n.people ? (on ? 'Needs nobody, ' + on + ' scheduled' : 'Needs nobody')
+    : on === n.people ? '✓ ' + on + ' of ' + n.people + ' scheduled'
+    : '✓ ' + on + ' scheduled, needs ' + n.people;
+  return '<button type="button" class="dneed ' + (short ? 'short' : 'ok') + '" onclick="openNeed(\'' + day + '\')"><b>' + head + '</b>' +
+    '<span>' + escapeHtml(needWhy(n)) + '</span></button>';
+}
+function openNeed(day) {
+  var n = needs[day];
+  if (!n) return;
+  needDay = day;
+  $('needTitle').textContent = 'People needed ' + niceDay(day);
+  $('needWhy').textContent = n.set ? 'The usual for this day would be ' + n.rule_people + '.'
+    : (n.rule_people ? 'The usual: ' + needWhy(n) + '.' : 'Nothing is on and we’re closed, so the usual is nobody.');
+  $('needPeople').value = n.people;
+  $('needNote').value = n.set ? n.set.note : '';
+  $('needUsual').classList.toggle('hidden', !n.set);
+  $('needDialog').showModal();
+  $('needPeople').select();
+}
+async function saveNeed(people) {
+  $('needSave').disabled = true;
+  var r = await sb.rpc('schedule_need_set', { p_day: needDay, p_people: people, p_note: people === null ? '' : $('needNote').value.trim() });
+  $('needSave').disabled = false;
+  if (r.error) return fail(r);
+  $('needDialog').close();
+  toast(people === null ? 'Back to the usual.' : 'Saved for ' + niceDay(needDay) + '.');
+  await loadNeeds(); drawWeek();
+}
+$('needForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var v = parseInt($('needPeople').value, 10);
+  if (isNaN(v) || v < 0 || v > 40) return toast('Type a number from 0 to 40.', true);
+  saveNeed(v);
+});
+$('needUsual').addEventListener('click', function () { saveNeed(null); });
+$('needCancel').addEventListener('click', function () { $('needDialog').close(); });
+
+// The numbers behind it, in a box under the week that managers can change.
+var RULE_BOXES = { rOpen: 'open_people', rShow: 'show_extra', rFree: 'free_extra', rFullAt: 'full_at', rFull: 'full_extra', rLead: 'lead_minutes' };
+function drawRules() {
+  $('needFold').classList.toggle('hidden', !(isMgr && needRules));
+  if (!isMgr || !needRules || $('needFold').contains(document.activeElement)) return;
+  Object.keys(RULE_BOXES).forEach(function (id) { $(id).value = needRules[RULE_BOXES[id]]; });
+}
+$('rulesForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var v = {};
+  Object.keys(RULE_BOXES).forEach(function (id) { v[id] = parseInt($(id).value, 10); });
+  if (Object.keys(v).some(function (id) { return isNaN(v[id]) || v[id] < 0; })) return toast('Every box needs a number.', true);
+  $('rulesSave').disabled = true;
+  var r = await sb.rpc('schedule_needs_rules', { p_open: v.rOpen, p_show: v.rShow, p_free: v.rFree, p_full: v.rFull, p_full_at: v.rFullAt, p_lead: v.rLead });
+  $('rulesSave').disabled = false;
+  if (r.error) return fail(r);
+  document.activeElement && document.activeElement.blur();
+  toast('Saved. The week is worked out again.');
+  await loadNeeds(); drawWeek();
+});
 
 function drawWeek() {
   var today = todayIso(), end = addDays(weekStart, 6);
@@ -220,7 +341,7 @@ function drawWeek() {
     html += '<div class="day' + (day === today ? ' today' : '') + (past ? ' past' : '') + (hrs ? '' : ' closed') + (list.length ? '' : ' bare') + '">' +
       '<div class="day-h"><b>' + DAY_LONG[dow] + '</b><span>' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span>' +
       (day === today ? '<em>Today</em>' : '') + (hrs ? '' : '<small>Closed</small>') + '</div>' +
-      showsHtml(day) + off +
+      showsHtml(day) + off + needHtml(day) +
       (list.length ? '<div class="shifts">' + list.map(function (s) { return shiftHtml(s, today); }).join('') + '</div>'
                    : '<div class="none">' + (view === 'mine' ? 'Not working' : view === 'grabs' ? 'Nothing' : hrs ? 'Nobody yet' : '') + '</div>') +
       (isMgr ? '<button class="add" onclick="openShift(null, \'' + day + '\')">+ Add a shift</button>' : '') + '</div>';
@@ -251,6 +372,9 @@ function drawManagerBar() {
   var drafts = shifts.filter(function (s) { return !s.published; }).length;
   var open = shifts.filter(function (s) { return !s.user_id; }).length;
   var bits = [];
+  // Days still to come this week that have fewer people on than they need.
+  var shortDays = Object.keys(needs).filter(function (d) { var n = needs[d]; return n.people != null && onDay(d) < n.people; }).length;
+  if (shortDays) bits.push('<b>' + shortDays + ' day' + (shortDays > 1 ? 's' : '') + '</b> still need' + (shortDays > 1 ? '' : 's') + ' people.');
   if (!shifts.length) bits.push('Nothing on this week yet. Add shifts with “+ Shift”, or copy last week and adjust.');
   else {
     bits.push(drafts ? '<b>' + drafts + ' draft shift' + (drafts > 1 ? 's' : '') + '</b> only managers can see.' : 'Everything on this week is posted.');
@@ -259,6 +383,7 @@ function drawManagerBar() {
   $('mgrStatus').innerHTML = bits.join(' ');
   $('postBtn').classList.toggle('hidden', !drafts);
   $('postBtn').textContent = 'Post ' + drafts + ' shift' + (drafts > 1 ? 's' : '');
+  drawRules();
   // Hours per person this week, drafts included, so nobody is over or under.
   var by = {};
   shifts.forEach(function (s) { if (s.user_id) by[s.user_id] = (by[s.user_id] || 0) + hoursOf(s); });

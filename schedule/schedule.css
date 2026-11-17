@@ -38,6 +38,13 @@ section { margin-top: 14px; }
 .dshow b { color: var(--white); font-weight: 600; }
 .doff { color: #f0d9a8; font-size: 15px; margin-bottom: 6px; }
 .doff.ask { color: var(--gray); font-style: italic; }
+/* Managers: "Needs 3 people, 1 scheduled" and why. Amber while the day is short. */
+.dneed { display: block; width: 100%; text-align: left; background: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 2px 0 8px; color: var(--muted); font: inherit; font-size: 15px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; }
+.dneed b { display: block; color: var(--ok); font-weight: 700; }
+.dneed.short { border-color: #8a6d2f; background: rgba(240, 217, 168, .07); }
+.dneed.short b { color: #f0d9a8; }
+.dneed:hover { border-color: var(--slate-light); }
+.dneed + .shifts, .dneed + .none { margin-top: 10px; }
 .dshow + .shifts, .doff + .shifts, .dshow + .none, .doff + .none { margin-top: 10px; }
 .none { color: var(--gray); }
 .none:empty { display: none; }
@@ -117,5 +124,10 @@ section { margin-top: 14px; }
 .fold { margin-top: 22px; max-width: 980px; }
 .fold summary { cursor: pointer; color: var(--slate-light); font-weight: 700; padding: 6px 0; }
 .fold .list, .fold .quiet { margin-top: 8px; }
+/* The numbers behind "Needs 3 people": a sentence, then a small number box. */
+.rules { margin-top: 8px; max-width: 620px; }
+.rule { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.rule label { flex: 1 1 auto; }
+.rule .input { flex: 0 0 76px; width: 76px; text-align: center; }
 .person { flex-wrap: wrap; justify-content: flex-start; }
 .person .input { flex: 1 1 180px; min-height: 44px; }
