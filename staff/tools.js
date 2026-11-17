@@ -94,6 +94,11 @@ var STAFF_TOOLS = [
     desc: 'Monthly show pitches to read and rate.', find: 'pitch show ideas' },
 
   // Bar & beer
+  // Tap gift cards (Sam, Nov 17 2026). The card's own link opens the same
+  // page; this tile opens it without a card: type a card's number, and for
+  // managers every card, the totals and making new ones.
+  { id: 'gift', group: 'bar', min: 'staff', ico: '🎁', href: '/gift/', title: 'Gift cards',
+    desc: 'Tap a gift card to see what’s on it and take a tab off it.', find: 'gift card balance nfc tap redeem load sell present' },
   { id: 'printmenu', group: 'bar', min: 'staff', ico: '🖨️', href: '/menu/print.html', title: 'Print menu',
     desc: 'Today’s taps on one page, straight from GoTab.', find: 'beer list taps paper' },
   { id: 'tvmenu', group: 'bar', min: 'staff', ico: '📺', href: 'https://www.sisyphusbrewing.com/pages/tv-menu', out: true, title: 'TV menu board', short: 'TV menu',

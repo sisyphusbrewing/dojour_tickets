@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Gift card · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <link rel="stylesheet" href="gift.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+</head>
+<body class="look gift-page">
+  <!-- Gift cards you tap (Sam, Nov 17 2026: "I want to offer gift cards now
+       with the NFC chip writing ability"). Spent at the club only (Sam's pick,
+       Nov 17 2026).
+
+       Each card has one link written on it: /gift/?c=<code>. The same link
+       does two things:
+         - A guest's phone (nobody signed in, or the shared door login): the
+           card's number and what's left on it. Nothing else.
+         - A staff phone, signed in: the balance, "Take off" (any staff) and
+           "Put on" (managers and the owner), undo for two minutes, and the
+           card's history.
+       Opened with no card (from the staff home tile): type a card's number,
+       and for managers the list of every card, the link to write on a new
+       one, the totals, and switching off a lost card.
+
+       GoTab can't read these cards, so staff ring things in GoTab as usual:
+         Selling a card: ring the "Gift card" item for the amount, take the
+           payment, then a manager taps the card and puts that amount on.
+         Paying with a card: tap the card, take the tab total off, then close
+           the tab in GoTab with the "Gift card" payment.
+
+       The rules (who may do what, never below $0, nothing ever deleted) live
+       in the database: supabase/migrations/20261118000000_gift_cards.sql.
+       This page only shows and asks. No staff top bar: guests see this page. -->
+  <header>
+    <div class="wrap hdr">
+      <a class="hdr-brand" id="homeLink" href="https://sisyphusbrewing.com">
+        <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+        <div class="hdr-title">Gift card</div>
+      </a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="quiet" id="loading" style="margin-top:28px">Loading…</p>
+
+    <!-- ===== The card (anyone) ===== -->
+    <section id="cardView" class="hidden">
+      <div class="gcard" id="gcard">
+        <div class="gcard-top"><span>Sisyphus gift card</span><span id="cardNo"></span></div>
+        <div class="gcard-bal" id="bal">&nbsp;</div>
+        <div class="gcard-sub" id="balSub">&nbsp;</div>
+      </div>
+      <p class="guest-note" id="guestNote">Spend it on beer, food or a show at the bar.<br>Hand the card to your bartender.</p>
+
+      <!-- Staff only -->
+      <div id="staffActs" class="hidden">
+        <div class="acts2">
+          <button class="btn btn-primary btn-big" id="spendBtn" type="button">Take off</button>
+          <button class="btn btn-big hidden" id="loadBtn" type="button">Put on</button>
+        </div>
+        <div class="done hidden" id="done">
+          <p id="doneText"></p>
+          <button class="btn-link hidden" id="undoBtn" type="button">That was a mistake, undo it</button>
+        </div>
+        <div class="warn hidden" id="offNote"></div>
+        <h2 class="sub" style="margin-top:28px">History</h2>
+        <div class="list" id="moves"></div>
+      </div>
+    </section>
+
+    <!-- ===== Not one of ours ===== -->
+    <section id="notFound" class="hidden">
+      <div class="empty"><b>We don’t know this card</b>The link on it doesn’t match any Sisyphus gift card. Ask at the bar.</div>
+    </section>
+
+    <!-- ===== Staff, opened without a card ===== -->
+    <section id="homeView" class="hidden">
+      <form class="card stack" id="findForm">
+        <h2>Open a card</h2>
+        <p class="quiet">Hold the card to the top of your phone. If it won’t tap, type the number on its back.</p>
+        <div class="find-row">
+          <input class="input" id="findNo" inputmode="numeric" pattern="[0-9]*" placeholder="Card number" autocomplete="off">
+          <button class="btn btn-primary" type="submit">Open</button>
+        </div>
+      </form>
+
+      <div id="mgrPart" class="hidden">
+        <div class="totals" id="totals"></div>
+
+        <h2 class="sub" style="margin-top:28px">How to ring it in GoTab</h2>
+        <div class="list howto">
+          <div><b>Selling a card.</b> Ring the “Gift card” item for the amount and take the payment. Then tap the card here and Put on that amount. No sales tax on a gift card.</div>
+          <div><b>Paying with a card.</b> Tap the card, Take off the tab total (or what’s left on the card), then close the tab in GoTab with the “Gift card” payment. If the tab is more than the card, they pay the rest the usual way.</div>
+        </div>
+
+        <h2 class="sub" style="margin-top:28px">Cards</h2>
+        <p class="quiet">A new card: make one here, copy its link, and write the link onto a blank card with NFC Tools (Write › Add a record › URL). Then tap the card to check it.</p>
+        <div class="mk-row">
+          <button class="btn" id="make1" type="button">Make 1 card</button>
+          <button class="btn" id="make10" type="button">Make 10</button>
+        </div>
+        <div class="list" id="cardList" style="margin-top:12px"></div>
+
+        <h2 class="sub" style="margin-top:28px">This week’s changes</h2>
+        <p class="quiet" id="repSum">&nbsp;</p>
+        <div class="list" id="repList"></div>
+      </div>
+      <p class="foot quiet" style="margin-top:28px"><a href="/staff/">Staff home</a> · <a href="#" id="signOutLink">Sign out</a></p>
+    </section>
+
+    <p class="foot quiet hidden" id="staffLink" style="margin-top:36px;text-align:center"><a href="#" id="signInLink">Staff sign in</a></p>
+  </main>
+
+  <!-- Sign in (staff only; guests never need it) -->
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Staff sign in</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+        <button class="btn btn-ghost" id="lockClose" type="button">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Take off / Put on -->
+  <dialog class="sheet" id="amtSheet">
+    <form method="dialog" class="stack" id="amtForm">
+      <h2 id="amtTitle">Take off</h2>
+      <p class="quiet" id="amtHelp"></p>
+      <div class="money"><span>$</span><input class="input" id="amt" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+      <div class="chips" id="quick"></div>
+      <div class="field"><label for="amtNote">Note (optional)</label>
+        <input class="input" id="amtNote" autocomplete="off" placeholder="Tab name or number"></div>
+      <div class="err hidden" id="amtErr"></div>
+      <div class="sheet-acts">
+        <button class="btn btn-primary btn-big" id="amtGo" type="submit" value="go">Take off</button>
+        <button class="btn btn-ghost" type="button" id="amtCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Switch off a lost card -->
+  <dialog class="sheet" id="offSheet">
+    <form method="dialog" class="stack" id="offForm">
+      <h2 id="offTitle">Switch off card</h2>
+      <p class="quiet">For a lost or broken card. Its link stops working and what’s on it moves to the card you pick. This can’t be undone.</p>
+      <div class="field" id="offToBox"><label for="offTo">Move the money to card number</label>
+        <input class="input" id="offTo" inputmode="numeric" autocomplete="off"></div>
+      <div class="field"><label for="offWhy">Why</label>
+        <input class="input" id="offWhy" autocomplete="off" placeholder="Lost, broken, ..."></div>
+      <div class="err hidden" id="offErr"></div>
+      <div class="sheet-acts">
+        <button class="btn btn-danger btn-big" type="submit" value="go">Switch it off</button>
+        <button class="btn btn-ghost" type="button" id="offCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="gift.js"></script>
+</body>
+</html>
