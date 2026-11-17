@@ -181,6 +181,16 @@ Dojour gotchas, learned the hard way:
   `booking_threads` (one row per conversation in the booking@ inbox).
   `booking_inbox.py` fills `booking_threads` every hour by reading booking@
   over IMAP, read-only; it never sends, labels or marks anything.
+- **The events@ inbox is read the same way** (Sam, Nov 17 2026: "We should
+  probably do this for the events@ email as well"). events@ is where the
+  public writes and nobody owns it, so things sit. `events_inbox.py` (workflow
+  "Events inbox", hourly) reads it with the same read-only reader as
+  `booking_inbox.py` and keeps one row per conversation in `events_threads`:
+  what it is (a private event or group, a ticket problem, an accessibility
+  question, a donation request, a comic who belongs in booking@, a sales
+  pitch), the dates and headcount they mentioned, and whose turn it is.
+  Managers only. It never sends, labels or marks anything either, and both
+  readers print counts only.
 - **Reorder buttons** sit at the top of `supplies/` (Sam, Nov 17 2026: "it
   would be nice to have buttons to order stuff like that, Pretzels"). Each is
   the usual order email to one vendor (pretzels Von Hanson's, jerky Ye Olde
@@ -229,7 +239,8 @@ Workflows read secrets from GitHub Actions: `SHOPIFY_STORE`,
 `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` (or `SHOPIFY_ACCESS_TOKEN`),
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_HOST/PORT/USER/PASS`,
 `FROM_EMAIL`, `DOJOUR_STATE`, `BOOKING_IMAP_PASS` (an app password for the
-booking@ inbox, read by `booking_inbox.py`), and (for schedule texts, once set
+booking@ inbox, read by `booking_inbox.py`), `EVENTS_IMAP_PASS` (the same for
+events@, read by `events_inbox.py`), and (for schedule texts, once set
 up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or commit their values.
 `service_account.json` and `state.json` are gitignored for that reason.
 
@@ -243,7 +254,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.
