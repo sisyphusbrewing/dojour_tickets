@@ -52,7 +52,6 @@ alter table public.payroll_runs enable row level security;
 drop policy if exists "Managers see payrolls" on public.payroll_runs;
 create policy "Managers see payrolls" on public.payroll_runs for select to authenticated
   using ((select public.is_manager()));
-grant select on public.payroll_runs to authenticated;
 
 -- ---------- Punches ----------
 create table if not exists public.time_punches (
@@ -85,7 +84,14 @@ alter table public.time_punches enable row level security;
 drop policy if exists "Own hours, managers see all" on public.time_punches;
 create policy "Own hours, managers see all" on public.time_punches for select to authenticated
   using ((select public.is_staff()) and (user_id = auth.uid() or (select public.is_manager())));
-grant select on public.time_punches to authenticated;   -- changes only through the functions below
+
+-- Supabase gives every new table to the website's logins with full rights and
+-- leaves it to the row rules above to say no. These tables hold pay records
+-- and the sticker code, so those rights are taken away as well: a signed-in
+-- login may read (the row rules decide which rows), and nothing is changed
+-- except through the functions below.
+revoke all on public.clock_settings, public.payroll_runs, public.time_punches from anon, authenticated;
+grant select on public.payroll_runs, public.time_punches to authenticated;
 
 -- A punch left open this long was forgotten, not worked. The next tap starts
 -- a new one and the old one waits for a clock-out time.

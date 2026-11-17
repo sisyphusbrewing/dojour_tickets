@@ -9,6 +9,7 @@ the real database. It reuses the schedule's stand-in for Supabase's logins.
     createdb t
     psql -d t -f supabase/tests/staff_schedule/stub.sql
     psql -d t -f supabase/migrations/20261115040000_staff_schedule.sql
+    psql -d t -c "alter default privileges in schema public grant all on tables to anon, authenticated"
     psql -d t -f supabase/migrations/20261117060000_time_clock.sql
     psql -d t -A -t -f supabase/tests/time_clock/scenario.sql
 
@@ -18,6 +19,11 @@ typing a time in by hand, a manager fixing hours, tips, writing in a shift
 nobody clocked, the payroll totals, marking payroll submitted, tips typed
 after payroll (they land in the next one), taking a submit back, and the
 "did you forget to clock out?" nudge.
+
+The `alter default privileges` line copies what Supabase does: it hands every
+new table to the website's logins with full rights. The migration takes those
+rights back, and the "cannot write hours straight into the table" check
+proves it.
 
 Each check prints `ok` or `FAIL` with what it was checking. Every line should
 say `ok`. Some steps are meant to be refused (a staff login reading payroll,
