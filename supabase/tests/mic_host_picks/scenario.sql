@@ -84,7 +84,7 @@ insert into mic_signups (mic_date, name, email, status, women_spot)
 set request.jwt.claim.role = 'authenticated';
 select mic_draw(today + 7, 12, true) is not null from t_ctx;
 reset request.jwt.claim.role;
-select case when count(*) filter (where women_spot) >= 3 and count(*) = 12 then 'ok' else 'FAIL' end as "women: at least 3 of 12"
+select case when count(*) filter (where women_spot) >= 4 and count(*) = 12 then 'ok' else 'FAIL' end as "women: at least 30% (4 of 12)"
   from mic_signups, t_ctx where mic_date = today + 7 and status = 'drawn';
 -- The name guess.
 select case when mic_guess_woman('Stephanie Smith') and mic_guess_woman('Joslyne X') and not mic_guess_woman('Greg Y')

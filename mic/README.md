@@ -28,8 +28,8 @@ the online sign-ups (Sam, Nov 9 2026).
   an inference by name is okay"): each sign-up gets `women_spot`, a guess
   from the first name (`mic_guess_woman()`). It stays behind the scenes, on no
   page (Sam, Nov 17 2026: "This part of the sorting can be done behind the
-  scenes"). The draw makes sure at least 3 of the 12 are women_spot
-  comics, when that many signed up.
+  scenes"). The draw makes sure at least 30% of the 12 (4) are
+  women_spot comics, when that many signed up (Sam: "70/30 is nice!").
 - Running order: the host opens, then a block of drawn names, then a
   guaranteed comic, then another block, and so on (12 drawn and 4 guaranteed
   = 3, guaranteed, 3, guaranteed...). `mic_renumber()` keeps it that way when
