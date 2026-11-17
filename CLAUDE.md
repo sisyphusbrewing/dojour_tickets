@@ -120,6 +120,20 @@ Dojour gotchas, learned the hard way:
   can set one day by hand (a holiday, a private party). The starting numbers
   came from three months of When I Work clock-ins and are Sam's to change.
   Checks: `supabase/tests/staffing_needs/`.
+- **The Schedule has a usual week**, the template a week is built from (Sam,
+  Nov 17 2026: "Can we pull up when i work so you can see what our schedules
+  were like before and we can use that as the template going forward?"). It
+  is a short list of shifts by day of the week with who usually works each
+  one, worked out from When I Work's old schedules and clock-ins. Managers
+  tap "Fill the usual week" on the Schedule and those shifts land on the week
+  on screen as drafts: days that are over, already have a shift, or are set
+  by hand to nobody are left alone, and a shift is left open when its person
+  has that day off. "Save this week as the usual week" (in the box under the
+  week) replaces it; the old one is kept, marked replaced. The rows are
+  people's names and hours, so they live only in the database
+  (`usual_shifts`), never in this repo. Rules in
+  `supabase/migrations/20261117290000_usual_week.sql`, checks in
+  `supabase/tests/usual_week/`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones").
   All staff use it since Nov 17 2026 (Sam: "they will be tracking their tips
