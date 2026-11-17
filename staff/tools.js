@@ -30,6 +30,11 @@ var STAFF_TOOLS = [
   // Show night
   { id: 'door', group: 'show', min: 'door', ico: '🎟️', href: '/', title: 'Door',
     desc: 'Tonight’s guest list and check-in.', find: 'guest list check in tickets will call names' },
+  // For whoever checks tickets at the door (mostly comics, not on the time
+  // clock): the night, a name and a Venmo. It lands on Pay comics for Sam to
+  // approve and pay (Sam, Nov 17 2026). The page itself needs no login.
+  { id: 'doorshift', group: 'show', min: 'door', ico: '🚪', href: '/doorshift/', title: 'Worked the door', short: 'Worked the door',
+    desc: 'Worked the door on a show night? Send in the night so you get paid.', find: 'door shift pay paid venmo worked form submit' },
   { id: 'timer', group: 'show', min: 'staff', ico: '⏱️', href: '/timer/', title: 'Stage timer',
     desc: 'The light the comic sees. Started from the Stream Deck.', find: 'clock light time' },
   { id: 'deck', group: 'show', min: 'staff', ico: '🎛️', href: '/staff/stream-deck.html', title: 'Stream Deck guide', short: 'Deck guide',
@@ -68,7 +73,7 @@ var STAFF_TOOLS = [
   { id: 'advance', group: 'comedy', min: 'manager', ico: '🎤', href: '/advance/booking.html', title: 'Booking desk',
     desc: 'Comedian advances: who’s booked, what they sent, what’s missing.', find: 'advance comic travel hotel green room' },
   { id: 'payouts', group: 'comedy', min: 'owner', ico: '💸', href: '/payouts/', title: 'Pay comics',
-    desc: 'Who we owe. Tap Pay, send it, tap Paid.', find: 'pay venmo paypal check owe settlement' },
+    desc: 'Who we owe, comics and door shifts. Tap Pay, send it, tap Paid.', find: 'pay venmo paypal check owe settlement door' },
   { id: 'payme', group: 'comedy', min: 'manager', ico: '🙋', href: '/payme/', title: 'Comic pay request form', short: 'Pay request form',
     desc: 'Send this to a comic who needs paying. Their request shows up on Pay comics.', find: 'pay request w9 form' },
   { id: 'inbox', group: 'comedy', min: 'owner', ico: '🪨', href: 'https://claude.ai/artifact/LFjnAQcjgGrr1QghpTvj3C', out: true, title: 'Boulder Inbox',
