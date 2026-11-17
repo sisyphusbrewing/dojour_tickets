@@ -48,11 +48,13 @@ var STAFF_TOOLS = [
   { id: 'schedule', group: 'you', min: 'staff', ico: '🕓', href: '/schedule/', title: 'Schedule',
     desc: 'Who works when. Trade a shift, ask for time off, say when you can’t work.', find: 'shifts hours time off swap trade availability calendar when i work' },
   // The time clock (Sam, Nov 16 2026): tap in, tap out, type the night's tips.
-  // Managers are trying it now. It opens to all staff on Mon Nov 30 2026, the
-  // first day of a pay period, so no payroll is split between When I Work's
-  // clock and this one. To open it sooner, take out "opens" and "early".
-  { id: 'clock', group: 'you', min: 'staff', early: 'manager', opens: '2026-11-30', ico: '⏱️', href: '/clock/', title: 'Clock',
-    desc: 'Clock in and out with a tap at the bar. Add your tips, see your hours for the pay period.', find: 'clock in out punch hours tips tip tracker payroll timesheet time when i work nfc tap' },
+  // Everyone's since Nov 17 2026. It was a manager's tool at first, set to
+  // open on Mon Nov 30, the first day of a pay period. Sam opened it the day
+  // the tag at the bar worked: "they will be tracking their tips on that page
+  // as well, no more go-tab for clocking in and out". So the pay period of
+  // Nov 16 to 29 has its first days on the old clock and the rest here.
+  { id: 'clock', group: 'you', min: 'staff', ico: '⏱️', href: '/clock/', title: 'Clock',
+    desc: 'Clock in and out with a tap at the bar. Add your tips, see your hours for the pay period.', find: 'clock in out punch hours tips tip tracker payroll timesheet time when i work gotab nfc tap' },
   { id: 'voice', group: 'you', min: 'door', ico: '🎙️', href: '/voice/', title: 'Voice notes', flag: 'voice',
     desc: 'Record a meeting or a thought. Claude emails you the summary and to-dos.', find: 'record meeting memo' },
 
