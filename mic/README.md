@@ -31,6 +31,10 @@ the online sign-ups (Sam, Nov 9 2026).
 - At 6:35 PM the running order shows by itself at the top of `index.html`
   (so on the website's open mic page), stage names only (Sam, Nov 17 2026:
   "at 6:35 the list should automatically post online"). `mic_public_lineup()`.
+- `hosts.html` (managers; Sam, Nov 17 2026: "a spot for Grace to put the open
+  mic host and showcase hosts in to track them"): the next 10 weeks of
+  Tuesdays and Thursdays, one host name each, saved in `mic_hosts` by date.
+  Tuesdays also get the Send-the-link button.
 - Data: `public.mic_signups`, `public.mic_hosts`, `public.mic_draws`;
   migrations `supabase/migrations/20261110003000_mic_signups.sql` and
   `20261117240000_mic_host_picks.sql`. Checks: `supabase/tests/mic_host_picks/`.
