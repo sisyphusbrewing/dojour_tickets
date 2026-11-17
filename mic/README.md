@@ -26,8 +26,9 @@ the online sign-ups (Sam, Nov 9 2026).
   from 6:30 on the day). Draw names on `host.html` still works by hand.
 - Women's spots (Sam, Nov 17 2026: "some element of Gender balancing", "making
   an inference by name is okay"): each sign-up gets `women_spot`, a guess
-  from the first name (`mic_guess_woman()`); staff can flip it on `host.html`
-  before the draw. The draw makes sure at least 3 of the 12 are women_spot
+  from the first name (`mic_guess_woman()`). It stays behind the scenes, on no
+  page (Sam, Nov 17 2026: "This part of the sorting can be done behind the
+  scenes"). The draw makes sure at least 3 of the 12 are women_spot
   comics, when that many signed up.
 - Running order: the host opens, then a block of drawn names, then a
   guaranteed comic, then another block, and so on (12 drawn and 4 guaranteed

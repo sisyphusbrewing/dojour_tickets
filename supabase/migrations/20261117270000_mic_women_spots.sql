@@ -5,8 +5,8 @@
 --
 -- Each sign-up gets women_spot, a guess from the first name (mic_guess_woman:
 -- a list of common women's first names, plus endings like -a, -elle, -lyn).
--- It's only a guess, so staff can flip it on the Tuesday mic page before
--- the draw. At the draw the 12 spots fill in this order:
+-- It's only a guess and stays behind the scenes, on no page (Sam, Nov 17
+-- 2026: "This part of the sorting can be done behind the scenes"). At the draw the 12 spots fill in this order:
 --   1. first-timers (all of them, up to 12),
 --   2. then, if fewer than 3 of the comics so far are women_spot, enough
 --      women_spot comics to reach 3 (at random among them, if there are that many),
