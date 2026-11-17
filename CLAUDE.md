@@ -143,6 +143,17 @@ Dojour gotchas, learned the hard way:
   `booking_threads` (one row per conversation in the booking@ inbox).
   `booking_inbox.py` fills `booking_threads` every hour by reading booking@
   over IMAP, read-only; it never sends, labels or marks anything.
+- **Reorder buttons** sit at the top of `supplies/` (Sam, Nov 17 2026: "it
+  would be nice to have buttons to order stuff like that, Pretzels"). Each is
+  the usual order email to one vendor (pretzels Von Hanson's, jerky Ye Olde
+  Butcher Shoppe, sodas and Liquid Death Capitol Beverage, syrups Sweet Haven,
+  seltzer ABV, kombucha J's), kept in `supply_reorders`. A manager taps Order,
+  changes counts, taps Send; `place_reorder()` writes `supply_orders` (only
+  counts change, never items or addresses; the same order twice in three days
+  asks first) and `supply_notify.py` emails it from ticketing@ with sam@ and
+  booking@ copied, replies to Sam. Rules in
+  `supabase/migrations/20261117220000_supply_reorders.sql`, checks in
+  `supabase/tests/supply_reorders/`.
 - This repo is public, so are its Actions logs. Scripts must not print staff
   names, email addresses, phone numbers or message text.
 
@@ -166,7 +177,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_schedule_notify test_booking_inbox test_shopify_pages test_supply_orders`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.

@@ -39,6 +39,16 @@
     dialog h2 { font-family: var(--head); text-transform: uppercase; letter-spacing: .1em; font-size: 16px; margin: 0 0 14px; }
     .d-actions { display: flex; gap: 8px; margin-top: 16px; }
     .d-actions .grow { flex: 1; }
+    /* Reorder buttons: the usual order email to each vendor (Sam, Nov 17 2026). */
+    .ro { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+    .ro .i-sub.bad { color: #f0b7ac; font-weight: 700; }
+    .ro .btn { flex: 0 0 auto; }
+    .ol { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+    .ol:first-child { border-top: 0; }
+    .ol .qty input { width: 46px; }
+    #o_preview { white-space: pre-wrap; font: 14px/1.45 var(--body, inherit); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 12px 0 0; color: var(--white); }
+    #orderer { max-height: calc(100dvh - 24px); overflow-y: auto; }
+    #o_meta { color: var(--gray); font-size: 13px; margin: -6px 0 10px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
@@ -81,6 +91,11 @@
 
   <main class="wrap">
     <div id="notManager" class="hidden empty"><b>Managers only</b>This login is for the door. <a href="../">Go to the door page</a>.</div>
+    <div id="reorders" class="hidden">
+      <div class="band-row"><span class="band">Reorder</span></div>
+      <p class="intro" style="margin-top:0">Tap Order to see the usual email to that vendor. Change a count if you need to, then Send. Sam and booking@ get a copy.</p>
+      <div class="rows" id="roList"></div>
+    </div>
     <div id="sheet">
       <p class="intro">Count it, type it in. When something hits its "low at" number, booking@ gets an email with where to buy it. Tap a name to change it.</p>
       <div id="list"><div class="empty">Loading the shelf…</div></div>
@@ -104,6 +119,21 @@
         <button class="btn btn-primary grow" id="saveItem" type="submit" value="save">Save</button>
         <button class="btn" type="button" onclick="$('editor').close()">Cancel</button>
         <button class="btn btn-danger" id="removeItem" type="button" onclick="removeItem()">Remove</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="orderer">
+    <form id="orderForm" method="dialog">
+      <h2 id="o_title">Order</h2>
+      <p id="o_meta"></p>
+      <div id="o_lines"></div>
+      <div class="field" style="margin-top:10px"><label for="o_note">Add a line (optional)</label>
+        <input class="input" id="o_note" maxlength="300" placeholder="Please deliver after 2 PM"></div>
+      <div id="o_preview">Loading the email…</div>
+      <p class="help" id="o_who"></p>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="o_send" type="submit">Send order</button>
+        <button class="btn" type="button" onclick="$('orderer').close()">Cancel</button>
       </div>
     </form>
   </dialog>
@@ -254,10 +284,115 @@
     });
     $('list').addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); });
 
+    // ---- Reorder buttons ------------------------------------------------
+    // Each button is the usual order email to one vendor (supply_reorders).
+    // The database builds the email words, checks it's a manager, and stops
+    // the same order going out twice in three days; supply_notify.py sends it.
+    var reorders = [], orders = [], canOrder = false, ordering = null, oLines = [], previewTimer = null;
+
+    async function loadReorders() {
+      var a = await sb.from('supply_reorders').select('*').eq('active', true).order('sort');
+      var b = await sb.from('supply_orders').select('id,reorder_id,status,ordered_at,ordered_by_name,error').order('ordered_at', { ascending: false }).limit(100);
+      if (a.error) { toast(a.error.message, true); return; }
+      reorders = a.data || []; orders = (b.data || []);
+      $('reorders').classList.toggle('hidden', !reorders.length);
+      renderReorders();
+    }
+
+    function shortDate(iso) { return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+
+    function renderReorders() {
+      $('roList').innerHTML = reorders.map(function (r) {
+        var last = orders.find(function (o) { return o.reorder_id === r.id; });
+        var sub = escapeHtml(r.vendor);
+        if (last) {
+          var who = last.ordered_by_name ? ' by ' + escapeHtml(last.ordered_by_name) : '';
+          if (last.status === 'failed') sub += ' · <span class="i-sub bad" style="display:inline">Didn\u2019t send ' + shortDate(last.ordered_at) + '. Try again.</span>';
+          else sub += ' · ' + (last.status === 'queued' ? 'sending now' : 'ordered ' + shortDate(last.ordered_at)) + who;
+        }
+        return '<div class="ro"><div class="i-main"><div class="i-name">' + escapeHtml(r.label) + '</div><div class="i-sub">' + sub + '</div>' +
+          (r.notes ? '<div class="i-sub">' + escapeHtml(r.notes) + '</div>' : '') + '</div>' +
+          '<button class="btn btn-primary" type="button" data-ro="' + r.id + '">Order</button></div>';
+      }).join('');
+    }
+
+    function openOrder(id) {
+      ordering = reorders.find(function (r) { return r.id === id; });
+      if (!ordering) return;
+      oLines = ordering.lines.map(function (l) { return { item: l.item, unit: l.unit, qty: Number(l.qty) }; });
+      $('o_title').textContent = ordering.label;
+      $('o_meta').textContent = 'To ' + ordering.vendor + ' (' + ordering.to_email + ')';
+      $('o_note').value = '';
+      $('o_send').disabled = !canOrder;
+      $('o_send').classList.toggle('hidden', !canOrder);
+      $('o_who').textContent = canOrder ? 'Goes out within a couple of minutes, from ticketing@, with Sam and booking@ copied. Replies go to Sam.'
+                                        : 'Only a manager can send orders. Tell Grace or Sam what we need.';
+      renderLines();
+      $('orderer').showModal();
+      preview();
+    }
+
+    function renderLines() {
+      $('o_lines').innerHTML = oLines.map(function (l, i) {
+        return '<div class="ol"><div class="i-name" style="font-size:15px">' + escapeHtml(l.item) + (l.unit ? '<div class="i-sub">' + escapeHtml(l.unit) + '</div>' : '') + '</div>' +
+          '<div class="qty"><button type="button" data-i="' + i + '" data-d="-1" aria-label="One less">−</button>' +
+          '<input type="number" min="0" step="any" inputmode="decimal" data-i="' + i + '" value="' + l.qty + '" aria-label="How many">' +
+          '<button class="plus" type="button" data-i="' + i + '" data-d="1" aria-label="One more">+</button></div></div>';
+      }).join('');
+    }
+
+    function preview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(async function () {
+        var res = await sb.rpc('reorder_preview', { p_reorder: ordering.id, p_lines: oLines, p_note: $('o_note').value });
+        if (res.error) { $('o_preview').textContent = 'Could not load the email: ' + res.error.message; return; }
+        var p = (res.data || [])[0];
+        $('o_preview').textContent = p ? 'Subject: ' + p.subject + '\n\n' + p.body : 'This button is gone.';
+      }, 250);
+    }
+
+    $('o_lines').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-d]'); if (!b) return;
+      var l = oLines[Number(b.dataset.i)];
+      l.qty = Math.max(0, l.qty + Number(b.dataset.d));
+      renderLines(); preview();
+    });
+    $('o_lines').addEventListener('change', function (e) {
+      if (e.target.tagName !== 'INPUT') return;
+      oLines[Number(e.target.dataset.i)].qty = Math.max(0, Number(e.target.value) || 0);
+      renderLines(); preview();
+    });
+    $('o_note').addEventListener('input', preview);
+    $('roList').addEventListener('click', function (e) { var b = e.target.closest('[data-ro]'); if (b) openOrder(b.dataset.ro); });
+
+    async function sendOrder(again) {
+      $('o_send').disabled = true;
+      var res = await sb.rpc('place_reorder', { p_reorder: ordering.id, p_lines: oLines, p_note: $('o_note').value, p_again: !!again });
+      $('o_send').disabled = false;
+      if (res.error) {
+        var m = res.error.message || '';
+        if (m.indexOf('ALREADY_SENT') === 0) {
+          if (confirm(ordering.label + ' was already ordered ' + m.replace('ALREADY_SENT ', '') + '. Send another order anyway?')) return sendOrder(true);
+          return;
+        }
+        toast(m, true); return;
+      }
+      $('orderer').close();
+      orders.unshift(res.data);
+      renderReorders();
+      var r = await runWorkflow('supply_notify.yml', {});
+      toast(r.ok ? ordering.label + ' order is on its way to ' + ordering.vendor + '.'
+                 : 'Saved, but sending did not start (' + r.error + '). The 9 AM run will send it.', !r.ok);
+      setTimeout(loadReorders, 90000);
+    }
+    $('orderForm').addEventListener('submit', function (e) { e.preventDefault(); if (canOrder) sendOrder(false); });
+
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       me = u ? u.email : '';
       if (!roleAtLeast(role, 'staff')) { showNoAccess('staff', ['sheet', 'filters']); return; }
+      canOrder = roleAtLeast(role, 'manager');
+      loadReorders();
       load();
     });
   </script>
