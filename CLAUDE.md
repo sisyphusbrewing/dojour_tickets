@@ -67,8 +67,9 @@ Dojour gotchas, learned the hard way:
   draws its tiles from it and the top bar (`staff/nav.js`) draws its "All
   tools" menu from it. A new tool is one new entry there, with the lowest
   login that may open it. A tool that opens to more people on a set day
-  takes `opens` (the day) and `early` (who may use it before then); the
-  Clock is a manager's tool until Mon Nov 30 2026 and everyone's from then.
+  takes `opens` (the day) and `early` (who may use it before then). No tool
+  uses them now: the Clock was held back that way until Sam opened it to
+  everyone on Nov 17 2026.
   A staff page gets the top bar with one line:
   `<script src="/staff/nav.js"></script>`. Don't put the bar on pages
   customers or comics see (exchange, payme, the Shopify embeds).
@@ -120,7 +121,9 @@ Dojour gotchas, learned the hard way:
   came from three months of When I Work clock-ins and are Sam's to change.
   Checks: `supabase/tests/staffing_needs/`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
-  tied to the scheduler" and "clock in and out via tap with their phones"). It
+  tied to the scheduler" and "clock in and out via tap with their phones").
+  All staff use it since Nov 17 2026 (Sam: "they will be tracking their tips
+  on that page as well, no more go-tab for clocking in and out"). It
   replaces When I Work's time clock and the "Tip Tracker" Google Sheet: an
   NFC tag at the bar that clocks a phone in or out when the phone is held
   to it (Sam, Nov 17 2026: "I would rather do nfc tap for clock in and out vs
