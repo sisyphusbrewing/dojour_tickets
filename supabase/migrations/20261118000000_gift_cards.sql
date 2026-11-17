@@ -62,11 +62,9 @@ begin
   end if;
   raise exception 'Gift card records are never changed or deleted.';
 end $$;
-drop trigger if exists gift_cards_keep on public.gift_cards;
-create trigger gift_cards_keep before update or delete on public.gift_cards
+create or replace trigger gift_cards_keep before update or delete on public.gift_cards
   for each row execute function public.gift_no_rewrite();
-drop trigger if exists gift_card_moves_keep on public.gift_card_moves;
-create trigger gift_card_moves_keep before update or delete on public.gift_card_moves
+create or replace trigger gift_card_moves_keep before update or delete on public.gift_card_moves
   for each row execute function public.gift_no_rewrite();
 
 -- The most a single Load can put on, and the most a card can hold. A typo
