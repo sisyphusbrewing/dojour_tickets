@@ -44,6 +44,8 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
+  <!-- The "Staff home / All tools" bar across the top of every staff page. -->
+  <script src="/staff/nav.js"></script>
 </head>
 <body>
   <div id="lock" class="hidden">
@@ -100,7 +102,7 @@
         <div class="field"><label for="l_show">Show</label><input class="input" id="l_show" list="shows" required maxlength="120" placeholder="Sam Jay"></div>
         <div class="field"><label for="l_end">Last night</label><input class="input" id="l_end" type="date"></div>
         <div class="field"><label for="l_role">Role</label>
-          <select class="input" id="l_role"><option>Headliner</option><option>Host</option><option>Feature</option><option>Host + feature</option><option>Other</option></select></div>
+          <select class="input" id="l_role"><option>Headliner</option><option>Host</option><option>Feature</option><option>Host + feature</option><option>Door</option><option>Other</option></select></div>
         <div class="field"><label for="l_amount">Amount</label><input class="input" id="l_amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
         <div class="field full"><label for="l_memo">Note they see</label><input class="input" id="l_memo" maxlength="200" placeholder="Host Thu–Fri"></div>
       </div>
@@ -239,13 +241,31 @@
 
     // Requests from the public "Venmo me for this show" form (payme/), until a
     // manager approves (matches or makes the payee and owed line) or dismisses.
+    // Door shifts come in the same way from doorshift/ (Sam, Nov 17 2026: "We
+    // need a seperate form where people can submit if they worked the door"),
+    // marked Door, one per night. The door form sends no amount: the sheet
+    // offers what the last door shift on it was paid, for Sam to keep or change.
     var PAYME = 'https://staff.sisyphusbrewing.com/payme/';
+    var DOORFORM = 'https://staff.sisyphusbrewing.com/doorshift/';
+    // What they said they're owed; for a door shift, what the newest Door line was.
+    function reqAmount(q) {
+      if (q.amount) return Number(q.amount);
+      if (q.role !== 'Door') return 0;
+      var last = lines.filter(function (l) { return l.role === 'Door'; })
+        .sort(function (a, b) { return a.created_at < b.created_at ? 1 : -1; })[0];
+      return last ? Number(last.amount) : 0;
+    }
     function bare(h) { return String(h || '').replace(/^@/, '').trim().toLowerCase(); }
     function firstWord(n) { return String(n || '').trim().split(/\s+/)[0].toLowerCase(); }
     function reqMatch(q) {
       return lines.find(function (l) {
         // A Venmo-only request (no show) matches any owed line for that person.
         if (l.status !== 'owed' || (q.show_name && l.show_name.toLowerCase() !== q.show_name.toLowerCase())) return false;
+        // A door shift is its own line: it only matches a Door line for that
+        // same night, never the comic's line for the show, and never the
+        // door line for another night of the same run.
+        if ((q.role === 'Door') !== (l.role === 'Door')) return false;
+        if (q.role === 'Door' && l.show_end !== q.show_end) return false;
         var p = payeeOf(l);
         return (p.handle && bare(p.handle) === bare(q.handle)) || String(p.name).toLowerCase() === q.name.toLowerCase() ||
           (p.name && p.name.trim().indexOf(' ') === -1 && firstWord(p.name) === firstWord(q.name));
@@ -260,14 +280,15 @@
             (q.amount && Number(q.amount) !== Number(m.amount) ? ' <span class="warn">(they said ' + money(q.amount) + ')</span>' : '')
             : '<span class="warn">Not on the sheet yet</span>';
           return '<div class="line req" data-req="' + q.id + '"><div class="l-main">' +
-            '<div class="l-name">' + escapeHtml(q.name) + '<span class="amt">' + (q.amount ? money(q.amount) : '$?') + '</span></div>' +
+            '<div class="l-name">' + escapeHtml(q.name) + '<span class="amt">' + (reqAmount(q) ? money(reqAmount(q)) : '$?') + '</span></div>' +
             '<div class="l-sub">' + [q.show_name + (q.show_dates ? ' · ' + q.show_dates : ''), q.role, 'Venmo ' + q.handle].filter(Boolean).map(escapeHtml).join(' · ') + '</div>' +
             '<div class="l-sub">' + [q.phone, q.email].filter(Boolean).map(escapeHtml).join(' · ') + (q.note ? '<br>“' + escapeHtml(q.note) + '”' : '') + '</div>' +
             '<div class="l-sub">' + match + '</div></div>' +
             '<div class="l-act"><button class="btn btn-sm btn-primary" type="button" data-act="approve">Approve</button>' +
             '<button class="btn btn-sm" type="button" data-act="dismiss">Dismiss</button></div></div>';
         }).join('') + '</div>' +
-        '<p class="help">The form comics use: <a href="#" data-act="copyform">' + PAYME + '</a></p>';
+        '<p class="help">The form comics use: <a href="#" data-act="copyform">' + PAYME + '</a><br>' +
+        'The form for door shifts: <a href="#" data-act="copydoor">' + DOORFORM + '</a></p>';
     }
     async function approveReq(q) {
       try {
@@ -277,7 +298,7 @@
         } else {
           var show = q.show_name || prompt('Which show is ' + q.name + ' getting paid for?', '');
           if (!show) return;
-          var amt = Number(prompt('Pay ' + q.name + ' how much for ' + show + '?', q.amount ? Number(q.amount) : ''));
+          var amt = Number(prompt('Pay ' + q.name + ' how much for ' + show + '?', reqAmount(q) || ''));
           if (!(amt > 0)) return;
           p = payees.find(function (x) { return x.handle && bare(x.handle) === bare(q.handle); }) || await payeeByName(q.name);
           var ins = await sb.from('payouts').insert({ payee_id: p.id, show_name: show, show_end: q.show_end,
@@ -310,6 +331,7 @@
     $('reqs').addEventListener('click', function (e) {
       var act = e.target.closest('[data-act]'); if (!act) return;
       if (act.dataset.act === 'copyform') { e.preventDefault(); copyText(PAYME, 'Form link copied'); return; }
+      if (act.dataset.act === 'copydoor') { e.preventDefault(); copyText(DOORFORM, 'Door form link copied'); return; }
       var el = e.target.closest('[data-req]'); if (!el) return;
       var q = reqs.find(function (x) { return x.id === el.dataset.req; });
       if (act.dataset.act === 'approve') approveReq(q); else if (act.dataset.act === 'dismiss') dismissReq(q);

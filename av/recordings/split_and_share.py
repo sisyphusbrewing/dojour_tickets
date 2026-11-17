@@ -63,6 +63,11 @@ COMICS_FILE = STATE_DIR / "comics.txt"          # comics who play here, one per 
 OUT_DIR = HOME / "Videos" / "Sisyphus clips"
 VIDEO = (".mkv", ".mp4", ".mov")
 DRY = "--dry-run" in sys.argv
+# Re-cutting a recording made before Nov 17 2026, when OBS had no audio sync offset and the sound ran
+# ~0.75 s ahead of the picture (the camera picture comes over the network, late):
+#     python split_and_share.py --redo "2026-11-14 18-03-45.mp4" --audio-delay 0.75
+AUDIO_DELAY = float(sys.argv[sys.argv.index("--audio-delay") + 1]) if "--audio-delay" in sys.argv else 0.0
+REDO = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--redo"]
 
 # Host intros: "please give a warm welcome to the very funny Mike Lester, everybody!"
 INTRO = re.compile(r"welcome|give it up|make (it|some|a lot of) (loud|noise)|make it loud|round of applause|"
@@ -143,6 +148,13 @@ def find_sets(events, rec_start, rec_end):
     return [(max(a - PAD, rec_start), min(b + PAD, rec_end)) for a, b in sets if b - a >= MIN_SET]
 
 
+def timer_covers_show(sets, rec_start, rec_end):
+    """True when the stage timer presses can be trusted to cut the show: at least two sets that
+    together cover half the recording. Fewer means someone pressed it once or twice and forgot."""
+    covered = sum(((b - a) for a, b, *_ in sets), timedelta())
+    return len(sets) >= 2 and covered >= (rec_end - rec_start) / 2
+
+
 def transcribe(src):
     """[{start, end, text}] in seconds from the file start. GPU if the CUDA wheels are there, else CPU."""
     for d in glob.glob(str(Path(sys.prefix) / "Lib/site-packages/nvidia/*/bin")):
@@ -205,7 +217,10 @@ def audio_sets(segs, total, known=()):
     for i, s in enumerate(segs):
         window = " ".join(x["text"] for x in segs[i:i + 3])
         every = EVERYBODY.search(window)
-        if INTRO.search(s["text"]) and every and not NOT_INTRO.search(window[:every.end()]):
+        hosted = every and not NOT_INTRO.search(window[:every.end()])
+        # Or no "everybody" but it names a comic we know: "Please give it up for Gabby Bryan." (Nov 14 6 PM)
+        named = not NOT_INTRO.search(s["text"]) and names_known_comic(s["text"], known)
+        if INTRO.search(s["text"]) and (hosted or named):
             if intros and s["start"] - intros[-1][0] < 90:
                 intros.pop()
             intros.append((s["start"], intro_name(window, known)))
@@ -230,7 +245,28 @@ def audio_sets(segs, total, known=()):
                 raw[-1][1] = b
             continue
         raw.append([a, b, name])
-    return [(a, b, name or find_name(segs, a, b, known)) for a, b, name in raw if b - a >= MIN_SET.total_seconds()]
+    named = [[a, b, name or find_name(segs, a, b, known)] for a, b, name in raw if b - a >= MIN_SET.total_seconds()]
+    merged = []
+    for a, b, name in named:
+        # The host re-introducing the same comic ("Lahiru" then "Lehiro", Nov 14 8 PM) is one set.
+        if merged and merged[-1][1] == a and same_name(merged[-1][2], name):
+            merged[-1][1] = b
+            continue
+        merged.append([a, b, name])
+    return [tuple(x) for x in merged]
+
+
+def names_known_comic(text, known):
+    """True when an intro line names someone on the comics list (snapped for Whisper's spelling)."""
+    m = NAME_AFTER.search(text)
+    return bool(m) and fix_name(m.group(1), known) in set(known)
+
+
+def same_name(x, y):
+    if not x or not y:
+        return False
+    x, y = x.lower(), y.lower()
+    return x == y or difflib.SequenceMatcher(None, x.split()[0], y.split()[0]).ratio() >= 0.6
 
 
 def known_names(h, title):
@@ -275,7 +311,16 @@ def cut(src, rec_start, a, b, dest):
     if DRY:
         print(f"  cut {a - rec_start} to {b - rec_start} -> {dest.name}")
         return
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", str((a - rec_start).total_seconds()), "-i", str(src),
+    at = (a - rec_start).total_seconds()
+    if AUDIO_DELAY:
+        # Recordings made before OBS got its audio sync offset (Nov 17 2026): the sound is ~0.75 s ahead of
+        # the picture, so take the sound from slightly earlier in the file.
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", str(at), "-i", str(src),
+                        "-ss", str(max(at - AUDIO_DELAY, 0)), "-i", str(src), "-map", "0:v:0", "-map", "1:a:0",
+                        "-t", str((b - a).total_seconds()), "-c", "copy", "-movflags", "+faststart", str(dest)],
+                       check=True)
+        return
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", str(at), "-i", str(src),
                     "-t", str((b - a).total_seconds()), "-c", "copy", "-movflags", "+faststart", str(dest)], check=True)
 
 
@@ -326,6 +371,11 @@ def handle(h, src):
                                             "at": [f"gte.{rec_start.isoformat()}", f"lte.{rec_end.isoformat()}"]})
     sets = [(a, b, None) for a, b in find_sets(events, rec_start, rec_end)]
     notes = []
+    if sets and not timer_covers_show(sets, rec_start, rec_end):
+        # Nov 13 2026: one press for the first comic and none after, so the "headliner" clip was
+        # the opener and Gabby Bryan's set never got its own clip. Too few presses = use the audio.
+        print(f"{src.name}: the stage timer only covers part of the show, finding the sets from the audio")
+        sets = []
     if not sets:
         print(f"{src.name}: no stage timer presses, finding the sets from the audio")
         segs = transcribe(src)
@@ -386,9 +436,14 @@ def main():
     # Skip a file OBS may still be writing (changed in the last 10 minutes).
     fresh = datetime.now().timestamp() - 600
     for src in sorted(p for p in obs.iterdir() if p.suffix.lower() in VIDEO):
-        if src.name in done or src.stat().st_mtime > fresh:
+        if REDO and src.name not in REDO:
+            continue
+        if (src.name in done and src.name not in REDO) or src.stat().st_mtime > fresh:
             continue
         try:
+            # A fresh sign-in for every file: the login lasts an hour and one show's transcript can take
+            # longer, so on Sun Nov 15 the 8 PM upload failed with 401 and waited a day.
+            h = sign_in()
             if handle(h, src) and not DRY:
                 done[src.name] = datetime.now(timezone.utc).isoformat()
                 DONE_FILE.write_text(json.dumps(done, indent=1))

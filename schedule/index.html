@@ -14,12 +14,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
   <link rel="stylesheet" href="schedule.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
   <script src="../staff/nav.js"></script>
 </head>
-<body class="sched-page">
+<body class="sched-page look">
   <!-- The staff schedule (Sam, Nov 14 2026: phase out When I Work and "do the
        scheduling through the staff page"). One page for everybody:
          - staff see the posted week, trade shifts, ask for time off, say which
@@ -27,7 +28,10 @@
          - managers build the week on the same page (Grace builds it going
            forward), post it, and answer time off.
        The rules live in the database (supabase/migrations/..._staff_schedule.sql);
-       this page only shows it and asks for changes. -->
+       this page only shows it and asks for changes.
+       Three tabs so nobody scrolls past forms to find their shifts (Sam, Nov 15
+       2026: "simple and easy for people to read and use"): Week (who works
+       when), Time off, and My settings (days I can't work, how to reach me). -->
   <div id="lock" class="hidden">
     <div class="card">
       <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
@@ -48,56 +52,81 @@
       <div class="hdr">
         <a class="hdr-brand" href="../staff/">
           <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
-          <div class="hdr-title">Schedule<small id="weekLabel">&nbsp;</small></div>
+          <div class="hdr-title">Schedule</div>
         </a>
-        <div class="hdr-right">
-          <button class="btn btn-sm" id="prevWeek" aria-label="The week before">‹</button>
-          <button class="btn btn-sm" id="thisWeek">This week</button>
-          <button class="btn btn-sm" id="nextWeek" aria-label="The week after">›</button>
-        </div>
       </div>
-      <div class="hdr-tools hidden" id="hdrTools">
-        <div class="chips" id="viewChips">
-          <button class="chip on" data-view="all">Everyone</button>
-          <button class="chip" data-view="mine">Just me</button>
-          <button class="chip hidden" data-view="grabs" id="grabsChip">Up for grabs</button>
-        </div>
-      </div>
+      <nav class="tabs3 hidden" id="tabs" aria-label="Parts of the schedule">
+        <a href="#week" data-tab="week" class="on">Week</a>
+        <a href="#timeoff" data-tab="timeoff">Time off<i class="hidden" id="offBadge"></i></a>
+        <a href="#settings" data-tab="settings">My settings</a>
+      </nav>
     </div>
   </header>
 
   <main class="wrap hidden" id="page">
     <div class="empty hidden" id="notManager"></div>
 
-    <!-- Notices: what changed that affects this login. The same lines go out
-         by email or text, whichever the person picked below. -->
-    <section id="noticeSection" class="hidden">
-      <div class="notices" id="notices"></div>
-    </section>
-
-    <!-- Managers: drafts are only visible to managers until posted. -->
-    <section id="mgrBar" class="mgr-bar hidden">
-      <div id="mgrStatus"></div>
-      <div class="mgr-acts">
-        <button class="btn btn-primary hidden" id="postBtn"></button>
-        <button class="btn" id="copyBtn">Copy last week</button>
+    <!-- ===== Week: who works when ===== -->
+    <div id="tab-week">
+      <div class="weekbar">
+        <button class="btn btn-sm" id="prevWeek" aria-label="The week before">‹</button>
+        <div class="weekbar-l"><b id="weekLabel">&nbsp;</b><button class="btn-link hidden" id="thisWeek">Back to this week</button></div>
+        <button class="btn btn-sm" id="nextWeek" aria-label="The week after">›</button>
       </div>
-    </section>
+      <div class="chips" id="viewChips">
+        <button class="chip on" data-view="all">Everyone</button>
+        <button class="chip" data-view="mine">Just me</button>
+        <button class="chip hidden" data-view="grabs" id="grabsChip">Up for grabs</button>
+      </div>
 
-    <p class="my-week hidden" id="myWeek"></p>
+      <!-- Notices: what changed that affects this login. The same lines go out
+           by email or text, whichever the person picked under My settings. -->
+      <section id="noticeSection" class="hidden">
+        <div class="list" id="notices"></div>
+        <button class="btn-link hidden" id="noticeClear">Clear all</button>
+      </section>
 
-    <section>
-      <button class="btn-link hidden" id="earlierBtn"></button>
+      <!-- Managers: drafts are only visible to managers until posted. -->
+      <section id="mgrBar" class="mgr-bar card hidden">
+        <div id="mgrStatus"></div>
+        <div class="mgr-acts">
+          <button class="btn btn-primary hidden" id="postBtn"></button>
+          <button class="btn" id="copyBtn">Copy last week</button>
+        </div>
+      </section>
+
+      <p class="my-week hidden" id="myWeek"></p>
       <div class="week" id="week"><p class="quiet">Loading the week…</p></div>
+      <p class="quiet hidden" id="weekNone"></p>
+      <button class="btn-link hidden" id="earlierBtn"></button>
       <div class="hours hidden" id="hours"></div>
-    </section>
 
-    <section id="offSection">
-      <div class="band-row"><span class="band">Time off</span></div>
+      <!-- Managers: the numbers behind "Needs 3 people" on each day (Sam, Nov 17
+           2026: "The scheduler should read the calendar for upcoming events and
+           then say how many people we need to schedule because of it"). -->
+      <details class="fold hidden" id="needFold"><summary>How many people a day needs</summary>
+        <form id="rulesForm" class="card stack rules">
+          <p class="help" style="margin:0">The Schedule reads the show calendar and works out each day’s number from these. Change them whenever they’re wrong.</p>
+          <div class="rule"><label for="rOpen">When we’re open: people on at a time</label><input class="input" id="rOpen" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rShow">A night with a ticketed show: this many more</label><input class="input" id="rShow" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rFree">A night with a free event (open mic, showcase, Blingo): this many more</label><input class="input" id="rFree" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rFullAt">A full room is a show with this many tickets sold</label><input class="input" id="rFullAt" type="number" inputmode="numeric" min="1" max="500" required></div>
+          <div class="rule"><label for="rFull">A full room: this many more again</label><input class="input" id="rFull" type="number" inputmode="numeric" min="0" max="9" required></div>
+          <div class="rule"><label for="rLead">The extra people start this many minutes before the show</label><input class="input" id="rLead" type="number" inputmode="numeric" min="0" max="360" required></div>
+          <!-- An early show has its own start, set in the database (Sam, Nov 17 2026: "When we have a 6pm show the bartender shifts should start at 5pm rather than 5:30"). -->
+          <p class="help hidden" id="earlyNote" style="margin:0"></p>
+          <p class="help" style="margin:0">A day that runs longer than 8 hours counts twice: an opener and a closer. A free event on the same night as a ticketed show doesn’t add again. For one odd day (a holiday, a private party), tap that day’s number in the week.</p>
+          <button class="btn btn-primary" type="submit" id="rulesSave">Save</button>
+        </form>
+      </details>
+    </div>
+
+    <!-- ===== Time off ===== -->
+    <div id="tab-timeoff" class="hidden">
       <div id="offPending"></div>
       <div class="cols2">
         <form id="offForm" class="card stack">
-          <div class="lbl">Ask for time off</div>
+          <h2>Ask for time off</h2>
           <div class="grid2">
             <div class="field"><label for="offFrom">First day off</label><input class="input" id="offFrom" type="date" required></div>
             <div class="field"><label for="offTo">Last day off</label><input class="input" id="offTo" type="date" required></div>
@@ -106,48 +135,48 @@
           <button class="btn btn-primary" type="submit" id="offBtn">Ask</button>
         </form>
         <div>
-          <div class="lbl" id="offListLbl">Your requests</div>
-          <div class="rows" id="offList"></div>
+          <h2 class="sub" id="offListLbl">Your requests</h2>
+          <div id="offList"></div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section id="availSection">
-      <div class="band-row"><span class="band">Days I can’t work</span></div>
-      <form id="availForm" class="card stack">
-        <p class="help" style="margin:0">Tap the days you can never work. For a one-off, ask for time off instead.</p>
-        <div class="daypick" id="dayPick"></div>
-        <div class="field"><label for="availNote">Anything else (optional)</label><input class="input" id="availNote" maxlength="200" placeholder="Class until 5 on Tuesdays"></div>
-        <button class="btn btn-primary" type="submit" id="availBtn">Save</button>
-      </form>
-      <details class="fold hidden" id="availAll"><summary>When everyone can’t work</summary><div class="rows" id="availAllList"></div></details>
-    </section>
+    <!-- ===== My settings: days I can't work, and how to reach me ===== -->
+    <div id="tab-settings" class="hidden">
+      <div class="cols2">
+        <form id="availForm" class="card stack">
+          <h2>Days I can’t work</h2>
+          <p class="help" style="margin-top:4px">Tap the days you can never work. For a one-off, ask for time off instead.</p>
+          <div class="daypick" id="dayPick"></div>
+          <div class="field"><label for="availNote">Anything else (optional)</label><input class="input" id="availNote" maxlength="200" placeholder="Class until 5 on Tuesdays"></div>
+          <button class="btn btn-primary" type="submit" id="availBtn">Save</button>
+        </form>
 
-    <section id="reachSection">
-      <div class="band-row"><span class="band">How to reach me</span></div>
-      <form id="reachForm" class="card stack">
-        <p class="help" style="margin:0">A new schedule, a change to your shift, a shift up for grabs, an answer on time off, and a reminder the morning you work.</p>
-        <div class="chips" id="reachPick">
-          <button type="button" class="chip" data-by="email">Email</button>
-          <button type="button" class="chip" data-by="text">Text</button>
-          <button type="button" class="chip" data-by="both">Both</button>
-          <button type="button" class="chip" data-by="none">Neither</button>
-        </div>
-        <div class="grid2">
+        <form id="reachForm" class="card stack">
+          <h2>How to reach me</h2>
+          <p class="help" style="margin-top:4px">For a new schedule, a change to your shift, a shift up for grabs, an answer on time off, and a reminder the morning you work.</p>
+          <div class="chips" id="reachPick">
+            <button type="button" class="chip" data-by="email">Email</button>
+            <button type="button" class="chip" data-by="text">Text</button>
+            <button type="button" class="chip" data-by="both">Both</button>
+            <button type="button" class="chip" data-by="none">Neither</button>
+          </div>
           <div class="field"><label for="reachEmail">Email</label><input class="input" id="reachEmail" type="email" autocomplete="email" placeholder="you@example.com"></div>
           <div class="field"><label for="reachPhone">Mobile number</label><input class="input" id="reachPhone" type="tel" autocomplete="tel" placeholder="612-555-0100"></div>
-        </div>
-        <p class="help hidden" id="textsNote" style="margin:0">Texts aren’t switched on yet. Until they are, a text is sent as an email, so add your email too.</p>
-        <button class="btn btn-primary" type="submit" id="reachBtn">Save</button>
-      </form>
-    </section>
+          <p class="help hidden" id="textsNote" style="margin-bottom:0">Texts aren’t switched on yet. Until they are, a text is sent as an email, so add your email too.</p>
+          <button class="btn btn-primary" type="submit" id="reachBtn">Save</button>
+        </form>
+      </div>
 
-    <section id="peopleSection" class="hidden">
-      <details class="fold"><summary>Who’s on the schedule</summary>
-        <p class="help">Every staff login is listed. Give each a name, and untick logins that aren’t a person or don’t take shifts.</p>
-        <div class="rows" id="peopleList"></div>
-      </details>
-    </section>
+      <!-- Managers only: what everyone has marked, and who is on the schedule. -->
+      <details class="fold hidden" id="availAll"><summary>When everyone can’t work</summary><div id="availAllList"></div></details>
+      <section id="peopleSection" class="hidden">
+        <details class="fold"><summary>Who’s on the schedule</summary>
+          <p class="help">Every staff login is listed. Give each a name, and untick logins that aren’t a person or don’t take shifts.</p>
+          <div class="list" id="peopleList"></div>
+        </details>
+      </section>
+    </div>
 
     <p class="foot">One must imagine the schedule posted.</p>
   </main>
@@ -156,14 +185,14 @@
   <dialog id="shiftDialog" class="sheet">
     <form id="shiftForm" class="stack" method="dialog">
       <h2 id="shiftTitle">Add a shift</h2>
-      <div class="grid2">
-        <div class="field full"><label for="sfDate">Day</label><input class="input" id="sfDate" type="date" required></div>
+      <div class="grid2 keep">
+        <div class="field"><label for="sfDate">Day</label><input class="input" id="sfDate" type="date" required></div>
+        <div class="field"><label for="sfPos">Job</label><input class="input" id="sfPos" list="posList" required maxlength="40">
+          <datalist id="posList"><option>Bar</option><option>Door</option><option>Comedy room</option><option>Barback</option><option>Manager</option><option>Brewery</option></datalist></div>
         <div class="field"><label for="sfStart">Starts</label><input class="input" id="sfStart" type="time" required></div>
         <div class="field"><label for="sfEnd">Ends</label><input class="input" id="sfEnd" type="time">
           <label class="check"><input type="checkbox" id="sfClose"> Until close</label></div>
-        <div class="field"><label for="sfPos">Job</label><input class="input" id="sfPos" list="posList" required maxlength="40">
-          <datalist id="posList"><option>Bar</option><option>Door</option><option>Comedy room</option><option>Barback</option><option>Manager</option><option>Brewery</option></datalist></div>
-        <div class="field"><label for="sfWho">Who</label><select class="input" id="sfWho"></select></div>
+        <div class="field full"><label for="sfWho">Who</label><select class="input" id="sfWho"></select></div>
         <div class="field full"><label for="sfNote">Note (optional)</label><input class="input" id="sfNote" maxlength="120" placeholder="Two shows tonight"></div>
       </div>
       <div class="warn hidden" id="sfWarn"></div>
@@ -173,6 +202,20 @@
         <button class="btn hidden" type="button" id="sfAgain">Save and add another</button>
         <button class="btn btn-danger hidden" type="button" id="sfRemove">Remove</button>
         <button class="btn btn-ghost" type="button" id="sfCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <!-- Managers: set one day's number by hand. -->
+  <dialog id="needDialog" class="sheet">
+    <form id="needForm" class="stack" method="dialog">
+      <h2 id="needTitle">People needed</h2>
+      <p class="help" id="needWhy" style="margin:0"></p>
+      <div class="field"><label for="needPeople">People needed this day</label><input class="input" id="needPeople" type="number" inputmode="numeric" min="0" max="40" required></div>
+      <div class="field"><label for="needNote">Why (optional)</label><input class="input" id="needNote" maxlength="120" placeholder="Private party in the back room"></div>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="needSave">Save</button>
+        <button class="btn hidden" type="button" id="needUsual">Go back to the usual</button>
+        <button class="btn btn-ghost" type="button" id="needCancel">Cancel</button>
       </div>
     </form>
   </dialog>

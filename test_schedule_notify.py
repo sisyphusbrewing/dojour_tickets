@@ -1,10 +1,14 @@
 """Checks for schedule_notify.py: who gets a schedule notice, and how.
 
-These only test plan(), which decides what to send without touching the
-network. Times are built from "now", never from today's date.
+These test plan(), which decides what to send without touching the network,
+and the two-minute watch loop with the sending and the waiting swapped out.
+Times are built from "now", never from today's date.
 """
 import unittest
 from datetime import datetime, timedelta, timezone
+from unittest import mock
+
+import requests
 
 import schedule_notify as sn
 
@@ -68,6 +72,29 @@ class PlanTest(unittest.TestCase):
         self.assertIn("- Notice 1", mine["body"])
         self.assertIn("- Notice 2", mine["body"])
 
+    def test_clock_notice_links_to_the_clock(self):
+        deliveries, _ = sn.plan([notice(1, kind="clock_open")], can_text=False, now=NOW)
+        self.assertEqual(deliveries[0]["subject"], "Did you forget to clock out?")
+        self.assertIn("The clock: " + sn.CLOCK_URL, deliveries[0]["body"])
+        self.assertNotIn("The schedule: ", deliveries[0]["body"])
+
+    def test_schedule_notice_still_links_to_the_schedule(self):
+        deliveries, _ = sn.plan([notice(1)], can_text=False, now=NOW)
+        self.assertIn("The schedule: " + sn.PAGE_URL, deliveries[0]["body"])
+        self.assertNotIn("The clock: ", deliveries[0]["body"])
+
+    def test_mixed_notices_link_to_both_pages(self):
+        deliveries, _ = sn.plan([notice(1, kind="clock_fixed"), notice(2, kind="shift_changed")],
+                                can_text=False, now=NOW)
+        self.assertEqual(len(deliveries), 1)
+        self.assertIn("The clock: " + sn.CLOCK_URL, deliveries[0]["body"])
+        self.assertIn("The schedule: " + sn.PAGE_URL, deliveries[0]["body"])
+
+    def test_every_clock_notice_has_its_own_subject(self):
+        for kind in ("clock_typed", "clock_fixed", "clock_open"):
+            deliveries, _ = sn.plan([notice(1, kind=kind)], can_text=False, now=NOW)
+            self.assertNotEqual(deliveries[0]["subject"], "Schedule update", kind)
+
     def test_stale_reminder_is_dropped(self):
         rows = [notice(1, kind="reminder", hours_old=20), notice(2, kind="reminder", hours_old=2)]
         deliveries, skipped = sn.plan(rows, can_text=False, now=NOW)
@@ -88,6 +115,84 @@ class PlanTest(unittest.TestCase):
     def test_mask_hides_addresses(self):
         self.assertEqual(sn.mask("jane@example.com"), "j***@example.com")
         self.assertEqual(sn.mask("+16125550100"), "***-0100")
+
+
+def central(hour, minute=0):
+    """A moment at this hour in Minneapolis, on whatever day it is there now."""
+    return datetime.now(sn.CENTRAL).replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+
+class QuietHoursTest(unittest.TestCase):
+    def test_the_small_hours_are_quiet(self):
+        for hour in (1, 2, 5, 7):
+            self.assertTrue(sn.quiet_hours(central(hour, 30)), hour)
+
+    def test_closing_time_and_the_morning_are_not(self):
+        # A bartender offering up a shift at 12:45 AM still reaches people,
+        # and the 9 AM "you work today" has an hour of room before it.
+        for hour in (0, 8, 9, 13, 23):
+            self.assertFalse(sn.quiet_hours(central(hour, 45)), hour)
+
+
+class Clock:
+    """A pretend clock: sleeping moves it forward instead of waiting."""
+    def __init__(self):
+        self.now = 1000.0
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
+class WatchTest(unittest.TestCase):
+    def run_watch(self, minutes, looks, quiet=False):
+        clock = Clock()
+        with mock.patch.object(sn, "main", side_effect=looks) as main, \
+             mock.patch.object(sn.time, "monotonic", clock.monotonic), \
+             mock.patch.object(sn.time, "sleep", clock.sleep), \
+             mock.patch.object(sn, "quiet_hours", return_value=quiet), \
+             mock.patch("builtins.print") as printed:
+            try:
+                sn.watch(minutes)
+                ended = None
+            except SystemExit as stop:
+                ended = stop.code
+        said = " ".join(str(c.args[0]) for c in printed.call_args_list)
+        return main.call_count, said, ended
+
+    def test_looks_every_two_minutes_and_stops_on_time(self):
+        # Ten minutes is five looks: at 0, 2, 4, 6 and 8 minutes.
+        count, said, ended = self.run_watch(10, [0, 3, 0, 1, 0])
+        self.assertEqual(count, 5)
+        self.assertIn("Looked 5 time(s), sent 4 notice(s), 0 look(s) failed.", said)
+        self.assertIsNone(ended)
+
+    def test_one_bad_look_does_not_stop_the_watch(self):
+        looks = [0, requests.ConnectionError("down"), 2, OSError("mail"), 0]
+        count, said, ended = self.run_watch(10, looks)
+        self.assertEqual(count, 5)
+        self.assertIn("sent 2 notice(s), 2 look(s) failed", said)
+        self.assertIsNone(ended)
+
+    def test_every_look_failing_ends_in_an_error(self):
+        count, said, ended = self.run_watch(6, [requests.ConnectionError("down")] * 3)
+        self.assertEqual(count, 3)
+        self.assertIn("Every look failed", str(ended))
+
+    def test_nothing_is_sent_in_quiet_hours(self):
+        count, said, ended = self.run_watch(10, [5] * 5, quiet=True)
+        self.assertEqual(count, 0)
+        self.assertIn("Looked 5 time(s), sent 0 notice(s)", said)
+        self.assertIsNone(ended)
+
+    def test_a_failed_look_never_prints_who_it_was_for(self):
+        # The action's log is public. Only the kind of error is printed.
+        looks = [requests.ConnectionError("could not reach pat@example.com"), 0]
+        count, said, ended = self.run_watch(4, looks)
+        self.assertNotIn("pat@example.com", said)
+        self.assertIn("ConnectionError", said)
 
 
 if __name__ == "__main__":

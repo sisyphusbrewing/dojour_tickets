@@ -1,13 +1,18 @@
 """
 Sisyphus - email a "Venmo me for this show" request to booking.
 
-Run by the "Pay request" action after a comic sends payme/index.html. Reads
-the row from Supabase with the service key and sends a short email with the
-Gmail SMTP settings the other emails use. Approve or dismiss it on the pay
-sheet. Reply-To is the comic when they left an email.
+Run by the "Pay request" action after a comic sends payme/index.html, or
+after someone who worked the door sends doorshift/index.html (Sam, Nov 17
+2026: "We need a seperate form where people can submit if they worked the
+door"). Reads the row from Supabase with the service key and sends a short
+email with the Gmail SMTP settings the other emails use. Approve or dismiss
+it on the pay sheet. Reply-To is the comic when they left an email.
 
     REQUEST_ID=<uuid> python pay_request_notify.py
-    DRY_RUN=1 ...   prints the email instead of sending it
+    DRY_RUN=1 ...   prints the email instead of sending it (on your own
+                    machine only: this repo's Actions logs are public, so
+                    the workflow never sets it and a real run prints no
+                    names)
 """
 import os
 import smtplib
@@ -35,6 +40,37 @@ def money(v):
     return f"${v:,.0f}" if v.is_integer() else f"${v:,.2f}"
 
 
+def compose(q):
+    """The subject and the lines of the email for one request (a pay_requests row)."""
+    show = (q.get("show_name") or "") + (f" ({q['show_dates']})" if q.get("show_dates") else "")
+    amount = f" · {money(q['amount'])}" if q.get("amount") else ""
+    if (q.get("role") or "").strip().lower() == "door":
+        # A door shift: the night comes first. The door form sends no
+        # amount (Sam sets it on the pay sheet), so there is usually none.
+        night = q.get("show_dates") or "a show night"
+        lines = [f"{q['name']} worked the door on {night}" + (f" ({q['show_name']})." if q.get("show_name") else "."), ""]
+        if q.get("amount"):
+            lines.append(f"  Door pay: {money(q['amount'])}")
+        subject = f"Door shift: {q['name']} · {night}{amount}"
+    else:
+        lines = [f"{q['name']} wants to be paid for {show}." if show else f"{q['name']} left their Venmo.", ""]
+        if q.get("role"):
+            lines.append(f"  Did: {q['role']}")
+        if q.get("amount"):
+            lines.append(f"  Told: {money(q['amount'])}")
+        subject = f"Pay request: {q['name']}" + (f" · {q['show_name']}" if q.get("show_name") else "") + amount
+    lines.append(f"  Venmo: {q['handle']}")
+    if q.get("phone"):
+        lines.append(f"  Phone: {q['phone']}")
+    if q.get("email"):
+        lines.append(f"  Email: {q['email']}")
+    if q.get("note"):
+        lines += ["", "  " + q["note"].strip().replace("\n", "\n  ")]
+    lines += ["", f"Approve it and pay it on the pay sheet: {SHEET_URL}", "",
+              "Sisyphus · 712 Ontario Ave W, Minneapolis"]
+    return subject, lines
+
+
 def main():
     if not REQUEST_ID:
         sys.exit("REQUEST_ID is required")
@@ -45,25 +81,10 @@ def main():
     if not rows:
         sys.exit(f"No pay request with id {REQUEST_ID}")
     q = rows[0]
-
-    show = (q.get("show_name") or "") + (f" ({q['show_dates']})" if q.get("show_dates") else "")
-    lines = [f"{q['name']} wants to be paid for {show}." if show else f"{q['name']} left their Venmo.", ""]
-    if q.get("role"):
-        lines.append(f"  Did: {q['role']}")
-    if q.get("amount"):
-        lines.append(f"  Told: {money(q['amount'])}")
-    lines.append(f"  Venmo: {q['handle']}")
-    if q.get("phone"):
-        lines.append(f"  Phone: {q['phone']}")
-    if q.get("email"):
-        lines.append(f"  Email: {q['email']}")
-    if q.get("note"):
-        lines += ["", "  " + q["note"].strip().replace("\n", "\n  ")]
-    lines += ["", f"Approve it and pay it on the pay sheet: {SHEET_URL}", "",
-              "Sisyphus · 712 Ontario Ave W, Minneapolis"]
+    subject, lines = compose(q)
 
     msg = EmailMessage()
-    msg["Subject"] = f"Pay request: {q['name']}" + (f" · {q['show_name']}" if q.get("show_name") else "") + (f" · {money(q['amount'])}" if q.get("amount") else "")
+    msg["Subject"] = subject
     msg["From"] = f"Sisyphus <{FROM_EMAIL}>"
     msg["To"] = ", ".join(TO)
     if q.get("email"):
@@ -79,7 +100,8 @@ def main():
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
         server.login(SMTP_USER, SMTP_PASS)
         server.send_message(msg)
-    print(f"Sent '{msg['Subject']}' to {', '.join(TO)}")
+    # No name and no address here: this prints into a public Actions log.
+    print(f"Sent the pay request email to {len(TO)} address(es).")
 
 
 if __name__ == "__main__":

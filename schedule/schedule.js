@@ -16,6 +16,10 @@ var role = 'door', me = null, isMgr = false, myRow = null;
 var people = [], nameOf = {};
 var weekStart = null;                 // the Monday of the week on screen, as a Date at noon
 var shifts = [], timeOff = [], avail = [], showsByDay = {};
+// What the show calendar has on each day of the week on screen and, for
+// managers, how many people each day needs. needsFor is the week they were
+// loaded for; needsOff is set when the database doesn't have that part yet.
+var needs = {}, needRules = null, needsFor = null, needsOff = false, needDay = null;
 var view = 'all', showPast = false, editing = null;
 
 // ---------- Small helpers ----------
@@ -29,7 +33,12 @@ function clock(t) {
   var p = t.split(':'), h = +p[0], m = p[1];
   return ((h + 11) % 12 + 1) + (m === '00' ? '' : ':' + m) + (h < 12 ? ' AM' : ' PM');
 }
-function span(s) { return clock(s.start_time) + ' to ' + clock(s.end_time); }
+// "1 to 6 PM", "11 AM to 3 PM", "5 PM to close": AM or PM is said once when both ends share it.
+function span(s) {
+  var a = clock(s.start_time), b = clock(s.end_time);
+  if (s.end_time && a.slice(-2) === b.slice(-2)) a = a.slice(0, -3);
+  return a + ' to ' + b;
+}
 function niceDay(s) { return fromIso(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
 function niceRange(a, b) { return a === b ? niceDay(a) : niceDay(a) + ' to ' + niceDay(b); }
 function mins(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
@@ -44,17 +53,9 @@ function hoursOf(s) {
 function hoursWord(h) { return (Math.round(h * 10) / 10) + ' h'; }
 function first(name) { return String(name || '').split(' ')[0]; }
 function who(id) { return nameOf[id] || 'Someone'; }
-function posClass(p) {
-  p = String(p || '').toLowerCase();
-  return /door/.test(p) ? 'pos-door' : /comedy|show|room|host/.test(p) ? 'pos-show' : /bar/.test(p) ? 'pos-bar' : 'pos-other';
-}
-// Send the waiting notices now instead of at the next 15-minute run. Best
-// effort: if it can't be started, the timer picks them up anyway.
-var nudgeTimer = null;
-function nudge() {
-  clearTimeout(nudgeTimer);
-  nudgeTimer = setTimeout(function () { runWorkflow('schedule_notify.yml', {}); }, 4000);
-}
+// Notices (emails and texts about a change) go out by themselves within about
+// two minutes: the "Schedule notices" action looks for waiting ones around
+// the clock, so this page doesn't have to start anything.
 function fail(r, what) { toast((r.error && r.error.message) || what || 'That didn’t save. Try again.', true); }
 
 // ---------- Start ----------
@@ -63,22 +64,44 @@ setupSignIn(async function (r) {
   try { localStorage.setItem('staffRoleSeen', role); } catch (e) {}
   if (!roleAtLeast(role, 'staff')) {
     $('page').classList.remove('hidden');
-    showNoAccess('staff', ['noticeSection', 'mgrBar', 'offSection', 'availSection', 'reachSection', 'peopleSection']);
-    $('week').innerHTML = '';
+    showNoAccess('staff', ['tab-week', 'tab-timeoff', 'tab-settings']);
     return;
   }
   me = (await sb.auth.getUser()).data.user;
   try { view = localStorage.getItem('schedView') || 'all'; } catch (e) {}
   if (view === 'grabs') view = 'all';
   weekStart = mondayOf(new Date());
+  showTab();
   $('page').classList.remove('hidden');
-  $('hdrTools').classList.remove('hidden');
+  $('tabs').classList.remove('hidden');
   await loadPeople();
   await Promise.all([loadWeek(), loadShows(), loadSide(), loadNotices()]);
   drawWeek();
 });
 
-// Come back to the tab after a while and it's fresh.
+// ---------- Tabs ----------
+// Week, Time off and My settings are three parts of this one page. The part
+// on screen is in the web address (#timeoff), so the back button and links
+// from other pages work. "#grabs" is the Week tab showing only the shifts
+// that need someone (the staff home page links to it).
+var TABS = ['week', 'timeoff', 'settings'];
+function showTab() {
+  var h = location.hash.replace('#', '');
+  if (h === 'grabs') { view = 'grabs'; h = 'week'; }
+  if (TABS.indexOf(h) === -1) h = 'week';
+  TABS.forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== h); });
+  document.querySelectorAll('#tabs a').forEach(function (a) {
+    a.classList.toggle('on', a.dataset.tab === h);
+    if (a.dataset.tab === h) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+}
+window.addEventListener('hashchange', function () {
+  if (!me) return;
+  showTab(); window.scrollTo(0, 0);
+  if (shifts) drawWeek();
+});
+
+// Come back to the page after a while and it's fresh.
 document.addEventListener('visibilitychange', function () {
   if (!document.hidden && me && !$('shiftDialog').open) { loadWeek().then(drawWeek); loadNotices(); }
 });
@@ -96,10 +119,35 @@ async function loadPeople() {
 }
 
 async function loadWeek() {
-  var r = await sb.from('shifts').select('*').gte('work_date', iso(weekStart)).lte('work_date', iso(addDays(weekStart, 6)))
-    .order('work_date').order('start_time');
+  var got = await Promise.all([
+    sb.from('shifts').select('*').gte('work_date', iso(weekStart)).lte('work_date', iso(addDays(weekStart, 6)))
+      .order('work_date').order('start_time'),
+    needsFor === iso(weekStart) ? null : loadNeeds()
+  ]);
+  var r = got[0];
   if (r.error) { shifts = null; return; }
   shifts = r.data || [];
+}
+
+// The calendar and the numbers (Sam, Nov 17 2026: "The scheduler should read
+// the calendar for upcoming events and then say how many people we need to
+// schedule because of it"). The database reads the website's list of upcoming
+// shows and works each day's number out; this page only shows it. Everyone
+// gets the day's events, free nights included; only managers get the numbers.
+async function loadNeeds() {
+  if (needsOff) return;
+  var from = iso(weekStart);
+  var r = await sb.rpc('schedule_needs', { p_from: from, p_to: iso(addDays(weekStart, 6)) });
+  needs = {};
+  if (r.error || !r.data) {
+    // Not in the database yet: carry on as before and stop asking.
+    if (r.error && (r.error.code === 'PGRST202' || r.error.code === '42883')) needsOff = true;
+    needsFor = null;
+    return;
+  }
+  needsFor = from;
+  needRules = r.data.rules || null;
+  (r.data.days || []).forEach(function (d) { needs[d.day] = d; });
 }
 
 // Shows on each day, so whoever builds the week can see a two-show Friday coming.
@@ -133,34 +181,146 @@ function offOn(day) {     // approved or pending time off covering a day
   return timeOff.filter(function (t) { return (t.status === 'approved' || t.status === 'pending') && t.start_date <= day && t.end_date >= day; });
 }
 
+// One shift: the time on the left, then who and what job. On a phone the
+// shifts of a day are rows in one box; on a computer each is a small block in
+// that day's column.
 function shiftHtml(s, today) {
   var mine = s.user_id === me.id, open = !s.user_id, future = s.work_date >= today;
-  var cls = 'shift ' + posClass(s.position) + (mine ? ' mine' : '') + (open ? ' open' : '') + (s.up_for_grabs ? ' grab' : '') + (s.published ? '' : ' draft');
+  var cls = 'shift' + (mine ? ' mine' : '') + (open ? ' open' : '') + (s.published ? '' : ' draft');
   var tags = '';
-  if (!s.published) tags += '<span class="tag">Draft</span>';
-  if (s.up_for_grabs) tags += '<span class="tag need">Needs cover</span>';
+  if (mine) tags += ' <span class="you">You</span>';
+  if (!s.published) tags += ' <span class="tag">Draft</span>';
+  if (s.up_for_grabs) tags += ' <span class="tag need">Needs cover</span>';
   var acts = '';
   if (s.published && future) {
     if (mine && !s.up_for_grabs) acts += '<button class="btn btn-sm" onclick="offerShift(' + s.id + ', true)">I can’t work it</button>';
     if (mine && s.up_for_grabs) acts += '<button class="btn btn-sm" onclick="offerShift(' + s.id + ', false)">Never mind, I’ll work it</button>';
     if (!mine && (open || s.up_for_grabs) && myRow && myRow.on_schedule) acts += '<button class="btn btn-sm btn-primary" onclick="takeShift(' + s.id + ')">Take it</button>';
   }
-  // Managers get a small pencil in the corner of every shift.
+  // Managers get a small pencil on every shift.
   var edit = isMgr ? '<button class="sh-edit" onclick="openShift(' + s.id + ')" aria-label="Change this shift" title="Change this shift">✎</button>' : '';
-  return '<div class="' + cls + '">' + edit + '<div class="sh-time">' + span(s) + '</div>' +
-    '<div class="sh-who">' + (open ? 'Open shift' : escapeHtml(who(s.user_id))) + (mine ? ' <span class="you">You</span>' : '') + '</div>' +
+  return '<div class="' + cls + '"><div class="sh-time">' + span(s) + '</div>' +
+    '<div class="sh-main"><div class="sh-who">' + (open ? 'Open shift' : escapeHtml(who(s.user_id))) + tags + '</div>' +
     '<div class="sh-pos">' + escapeHtml(s.position) + (s.note ? ' · ' + escapeHtml(s.note) : '') + '</div>' +
-    (tags ? '<div class="sh-tags">' + tags + '</div>' : '') +
-    (acts ? '<div class="sh-acts">' + acts + '</div>' : '') + '</div>';
+    (acts ? '<div class="sh-acts">' + acts + '</div>' : '') + '</div>' + edit + '</div>';
 }
+
+// The shows on a day, each name once: "The Dose · 7:00 PM, 78 sold · 9:30 PM, 40 sold".
+// They come from the calendar when the database has it (free nights too:
+// "Thursday Showcase 8:00 PM, free"), and from the ticket counts otherwise.
+function showsHtml(day) {
+  var by = {}, order = [], n = needs[day];
+  var list = n && n.events && n.events.length ? n.events : (showsByDay[day] || []);
+  list.forEach(function (x) {
+    if (!by[x.title]) { by[x.title] = []; order.push(x.title); }
+    by[x.title].push(escapeHtml(x.time) + (x.free ? ', free' : ', ' + x.sold + ' sold'));
+  });
+  return order.map(function (t) { return '<div class="dshow"><b>' + escapeHtml(t) + '</b> ' + by[t].join(' · ') + '</div>'; }).join('');
+}
+
+// ---------- Managers: how many people a day needs ----------
+// Minutes after midnight as a clock time: 1050 is "5:30 PM".
+function clockM(m) {
+  m = ((m % 1440) + 1440) % 1440;
+  if (m === 0) return 'midnight';
+  var h = Math.floor(m / 60), mm = m % 60;
+  return ((h + 11) % 12 + 1) + (mm ? ':' + ('0' + mm).slice(-2) : '') + (h < 12 ? ' AM' : ' PM');
+}
+function peopleWord(n) { return n + (n === 1 ? ' person' : ' people'); }
+// How many people are on a day so far. A shift with nobody on it doesn't count.
+function onDay(day) { return shifts.filter(function (s) { return s.work_date === day && s.user_id; }).length; }
+// Why a day needs what it needs, in a sentence, from the pieces the database sends.
+function needWhy(n) {
+  if (n.set) return 'Set by hand' + (n.set.note ? ': ' + n.set.note : '') + '. The usual would be ' + n.rule_people + '.';
+  return (n.parts || []).map(function (p) {
+    if (p.why === 'open') return p.people + (p.split ? ' for open hours (an opener and a closer)' : ' for open hours');
+    if (p.why === 'closed') return p.people + ' to run the bar (we’re closed that day)';
+    if (p.why === 'show') return p.people + ' more from ' + clockM(p.from) + ' for ' + p.title + (p.full ? ' (a full room)' : '');
+    if (p.why === 'free') return p.people + ' more from ' + clockM(p.from) + ' for ' + p.title;
+    return '';
+  }).filter(Boolean).join(', ');
+}
+// The line under a day's shows: "Needs 3 people, 1 scheduled" and why. Tap it
+// to set that one day by hand. Only managers, only days still to come.
+function needHtml(day) {
+  var n = needs[day];
+  if (!isMgr || view !== 'all' || !n || n.people == null) return '';
+  var on = onDay(day);
+  if (!n.people && !on && !n.set) return '';
+  var short = on < n.people;
+  var head = short ? 'Needs ' + peopleWord(n.people) + ', ' + on + ' scheduled'
+    : !n.people ? (on ? 'Needs nobody, ' + on + ' scheduled' : 'Needs nobody')
+    : on === n.people ? '✓ ' + on + ' of ' + n.people + ' scheduled'
+    : '✓ ' + on + ' scheduled, needs ' + n.people;
+  return '<button type="button" class="dneed ' + (short ? 'short' : 'ok') + '" onclick="openNeed(\'' + day + '\')"><b>' + head + '</b>' +
+    '<span>' + escapeHtml(needWhy(n)) + '</span></button>';
+}
+function openNeed(day) {
+  var n = needs[day];
+  if (!n) return;
+  needDay = day;
+  $('needTitle').textContent = 'People needed ' + niceDay(day);
+  $('needWhy').textContent = n.set ? 'The usual for this day would be ' + n.rule_people + '.'
+    : (n.rule_people ? 'The usual: ' + needWhy(n) + '.' : 'Nothing is on and we’re closed, so the usual is nobody.');
+  $('needPeople').value = n.people;
+  $('needNote').value = n.set ? n.set.note : '';
+  $('needUsual').classList.toggle('hidden', !n.set);
+  $('needDialog').showModal();
+  $('needPeople').select();
+}
+async function saveNeed(people) {
+  $('needSave').disabled = true;
+  var r = await sb.rpc('schedule_need_set', { p_day: needDay, p_people: people, p_note: people === null ? '' : $('needNote').value.trim() });
+  $('needSave').disabled = false;
+  if (r.error) return fail(r);
+  $('needDialog').close();
+  toast(people === null ? 'Back to the usual.' : 'Saved for ' + niceDay(needDay) + '.');
+  await loadNeeds(); drawWeek();
+}
+$('needForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var v = parseInt($('needPeople').value, 10);
+  if (isNaN(v) || v < 0 || v > 40) return toast('Type a number from 0 to 40.', true);
+  saveNeed(v);
+});
+$('needUsual').addEventListener('click', function () { saveNeed(null); });
+$('needCancel').addEventListener('click', function () { $('needDialog').close(); });
+
+// The numbers behind it, in a box under the week that managers can change.
+var RULE_BOXES = { rOpen: 'open_people', rShow: 'show_extra', rFree: 'free_extra', rFullAt: 'full_at', rFull: 'full_extra', rLead: 'lead_minutes' };
+function drawRules() {
+  $('needFold').classList.toggle('hidden', !(isMgr && needRules));
+  if (!isMgr || !needRules || $('needFold').contains(document.activeElement)) return;
+  Object.keys(RULE_BOXES).forEach(function (id) { $(id).value = needRules[RULE_BOXES[id]]; });
+  // An early show is the exception to the minutes box above (Sam, Nov 17
+  // 2026): say so, with the numbers the database works from.
+  var early = needRules.early_at != null && needRules.early_lead != null;
+  $('earlyNote').classList.toggle('hidden', !early);
+  if (early) $('earlyNote').textContent = 'A show at ' + clockM(needRules.early_at) + ' or earlier is the exception: ' + needRules.early_lead +
+    ' minutes before, so ' + clockM(needRules.early_at - needRules.early_lead) + ' for a ' + clockM(needRules.early_at) + ' show.';
+}
+$('rulesForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var v = {};
+  Object.keys(RULE_BOXES).forEach(function (id) { v[id] = parseInt($(id).value, 10); });
+  if (Object.keys(v).some(function (id) { return isNaN(v[id]) || v[id] < 0; })) return toast('Every box needs a number.', true);
+  $('rulesSave').disabled = true;
+  var r = await sb.rpc('schedule_needs_rules', { p_open: v.rOpen, p_show: v.rShow, p_free: v.rFree, p_full: v.rFull, p_full_at: v.rFullAt, p_lead: v.rLead });
+  $('rulesSave').disabled = false;
+  if (r.error) return fail(r);
+  document.activeElement && document.activeElement.blur();
+  toast('Saved. The week is worked out again.');
+  await loadNeeds(); drawWeek();
+});
 
 function drawWeek() {
   var today = todayIso(), end = addDays(weekStart, 6);
   $('weekLabel').textContent = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' to ' +
     end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  $('weekNone').classList.add('hidden');
   $('thisWeek').classList.toggle('hidden', iso(weekStart) === iso(mondayOf(new Date())));
   if (shifts === null) {
-    $('week').className = 'week';
+    $('week').className = 'week off';
     $('week').innerHTML = '<div class="empty"><b>The schedule isn’t switched on yet</b>It will show up here as soon as it is.</div>';
     $('mgrBar').classList.add('hidden');
     return;
@@ -171,7 +331,7 @@ function drawWeek() {
   if (view === 'grabs' && !grabs.length) view = 'all';
   document.querySelectorAll('#viewChips .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.view === view); });
 
-  var pastDays = 0, html = '';
+  var pastDays = 0, html = '', listed = 0;
   for (var i = 0; i < 7; i++) {
     var d = addDays(weekStart, i), day = iso(d), dow = d.getDay(), hrs = OPEN[dow];
     var list = shifts.filter(function (s) { return s.work_date === day; }).filter(function (s) {
@@ -179,24 +339,29 @@ function drawWeek() {
     });
     var past = day < today;
     if (past) pastDays++;
-    var shows = (showsByDay[day] || []).map(function (x) {
-      return '<div class="dshow"><b>' + escapeHtml(x.time) + '</b> ' + escapeHtml(x.title) + '<i>' + x.sold + ' sold</i></div>';
-    }).join('');
+    listed += list.length;
     var off = offOn(day).map(function (t) {
       return '<div class="doff' + (t.status === 'pending' ? ' ask' : '') + '">' + (t.user_id === me.id ? 'You' : escapeHtml(first(who(t.user_id)))) +
         (t.status === 'pending' ? ' asked off' : ' off') + '</div>';
     }).join('');
-    html += '<div class="day' + (day === today ? ' today' : '') + (past ? ' past' : '') + (hrs ? '' : ' closed') + '">' +
-      '<div class="day-h"><b>' + DAY_SHORT[dow] + '</b><span>' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span>' +
-      '<small>' + (day === today ? 'Today · ' : '') + (hrs ? clock(hrs[0]) + ' to ' + clock(hrs[1]) : 'Closed') + '</small></div>' +
-      shows + off + list.map(function (s) { return shiftHtml(s, today); }).join('') +
-      (list.length ? '' : '<div class="none">' + (view === 'mine' ? 'Not working' : view === 'grabs' ? 'Nothing' : hrs ? 'Nobody yet' : '') + '</div>') +
-      (isMgr ? '<button class="add" onclick="openShift(null, \'' + day + '\')">+ Shift</button>' : '') + '</div>';
+    html += '<div class="day' + (day === today ? ' today' : '') + (past ? ' past' : '') + (hrs ? '' : ' closed') + (list.length ? '' : ' bare') + '">' +
+      '<div class="day-h"><b>' + DAY_LONG[dow] + '</b><span>' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span>' +
+      (day === today ? '<em>Today</em>' : '') + (hrs ? '' : '<small>Closed</small>') + '</div>' +
+      showsHtml(day) + off + needHtml(day) +
+      (list.length ? '<div class="shifts">' + list.map(function (s) { return shiftHtml(s, today); }).join('') + '</div>'
+                   : '<div class="none">' + (view === 'mine' ? 'Not working' : view === 'grabs' ? 'Nothing' : hrs ? 'Nobody yet' : '') + '</div>') +
+      (isMgr ? '<button class="add" onclick="openShift(null, \'' + day + '\')">+ Add a shift</button>' : '') + '</div>';
   }
-  $('week').className = 'week' + (showPast ? '' : ' hide-past');
+  // "Just me" and "Up for grabs" only list the days that have something (on a
+  // phone), so a week with nothing says so in a sentence instead.
+  $('week').className = 'week view-' + view + (showPast ? '' : ' hide-past');
   $('week').innerHTML = html;
+  if (view !== 'all' && !listed) {
+    $('weekNone').textContent = view === 'mine' ? 'You’re not on the schedule this week.' : 'Nothing is up for grabs this week.';
+    $('weekNone').classList.remove('hidden');
+  }
   $('earlierBtn').classList.toggle('hidden', !pastDays || pastDays === 7);
-  $('earlierBtn').textContent = showPast ? 'Hide earlier days' : 'Earlier this week (' + pastDays + ' day' + (pastDays > 1 ? 's' : '') + ')';
+  $('earlierBtn').textContent = showPast ? 'Hide earlier days' : 'Show earlier this week';
 
   // My week, in a sentence.
   var mine = shifts.filter(function (s) { return s.user_id === me.id && s.published; });
@@ -213,6 +378,9 @@ function drawManagerBar() {
   var drafts = shifts.filter(function (s) { return !s.published; }).length;
   var open = shifts.filter(function (s) { return !s.user_id; }).length;
   var bits = [];
+  // Days still to come this week that have fewer people on than they need.
+  var shortDays = Object.keys(needs).filter(function (d) { var n = needs[d]; return n.people != null && onDay(d) < n.people; }).length;
+  if (shortDays) bits.push('<b>' + shortDays + ' day' + (shortDays > 1 ? 's' : '') + '</b> still need' + (shortDays > 1 ? '' : 's') + ' people.');
   if (!shifts.length) bits.push('Nothing on this week yet. Add shifts with “+ Shift”, or copy last week and adjust.');
   else {
     bits.push(drafts ? '<b>' + drafts + ' draft shift' + (drafts > 1 ? 's' : '') + '</b> only managers can see.' : 'Everything on this week is posted.');
@@ -221,6 +389,7 @@ function drawManagerBar() {
   $('mgrStatus').innerHTML = bits.join(' ');
   $('postBtn').classList.toggle('hidden', !drafts);
   $('postBtn').textContent = 'Post ' + drafts + ' shift' + (drafts > 1 ? 's' : '');
+  drawRules();
   // Hours per person this week, drafts included, so nobody is over or under.
   var by = {};
   shifts.forEach(function (s) { if (s.user_id) by[s.user_id] = (by[s.user_id] || 0) + hoursOf(s); });
@@ -238,7 +407,6 @@ async function offerShift(id, on) {
   if (on && !confirm('Offer up ' + niceDay(s.work_date) + ', ' + span(s) + '?\n\nEveryone on the schedule is told. It stays YOUR shift until someone takes it.')) return;
   var r = await sb.rpc('shift_offer', { p_shift: id, p_on: on });
   if (r.error) return fail(r);
-  if (on) nudge();
   toast(on ? 'Offered. You’ll hear when someone takes it.' : 'Back on. It’s yours.');
   await loadWeek(); drawWeek();
 }
@@ -249,7 +417,6 @@ async function takeShift(id) {
       (clash ? '\n\nHeads up: you already work ' + span(clash) + ' that day.' : '') + '\n\nIt becomes your shift right away.')) return;
   var r = await sb.rpc('shift_take', { p_shift: id });
   if (r.error) { fail(r); await loadWeek(); drawWeek(); return; }
-  nudge();
   toast('It’s yours. Thank you.');
   await loadWeek(); drawWeek();
 }
@@ -318,7 +485,6 @@ async function saveShift(again) {
   var r = editing ? await sb.from('shifts').update(row).eq('id', editing.id) : await sb.from('shifts').insert(row);
   $('sfSave').disabled = false;
   if (r.error) return fail(r);
-  if (editing && editing.published) nudge();
   var inWeek = row.work_date >= iso(weekStart) && row.work_date <= iso(addDays(weekStart, 6));
   if (!inWeek) weekStart = mondayOf(fromIso(row.work_date));
   await loadWeek(); drawWeek();
@@ -332,7 +498,6 @@ $('sfRemove').addEventListener('click', async function () {
   if (!editing || !confirm('Remove this shift?' + (editing.published && editing.user_id ? '\n\n' + first(who(editing.user_id)) + ' will be told.' : ''))) return;
   var r = await sb.from('shifts').delete().eq('id', editing.id);
   if (r.error) return fail(r);
-  if (editing.published) nudge();
   $('shiftDialog').close();
   await loadWeek(); drawWeek();
   toast('Removed.');
@@ -345,7 +510,6 @@ $('postBtn').addEventListener('click', async function () {
   var r = await sb.rpc('schedule_publish', { p_from: iso(weekStart), p_to: iso(addDays(weekStart, 6)) });
   this.disabled = false;
   if (r.error) return fail(r);
-  nudge();
   toast('Posted. Everyone has been told.');
   await loadWeek(); drawWeek();
 });
@@ -380,16 +544,20 @@ async function loadSide() {
 
 function drawOff() {
   var today = todayIso();
+  // Managers: requests waiting on an answer come first, and the tab shows how many.
   var pending = isMgr ? timeOff.filter(function (t) { return t.status === 'pending' && t.user_id !== me.id; }) : [];
-  $('offPending').innerHTML = pending.map(function (t) {
-    return '<div class="card ask-card"><div><b>' + escapeHtml(who(t.user_id)) + '</b> asked for <b>' + niceRange(t.start_date, t.end_date) + '</b>' +
+  $('offBadge').classList.toggle('hidden', !pending.length);
+  $('offBadge').textContent = pending.length;
+  $('offPending').innerHTML = !pending.length ? '' : '<h2 class="sub">Waiting on your answer</h2><div class="list asks">' + pending.map(function (t) {
+    return '<div class="ask"><div><b>' + escapeHtml(who(t.user_id)) + '</b> asked for <b>' + niceRange(t.start_date, t.end_date) + '</b>' +
       (t.note ? '<div class="help">' + escapeHtml(t.note) + '</div>' : '') + '</div>' +
       '<div class="sh-acts"><button class="btn btn-sm btn-primary" onclick="decideOff(' + t.id + ', \'approved\')">Approve</button>' +
       '<button class="btn btn-sm" onclick="decideOff(' + t.id + ', \'denied\')">Decline</button></div></div>';
-  }).join('');
+  }).join('') + '</div>';
   var list = timeOff.filter(function (t) { return t.end_date >= today && (t.user_id === me.id || t.status !== 'pending' || !isMgr); });
-  $('offListLbl').textContent = isMgr ? 'Coming up' : 'Your requests';
-  $('offList').innerHTML = list.map(function (t) {
+  $('offListLbl').textContent = isMgr ? 'Time off coming up' : 'Your requests';
+  $('offList').innerHTML = !list.length ? '<p class="quiet">' + (isMgr ? 'Nobody has time off coming up.' : 'Nothing asked for.') + '</p>'
+    : '<div class="list">' + list.map(function (t) {
     var mine = t.user_id === me.id;
     var word = { pending: 'Waiting', approved: 'Approved', denied: 'Declined' }[t.status];
     var act = mine && t.status !== 'denied' ? '<button class="btn-link" onclick="cancelOff(' + t.id + ')">Take it back</button>'
@@ -397,7 +565,7 @@ function drawOff() {
     return '<div class="row"><div><b>' + (mine ? '' : escapeHtml(who(t.user_id)) + ' · ') + niceRange(t.start_date, t.end_date) + '</b>' +
       (t.note ? '<div class="help">' + escapeHtml(t.note) + '</div>' : '') + '</div>' +
       '<div class="row-r"><span class="tag st-' + t.status + '">' + word + '</span>' + act + '</div></div>';
-  }).join('') || '<p class="quiet">' + (isMgr ? 'Nobody has time off coming up.' : 'Nothing asked for.') + '</p>';
+  }).join('') + '</div>';
 }
 $('offFrom').addEventListener('change', function () { if (!$('offTo').value || $('offTo').value < this.value) $('offTo').value = this.value; });
 $('offForm').addEventListener('submit', async function (e) {
@@ -408,7 +576,6 @@ $('offForm').addEventListener('submit', async function (e) {
   $('offBtn').disabled = false;
   if (r.error) return fail(r);
   this.reset();
-  nudge();
   toast('Asked. You’ll hear when a manager answers.');
   await loadSide(); drawWeek();
 });
@@ -416,7 +583,6 @@ async function cancelOff(id) {
   if (!confirm('Take this request back?')) return;
   var r = await sb.from('time_off').update({ status: 'cancelled' }).eq('id', id);
   if (r.error) return fail(r);
-  nudge();
   await loadSide(); drawWeek();
 }
 async function decideOff(id, status) {
@@ -424,7 +590,6 @@ async function decideOff(id, status) {
     status: status, decided_by: status === 'pending' ? null : first(who(me.id)), decided_at: status === 'pending' ? null : new Date().toISOString()
   }).eq('id', id);
   if (r.error) return fail(r);
-  if (status !== 'pending') nudge();
   toast(status === 'approved' ? 'Approved. They’ve been told.' : status === 'denied' ? 'Declined. They’ve been told.' : 'Back to waiting.');
   await loadSide(); drawWeek();
 }
@@ -437,11 +602,11 @@ function drawAvail() {
   $('availNote').value = mine.note || '';
   $('availAll').classList.toggle('hidden', !isMgr);
   var others = avail.filter(function (a) { return (a.off_days || []).length || a.note; });
-  $('availAllList').innerHTML = others.map(function (a) {
+  $('availAllList').innerHTML = !others.length ? '<p class="quiet">Nobody has marked any days.</p>' : '<div class="list">' + others.map(function (a) {
     var days = [1, 2, 3, 4, 5, 6, 0].filter(function (d) { return a.off_days.indexOf(d) !== -1; }).map(function (d) { return DAY_SHORT[d]; });
     return '<div class="row"><div><b>' + escapeHtml(who(a.user_id)) + '</b>' + (a.note ? '<div class="help">' + escapeHtml(a.note) + '</div>' : '') + '</div>' +
       '<div class="row-r">' + (days.length ? 'Can’t work ' + days.join(', ') : '') + '</div></div>';
-  }).join('') || '<p class="quiet">Nobody has marked any days.</p>';
+  }).join('') + '</div>';
 }
 $('dayPick').addEventListener('click', function (e) { var c = e.target.closest('.chip'); if (c) c.classList.toggle('on'); });
 $('availForm').addEventListener('submit', async function (e) {
@@ -457,7 +622,7 @@ $('availForm').addEventListener('submit', async function (e) {
 
 // ---------- How to reach me ----------
 function drawReach() {
-  $('reachSection').classList.toggle('hidden', !myRow);
+  $('reachForm').classList.toggle('hidden', !myRow);
   if (!myRow) return;
   pickReach(myRow.notify_by || 'email');
   $('reachEmail').value = myRow.notify_email || '';
@@ -510,7 +675,9 @@ async function loadNotices() {
     var when = new Date(n.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     return '<div class="notice"><div>' + escapeHtml(n.body) + '<small>' + when + '</small></div>' +
       '<button class="btn btn-sm" onclick="dismissNotice([' + n.id + '])">Got it</button></div>';
-  }).join('') + (rows.length > 1 ? '<button class="btn-link" onclick="dismissNotice([' + rows.map(function (n) { return n.id; }).join(',') + '])">Clear all</button>' : '');
+  }).join('');
+  $('noticeClear').classList.toggle('hidden', rows.length < 2);
+  $('noticeClear').onclick = function () { dismissNotice(rows.map(function (n) { return n.id; })); };
 }
 async function dismissNotice(ids) {
   var r = await sb.rpc('schedule_dismiss', { p_ids: ids });

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tuesday Open Mic Sign-Up · Sisyphus</title>
-  <meta name="description" content="Sign up for the free Tuesday open mic at Sisyphus, the comedy club and brewery in Minneapolis. 7 PM in the main taproom.">
+  <meta name="description" content="Sign up for the free Tuesday open mic at Sisyphus, the comedy club and brewery in Minneapolis. 7 PM in the comedy club.">
   <meta name="theme-color" content="#2b2929">
   <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +27,9 @@
     .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
     .done-big { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 28px; color: #fff; margin: 8px 0 10px; }
     .camus { color: var(--gray); font-style: italic; margin-top: 18px; }
+    .tonight { margin-bottom: 22px; }
+    .tonight ol { font-size: 20px; line-height: 1.6; color: #fff; margin: 0; padding-left: 32px; }
+    .tonight .first { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: var(--slate); color: #fff; border-radius: 6px; padding: 3px 6px 1px; margin-left: 6px; vertical-align: 3px; }
     .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 18px 16px 28px; }
   </style>
 </head>
@@ -41,11 +44,20 @@
   </header>
 
   <main class="wrap">
+    <!-- Tonight's running order, posted here by itself at 6:35 PM (Sam, Nov 17 2026). -->
+    <section id="viewTonight" class="tonight hidden">
+      <div class="eyebrow">Tonight · 7 PM · Comedy club</div>
+      <h1>Tonight's lineup</h1>
+      <p class="lead" id="tonightHost"></p>
+      <div class="card"><ol id="tonightList"></ol></div>
+      <p style="margin-top:10px">Didn't hear your name? You're in the room anyway. Sign up below for next week.</p>
+    </section>
+
     <section id="viewForm">
-      <div class="eyebrow">Free · 7 PM · Main taproom</div>
+      <div class="eyebrow">Free · 7 PM · Comedy club</div>
       <h1>Tuesday Open Mic</h1>
       <p class="lead">Put your name in for <b id="micDate">next Tuesday</b>.</p>
-      <p>A few spots are booked ahead. The rest are drawn at random from this list before the mic starts at 7, so be in the taproom to hear your name. If it doesn't get called, you're still in a bar. There are worse outcomes.</p>
+      <p>A few spots are booked ahead. The rest are drawn at random from this list before the mic starts at 7, so be in the room to hear your name. If it doesn't get called, you're still in a bar. There are worse outcomes.</p>
 
       <form id="micForm" class="card stack" style="margin-top:16px" novalidate>
         <div class="field"><label for="f_name">Your name (the one we say on the mic)</label>
@@ -59,14 +71,14 @@
         <div class="err hidden" id="formError"></div>
         <button class="btn btn-primary btn-big" id="sendBtn" type="submit">Put my name in</button>
       </form>
-      <p style="margin-top:14px;font-size:14px;color:var(--gray)">One sign-up per person per week. Sign-ups for a Tuesday close at 5 PM that day; after that you're in for the week after. Must be 18+.</p>
+      <p style="margin-top:14px;font-size:14px;color:var(--gray)">One sign-up per person per week. Sign-ups for a Tuesday close at 6:30 PM that day; after that you're in for the week after. Must be 18+.</p>
     </section>
 
     <section id="viewDone" class="hidden">
       <div class="eyebrow">Tuesday Open Mic</div>
       <p class="done-big" id="doneTitle">You're in.</p>
       <p id="doneText"></p>
-      <p>7 PM, main taproom, 712 Ontario Ave W. Names get drawn before the mic starts.</p>
+      <p>7 PM, comedy club, 712 Ontario Ave W. Names get drawn before the mic starts.</p>
       <p class="camus">Il faut imaginer Sisyphe heureux.</p>
     </section>
   </main>
@@ -92,6 +104,22 @@
       var p = iso.split('-').map(Number);
       return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     }
+    // From 6:35 PM on a mic night the database hands back the running order.
+    function showTonight() {
+      sb.rpc('mic_public_lineup').then(function (r) {
+        var d = r.data;
+        if (!d || !d.lineup || !d.lineup.length) return;
+        $('tonightHost').textContent = d.host_name ? 'Hosted by ' + d.host_name + '.' : '';
+        // First-timers always get up and are marked (Sam, Nov 17 2026).
+        $('tonightList').innerHTML = d.lineup.map(function (x) {
+          var li = document.createElement('li'); li.textContent = x.name;
+          return li.outerHTML.replace('</li>', x.first ? ' <span class="first">First time</span></li>' : '</li>');
+        }).join('');
+        $('viewTonight').classList.remove('hidden');
+      });
+    }
+    showTonight();
+    setInterval(function () { if (!document.hidden) showTonight(); }, 60000);
     sb.rpc('mic_next_date').then(function (r) { if (r.data) $('micDate').textContent = niceDate(r.data); });
 
     try { var saved = JSON.parse(localStorage.getItem('mic-me') || 'null'); if (saved) { $('f_name').value = saved.name || ''; $('f_email').value = saved.email || ''; $('f_phone').value = saved.phone || ''; } } catch (e) {}

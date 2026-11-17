@@ -1,0 +1,39 @@
+/* The "Say something" page (safe/index.html). Sits on top of staff.css and
+   staff/look.css; only what this one page needs is here. */
+.lead { margin: 22px 0 0; color: var(--muted); font-size: 18px; }
+
+/* "In danger right now?" One plain box, one button, before anything else. */
+.now { margin-top: 18px; padding: 14px 16px; border-radius: 16px; background: #4a2f2a; color: #f6dcd5;
+  display: flex; flex-direction: column; gap: 12px; }
+.now b { color: #fff; }
+.look .now .call { background: #b4513f; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+.look .now .call:hover { background: #9c4434; }
+
+.look .field.top { margin-top: 28px; }
+.look textarea.input { min-height: 140px; resize: vertical; width: 100%; }
+.look .band-row { margin-top: 28px; }
+.opt { font-weight: 400; color: var(--gray); }
+
+/* Pick-one buttons wrap onto a second line here, so every choice shows. */
+.look .chips { flex-wrap: wrap; overflow: visible; }
+#dayBox { margin-top: 12px; max-width: 260px; }
+
+/* Who reads it: one row each. Tap anywhere on the row. */
+.pick { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+.pick input { flex: 0 0 auto; width: 22px; height: 22px; margin: 0; accent-color: var(--slate-light); }
+.pick b { display: block; font-size: 18px; line-height: 1.25; }
+.pick small { display: block; color: var(--gray); font-size: 15px; }
+.pick:has(input:checked) { background: #33485a; }
+.pick:has(input:checked) small { color: #d5e2ec; }
+
+.private { margin-top: 18px !important; font-size: 15px; }
+.send { margin-top: 18px; }
+.send .err { margin-bottom: 12px; text-align: center; }
+.look .err { font-size: 16px; }
+.look .send .btn { width: 100%; }
+
+.done { margin-top: 26px; text-align: center; padding: 26px 18px !important; }
+.look .done h2 { font-size: 24px; }
+.done p { margin: 12px 0 0; }
+.done .warn { text-align: left; }
+.done .btn { margin-top: 22px; }

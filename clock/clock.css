@@ -1,0 +1,60 @@
+/* The time clock (/clock/). Sits on top of staff.css, look.css and the
+   schedule's schedule.css (same week bar, rows and folds). Built for a phone
+   held in one hand: one big button, then short lists. */
+#tab-clock, #tab-hours, #tab-payroll { padding-top: 16px; }
+.clock-page section { margin-top: 22px; }
+.clock-page .weekbar { max-width: 420px; }
+
+/* ---------- The one button ---------- */
+.punch { text-align: center; padding: 22px 18px 14px; margin-top: 0 !important; }
+.punch-hello { color: var(--muted); margin: 0; }
+.punch-state { font-size: 30px; font-weight: 700; line-height: 1.15; margin: 4px 0 0; }
+.punch-sub { color: var(--muted); margin: 6px 0 0; min-height: 1.4em; }
+.look .punch-btn { display: block; width: 100%; min-height: 104px; margin-top: 18px; border-radius: 20px; font-size: 30px; font-weight: 700;
+                   background: var(--slate); color: #fff; }
+.look .punch-btn:hover { background: var(--slate-dark); }
+.look .punch-btn.out { background: #c9a35a; color: #2b2929; }
+.look .punch-btn.out:hover { background: #b8934c; }
+.look .punch-btn:disabled { opacity: .6; }
+.punch.on .punch-state { color: #f0d9a8; }
+/* Just clocked in: the answer in big letters, and no big button to bump. */
+.punch.just { padding-top: 34px; padding-bottom: 22px; }
+.punch.just .punch-state { font-size: 40px; color: var(--ok); }
+.punch-bar { color: var(--ok); font-weight: 600; margin: 10px 0 0; }
+.punch-bar.old { color: #f0d9a8; font-weight: 400; }
+.punch .btn-link { margin-top: 8px; padding: 10px 0; }
+
+/* ---------- Rows: a shift on the left, its numbers on the right ---------- */
+.clock-page .row b { font-weight: 700; }
+.clock-page .row small { display: block; color: var(--gray); font-size: 15px; margin-top: 2px; }
+.clock-page .row-r { color: var(--white); font-weight: 600; }
+.clock-page .row-r small { font-weight: 400; }
+.clock-page .row-r .btn-sm { white-space: nowrap; }
+.clock-page .tag { margin: 0 0 0 6px; vertical-align: 1px; color: var(--gray); border: 1px solid var(--line); }
+.clock-page .tag.paid { color: var(--ok); border-color: #4b6a52; }
+.clock-page .tag.need { color: #f0d9a8; border-color: #c9a35a; }
+.day-lbl { color: var(--gray); font-size: 15px; font-weight: 600; margin: 18px 0 6px; }
+
+/* ---------- Payroll: name, hours, tips ---------- */
+.pay .prow { display: grid; grid-template-columns: minmax(0, 1fr) 58px 92px; column-gap: 8px; align-items: baseline; }
+.pay .prow > :nth-child(2), .pay .prow > :nth-child(3) { text-align: right; font-variant-numeric: tabular-nums; }
+.pay .prow.head { color: var(--gray); font-size: 15px; font-weight: 600; padding-top: 10px; padding-bottom: 10px; }
+.pay .prow.total { font-weight: 700; }
+.pay .prow b { font-weight: 700; overflow-wrap: anywhere; }
+.pay .prow .flags { grid-column: 1 / -1; color: #f0d9a8; font-size: 15px; margin-top: 2px; }
+.pay .prow .num { font-weight: 700; }
+@media (min-width: 600px) { .pay .prow { grid-template-columns: minmax(0, 1fr) 90px 130px; } .pay .prow .num { font-size: 19px; } }
+.pname { font-weight: 700; margin: 18px 0 6px; }
+.big-num { font-size: 26px !important; font-weight: 700; text-align: center; }
+#stickerLink { flex: 1 1 auto; min-width: 0; font-size: 15px; }
+
+/* Off the club wifi: the button is greyed and a line says what to do instead. */
+.punch-wifi { color: #f0d9a8; font-size: 15px; line-height: 1.4; margin: 12px 0 0; }
+.punch-btn.dim { opacity: .5; }
+.wifi-state { color: var(--white); font-weight: 600; }
+.wifi-state.good { color: var(--ok); }
+
+/* Read the updates first: the line under the button, and the update itself. */
+.punch-news { color: var(--muted); font-size: 15px; line-height: 1.4; margin: 12px 0 0; }
+.news-body { margin: 0; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+#newsDialog .sheet-acts .btn-primary { flex: 1 1 auto; min-height: 56px; font-size: 19px; }

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mic hosts · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <style>
+    /* Who hosts the Tuesday open mic and the Thursday showcase, week by week
+       (Sam, Nov 17 2026: "Let's Make a spot for Grace to put the open mic host
+       and showcase hosts in to track them"). One row per night in
+       public.mic_hosts, keyed by date. A Tuesday's row also carries the host's
+       link for their 4 guaranteed comics (mic/picks.html); Thursdays just keep
+       the name. */
+    .night { display: flex; flex-direction: column; gap: 8px; }
+    .night-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .night-day { font-weight: 700; font-size: 18px; color: #fff; }
+    .night-what { color: var(--gray); font-size: 15px; }
+    .night-form { display: flex; gap: 8px; }
+    .night-form .input { flex: 1; min-width: 0; font-size: 17px; }
+    .night-off { color: var(--gray); font-size: 16px; }
+    .night-link { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .saved { color: #9fd49f; font-size: 14px; font-weight: 700; }
+    .tabs2 { display: flex; gap: 8px; margin: 14px 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="/staff/nav.js"></script>
+</head>
+<body class="look">
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Mic hosts</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Mic hosts</div>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app">
+    <div id="notManager" class="hidden empty"></div>
+    <p style="margin:16px 0 0">Who hosts the Tuesday open mic and the Thursday showcase each week. Type a name and tap Save. For a Tuesday, send the host their link: it's where they put their 4 guaranteed comics, and it shows them how to run the Stream Deck.</p>
+    <div class="tabs2">
+      <button class="btn btn-sm btn-primary" type="button" data-show="all">Both</button>
+      <button class="btn btn-sm" type="button" data-show="2">Tuesdays</button>
+      <button class="btn btn-sm" type="button" data-show="4">Thursdays</button>
+    </div>
+    <div class="list" id="nights"></div>
+    <p style="margin-top:14px"><a class="btn-link" href="host.html">Tonight's open mic lineup</a></p>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var WEEKS = 10, show = 'all', hosts = {};
+    var PICKS_URL = location.origin + '/mic/picks.html?k=';
+    // Nights with no show (Sam: closed Thanksgiving; no showcase Dec 24 or 31).
+    var OFF = { '2026-11-26': 'Closed for Thanksgiving', '2026-12-24': 'No showcase (Christmas Eve)', '2026-12-31': 'No showcase (New Year’s Eve)' };
+    function esc(s) { return escapeHtml(s == null ? '' : String(s)); }
+    function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function todayCentral() {
+      var p = {}; new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' })
+        .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+      return new Date(+p.year, +p.month - 1, +p.day);
+    }
+    // The next WEEKS weeks of Tuesdays (open mic, from Nov 17 2026) and
+    // Thursdays (showcase, from Nov 19 2026), today included.
+    function nights() {
+      var out = [], d = todayCentral();
+      for (var i = 0; i < WEEKS * 7; i++) {
+        var day = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i), dow = day.getDay(), key = iso(day);
+        if (dow === 2 && key >= '2026-11-17') out.push({ date: key, dow: 2, what: 'Open mic, 7 PM', day: day });
+        if (dow === 4 && key >= '2026-11-19') out.push({ date: key, dow: 4, what: 'Showcase, 8 PM', day: day });
+      }
+      return out;
+    }
+
+    async function load() {
+      var list = nights();
+      var res = await sb.from('mic_hosts').select('*').gte('mic_date', list[0].date).lte('mic_date', list[list.length - 1].date);
+      if (res.error) { toast(res.error.message, true); return; }
+      hosts = {}; (res.data || []).forEach(function (h) { hosts[h.mic_date] = h; });
+      render();
+    }
+
+    function render() {
+      $('nights').innerHTML = nights().filter(function (n) { return show === 'all' || String(n.dow) === show; }).map(function (n) {
+        var h = hosts[n.date], name = h && h.host_name ? h.host_name : '';
+        var label = n.day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        var top = '<div class="night-top"><span class="night-day">' + label + '</span><span class="night-what">' + n.what + '</span></div>';
+        if (OFF[n.date]) return '<div class="night">' + top + '<div class="night-off">' + OFF[n.date] + '</div></div>';
+        var link = (n.dow === 2 && name) ? '<div class="night-link"><button class="btn btn-sm" type="button" data-share="' + n.date + '">Send ' + esc(name.split(' ')[0]) + ' the link</button>' +
+          '<button class="btn btn-sm btn-ghost" type="button" data-copy="' + n.date + '">Copy link</button></div>' : '';
+        return '<div class="night">' + top +
+          '<form class="night-form" data-date="' + n.date + '"><input class="input" maxlength="80" placeholder="Host" aria-label="Host for ' + label + '" value="' + esc(name) + '">' +
+          '<button class="btn btn-primary btn-sm" type="submit">Save</button></form>' + link + '</div>';
+      }).join('');
+    }
+
+    $('nights').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var f = e.target, date = f.dataset.date, name = f.querySelector('input').value.trim();
+      var res = hosts[date] ? await sb.from('mic_hosts').update({ host_name: name }).eq('mic_date', date)
+                            : (name ? await sb.from('mic_hosts').insert({ mic_date: date, host_name: name }) : { error: null });
+      if (res.error) { toast(res.error.message, true); return; }
+      await load(); toast(name ? name + ' is hosting' : 'Host cleared');
+    });
+    $('nights').addEventListener('click', function (e) {
+      var s = e.target.closest('[data-share]'), c = e.target.closest('[data-copy]');
+      var h = s ? hosts[s.dataset.share] : c ? hosts[c.dataset.copy] : null;
+      if (!h) return;
+      var url = PICKS_URL + h.token;
+      if (c) { navigator.clipboard.writeText(url).then(function () { toast('Link copied'); }, function () { toast('Could not copy', true); }); return; }
+      var p = h.mic_date.split('-').map(Number);
+      var when = new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      var text = 'Hi ' + h.host_name.split(' ')[0] + ', thanks for hosting the Sisyphus open mic on ' + when + '. Put your 4 guaranteed comics (5 to 7 minutes each) in here. It also shows how to run the Stream Deck: ';
+      if (navigator.share) navigator.share({ text: text, url: url }).catch(function () {});
+      else location.href = 'sms:?&body=' + encodeURIComponent(text + url);
+    });
+    document.querySelector('.tabs2').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-show]'); if (!b) return;
+      show = b.dataset.show;
+      document.querySelectorAll('.tabs2 .btn').forEach(function (x) { x.classList.toggle('btn-primary', x === b); });
+      render();
+    });
+
+    setupSignIn(async function (role) {
+      if (!roleAtLeast(role, 'manager')) { showNoAccess('manager', ['nights']); return; }
+      load();
+    });
+  </script>
+</body>
+</html>

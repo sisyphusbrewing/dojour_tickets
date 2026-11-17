@@ -1,0 +1,96 @@
+/* The simpler look for staff pages (Sam, Nov 15 2026: "the interface was a
+   little clunky visually. I want this to be simple and easy for people to
+   read and use").
+
+   A page moves to it with two changes: load this file after staff.css, and
+   put class="look" on its <body>. Pages that haven't moved look as they did.
+
+   What it changes, everywhere at once:
+     - bigger, plain text. No more small capital letters spaced far apart.
+     - plain headings in place of the tilted bands.
+     - one kind of box. A list is ONE box with thin lines between its rows,
+       not a box around every row inside another box.
+     - buttons you can't miss, and at most one bright one per box. */
+body.look { font-size: 17px; line-height: 1.4; }
+.look .wrap { padding: 0 18px; }
+.look .quiet { color: var(--gray); margin: 0; }
+/* Very small phones: a touch smaller so names and times still fit on a line. */
+@media (max-width: 359px) { body.look { font-size: 16px; } .look .wrap { padding: 0 14px; } }
+
+/* ---------- Top of the page ---------- */
+.look header { border-bottom: 1px solid var(--line); padding: 9px 0; padding-top: calc(9px + env(safe-area-inset-top)); }
+.look .hdr-brand img { height: 38px; }
+.look .hdr-title { font-size: 22px; text-transform: none; letter-spacing: .01em; padding-top: 5px; }
+
+/* Tabs under the page name: the parts of one tool, one at a time. */
+.look .tabs3 { display: flex; gap: 24px; margin: 6px 0 -10px; overflow-x: auto; scrollbar-width: none; }
+.look .tabs3::-webkit-scrollbar { display: none; }
+.look .tabs3 a { flex: 0 0 auto; padding: 9px 0 9px; color: var(--gray); font-weight: 700; text-decoration: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+.look .tabs3 a.on { color: var(--white); border-bottom-color: var(--slate-light); }
+.look .tabs3 a i { font-style: normal; display: inline-block; min-width: 22px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #c9a35a; color: #2b2929; font-size: 14px; text-align: center; }
+
+/* ---------- Headings (the old tilted bands, now plain) ---------- */
+.look .band-row { margin: 34px 0 10px; padding: 0; align-items: baseline; }
+.look .band { background: none; transform: none; box-shadow: none; padding: 0; font-size: 22px; text-transform: none; letter-spacing: .01em; line-height: 1.15; }
+.look .band-note { font-size: 15px; font-weight: 400; }
+.look h2.sub { font-family: var(--body); font-size: 17px; font-weight: 700; margin: 0 0 8px; }
+
+/* ---------- Boxes and lists ---------- */
+.look .card { border: 0; border-radius: 16px; padding: 18px; }
+.look .card h2 { font-family: var(--body); font-size: 19px; font-weight: 700; margin: 0; }
+.look .list { background: var(--card); border-radius: 16px; overflow: hidden; }
+.look .list > * { padding: 14px 16px; }
+.look .list > * + * { border-top: 1px solid var(--line); }
+.look .chev { flex: 0 0 auto; color: var(--gray); font-size: 24px; line-height: 1; }
+
+/* ---------- Buttons ---------- */
+.look .btn { min-height: 48px; padding: 10px 18px; border-radius: 12px; border-color: transparent; background: #4d4949; font-weight: 700; }
+.look .btn:hover { background: #575252; }
+.look .btn-primary { background: var(--slate); }
+.look .btn-primary:hover { background: var(--slate-dark); }
+.look .btn-ghost { background: transparent; color: var(--slate-light); }
+.look .btn-ghost:hover { background: rgba(255,255,255,.06); }
+.look .btn-danger { background: transparent; color: #f0b7ac; border-color: #6b4a44; }
+.look .btn-sm { min-height: 40px; padding: 6px 14px; font-size: 15px; border-radius: 10px; }
+.look .btn-big { font-family: var(--body); text-transform: none; letter-spacing: 0; font-size: 18px; padding-top: 10px; }
+.look .btn-link { font-size: 16px; font-weight: 700; }
+
+/* ---------- Forms ---------- */
+.look .field label, .look .lbl { font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--muted); margin-bottom: 6px; }
+.look .input, .look select.input, .look textarea.input { min-height: 50px; border-radius: 12px; padding: 10px 14px; background: #242222; }
+.look .search .input { padding-left: 42px; }
+/* A pair of short boxes that stays side by side even on a phone (a start and an end time). */
+.look .grid2.keep { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.look .grid2 .check { margin-top: 8px; }
+.look input[type=date].input, .look input[type=time].input { padding-left: 10px; padding-right: 8px; }
+.look .help { font-size: 15px; line-height: 1.4; }
+.look .check { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; color: var(--muted); font-weight: 600; }
+.look .check input { width: 20px; height: 20px; accent-color: var(--slate); }
+
+/* ---------- Pick-one buttons ---------- */
+.look .chip { min-height: 42px; padding: 8px 16px; font-size: 16px; border-color: #5a5555; }
+.look .chip.on { border-color: var(--slate); }
+.look .tag { font-family: var(--body); text-transform: none; letter-spacing: 0; font-size: 13px; padding: 2px 9px; border-radius: 999px; }
+
+/* ---------- What's new (staff/news.js) ---------- */
+.look .news { gap: 0; background: var(--card); border-radius: 16px; overflow: hidden; }
+.look .news.caught { background: none; border-radius: 0; }
+.look .note { border: 0; border-radius: 0; background: none; padding: 16px; }
+.look .note + .note { border-top: 1px solid var(--line); }
+.look .note.read { opacity: 1; }
+.look .note.read h3 { color: var(--muted); }
+.look .note h3 { font-family: var(--body); font-size: 18px; font-weight: 700; letter-spacing: 0; line-height: 1.25; }
+.look .note .when { font-size: 14px; margin-top: 3px; }
+.look .note p { color: #ecebeb; margin-top: 8px; }
+.look .note .acts { margin-top: 14px; }
+.look .note .seen { font-size: 14px; }
+.look #postForm { margin-bottom: 10px; }
+
+/* ---------- Pop-up forms ---------- */
+.look dialog.sheet { background: var(--card); color: var(--white); border: 0; border-radius: 18px; padding: 20px; width: calc(100% - 24px); max-width: 460px; max-height: calc(100% - 24px); }
+.look dialog.sheet::backdrop { background: rgba(0,0,0,.6); }
+.look dialog.sheet h2 { font-family: var(--body); font-size: 20px; font-weight: 700; margin: 0; text-transform: none; letter-spacing: 0; }
+.look .sheet-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.look .warn { background: #4a3f2a; color: #f0d9a8; border-radius: 12px; padding: 10px 14px; font-size: 16px; line-height: 1.4; }
+
+.look .foot { font-size: 14px; }
