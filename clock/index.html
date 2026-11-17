@@ -29,13 +29,16 @@
        It replaces two things: When I Work's time clock (the hours) and the
        "Sisyphus Tip Tracker" Google Sheet (where each person typed a row per
        shift). One page, built for a phone held in one hand:
-         - Clock: one big button. Tap in, tap out, type the night's credit tips.
+         - Clock: hold your phone to the NFC sticker at the bar and you are
+           clocked in or out (Sam, Nov 17 2026: "I would rather do nfc tap
+           for clock in and out vs QR code"). The one big button does the
+           same for a phone that can't tap. Then type the night's credit tips.
          - My hours: my shifts and tips for the two-week pay period.
          - Payroll (managers): hours and tips per person, last name first, in
            the shape Sam types into ADP. Sam marks each payroll as submitted,
            the way he used to add a "Payroll Submitted" line to the sheet.
-       A sticker or sign at the bar opens this page with "?at=<code>" in the
-       link; taps made that way are marked "at the bar".
+       The sticker opens this page with "?at=<code>" in the link; the page
+       then clocks the person in or out and marks it "at the bar".
        The rules live in the database (supabase/migrations/..._time_clock.sql);
        this page only shows and asks. -->
   <div id="lock" class="hidden">
@@ -135,8 +138,10 @@
       <details class="fold" id="nightFold"><summary>Tips by night, to check against GoTab</summary><div class="list" id="nightList"></div></details>
       <details class="fold" id="shiftFold"><summary>Every shift</summary><div id="shiftList"></div></details>
       <details class="fold" id="stickerFold"><summary>The tap sticker for the bar</summary>
-        <p class="help">Put this link on an NFC sticker or a printed sign at the bar. Tapping it opens the Clock, and those taps are marked “at the bar”. Keep the link to yourself; anyone who has it can look like they are at the bar.</p>
+        <p class="help">Staff hold their phone to this sticker and they’re clocked in or out, marked “at the bar”.</p>
+        <p class="help"><b>To make one:</b> copy this link and write it onto a blank NFC sticker as a web link (the free NFC Tools app does it). Then hold your own phone to it: this page tells you if it works.</p>
         <div class="row" style="margin-top:8px"><input class="input" id="stickerLink" readonly aria-label="The sticker link"><button class="btn btn-sm" id="stickerCopy" type="button">Copy</button></div>
+        <p class="help">Put it where guests can’t reach, and not on metal (it won’t read). Keep the link to yourself: anyone who has it can clock in from anywhere and look like they’re at the bar.</p>
       </details>
     </div>
 

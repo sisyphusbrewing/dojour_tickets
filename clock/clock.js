@@ -8,6 +8,9 @@ var PERIOD_ANCHOR = '2026-11-02';      // a Monday that started a two-week pay p
 var UNDO_MS = 2 * 60 * 1000;           // clocking out this soon after clocking in just drops the punch
 var FORGOT_MS = 16 * 3600 * 1000;      // a punch open this long was forgotten, not worked
 var CODE_GOOD_MS = 10 * 60 * 1000;     // how long a tap on the bar sticker counts as "at the bar"
+var TAP_WAIT_MS = 4000;                // a sticker tap waits this long before clocking out, so "Not yet" can stop it
+var TAP_STALE_MS = 60 * 1000;          // a phone that slept through that wait doesn't clock out when it wakes up
+var TAP_LONGEST_MS = 12 * 3600 * 1000; // on the clock longer than this, a sticker tap asks instead of clocking out (a forgotten clock-out)
 
 var role = 'door', isMgr = false, isOwner = false, me = null;
 var st = null;                         // what the database says about me right now (clock_status)
@@ -17,15 +20,26 @@ var myPunches = [], allPunches = [], shiftOf = {}, payRows = [], run = null, lat
 var busy = false, editing = null, formMode = 'mine', tipsFor = null, leftFor = null;
 
 // The code from the bar sticker's link ("?at=..."). Kept in memory for a few
-// minutes and taken out of the address bar, so a bookmark doesn't carry it.
+// minutes and taken out of the address bar, so a bookmark doesn't carry it and
+// reloading the page doesn't count as a second tap.
 var barCode = null, barCodeAt = 0;
+var tapped = false;                    // this page was opened by a tap on the sticker, and the tap hasn't been used yet
+var tapDue = 0, tapTimer = null;       // a sticker tap is about to clock out (see "A tap on the bar sticker")
+var stickerOk = null;                  // true / false once we know whether the sticker carries today's link
+var skew = 0, skewFrom = null;         // how far this phone's clock is from the database's
 (function () {
   try {
     var q = new URLSearchParams(location.search), at = q.get('at');
-    if (at) { barCode = at; barCodeAt = Date.now(); history.replaceState(null, '', location.pathname + location.hash); }
+    if (at) { barCode = at; barCodeAt = Date.now(); tapped = true; history.replaceState(null, '', location.pathname + location.hash); }
   } catch (e) {}
 })();
 function freshCode() { return barCode && Date.now() - barCodeAt < CODE_GOOD_MS ? barCode : null; }
+// The time by the database's clock. "Two minutes since you clocked in" is the
+// database's call, so a phone with the wrong time mustn't get it wrong.
+function srvNow() { return Date.now() + skew; }
+// Clocked in so recently that it can still be undone. A few seconds short of
+// the database's two minutes, so "undo" never arrives a moment too late.
+function justIn() { return !!(st && st.open) && srvNow() - new Date(st.open.clock_in) < UNDO_MS - 5000; }
 
 // ---------- Small helpers ----------
 function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
@@ -102,9 +116,13 @@ setupSignIn(async function (r) {
   $('page').classList.remove('hidden');
   $('tabs').classList.remove('hidden');
   await Promise.all([loadPeople(), loadStatus()]);
+  var tap = tapped && !!freshCode();
+  tapped = false;
   // A manager login that doesn't take shifts (Sam's) has nothing to clock, so it opens on Payroll.
-  if (!location.hash && isMgr && st && !st.on_schedule) { try { history.replaceState(null, '', '#payroll'); } catch (e) {} }
+  // Unless it just tapped the sticker: then it stays here to be told whether the sticker works.
+  if (!location.hash && isMgr && st && !st.on_schedule && !tap) { try { history.replaceState(null, '', '#payroll'); } catch (e) {} }
   showTab();
+  if (tap) afterTap();
 });
 
 // ---------- Tabs ----------
@@ -158,23 +176,45 @@ function drawClock() {
     btn.classList.add('hidden'); other.classList.add('hidden');
     return;
   }
+  if (st.now && st.now !== skewFrom) { skewFrom = st.now; skew = new Date(st.now) - Date.now(); }
   var open = st.open;
+  var fresh = justIn(), leaving = !!(tapDue && open);
   $('hello').textContent = 'Hi ' + first(st.name) + '.';
   $('punchCard').classList.toggle('on', !!open);
-  $('atBar').classList.toggle('hidden', !freshCode() || !st.on_schedule);
-  btn.classList.toggle('hidden', !st.on_schedule);
-  other.classList.toggle('hidden', !st.on_schedule);
+  $('punchCard').classList.toggle('just', fresh && !leaving);
+  // The line under the button: "At the bar" after a sticker tap, or a warning
+  // when the sticker carries a link that has since been changed.
+  $('atBar').classList.toggle('hidden', !(st.on_schedule && (stickerOk === false || freshCode())));
+  $('atBar').classList.toggle('old', stickerOk === false);
+  $('atBar').textContent = stickerOk === false ? 'This sticker has an old link, so this doesn’t count as “at the bar”. Tell a manager.' : '✓ At the bar';
+  btn.classList.toggle('hidden', !st.on_schedule || (fresh && !leaving));
+  other.classList.toggle('hidden', !st.on_schedule || leaving);
   if (!st.on_schedule) {
-    $('state').textContent = 'Nothing to clock';
-    $('stateSub').textContent = 'This login isn’t on the schedule. A manager can add it on the Schedule page, under My settings.';
+    $('state').textContent = stickerOk === true ? '✓ This sticker works' : stickerOk === false ? 'This sticker has an old link' : 'Nothing to clock';
+    $('stateSub').textContent = stickerOk === true ? 'Staff who tap it are clocked in or out. This login isn’t on the schedule, so it has nothing to clock.'
+      : stickerOk === false ? 'Write today’s link onto it. The link is under Payroll, “The tap sticker for the bar”.'
+      : 'This login isn’t on the schedule. A manager can add it on the Schedule page, under My settings.';
   } else if (open) {
-    var fresh = Date.now() - new Date(open.clock_in) < UNDO_MS;
-    $('state').textContent = 'On the clock';
-    $('stateSub').innerHTML = 'Since ' + timeOf(open.clock_in) + ' · ' + elapsed(open.clock_in) +
-      (st.shift ? '<br><span class="quiet">Scheduled ' + escapeHtml(sched(st.shift)) + '</span>' : '');
-    btn.textContent = fresh ? 'Undo clock in' : 'Clock out';
-    btn.classList.add('out');
-    other.textContent = 'I left earlier';
+    var planned = st.shift ? '<br><span class="quiet">Scheduled ' + escapeHtml(sched(st.shift)) + '</span>' : '';
+    if (leaving) {
+      // A sticker tap is about to clock them out. The button stops it.
+      $('state').textContent = 'Clocking you out…';
+      $('stateSub').innerHTML = 'On the clock since ' + timeOf(open.clock_in) + ' · ' + elapsed(open.clock_in);
+      btn.textContent = 'Not yet';
+      btn.classList.remove('out');
+    } else if (fresh) {
+      // Just clocked in: say so in big letters and get out of the way. The
+      // big button is gone for these two minutes so a pocket can't press it.
+      $('state').textContent = '✓ Clocked in';
+      $('stateSub').innerHTML = 'At ' + timeOf(open.clock_in) + '. You can put your phone away.' + planned;
+      other.textContent = 'That was a mistake, undo it';
+    } else {
+      $('state').textContent = 'On the clock';
+      $('stateSub').innerHTML = 'Since ' + timeOf(open.clock_in) + ' · ' + elapsed(open.clock_in) + planned;
+      btn.textContent = 'Clock out';
+      btn.classList.add('out');
+      other.textContent = 'I left earlier';
+    }
   } else {
     $('state').textContent = 'Not clocked in';
     $('stateSub').textContent = st.last ? 'Clocked out at ' + timeOf(st.last.clock_out) + ' · ' + hrs(hoursOf(st.last))
@@ -196,27 +236,101 @@ function drawClock() {
   }).join('');
 }
 
-$('punchBtn').addEventListener('click', async function () {
-  var btn = this;
+// Clock in if I'm out, out if I'm in (the database decides which). Used by
+// the big button, by a tap on the bar sticker, and by "undo".
+async function punch(byTap) {
+  var btn = $('punchBtn');
   if (busy) return;
   busy = true; btn.disabled = true;
-  var r = await sb.rpc('clock_punch', { p_code: freshCode() });
+  var code = freshCode();
+  var r = await sb.rpc('clock_punch', { p_code: code });
   if (r.error) {
-    busy = false; btn.disabled = false; chime(false);
+    busy = false; btn.disabled = false;
+    if (!byTap) chime(false);
+    drawClock();
     return fail(r, 'That didn’t go through. Check the wifi and tap again.');
   }
   st = r.data;
-  chime(true);
-  try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  // The database says whether the code on the sticker was the right one.
+  if (code && st.did === 'in' && st.open && st.open.in_at_bar === false) stickerOk = false;
+  // The beep and the buzz only work after a finger has touched the page, so a
+  // sticker tap gets its answer in big letters instead.
+  if (!byTap) {
+    chime(true);
+    try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  }
   drawClock();
   toast(st.did === 'in' ? 'Clocked in. Have a good one.' : st.did === 'out' ? 'Clocked out. Thank you.' : 'Undone. You’re not clocked in.');
   // A short pause, so a double tap can't clock straight back out.
   setTimeout(function () { busy = false; btn.disabled = false; }, 1500);
+  // When the two minutes to undo are up, the Clock out button comes back.
+  if (st.did === 'in') setTimeout(drawClock, UNDO_MS);
   if (st.did === 'out' && st.last) openTips(st.last.id);
+}
+$('punchBtn').addEventListener('click', function () {
+  if (tapDue) return stopTap();
+  punch(false);
 });
 $('otherBtn').addEventListener('click', function () {
-  if (st && st.open) openLeft(st.open.id); else openShift('mine');
+  if (st && st.open) { if (justIn()) punch(false); else openLeft(st.open.id); }
+  else openShift('mine');
 });
+
+// ---------- A tap on the bar sticker ----------
+// The NFC sticker at the bar holds this page's link with a code on the end.
+// Holding a phone to it opens the page, and the page then does the clocking by
+// itself (Sam, Nov 17 2026: "I would rather do nfc tap for clock in and out vs
+// QR code"). The rules:
+//   - Not clocked in: clock in at once. It can be undone for two minutes.
+//   - Clocked in: count a few seconds with a "Not yet" button, then clock out
+//     and ask for tips. The wait is there because a clock-out can't be undone.
+//   - Nothing happens by itself within two minutes of the last punch, so a
+//     phone that reads the sticker twice doesn't undo what the first read did.
+//   - On the clock for more than twelve hours means last night's clock-out
+//     was forgotten: the tap asks instead of writing down a 15-hour shift.
+function afterTap() {
+  if (!st) return;
+  if (isMgr) checkSticker();
+  if (!st.on_schedule) return;
+  if (st.open) {
+    var age = srvNow() - new Date(st.open.clock_in);
+    if (age < UNDO_MS) return;                                         // the page already says "Clocked in"
+    if (age > TAP_LONGEST_MS) return toast('Still on the clock from ' + timeOf(st.open.clock_in) + '? Clock out, or tap “I left earlier”.', true);
+    tapDue = Date.now() + TAP_WAIT_MS;
+    tapTimer = setTimeout(tapOut, TAP_WAIT_MS);
+    drawClock();
+  } else {
+    if (st.last && srvNow() - new Date(st.last.clock_out) < UNDO_MS) return toast('You just clocked out.');
+    punch(true);
+  }
+}
+function tapOut() {
+  var late = Date.now() - tapDue;
+  tapTimer = null; tapDue = 0;
+  // A phone that fell asleep mid-count wakes up much later. Don't clock out
+  // then; show where things stand instead.
+  if (late > TAP_STALE_MS || !st || !st.open) { loadStatus(); return; }
+  punch(true);
+}
+function stopTap() {
+  var btn = $('punchBtn');
+  clearTimeout(tapTimer);
+  tapTimer = null; tapDue = 0;
+  // "Not yet" turns back into "Clock out" under the same finger, so it sits
+  // out a moment: a double press mustn't clock out after all.
+  busy = true; btn.disabled = true;
+  setTimeout(function () { busy = false; btn.disabled = false; }, 1500);
+  drawClock();
+  toast('OK. You’re still on the clock.');
+}
+// A manager who taps a sticker is told whether it carries today's link, so a
+// freshly written sticker can be checked with one tap.
+async function checkSticker() {
+  var r = await sb.rpc('clock_bar_code');
+  if (r.error || !barCode) return;
+  stickerOk = r.data === barCode;
+  drawClock();
+}
 
 // ---------- Credit tips for one shift ----------
 function findPunch(id) {

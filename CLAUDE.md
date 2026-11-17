@@ -84,8 +84,11 @@ Dojour gotchas, learned the hard way:
   `supabase/tests/staff_schedule/` before applying them.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones"). It
-  replaces When I Work's time clock and the "Tip Tracker" Google Sheet: one
-  big button to clock in and out, the night's credit tips typed per shift, "My
+  replaces When I Work's time clock and the "Tip Tracker" Google Sheet: an
+  NFC sticker at the bar that clocks a phone in or out when the phone is held
+  to it (Sam, Nov 17 2026: "I would rather do nfc tap for clock in and out vs
+  QR code"; the page's one big button does the same for a phone that can't
+  tap), the night's credit tips typed per shift, "My
   hours" for the two-week pay period (Monday to Sunday twice, counted from Mon
   Nov 2 2026), and a Payroll tab for managers with hours and tips per person,
   last name first, the way Sam types them into ADP. The rules live in
@@ -93,7 +96,10 @@ Dojour gotchas, learned the hard way:
   and asks. Nothing is ever deleted (a removed shift is flagged), paid hours
   and paid tips are locked, and only the owner marks a payroll submitted. The
   link on the bar's sticker carries a code kept in the database
-  (`clock_settings`), never in this repo. Its notices ride the schedule's
+  (`clock_settings`), never in this repo. A tap clocks in at once (undo for
+  two minutes) and clocks out after a four-second "Not yet" wait; nothing
+  happens by itself within two minutes of the last punch, so a double read
+  can't undo it. Its notices ride the schedule's
   outbox (kinds starting `clock_`). Check rule changes with
   `supabase/tests/time_clock/` before applying them.
 - **`booking/`** is the Booking board (Sam, Nov 14 2026, built for Grace):
