@@ -67,3 +67,8 @@ select mic_draw(today, 12, true) from t_ctx;
 insert into mic_draws (mic_date, spots, how) values ('2030-01-01', 1, 'auto');
 reset role;
 select case when count(*) = 4 then 'ok' else 'FAIL' end as "refused saves changed nothing" from mic_signups where host_pick and status = 'booked';
+-- The public lineup gives names only, and nothing before 6:35 (time-of-day
+-- dependent, so this only checks it never leaks emails).
+set role anon;
+select case when coalesce(mic_public_lineup()::text, '') not like '%@%' then 'ok' else 'FAIL' end as "public lineup: no emails";
+reset role;

@@ -20,6 +20,9 @@
 --   block, and so on. The drawn names are split evenly so each guaranteed comic
 --   closes a block: 12 drawn and 4 picks = 3, pick, 3, pick, 3, pick, 3, pick.
 --   Host picks come before comics staff booked ahead by hand.
+-- * At 6:35 PM the running order goes up on the public sign-up page (the open
+--   mic page on the website), stage names only (Sam, Nov 17 2026: "at 6:35
+--   the list should automatically post online"). mic_public_lineup().
 
 create table if not exists public.mic_hosts (
   mic_date    date primary key,                    -- the Tuesday
@@ -195,6 +198,25 @@ begin
   update public.mic_hosts set picks_at = now() where mic_date = h.mic_date;
   return jsonb_build_object('mic_date', h.mic_date, 'saved', cardinality(v_names));
 end $$;
+
+-- Tonight's running order for the public page: only on a Tuesday's own date,
+-- only from 6:35 PM Central, only once names are drawn. Names only.
+create or replace function public.mic_public_lineup()
+returns jsonb language sql stable security definer set search_path = public as $$
+  with n as (select (now() at time zone 'America/Chicago') as t)
+  select case
+    when (select t::time from n) < time '18:35' then null
+    when not exists (select 1 from public.mic_signups s where s.mic_date = (select t::date from n) and s.status in ('drawn', 'not_drawn')) then null
+    else jsonb_build_object(
+      'mic_date', (select t::date from n),
+      'host_name', (select h.host_name from public.mic_hosts h where h.mic_date = (select t::date from n)),
+      'lineup', coalesce((select jsonb_agg(s.name order by s.slot nulls last, s.created_at)
+                            from public.mic_signups s
+                           where s.mic_date = (select t::date from n) and s.status in ('booked', 'drawn')), '[]'::jsonb))
+  end
+$$;
+revoke all on function public.mic_public_lineup() from public;
+grant execute on function public.mic_public_lineup() to anon, authenticated, service_role;
 
 revoke all on function public.mic_renumber(date) from public;
 revoke all on function public.mic_draw(date, int, boolean) from public;

@@ -26,6 +26,9 @@ the online sign-ups (Sam, Nov 9 2026).
   guaranteed comic, then another block, and so on (12 drawn and 4 guaranteed
   = 3, guaranteed, 3, guaranteed...). `mic_renumber()` keeps it that way when
   anything changes. The host's page shows the whole order after the draw.
+- At 6:35 PM the running order shows by itself at the top of `index.html`
+  (so on the website's open mic page), stage names only (Sam, Nov 17 2026:
+  "at 6:35 the list should automatically post online"). `mic_public_lineup()`.
 - Data: `public.mic_signups`, `public.mic_hosts`, `public.mic_draws`;
   migrations `supabase/migrations/20261110003000_mic_signups.sql` and
   `20261117240000_mic_host_picks.sql`. Checks: `supabase/tests/mic_host_picks/`.
