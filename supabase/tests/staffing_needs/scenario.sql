@@ -8,12 +8,15 @@
 -- each is the first Monday, Tuesday, ... that is at least a week away.
 select schedule_today() + 7 + ((1 - extract(dow from schedule_today() + 7)::int + 7) % 7) as mon,
        schedule_today() + 7 + ((2 - extract(dow from schedule_today() + 7)::int + 7) % 7) as tue,
+       schedule_today() + 7 + ((3 - extract(dow from schedule_today() + 7)::int + 7) % 7) as wed,
        schedule_today() + 7 + ((4 - extract(dow from schedule_today() + 7)::int + 7) % 7) as thu,
        schedule_today() + 7 + ((5 - extract(dow from schedule_today() + 7)::int + 7) % 7) as fri,
        schedule_today() + 7 + ((6 - extract(dow from schedule_today() + 7)::int + 7) % 7) as sat,
        schedule_today() + 7 + ((0 - extract(dow from schedule_today() + 7)::int + 7) % 7) as sun,
        schedule_today() + 21 + ((4 - extract(dow from schedule_today() + 21)::int + 7) % 7) as thu2,
-       schedule_today() + 21 + ((1 - extract(dow from schedule_today() + 21)::int + 7) % 7) as mon2 \gset
+       schedule_today() + 21 + ((1 - extract(dow from schedule_today() + 21)::int + 7) % 7) as mon2,
+       schedule_today() + 21 + ((6 - extract(dow from schedule_today() + 21)::int + 7) % 7) as sat2,
+       schedule_today() + 21 + ((0 - extract(dow from schedule_today() + 21)::int + 7) % 7) as sun2 \gset
 
 \echo == set up: Thanksgiving 2026 came with the rules as a day set by hand
 select case when people = 0 and note = 'Closed for Thanksgiving' then 'ok' else 'FAIL' end as thanksgiving_closed
@@ -36,7 +39,12 @@ insert into exchange_showtimes (variant_id, show_title, date_text, ticket_type, 
  (7, 'Sunday Special', 'SUN 6', 'General Admission', (:'sun'::date + time '18:00') at time zone 'America/Chicago', 20),
  -- A Monday (closed) with a show, and a cancelled show on the Saturday.
  (8, 'Monday Taping', 'MON2 7', 'General Admission', (:'mon2'::date + time '19:00') at time zone 'America/Chicago', 15),
- (9, 'CANCELLED: Nobody', 'SAT 7', 'General Admission', (:'sat'::date + time '19:00') at time zone 'America/Chicago', 25);
+ (9, 'CANCELLED: Nobody', 'SAT 7', 'General Admission', (:'sat'::date + time '19:00') at time zone 'America/Chicago', 25),
+ -- Early ones: a 5 PM Sunday show, a free event at 6 on a Wednesday, and a
+ -- Saturday show at 6:30, which is not early.
+ (10, 'Lobby Show', 'SUN2 5', 'General Admission', (:'sun2'::date + time '17:00') at time zone 'America/Chicago', 20),
+ (11, 'Early Trivia', 'WED 6', 'General Admission', (:'wed'::date + time '18:00') at time zone 'America/Chicago', 0),
+ (12, 'Half Past', 'SAT2 630', 'General Admission', (:'sat2'::date + time '18:30') at time zone 'America/Chicago', 22);
 -- Tickets for Friday at 7: 40 on the website, 10 on Dojour, plus the venue's
 -- own Dojour hold (no email) and 5 comps, which are not sales.
 insert into tickets (show_title, show_date, tickets, source, email) values
@@ -74,6 +82,22 @@ select case when (pg_temp.day(:'thu2') ->> 'people')::int = 2 and jsonb_array_le
 \echo == Sunday (open 1 to 6) with a 6 PM show: two, and the day runs to 8
 select case when (pg_temp.day(:'sun') ->> 'people')::int = 2 and (pg_temp.day(:'sun') -> 'parts' -> 0 ->> 'to')::int = 20 * 60
              and not (pg_temp.day(:'sun') -> 'parts' -> 0 ->> 'split')::boolean then 'ok' else 'FAIL' end as sunday_show;
+\echo == its extra person starts at 5:00, an hour before, not 4:30 (Sam, Nov 17 2026: a 6pm show, shifts start at 5pm)
+select case when (pg_temp.day(:'sun') -> 'parts' -> 1 ->> 'why') = 'show'
+             and (pg_temp.day(:'sun') -> 'parts' -> 1 ->> 'from')::int = 17 * 60 then 'ok' else 'FAIL' end as six_pm_show_from_five;
+\echo == a 5 PM show: from 4:00, and the day runs to 7
+select case when (pg_temp.day(:'sun2') ->> 'people')::int = 2 and (pg_temp.day(:'sun2') -> 'parts' -> 1 ->> 'from')::int = 16 * 60
+             and (pg_temp.day(:'sun2') -> 'parts' -> 0 ->> 'to')::int = 19 * 60 then 'ok' else 'FAIL' end as five_pm_show_from_four;
+\echo == a free event at 6 PM gets the same hour: from 5:00
+select case when (pg_temp.day(:'wed') ->> 'people')::int = 2 and (pg_temp.day(:'wed') -> 'parts' -> 1 ->> 'why') = 'free'
+             and (pg_temp.day(:'wed') -> 'parts' -> 1 ->> 'from')::int = 17 * 60 then 'ok' else 'FAIL' end as free_at_six_from_five;
+\echo == a 6:30 show is not an early one: 90 minutes before, which is also 5:00
+select case when (pg_temp.day(:'sat2') ->> 'people')::int = 3 and (pg_temp.day(:'sat2') -> 'parts' -> 1 ->> 'from')::int = 17 * 60
+            then 'ok' else 'FAIL' end as half_past_six_is_ninety;
+\echo == the page is told the two early numbers along with the rest
+select case when (r ->> 'early_at')::int = 18 * 60 and (r ->> 'early_lead')::int = 60 and (r ->> 'lead_minutes')::int = 90
+             and not (r ? 'hours') and not (r ? 'id') then 'ok' else 'FAIL' end as early_numbers_sent
+  from (select schedule_needs(:'mon', :'mon') -> 'rules' as r) q;
 \echo == Monday is closed: nobody. A show on a Monday: one to run the bar and one more.
 select case when (pg_temp.day(:'mon') ->> 'people')::int = 0 and jsonb_array_length(pg_temp.day(:'mon') -> 'parts') = 0
              and (pg_temp.day(:'mon') -> 'open') = 'null'::jsonb then 'ok' else 'FAIL' end as monday_closed;
@@ -93,6 +117,8 @@ select case when (pg_temp.day(:'fri') ->> 'people')::int = 4 and (pg_temp.day(:'
 select schedule_needs_rules(2, 1, 1, 1, 50, 120);
 select case when (pg_temp.day(:'fri') ->> 'people')::int = 6 and (pg_temp.day(:'fri') -> 'parts' -> 1 ->> 'from')::int = 17 * 60
             then 'ok' else 'FAIL' end as bigger_numbers;
+\echo == ...but the 6 PM show keeps its hour: still 5:00
+select case when (pg_temp.day(:'sun') -> 'parts' -> 1 ->> 'from')::int = 17 * 60 then 'ok' else 'FAIL' end as early_show_keeps_its_hour;
 \echo == a number out of range is refused (expect ERROR: out of range)
 select schedule_needs_rules(1, 1, 1, 1, 0, 90);
 \echo == back to the starting numbers

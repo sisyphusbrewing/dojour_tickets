@@ -113,6 +113,8 @@
           <div class="rule"><label for="rFullAt">A full room is a show with this many tickets sold</label><input class="input" id="rFullAt" type="number" inputmode="numeric" min="1" max="500" required></div>
           <div class="rule"><label for="rFull">A full room: this many more again</label><input class="input" id="rFull" type="number" inputmode="numeric" min="0" max="9" required></div>
           <div class="rule"><label for="rLead">The extra people start this many minutes before the show</label><input class="input" id="rLead" type="number" inputmode="numeric" min="0" max="360" required></div>
+          <!-- An early show has its own start, set in the database (Sam, Nov 17 2026: "When we have a 6pm show the bartender shifts should start at 5pm rather than 5:30"). -->
+          <p class="help hidden" id="earlyNote" style="margin:0"></p>
           <p class="help" style="margin:0">A day that runs longer than 8 hours counts twice: an opener and a closer. A free event on the same night as a ticketed show doesn’t add again. For one odd day (a holiday, a private party), tap that day’s number in the week.</p>
           <button class="btn btn-primary" type="submit" id="rulesSave">Save</button>
         </form>
