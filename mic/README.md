@@ -18,9 +18,10 @@ the online sign-ups (Sam, Nov 9 2026).
   staff type the night's host; that makes a private link to `picks.html`
   ("Send the link" opens the phone's share sheet). The host types up to 4
   comics there, 5 to 7 minutes each, no login, and can change them all day.
-- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, every
-  first-timer goes on the lineup ("the first timers automatically get up and
-  should be identified online") and 12 more names are drawn at random, once (the staff page or the host's page,
+- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, 12 spots
+  fill: first-timers first ("the first timers automatically get up and should
+  be identified online"; "it's 12 - First timers"), the rest drawn at random
+  from everyone else, once (the staff page or the host's page,
   whichever is open, asks the database for it; `mic_draw()` only allows it
   from 6:30 on the day). Draw names on `host.html` still works by hand.
 - Running order: the host opens, then a block of drawn names, then a
@@ -30,6 +31,10 @@ the online sign-ups (Sam, Nov 9 2026).
 - At 6:35 PM the running order shows by itself at the top of `index.html`
   (so on the website's open mic page), stage names only (Sam, Nov 17 2026:
   "at 6:35 the list should automatically post online"). `mic_public_lineup()`.
+- `hosts.html` (managers; Sam, Nov 17 2026: "a spot for Grace to put the open
+  mic host and showcase hosts in to track them"): the next 10 weeks of
+  Tuesdays and Thursdays, one host name each, saved in `mic_hosts` by date.
+  Tuesdays also get the Send-the-link button.
 - Data: `public.mic_signups`, `public.mic_hosts`, `public.mic_draws`;
   migrations `supabase/migrations/20261110003000_mic_signups.sql` and
   `20261117240000_mic_host_picks.sql`. Checks: `supabase/tests/mic_host_picks/`.
