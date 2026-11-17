@@ -1,6 +1,6 @@
 # Tuesday open mic sign-up
 
-Free stand-up open mic every Tuesday at 7 PM in the main taproom, from
+Free stand-up open mic every Tuesday at 7 PM in the comedy club (moved from the taproom, Sam, Nov 17 2026), from
 Nov 17 2026. A few spots are booked ahead; the rest are drawn at random from
 the online sign-ups (Sam, Nov 9 2026).
 
