@@ -102,7 +102,11 @@ Dojour gotchas, learned the hard way:
   it at $0), rewritten by the sync every four hours. `schedule_needs()` in
   `supabase/migrations/20261117200000_staffing_needs.sql` works out each
   day's number: people on while we're open, more for a ticketed show or a
-  free event, counted from 90 minutes before. Managers see "Needs 3 people, 1
+  free event, counted from 90 minutes before, or from an hour before when
+  it starts at 6 PM or earlier (Sam, Nov 17 2026: "When we have a 6pm show
+  the bartender shifts should start at 5pm rather than 5:30"; the current
+  `schedule_needs()` is in
+  `supabase/migrations/20261117230000_early_show_start.sql`). Managers see "Needs 3 people, 1
   scheduled" on each day, can change the numbers in a box under the week, and
   can set one day by hand (a holiday, a private party). The starting numbers
   came from three months of When I Work clock-ins and are Sam's to change.

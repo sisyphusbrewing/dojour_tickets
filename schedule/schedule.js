@@ -292,6 +292,12 @@ function drawRules() {
   $('needFold').classList.toggle('hidden', !(isMgr && needRules));
   if (!isMgr || !needRules || $('needFold').contains(document.activeElement)) return;
   Object.keys(RULE_BOXES).forEach(function (id) { $(id).value = needRules[RULE_BOXES[id]]; });
+  // An early show is the exception to the minutes box above (Sam, Nov 17
+  // 2026): say so, with the numbers the database works from.
+  var early = needRules.early_at != null && needRules.early_lead != null;
+  $('earlyNote').classList.toggle('hidden', !early);
+  if (early) $('earlyNote').textContent = 'A show at ' + clockM(needRules.early_at) + ' or earlier is the exception: ' + needRules.early_lead +
+    ' minutes before, so ' + clockM(needRules.early_at - needRules.early_lead) + ' for a ' + clockM(needRules.early_at) + ' show.';
 }
 $('rulesForm').addEventListener('submit', async function (e) {
   e.preventDefault();
