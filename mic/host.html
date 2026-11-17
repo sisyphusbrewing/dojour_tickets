@@ -272,7 +272,8 @@
       await renumber(); load();
     });
     $('copyBtn').addEventListener('click', function () {
-      var text = 'Tuesday Mic, ' + niceDate(micDate, true) + '\n' + Array.prototype.map.call($('lineup').children, function (li, i) { return (i + 1) + '. ' + li.textContent.replace(' (drawn)', ''); }).join('\n');
+      var line = rows.filter(function (r) { return r.status === 'booked' || r.status === 'drawn'; }).sort(bySlot);
+      var text = 'Tuesday Mic, ' + niceDate(micDate, true) + (host ? '\nHost: ' + host.host_name : '') + '\n' + line.map(function (r, i) { return (i + 1) + '. ' + r.name; }).join('\n');
       navigator.clipboard.writeText(text).then(function () { toast('Lineup copied'); }, function () { toast('Could not copy', true); });
     });
 
