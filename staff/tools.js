@@ -35,6 +35,10 @@ var STAFF_TOOLS = [
   // approve and pay (Sam, Nov 17 2026). The page itself needs no login.
   { id: 'doorshift', group: 'show', min: 'door', ico: '🚪', href: '/doorshift/', title: 'Worked the door', short: 'Worked the door',
     desc: 'Worked the door on a show night? Send in the night so you get paid.', find: 'door shift pay paid venmo worked form submit' },
+  // Report unsafe behavior, anonymously if they like (Sam, Nov 17 2026). The
+  // tag and the sign in the Green Room open the same page. No login needed.
+  { id: 'safe', group: 'show', min: 'door', ico: '🛟', href: '/safe/', title: 'Say something',
+    desc: 'Someone made you or another person feel unsafe? Tell Sam and Grace. Your name is optional.', find: 'unsafe report harassment safety green room anonymous complaint' },
   { id: 'timer', group: 'show', min: 'staff', ico: '⏱️', href: '/timer/', title: 'Stage timer',
     desc: 'The light the comic sees. Started from the Stream Deck.', find: 'clock light time' },
   { id: 'deck', group: 'show', min: 'staff', ico: '🎛️', href: '/staff/stream-deck.html', title: 'Stream Deck guide', short: 'Deck guide',
