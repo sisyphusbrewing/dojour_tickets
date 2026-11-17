@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Clock</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Clock">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <link rel="stylesheet" href="../schedule/schedule.css">
+  <link rel="stylesheet" href="clock.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="../staff/nav.js"></script>
+</head>
+<body class="clock-page look">
+  <!-- The time clock (Sam, Nov 16 2026: "I want to make the staff portal the
+       place where people enter their shifts tied to the scheduler" and "Could
+       we have people clock in and out via tap with their phones?").
+
+       It replaces two things: When I Work's time clock (the hours) and the
+       "Sisyphus Tip Tracker" Google Sheet (where each person typed a row per
+       shift). One page, built for a phone held in one hand:
+         - Clock: one big button. Tap in, tap out, type the night's credit tips.
+         - My hours: my shifts and tips for the two-week pay period.
+         - Payroll (managers): hours and tips per person, last name first, in
+           the shape Sam types into ADP. Sam marks each payroll as submitted,
+           the way he used to add a "Payroll Submitted" line to the sheet.
+       A sticker or sign at the bar opens this page with "?at=<code>" in the
+       link; taps made that way are marked "at the bar".
+       The rules live in the database (supabase/migrations/..._time_clock.sql);
+       this page only shows and asks. -->
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Clock</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Clock</div>
+        </a>
+      </div>
+      <nav class="tabs3 hidden" id="tabs" aria-label="Parts of the time clock">
+        <a href="#clock" data-tab="clock" class="on">Clock</a>
+        <a href="#hours" data-tab="hours">My hours</a>
+        <a href="#payroll" data-tab="payroll" class="hidden" id="payrollTab">Payroll</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap hidden" id="page">
+    <div class="empty hidden" id="notManager"></div>
+
+    <!-- ===== Clock: the one button ===== -->
+    <div id="tab-clock">
+      <section class="card punch" id="punchCard">
+        <p class="punch-hello" id="hello">&nbsp;</p>
+        <p class="punch-state" id="state">&nbsp;</p>
+        <p class="punch-sub" id="stateSub">&nbsp;</p>
+        <button class="btn punch-btn hidden" id="punchBtn" type="button">Clock in</button>
+        <p class="punch-bar hidden" id="atBar">✓ At the bar</p>
+        <button class="btn-link" id="otherBtn" type="button"></button>
+      </section>
+
+      <!-- Finished shifts that still need their tips typed in. -->
+      <section id="tipsSection" class="hidden">
+        <h2 class="sub">Tips to add</h2>
+        <div class="list" id="tipsList"></div>
+      </section>
+
+      <!-- A shift that was never clocked out of. -->
+      <section id="forgotSection" class="hidden">
+        <h2 class="sub">You didn’t clock out</h2>
+        <div class="list" id="forgotList"></div>
+      </section>
+    </div>
+
+    <!-- ===== My hours: this pay period ===== -->
+    <div id="tab-hours" class="hidden">
+      <div class="weekbar">
+        <button class="btn btn-sm prevPeriod" aria-label="The pay period before">‹</button>
+        <div class="weekbar-l"><b class="periodLabel">&nbsp;</b><button class="btn-link hidden thisPeriod">Back to this pay period</button></div>
+        <button class="btn btn-sm nextPeriod" aria-label="The pay period after">›</button>
+      </div>
+      <p class="my-week hidden" id="myTotal"></p>
+      <div id="myList"><p class="quiet" style="margin-top:18px">Loading…</p></div>
+      <button class="btn-link" id="addMineBtn" type="button" style="margin-top:14px">I forgot to clock in</button>
+    </div>
+
+    <!-- ===== Payroll: everyone, for managers ===== -->
+    <div id="tab-payroll" class="hidden">
+      <div class="weekbar">
+        <button class="btn btn-sm prevPeriod" aria-label="The pay period before">‹</button>
+        <div class="weekbar-l"><b class="periodLabel">&nbsp;</b><button class="btn-link hidden thisPeriod">Back to this pay period</button></div>
+        <button class="btn btn-sm nextPeriod" aria-label="The pay period after">›</button>
+      </div>
+
+      <section id="nowSection" class="hidden">
+        <h2 class="sub">On the clock now</h2>
+        <div class="list" id="nowList"></div>
+      </section>
+
+      <section>
+        <p class="quiet" id="payStatus">&nbsp;</p>
+        <div class="list pay" id="payList"></div>
+        <div class="warn hidden" id="payWarn" style="margin-top:12px"></div>
+        <div class="mgr-acts" style="margin-top:14px">
+          <button class="btn btn-primary hidden" id="submitBtn" type="button">Mark payroll submitted</button>
+          <button class="btn" id="addBtn" type="button">Add hours for someone</button>
+        </div>
+        <button class="btn-link hidden" id="undoBtn" type="button" style="margin-top:8px">Marked by mistake? Take it back</button>
+      </section>
+
+      <details class="fold" id="nightFold"><summary>Tips by night, to check against GoTab</summary><div class="list" id="nightList"></div></details>
+      <details class="fold" id="shiftFold"><summary>Every shift</summary><div id="shiftList"></div></details>
+      <details class="fold" id="stickerFold"><summary>The tap sticker for the bar</summary>
+        <p class="help">Put this link on an NFC sticker or a printed sign at the bar. Tapping it opens the Clock, and those taps are marked “at the bar”. Keep the link to yourself; anyone who has it can look like they are at the bar.</p>
+        <div class="row" style="margin-top:8px"><input class="input" id="stickerLink" readonly aria-label="The sticker link"><button class="btn btn-sm" id="stickerCopy" type="button">Copy</button></div>
+      </details>
+    </div>
+
+    <p class="foot">One must imagine Sisyphus clocked in.</p>
+  </main>
+
+  <!-- Credit tips for one shift. -->
+  <dialog id="tipsDialog" class="sheet">
+    <form id="tipsForm" class="stack" method="dialog">
+      <h2 id="tipsTitle">Credit tips</h2>
+      <p class="help" id="tipsWhen" style="margin:0"></p>
+      <div class="field"><label for="tipsAmount">Your credit tips for this shift</label>
+        <input class="input big-num" id="tipsAmount" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="tipsSave">Save</button>
+        <button class="btn btn-ghost" type="button" id="tipsLater">Later</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- "I left earlier" / "When did you leave?" -->
+  <dialog id="leftDialog" class="sheet">
+    <form id="leftForm" class="stack" method="dialog">
+      <h2>When did you leave?</h2>
+      <p class="help" id="leftWhen" style="margin:0"></p>
+      <div class="field"><label for="leftTime">I left at</label><input class="input" id="leftTime" type="time" required></div>
+      <p class="help" style="margin:0">A manager is told the time was typed in.</p>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="leftSave">Save</button>
+        <button class="btn btn-ghost" type="button" id="leftCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- One form for a whole shift. Staff use it for "I forgot to clock in";
+       managers use it to add or fix anybody's hours. -->
+  <dialog id="shiftDialog" class="sheet">
+    <form id="shiftForm" class="stack" method="dialog">
+      <h2 id="sfTitle">I forgot to clock in</h2>
+      <div class="grid2 keep">
+        <div class="field full hidden" id="sfWhoField"><label for="sfWho">Who</label><select class="input" id="sfWho"></select></div>
+        <div class="field full"><label for="sfDate">Day</label><input class="input" id="sfDate" type="date" required></div>
+        <div class="field"><label for="sfIn">Started</label><input class="input" id="sfIn" type="time" required></div>
+        <div class="field"><label for="sfOut">Left</label><input class="input" id="sfOut" type="time"></div>
+        <div class="field full"><label for="sfTips">Credit tips (leave empty if not known yet)</label><input class="input" id="sfTips" inputmode="decimal" autocomplete="off" placeholder="0.00"></div>
+        <div class="field full" id="sfNoteField"><label for="sfNote">Note (optional)</label><input class="input" id="sfNote" maxlength="200" placeholder="Forgot to clock in"></div>
+      </div>
+      <p class="help" id="sfHelp" style="margin:0"></p>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="sfSave">Save</button>
+        <button class="btn btn-danger hidden" type="button" id="sfRemove">Remove</button>
+        <button class="btn btn-ghost" type="button" id="sfCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="clock.js"></script>
+</body>
+</html>

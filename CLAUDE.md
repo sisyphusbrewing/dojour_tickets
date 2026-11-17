@@ -82,6 +82,20 @@ Dojour gotchas, learned the hard way:
   row to `schedule_outbox`; `schedule_notify.py` sends those by email or text,
   whichever that person picked. Check rule changes with
   `supabase/tests/staff_schedule/` before applying them.
+- **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
+  tied to the scheduler" and "clock in and out via tap with their phones"). It
+  replaces When I Work's time clock and the "Tip Tracker" Google Sheet: one
+  big button to clock in and out, the night's credit tips typed per shift, "My
+  hours" for the two-week pay period (Monday to Sunday twice, counted from Mon
+  Nov 2 2026), and a Payroll tab for managers with hours and tips per person,
+  last name first, the way Sam types them into ADP. The rules live in
+  `supabase/migrations/20261117060000_time_clock.sql`; the page only shows
+  and asks. Nothing is ever deleted (a removed shift is flagged), paid hours
+  and paid tips are locked, and only the owner marks a payroll submitted. The
+  link on the bar's sticker carries a code kept in the database
+  (`clock_settings`), never in this repo. Its notices ride the schedule's
+  outbox (kinds starting `clock_`). Check rule changes with
+  `supabase/tests/time_clock/` before applying them.
 - **`booking/`** is the Booking board (Sam, Nov 14 2026, built for Grace):
   every weekend at a glance, what each show still needs (contract, W-9, host,
   feature, advance, emails) and the booking requests waiting for an answer.

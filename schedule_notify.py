@@ -11,6 +11,11 @@ want text or e-mail, or both").
 
 It also queues the "you work today" reminders, once a day from 9 AM Central.
 
+The time clock (clock/index.html, Sam Nov 16 2026) uses the same outbox: a
+manager hears when someone types a time in by hand, a person hears when a
+manager changes their hours, and anyone who looks to have forgotten to clock
+out gets one nudge. Those notices link to the Clock page, not the schedule.
+
 Run by the "Schedule notices" action every 15 minutes while we're awake, and
 right away when someone changes the schedule.
 
@@ -47,6 +52,7 @@ TWILIO_TOKEN = (os.environ.get("TWILIO_AUTH_TOKEN") or "").strip()
 TWILIO_FROM = (os.environ.get("TWILIO_FROM") or "").strip()
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 PAGE_URL = "https://staff.sisyphusbrewing.com/schedule/"
+CLOCK_URL = "https://staff.sisyphusbrewing.com/clock/"
 AUTH = {"apikey": SERVICE_KEY, "Authorization": f"Bearer {SERVICE_KEY}", "Content-Type": "application/json"}
 CENTRAL = ZoneInfo("America/Chicago")
 
@@ -69,6 +75,10 @@ SUBJECTS = {
     "timeoff_cancelled": "A time off request was taken back",
     "availability": "Someone changed when they can work",
     "reminder": "You work today",
+    # The time clock's notices (their kind starts with "clock_").
+    "clock_typed": "Hours were typed in by hand",
+    "clock_fixed": "Your hours were changed",
+    "clock_open": "Did you forget to clock out?",
 }
 
 
@@ -137,8 +147,16 @@ def plan(rows, can_text, now):
                 else f"Sisyphus schedule: {len(rows_for)} updates"
             lines = [f"Hi {first}," if first else "Hi,", ""]
             lines += bodies if len(bodies) == 1 else [f"- {b}" for b in bodies]
-            lines += ["", f"The schedule: {PAGE_URL}", "",
-                      "To get these by text instead, or to stop them, open that page and look under \"How to reach me\".",
+            # Link the page the notice is about: the Clock for clock notices,
+            # the schedule for the rest (both when one email carries both).
+            kinds = [str(r.get("kind") or "") for r in rows_for]
+            lines.append("")
+            if any(k.startswith("clock_") for k in kinds):
+                lines.append(f"The clock: {CLOCK_URL}")
+            if any(not k.startswith("clock_") for k in kinds):
+                lines.append(f"The schedule: {PAGE_URL}")
+            lines += ["", "To get these by text instead, or to stop them, open the schedule and look under "
+                          f"\"How to reach me\": {PAGE_URL}",
                       "", "Sisyphus"]
             deliveries.append({"how": "email", "to": email, "ids": ids, "subject": subject, "body": "\n".join(lines)})
         if want_text:
@@ -149,9 +167,13 @@ def plan(rows, can_text, now):
     return deliveries, skipped
 
 
-def rpc(name):
+def rpc(name, optional=False):
     r = requests.post(f"{SUPABASE_URL}/rest/v1/rpc/{name}", headers=AUTH, json={}, timeout=30)
     if r.status_code == 404:
+        if optional:
+            # A part that isn't in the database yet (the time clock, before its
+            # migration is applied). Skip it; the rest of the notices still go.
+            return None
         # The schedule tables aren't in the database yet. Nothing to do, and not an error.
         print("The schedule isn't switched on yet.")
         sys.exit(0)
@@ -182,6 +204,12 @@ def main():
         queued = rpc("schedule_queue_reminders")
         if queued:
             print(f"Queued {queued} reminder(s) for today's shifts.")
+    if not DRY_RUN:
+        # "Did you forget to clock out?", once per shift, at any hour: bar
+        # shifts end after midnight.
+        nudged = rpc("clock_queue_reminders", optional=True)
+        if nudged:
+            print(f"Queued {nudged} forgot-to-clock-out nudge(s).")
 
     rows = rpc("schedule_outbox_pending")
     if not rows:

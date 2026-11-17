@@ -87,6 +87,11 @@
           <a class="go gold hidden" id="grabRow" href="../schedule/#grabs">
             <div><b id="grabLine"></b></div><span class="chev">›</span>
           </a>
+          <!-- The time clock, one tap away (Sam, Nov 16 2026: "clock in and out
+               via tap with their phones"). Says so when you are on the clock. -->
+          <a class="go hidden" id="clockRow" href="../clock/">
+            <div><small id="clockHead">Time clock</small><b id="clockLine">Clock in</b></div><span class="chev">›</span>
+          </a>
         </div>
       </section>
 
@@ -350,6 +355,29 @@
       $('grabRow').classList.toggle('hidden', !grabs.length || !row.on_schedule);
       $('grabLine').textContent = grabs.length + ' shift' + (grabs.length > 1 ? 's' : '') + ' up for grabs';
       $('shiftSection').classList.remove('hidden');
+      if (row.on_schedule && can('clock')) loadClock();
+    }
+
+    // ---------- The time clock row ----------
+    // One line under the shift: "Clock in", or since when you have been on
+    // the clock. The Clock page does the work; this only points at it. If
+    // the clock isn't in the database yet the row never appears.
+    async function loadClock() {
+      var res = await sb.rpc('clock_status');
+      var st = res.data;
+      if (res.error || !st || !st.on_schedule) return;
+      var open = st.open;
+      if (open && open.clock_in) {
+        var since = new Date(open.clock_in).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
+        $('clockHead').textContent = 'On the clock since ' + since;
+        $('clockLine').textContent = 'Clock out';
+        $('clockRow').classList.add('gold');
+      } else {
+        var owed = (st.need_tips || []).length;
+        $('clockHead').textContent = owed ? 'Tips to add for ' + owed + ' shift' + (owed > 1 ? 's' : '') : 'Time clock';
+        $('clockLine').textContent = 'Clock in';
+      }
+      $('clockRow').classList.remove('hidden');
     }
   </script>
 </body>

@@ -68,6 +68,29 @@ class PlanTest(unittest.TestCase):
         self.assertIn("- Notice 1", mine["body"])
         self.assertIn("- Notice 2", mine["body"])
 
+    def test_clock_notice_links_to_the_clock(self):
+        deliveries, _ = sn.plan([notice(1, kind="clock_open")], can_text=False, now=NOW)
+        self.assertEqual(deliveries[0]["subject"], "Did you forget to clock out?")
+        self.assertIn("The clock: " + sn.CLOCK_URL, deliveries[0]["body"])
+        self.assertNotIn("The schedule: ", deliveries[0]["body"])
+
+    def test_schedule_notice_still_links_to_the_schedule(self):
+        deliveries, _ = sn.plan([notice(1)], can_text=False, now=NOW)
+        self.assertIn("The schedule: " + sn.PAGE_URL, deliveries[0]["body"])
+        self.assertNotIn("The clock: ", deliveries[0]["body"])
+
+    def test_mixed_notices_link_to_both_pages(self):
+        deliveries, _ = sn.plan([notice(1, kind="clock_fixed"), notice(2, kind="shift_changed")],
+                                can_text=False, now=NOW)
+        self.assertEqual(len(deliveries), 1)
+        self.assertIn("The clock: " + sn.CLOCK_URL, deliveries[0]["body"])
+        self.assertIn("The schedule: " + sn.PAGE_URL, deliveries[0]["body"])
+
+    def test_every_clock_notice_has_its_own_subject(self):
+        for kind in ("clock_typed", "clock_fixed", "clock_open"):
+            deliveries, _ = sn.plan([notice(1, kind=kind)], can_text=False, now=NOW)
+            self.assertNotEqual(deliveries[0]["subject"], "Schedule update", kind)
+
     def test_stale_reminder_is_dropped(self):
         rows = [notice(1, kind="reminder", hours_old=20), notice(2, kind="reminder", hours_old=2)]
         deliveries, skipped = sn.plan(rows, can_text=False, now=NOW)

@@ -39,6 +39,9 @@ var STAFF_TOOLS = [
   // Just for you
   { id: 'schedule', group: 'you', min: 'staff', ico: '🕓', href: '/schedule/', title: 'Schedule',
     desc: 'Who works when. Trade a shift, ask for time off, say when you can’t work.', find: 'shifts hours time off swap trade availability calendar when i work' },
+  // The time clock (Sam, Nov 16 2026): tap in, tap out, type the night's tips.
+  { id: 'clock', group: 'you', min: 'staff', ico: '⏱️', href: '/clock/', title: 'Clock',
+    desc: 'Clock in and out with one tap. Add your tips, see your hours for the pay period.', find: 'clock in out punch hours tips tip tracker payroll timesheet time when i work' },
   { id: 'voice', group: 'you', min: 'door', ico: '🎙️', href: '/voice/', title: 'Voice notes', flag: 'voice',
     desc: 'Record a meeting or a thought. Claude emails you the summary and to-dos.', find: 'record meeting memo' },
 
