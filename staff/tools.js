@@ -10,6 +10,9 @@
 //   desc   one plain sentence: what it is for
 //   href   where it opens. Start with "/" for a page on this site.
 //   min    the lowest login that can open it: door, staff, manager or owner
+//   opens  optional: the day (YYYY-MM-DD, Minneapolis) the tool opens to
+//          everyone at "min". Before that day only "early" logins see it.
+//   early  who sees it before "opens" (for example manager)
 //   group  which heading it sits under (see STAFF_GROUPS)
 //   ico    the picture on the tile
 //   find   extra words the search box should match
@@ -40,8 +43,11 @@ var STAFF_TOOLS = [
   { id: 'schedule', group: 'you', min: 'staff', ico: '🕓', href: '/schedule/', title: 'Schedule',
     desc: 'Who works when. Trade a shift, ask for time off, say when you can’t work.', find: 'shifts hours time off swap trade availability calendar when i work' },
   // The time clock (Sam, Nov 16 2026): tap in, tap out, type the night's tips.
-  { id: 'clock', group: 'you', min: 'staff', ico: '⏱️', href: '/clock/', title: 'Clock',
-    desc: 'Clock in and out with one tap. Add your tips, see your hours for the pay period.', find: 'clock in out punch hours tips tip tracker payroll timesheet time when i work' },
+  // Managers are trying it now. It opens to all staff on Mon Nov 30 2026, the
+  // first day of a pay period, so no payroll is split between When I Work's
+  // clock and this one. To open it sooner, take out "opens" and "early".
+  { id: 'clock', group: 'you', min: 'staff', early: 'manager', opens: '2026-11-30', ico: '⏱️', href: '/clock/', title: 'Clock',
+    desc: 'Clock in and out with a tap at the bar. Add your tips, see your hours for the pay period.', find: 'clock in out punch hours tips tip tracker payroll timesheet time when i work nfc tap' },
   { id: 'voice', group: 'you', min: 'door', ico: '🎙️', href: '/voice/', title: 'Voice notes', flag: 'voice',
     desc: 'Record a meeting or a thought. Claude emails you the summary and to-dos.', find: 'record meeting memo' },
 
@@ -86,10 +92,16 @@ var STAFF_TOOLS = [
 // Which tools a login can open. role is door, staff, manager or owner;
 // canVoice says whether this login is on the voice notes list.
 var STAFF_RANK = { door: 1, staff: 2, manager: 3, owner: 4 };
+// The lowest login that can see a tool today: "early" until the tool's
+// "opens" day (by Minneapolis's calendar), "min" from then on.
+function staffToolMin(t, today) {
+  today = today || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  return t.opens && t.early && today < t.opens ? t.early : t.min;
+}
 function staffToolsFor(role, canVoice) {
   var rank = STAFF_RANK[role] || 1;
   return STAFF_TOOLS.filter(function (t) {
-    if (rank < STAFF_RANK[t.min]) return false;
+    if (rank < STAFF_RANK[staffToolMin(t)]) return false;
     if (t.flag === 'voice' && !canVoice) return false;
     return true;
   });

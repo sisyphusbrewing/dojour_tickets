@@ -16,8 +16,11 @@ manager hears when someone types a time in by hand, a person hears when a
 manager changes their hours, and anyone who looks to have forgotten to clock
 out gets one nudge. Those notices link to the Clock page, not the schedule.
 
-Run by the "Schedule notices" action every 15 minutes while we're awake, and
-right away when someone changes the schedule.
+Run by the "Schedule notices" action, which keeps this script going around
+the clock and has it look for waiting notices every two minutes (--watch).
+GitHub's own timer started only two to four of the 68 runs a day it was asked
+for (Nov 14 to 17 2026), so a notice could sit for hours; see the workflow.
+Nothing is sent between 1 AM and 8 AM Central: a notice waits for morning.
 
 Texts go through Twilio and only when the TWILIO_ACCOUNT_SID,
 TWILIO_AUTH_TOKEN and TWILIO_FROM secrets exist. Until then a person who
@@ -28,13 +31,15 @@ Several notices for one person go out as one email, not five.
 The log of a GitHub Action in this repo is public, so this never prints a
 name, an email address, a phone number or what a notice says.
 
-    python schedule_notify.py
+    python schedule_notify.py               one look, then stop
+    python schedule_notify.py --watch 330   look every two minutes for 330 minutes
     DRY_RUN=1 ...   shows what would be sent (addresses masked), sends nothing
 """
 import os
 import smtplib
 import ssl
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from zoneinfo import ZoneInfo
@@ -60,6 +65,8 @@ REMIND_FROM_HOUR = 9       # "you work today" goes out from 9 AM Central
 REMINDER_STALE_HOURS = 14  # a "you work today" that old is about yesterday; drop it
 GIVE_UP_DAYS = 3           # anything unsent this long is dropped, not sent late
 TEXT_MAX = 600             # keep a text to a few segments
+WATCH_EVERY = 120          # seconds between looks when watching
+QUIET_FROM, QUIET_TO = 1, 8   # nothing goes out from 1 AM to 8 AM Central; it waits for morning
 
 # What the email subject says for each kind of notice.
 SUBJECTS = {
@@ -198,7 +205,15 @@ def send_text(to, body):
     r.raise_for_status()
 
 
-def main():
+def quiet_hours(now):
+    """True from 1 AM to 8 AM Central, when a notice waits for morning."""
+    return QUIET_FROM <= now.astimezone(CENTRAL).hour < QUIET_TO
+
+
+def main(quietly=False):
+    """One look: queue today's reminders, then send whatever is waiting.
+    Returns how many notices went out. `quietly` leaves out the "nothing to
+    send" line, so a run that looks 165 times doesn't print it 165 times."""
     now = datetime.now(timezone.utc)
     if not DRY_RUN and now.astimezone(CENTRAL).hour >= REMIND_FROM_HOUR:
         queued = rpc("schedule_queue_reminders")
@@ -213,8 +228,9 @@ def main():
 
     rows = rpc("schedule_outbox_pending")
     if not rows:
-        print("Nothing to send. The boulder rests.")
-        return
+        if not quietly:
+            print("Nothing to send. The boulder rests.")
+        return 0
     deliveries, skipped = plan(rows, texts_on(), now)
 
     if DRY_RUN:
@@ -224,7 +240,7 @@ def main():
             print(d["body"], "\n")
         for i, why in skipped.items():
             print(f"[DRY RUN] notice {i} not sent: {why}")
-        return
+        return 0
 
     for why in sorted(set(skipped.values())):
         stamp([i for i, w in skipped.items() if w == why], f"not sent: {why}")
@@ -267,7 +283,34 @@ def main():
         stamp(ids, how)
     print(f"Sent {len(sent)} notice(s) in {len(deliveries)} message(s); "
           f"{len(skipped)} not sent; {len(failed - set(sent))} to retry.")
+    return len(sent)
+
+
+def watch(minutes):
+    """Look every two minutes for `minutes`, then stop so the action can start
+    its next run (a GitHub job may run six hours at most). One look that fails
+    (the database or the mail server hiccups) is tried again at the next look;
+    the run only ends in an error when every single look failed."""
+    end = time.monotonic() + minutes * 60
+    looks = sent = failed = 0
+    while True:
+        looks += 1
+        try:
+            if not quiet_hours(datetime.now(timezone.utc)):
+                sent += main(quietly=True) or 0
+        except (requests.RequestException, smtplib.SMTPException, OSError) as err:
+            failed += 1
+            print(f"A look failed ({type(err).__name__}); trying again in two minutes.")
+        if time.monotonic() + WATCH_EVERY >= end:
+            break
+        time.sleep(WATCH_EVERY)
+    print(f"Looked {looks} time(s), sent {sent} notice(s), {failed} look(s) failed.")
+    if failed == looks:
+        sys.exit("Every look failed. Check the Supabase and email secrets.")
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--watch":
+        watch(float(sys.argv[2]))
+    else:
+        main()

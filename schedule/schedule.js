@@ -49,13 +49,9 @@ function hoursOf(s) {
 function hoursWord(h) { return (Math.round(h * 10) / 10) + ' h'; }
 function first(name) { return String(name || '').split(' ')[0]; }
 function who(id) { return nameOf[id] || 'Someone'; }
-// Send the waiting notices now instead of at the next 15-minute run. Best
-// effort: if it can't be started, the timer picks them up anyway.
-var nudgeTimer = null;
-function nudge() {
-  clearTimeout(nudgeTimer);
-  nudgeTimer = setTimeout(function () { runWorkflow('schedule_notify.yml', {}); }, 4000);
-}
+// Notices (emails and texts about a change) go out by themselves within about
+// two minutes: the "Schedule notices" action looks for waiting ones around
+// the clock, so this page doesn't have to start anything.
 function fail(r, what) { toast((r.error && r.error.message) || what || 'That didn’t save. Try again.', true); }
 
 // ---------- Start ----------
@@ -280,7 +276,6 @@ async function offerShift(id, on) {
   if (on && !confirm('Offer up ' + niceDay(s.work_date) + ', ' + span(s) + '?\n\nEveryone on the schedule is told. It stays YOUR shift until someone takes it.')) return;
   var r = await sb.rpc('shift_offer', { p_shift: id, p_on: on });
   if (r.error) return fail(r);
-  if (on) nudge();
   toast(on ? 'Offered. You’ll hear when someone takes it.' : 'Back on. It’s yours.');
   await loadWeek(); drawWeek();
 }
@@ -291,7 +286,6 @@ async function takeShift(id) {
       (clash ? '\n\nHeads up: you already work ' + span(clash) + ' that day.' : '') + '\n\nIt becomes your shift right away.')) return;
   var r = await sb.rpc('shift_take', { p_shift: id });
   if (r.error) { fail(r); await loadWeek(); drawWeek(); return; }
-  nudge();
   toast('It’s yours. Thank you.');
   await loadWeek(); drawWeek();
 }
@@ -360,7 +354,6 @@ async function saveShift(again) {
   var r = editing ? await sb.from('shifts').update(row).eq('id', editing.id) : await sb.from('shifts').insert(row);
   $('sfSave').disabled = false;
   if (r.error) return fail(r);
-  if (editing && editing.published) nudge();
   var inWeek = row.work_date >= iso(weekStart) && row.work_date <= iso(addDays(weekStart, 6));
   if (!inWeek) weekStart = mondayOf(fromIso(row.work_date));
   await loadWeek(); drawWeek();
@@ -374,7 +367,6 @@ $('sfRemove').addEventListener('click', async function () {
   if (!editing || !confirm('Remove this shift?' + (editing.published && editing.user_id ? '\n\n' + first(who(editing.user_id)) + ' will be told.' : ''))) return;
   var r = await sb.from('shifts').delete().eq('id', editing.id);
   if (r.error) return fail(r);
-  if (editing.published) nudge();
   $('shiftDialog').close();
   await loadWeek(); drawWeek();
   toast('Removed.');
@@ -387,7 +379,6 @@ $('postBtn').addEventListener('click', async function () {
   var r = await sb.rpc('schedule_publish', { p_from: iso(weekStart), p_to: iso(addDays(weekStart, 6)) });
   this.disabled = false;
   if (r.error) return fail(r);
-  nudge();
   toast('Posted. Everyone has been told.');
   await loadWeek(); drawWeek();
 });
@@ -454,7 +445,6 @@ $('offForm').addEventListener('submit', async function (e) {
   $('offBtn').disabled = false;
   if (r.error) return fail(r);
   this.reset();
-  nudge();
   toast('Asked. You’ll hear when a manager answers.');
   await loadSide(); drawWeek();
 });
@@ -462,7 +452,6 @@ async function cancelOff(id) {
   if (!confirm('Take this request back?')) return;
   var r = await sb.from('time_off').update({ status: 'cancelled' }).eq('id', id);
   if (r.error) return fail(r);
-  nudge();
   await loadSide(); drawWeek();
 }
 async function decideOff(id, status) {
@@ -470,7 +459,6 @@ async function decideOff(id, status) {
     status: status, decided_by: status === 'pending' ? null : first(who(me.id)), decided_at: status === 'pending' ? null : new Date().toISOString()
   }).eq('id', id);
   if (r.error) return fail(r);
-  if (status !== 'pending') nudge();
   toast(status === 'approved' ? 'Approved. They’ve been told.' : status === 'denied' ? 'Declined. They’ve been told.' : 'Back to waiting.');
   await loadSide(); drawWeek();
 }

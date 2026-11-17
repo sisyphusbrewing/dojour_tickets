@@ -1,33 +1,82 @@
 name: Schedule notices
 
-# Sends staff their schedule notices by email or text (schedule_notify.py):
-# a posted week, a changed shift, a shift up for grabs, a time off answer, and
-# a "you work today" reminder the morning of. Each person picks email, text,
-# both or neither on the schedule page (staff hub > Schedule).
-# The page starts this through the "run-workflow" Supabase function as soon as
-# something changes; the timer is the backstop and sends the reminders.
+# Sends staff their schedule and time clock notices by email or text
+# (schedule_notify.py): a posted week, a changed shift, a shift up for grabs,
+# a time off answer, a "you work today" reminder the morning of, and the
+# clock's "did you forget to clock out?". Each person picks email, text, both
+# or neither on the Schedule page under My settings.
+#
+# How it keeps time. A notice should arrive in minutes, so this was first set
+# to run every 15 minutes. GitHub started only two to four of those 68 runs a
+# day (Nov 14 to 17 2026; it did the same to the VIP emails on Nov 5 to 7), so
+# a "your shift changed" could sit for hours. Now one run stays up for five
+# and a half hours, looks for waiting notices every two minutes, and starts
+# the next run as its last step. A GitHub job may run six hours at most.
+# The timer below is only a backup. Whenever GitHub does start it, it checks
+# that a run is going and starts one if not (the "check" job), so a run that
+# died without starting the next one is replaced the same day.
+#
+# Nothing is sent between 1 AM and 8 AM Central; it waits for morning.
+# To stop all notices, disable this workflow in the Actions tab.
+#
 # Texts need the TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM secrets;
 # without them a "text" choice is emailed instead.
 
 on:
   schedule:
-    - cron: '7,22,37,52 0-6,14-23 * * *'   # every 15 min, 8 AM to about 1 AM Central (9 AM to 2 AM in summer)
+    - cron: '7,22,37,52 * * * *'   # the backup; GitHub starts only a few of these a day
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Show what would be sent (addresses hidden) and stop. Sends nothing.'
+        type: boolean
+        default: false
 
-concurrency:
-  group: schedule-notify
-  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: write   # lets a run start the next one
 
 jobs:
-  send:
+  # The backup, started by GitHub's timer. It sends nothing itself: it asks
+  # GitHub whether a notices run is going and starts one only if none is.
+  check:
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Start the notices again if they have stopped
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          going=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow schedule_notify.yml \
+            --event workflow_dispatch --limit 20 --json status \
+            --jq '[.[] | select(.status != "completed")] | length')
+          if [ "$going" = "0" ]; then
+            echo "No notices run is going. Starting one."
+            gh workflow run schedule_notify.yml --repo "$GITHUB_REPOSITORY" --ref main
+          else
+            echo "A notices run is going. Nothing to do."
+          fi
+
+  # The run that does the work, started by the run before it (or by hand).
+  send:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    # One at a time: the next run waits here until this one ends. A dry run
+    # has its own lane so it never waits behind the five-hour run.
+    concurrency:
+      group: schedule-notify${{ inputs.dry_run && '-dry-run' || '' }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: pip install requests
-      - name: Send schedule notices
+      - name: Look for schedule notices every two minutes
+        id: watch
+        timeout-minutes: 336
         env:
           SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -38,4 +87,25 @@ jobs:
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
-        run: python schedule_notify.py
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: |
+          if [ -n "$DRY_RUN" ]; then
+            python schedule_notify.py
+          else
+            python schedule_notify.py --watch 330
+          fi
+      - name: Start the next run
+        # Even when the step above failed, so one bad run doesn't end the
+        # notices. After a failure it waits ten minutes first, so a broken
+        # setting retries six times an hour instead of in a tight loop.
+        if: ${{ always() && !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.watch.outcome }}" != "success" ]; then sleep 600; fi
+          for try in 1 2 3; do
+            if gh workflow run schedule_notify.yml --repo "$GITHUB_REPOSITORY" --ref main; then exit 0; fi
+            sleep 30
+          done
+          echo "Could not start the next run. The timer's check will start one."
+          exit 1
