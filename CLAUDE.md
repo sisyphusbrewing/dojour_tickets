@@ -205,6 +205,19 @@ Dojour gotchas, learned the hard way:
   either of them. The Booking board skips these emails. The page promises
   nothing about the phone is kept (no address, nothing saved on the phone):
   keep that true. The sign is made by `safe/make_sign.py`.
+- **`gift/`** is the tap gift cards (Sam, Nov 17 2026: "I want to offer gift
+  cards now with the NFC chip writing ability"; spent at the club only, not
+  on the website, Sam's pick). Each blank NFC card carries one link,
+  `/gift/?c=<32 random letters>`, written with NFC Tools. A guest's tap shows
+  the balance only; a signed-in staff phone can Take off, a manager or the
+  owner can Put on, each can undo their own change for two minutes. The
+  balance is the sum of `gift_card_moves`; nothing there is ever changed or
+  deleted (a trigger refuses it), and a lost card is switched off with its
+  money moved to another card. GoTab can't read the cards: staff ring the
+  sale and the payment in GoTab and do the balance on the page. Minnesota
+  gift cards can't expire or carry fees. Rules in
+  `supabase/migrations/20261118000000_gift_cards.sql`, checks in
+  `supabase/tests/gift_cards/`.
 - This repo is public, so are its Actions logs. Scripts must not print staff
   names, email addresses, phone numbers or message text.
 
