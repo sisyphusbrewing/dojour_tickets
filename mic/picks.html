@@ -28,6 +28,11 @@
     .ok { color: #9fd49f; font-weight: 700; font-size: 16px; }
     .lineup { font-size: 19px; line-height: 1.6; color: #fff; margin: 0; padding-left: 30px; }
     .lineup .tag { color: var(--slate-light); font-size: 13px; font-weight: 700; }
+    .deck-h { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 24px; margin: 4px 0 8px; color: #fff; }
+    .steps { margin: 0; padding-left: 22px; color: #d9d6d6; font-size: 16px; line-height: 1.5; }
+    .steps li { margin: 0 0 10px; }
+    .steps li:last-child { margin-bottom: 0; }
+    .steps b { color: #fff; }
     .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 18px 16px 28px; }
   </style>
 </head>
@@ -71,6 +76,28 @@
       </div>
       <p id="drawNote" style="margin-top:14px;font-size:14px;color:var(--gray)">At 6:30 PM, 12 spots fill from the online sign-ups, first-timers first. The full running order shows up right here then: a few drawn comics, then one of yours, and so on.</p>
       <p style="margin-top:6px;font-size:14px;color:var(--gray)">7 PM, comedy club, 712 Ontario Ave W.</p>
+
+      <!-- How to run the show from the Stream Deck (Sam, Nov 17 2026: "The link
+           we send the host should explain how to run the show via the Stream
+           Deck"). Mirrors staff/stream-deck.html; change a key there, change it here. -->
+      <div style="margin-top:26px">
+        <div class="eyebrow">Running the show</div>
+        <h2 class="deck-h">The Stream Deck</h2>
+        <p>The Stream Deck sits at the bar: eight keys up top, four knobs along the bottom, a touch strip between them. It runs the lights, the music, the mic, the recording and the comic's clock. The knobs are always MIC, MUSIC, LIGHTS and CLOCK. Turn them for more or less, push them for on and off.</p>
+        <div class="card">
+          <ol class="steps">
+            <li><b>Before you start.</b> Staff will have the room on PRE-SHOW, with music playing.</li>
+            <li><b>Starting the show.</b> Press <b>START SHOW</b>. The room lights and music fade, the stage lights come up, the stage mic turns on and the recording starts. The deck switches to the SHOW screen by itself.</li>
+            <li><b>Set each comic's time.</b> Tap the <b>CLOCK</b> square on the touch strip and pick a length (3, 5, 7, 10...). You can also turn the CLOCK knob, one minute a click. Your four get 5 to 7 minutes.</li>
+            <li><b>Comic hits the stage.</b> Press <b>START CLOCK</b>. Their screen shows the time, goes red with a minute left and says WRAP IT UP at 30 seconds. Press <b>WRAP IT UP</b> to flash it sooner.</li>
+            <li><b>Comic is off.</b> Press <b>STOP CLOCK</b>. For the next one, set the time and press START CLOCK again.</li>
+            <li><b>Walk-on music.</b> Push the <b>MUSIC</b> knob to bring music back between acts, and push it again to pause it.</li>
+            <li><b>Sound acting up?</b> Turn the <b>MIC</b> knob for volume. If a mic dies or everything goes quiet, tap the MIC square and press <b>RESET SOUND</b>. It's safe any time.</li>
+            <li><b>The end.</b> Press <b>END SHOW</b>, then <b>YES END SHOW</b>. The lights and music come back and the recording stops.</li>
+          </ol>
+        </div>
+        <p style="font-size:14px;color:var(--gray)">Don't touch ALL OFF, since that's for closing. If something's wrong, grab the bartender.</p>
+      </div>
     </section>
 
     <section id="viewOver" class="hidden">
