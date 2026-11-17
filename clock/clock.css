@@ -53,3 +53,8 @@
 .punch-btn.dim { opacity: .5; }
 .wifi-state { color: var(--white); font-weight: 600; }
 .wifi-state.good { color: var(--ok); }
+
+/* Read the updates first: the line under the button, and the update itself. */
+.punch-news { color: var(--muted); font-size: 15px; line-height: 1.4; margin: 12px 0 0; }
+.news-body { margin: 0; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+#newsDialog .sheet-acts .btn-primary { flex: 1 1 auto; min-height: 56px; font-size: 19px; }

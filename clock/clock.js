@@ -27,6 +27,11 @@ var tapped = false;                    // this page was opened by a tap on the s
 var tapDue = 0, tapTimer = null;       // a sticker tap is about to clock out (see "A tap on the bar sticker")
 var stickerOk = null;                  // true / false once we know whether the sticker carries today's link
 var skew = 0, skewFrom = null;         // how far this phone's clock is from the database's
+// "What's new" updates this login hasn't read. Clocking in walks through them
+// first (see "Read the updates first"). Only updates posted from this day on
+// count, so nobody meets a pile of old ones the first time they clock in.
+var NEWS_FROM = '2026-11-17T06:00:00Z';  // midnight on Nov 17 2026 in Minneapolis, the day Sam asked for this
+var unread = [], newsAt = 0, newsUnsaved = [];
 (function () {
   try {
     var q = new URLSearchParams(location.search), at = q.get('at');
@@ -113,7 +118,8 @@ setupSignIn(async function (r) {
   $('payrollTab').classList.toggle('hidden', !isMgr);
   $('page').classList.remove('hidden');
   $('tabs').classList.remove('hidden');
-  await Promise.all([loadPeople(), loadStatus()]);
+  // The updates get four seconds at most: slow wifi mustn't keep a tap from clocking in.
+  await Promise.all([loadPeople(), loadStatus(), within(loadUnread(), 4000)]);
   var tap = tapped && !!freshCode();
   tapped = false;
   // A manager login that doesn't take shifts (Sam's) has nothing to clock, so it opens on Payroll.
@@ -146,7 +152,7 @@ window.addEventListener('hashchange', function () { if (me) { showTab(); window.
 // Come back to the page after a while and it's fresh.
 document.addEventListener('visibilitychange', function () {
   if (document.hidden || !me || document.querySelector('dialog[open]')) return;
-  loadStatus(); if (tabNow() === 'hours') loadMine(); if (tabNow() === 'payroll') loadPayroll();
+  loadStatus(); loadUnread(); if (tabNow() === 'hours') loadMine(); if (tabNow() === 'payroll') loadPayroll();
 });
 // The "2 h 10 min" under the button, and the Undo that turns into Clock out.
 setInterval(function () { if (st && st.open && !document.hidden) drawClock(); }, 20000);
@@ -199,6 +205,10 @@ function drawClock() {
   if (offWifi) $('wifiNote').textContent = 'You’re not on the club wifi, so the button won’t clock you ' + (open ? 'out' : 'in') +
     '. Join the wifi, or hold your phone to the tag at the bar.';
   btn.classList.toggle('dim', offWifi);
+  // Not clocked in, with updates waiting: say so before the button is pressed.
+  var toRead = !!st.on_schedule && !open && !offWifi ? unread.length : 0;
+  $('newsNote').classList.toggle('hidden', !toRead);
+  if (toRead) $('newsNote').textContent = 'First, ' + toRead + (toRead === 1 ? ' update' : ' updates') + ' to read.';
   if (!st.on_schedule) {
     $('state').textContent = stickerOk === true ? '✓ This tag works' : stickerOk === false ? 'This tag has an old link' : 'Nothing to clock';
     $('stateSub').textContent = stickerOk === true ? 'Staff who tap it are clocked in or out. This login isn’t on the schedule, so it has nothing to clock.'
@@ -285,19 +295,104 @@ async function punch(byTap) {
 }
 $('punchBtn').addEventListener('click', function () {
   if (tapDue) return stopTap();
-  punch(false);
+  if (st && st.open) punch(false); else clockIn(false);
 });
 $('otherBtn').addEventListener('click', function () {
   if (st && st.open) { if (justIn()) punch(false); else openLeft(st.open.id); }
   else openShift('mine');
 });
 
+// ---------- Read the updates first ----------
+// Sam, Nov 17 2026: "When employees clock in on the app now (either with tap
+// or with their login) they should have to click through the updates before
+// they can clock in." So clocking in, by the tag or by the button, first shows
+// each "What's new" update this login hasn't read, one at a time. "Got it"
+// marks it read (the same mark the staff home page keeps) and moves on; "Got
+// it" on the last one clocks them in. "Not now" closes it and they are not
+// clocked in. Clocking out never waits on this.
+//   - Only updates posted since NEWS_FROM count, and for a login made after
+//     that, only those posted since it was made: a new hire doesn't click
+//     through a year of old news.
+//   - If the updates can't be loaded, or a "Got it" can't be saved, nobody is
+//     kept off the clock for it. The update comes up again next time.
+function within(p, ms) { return Promise.race([p, new Promise(function (done) { setTimeout(done, ms); })]); }
+async function loadUnread() {
+  var list = [];
+  try {
+    var from = me.created_at && new Date(me.created_at) > new Date(NEWS_FROM) ? me.created_at : NEWS_FROM;
+    var got = await Promise.all([
+      sb.from('staff_updates').select('id,title,body,created_at').gte('created_at', from).order('created_at', { ascending: true }).limit(40),
+      sb.from('staff_update_reads').select('update_id').eq('user_id', me.id)
+    ]);
+    if (!got[0].error && !got[1].error) {
+      var seen = {};
+      (got[1].data || []).forEach(function (r) { seen[r.update_id] = true; });
+      list = (got[0].data || []).filter(function (n) { return !seen[n.id]; });
+    }
+  } catch (e) {}
+  if ($('newsDialog').open) return;      // someone is reading: don't change the list under them
+  unread = list;
+  if (st) drawClock();
+}
+function drawNews() {
+  var n = unread[newsAt], left = unread.length - newsAt;
+  $('newsCount').textContent = 'Before you clock in' + (unread.length > 1 ? ' · ' + (newsAt + 1) + ' of ' + unread.length : '');
+  $('newsTitle').textContent = n.title;
+  $('newsWhen').textContent = 'Posted ' + new Date(n.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: TZ });
+  $('newsBody').textContent = n.body || '';
+  $('newsGot').textContent = left > 1 ? 'Got it, next' : 'Got it, clock me in';
+}
+// Clock in, by the button or by a tap on the tag: the updates first, if there are any.
+function clockIn(byTap) {
+  if (busy) return;
+  // Off the club wifi the button is refused anyway. Say that now, not after the reading.
+  var refused = !!st && st.wifi === 'off' && !freshCode();
+  if (!unread.length || refused) return punch(byTap);
+  newsAt = 0; newsUnsaved = [];
+  drawNews();
+  $('newsGot').disabled = false;
+  $('newsDialog').showModal();
+  $('newsDialog').scrollTop = 0;
+}
+$('newsGot').addEventListener('click', async function () {
+  var n = unread[newsAt], btn = $('newsGot');
+  if (!n || btn.disabled) return;
+  btn.disabled = true;
+  var r = null;
+  try { r = await sb.from('staff_update_reads').insert({ update_id: n.id }); } catch (e) { r = { error: e }; }
+  // "Already read" (23505) is fine. Anything else didn't save: it comes up again next time.
+  if (r && r.error && r.error.code !== '23505') newsUnsaved.push(n);
+  newsAt++;
+  if (newsAt < unread.length) {
+    drawNews();
+    $('newsDialog').scrollTop = 0;
+    // The button sits out a moment, so a double press can't skip an update unread.
+    setTimeout(function () { btn.disabled = false; }, 700);
+    return;
+  }
+  btn.disabled = false;
+  unread = newsUnsaved; newsUnsaved = [];
+  $('newsDialog').close();
+  drawClock();
+  punch(false);
+});
+// "Not now", or the Escape key: closed without clocking in. What was already read stays read.
+function stopNews() {
+  unread = newsUnsaved.concat(unread.slice(newsAt)); newsUnsaved = [];
+  if ($('newsDialog').open) $('newsDialog').close();
+  drawClock();
+  toast('OK. You’re not clocked in.');
+}
+$('newsNot').addEventListener('click', stopNews);
+$('newsDialog').addEventListener('cancel', function (e) { e.preventDefault(); stopNews(); });
+
 // ---------- A tap on the bar sticker ----------
 // The NFC sticker at the bar holds this page's link with a code on the end.
 // Holding a phone to it opens the page, and the page then does the clocking by
 // itself (Sam, Nov 17 2026: "I would rather do nfc tap for clock in and out vs
 // QR code"). The rules:
-//   - Not clocked in: clock in at once. It can be undone for two minutes.
+//   - Not clocked in: clock in at once (after any unread updates, see "Read
+//     the updates first"). It can be undone for two minutes.
 //   - Clocked in: count a few seconds with a "Not yet" button, then clock out
 //     and ask for tips. The wait is there because a clock-out can't be undone.
 //   - Nothing happens by itself within two minutes of the last punch, so a
@@ -317,7 +412,7 @@ function afterTap() {
     drawClock();
   } else {
     if (st.last && srvNow() - new Date(st.last.clock_out) < UNDO_MS) return toast('You just clocked out.');
-    punch(true);
+    clockIn(true);
   }
 }
 function tapOut() {

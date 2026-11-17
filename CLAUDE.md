@@ -130,7 +130,15 @@ Dojour gotchas, learned the hard way:
   where the request came from with the club's network, which a manager sets
   once from the Payroll tab ("The club wifi") while standing in the club.
   Until that is set the rule is off. That rule is in
-  `supabase/migrations/20261117210000_clock_wifi.sql`. Its notices ride the schedule's
+  `supabase/migrations/20261117210000_clock_wifi.sql`. Clocking in, by the
+  tag or by the button, first walks the person through any "What's new"
+  updates they haven't read, one at a time, and "Got it" on the last one
+  clocks them in (Sam, Nov 17 2026: "they should have to click through the
+  updates before they can clock in"). Only updates posted since Nov 17 2026
+  count (and since the login was made, for a new hire). This one is the
+  page's doing, not the database's, on purpose: if the updates can't be
+  loaded or a "Got it" can't be saved, nobody is kept off the clock.
+  Clocking out never waits on it. Its notices ride the schedule's
   outbox (kinds starting `clock_`). Check rule changes with
   `supabase/tests/time_clock/` before applying them.
 - **`booking/`** is the Booking board (Sam, Nov 14 2026, built for Grace):
