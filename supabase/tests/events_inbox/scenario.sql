@@ -6,7 +6,8 @@
 set role service_role;
 insert into events_threads (key, kind, subject, from_name, from_email, waiting_on) values
   ('gm:1', 'private', 'Holiday party?', 'Chris Planner', 'chris@acme.example', 'us'),
-  ('gm:2', 'tickets', 'Wrong night', 'Sam Buyer', 'buyer@example.com', 'us');
+  ('gm:2', 'tickets', 'Wrong night', 'Sam Buyer', 'buyer@example.com', 'us'),
+  ('gm:3', 'owner', 'Future lease', 'Lee Owner', 'lee@example.com', 'us');
 reset role;
 
 -- signed out: nothing (expect 1 ERROR)
@@ -23,7 +24,9 @@ reset role;
 
 -- manager: reads, makes the call, nothing else
 set role authenticated; select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
-select case when count(*) = 2 then 'ok' else 'FAIL' end || ' manager sees both rows' from events_threads;
+select case when count(*) = 2 then 'ok' else 'FAIL' end || ' manager sees both rows, not the lease one' from events_threads;
+with u as (update events_threads set status = 'done' where key = 'gm:3' returning 1)
+select case when count(*) = 0 then 'ok' else 'FAIL' end || ' manager cannot touch the lease one' from u;
 with u as (update events_threads set status = 'done', status_by = 'ggeertsema', status_at = now(), note = 'called them' where key = 'gm:1' returning 1)
 select case when count(*) = 1 then 'ok' else 'FAIL' end || ' manager marks one done' from u;
 -- a manager may set the call and nothing else (expect 5 ERRORs)
@@ -36,7 +39,7 @@ reset role;
 
 -- owner counts as a manager
 set role authenticated; select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
-select case when count(*) = 2 then 'ok' else 'FAIL' end || ' owner sees both rows' from events_threads;
+select case when count(*) = 3 then 'ok' else 'FAIL' end || ' owner sees all three, lease included' from events_threads;
 reset role;
 
 -- the hourly job refreshing a row keeps the manager's call
@@ -46,4 +49,4 @@ insert into events_threads (key, kind, subject, waiting_on, msg_count) values ('
 reset role;
 select case when status = 'done' and note = 'called them' and waiting_on = 'them' and updated_at >= created_at then 'ok' else 'FAIL' end || ' refresh keeps the call'
   from events_threads where key = 'gm:1';
-select case when count(*) = 2 then 'ok' else 'FAIL' end || ' still two rows' from events_threads;
+select case when count(*) = 3 then 'ok' else 'FAIL' end || ' still three rows' from events_threads;

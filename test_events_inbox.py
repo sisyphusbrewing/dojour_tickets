@@ -111,6 +111,54 @@ class ClassifyTest(unittest.TestCase):
             self.assertNotIn(column, row)
 
 
+class FirstReadTuningTest(unittest.TestCase):
+    """Shapes seen in the first read of events@ (Nov 18 2026), made up again."""
+
+    def test_a_business_we_never_answered_selling_something_is_a_pitch(self):
+        for subject, text in (("Photo Booth @ Sisyphus?", "I'm looking for fun spaces that might want a photo booth."),
+                              ("ticket fees idea", "Would you let someone run your Meta ads if it cost nothing?"),
+                              ("Event partnerships", "Exploring partnership opportunities and private events with you."),
+                              ("A review worth mentioning", "This Google review is worth mentioning. We can get it removed.")):
+            row = classify(thread(msg("Pat Seller <pat@seller.example>", subject, text)))
+            self.assertEqual(row["kind"], "pitch", subject)
+
+    def test_a_person_on_free_mail_is_not_taken_for_a_salesman(self):
+        row = classify(thread(msg("Jo Organizer <jo@gmail.com>", "Rental / comedy show",
+                                  "I am looking to rent the space for a comedy show with about 50 guests.")))
+        self.assertEqual(row["kind"], "private")
+
+    def test_a_parent_raising_money_is_a_donation_not_a_rental(self):
+        row = classify(thread(msg("Chris Parent <chris@gmail.com>", "Team sponsorship",
+                                  "I'm a parent helping raise funds for my son's hockey team. Would you sponsor us?")))
+        self.assertEqual(row["kind"], "donation")
+
+    def test_lease_and_press_are_for_sam_only(self):
+        lease = classify(thread(msg("Lee Owner <lee@otherbrewery.example>", "Future Lease",
+                                    "I read about your upcoming lease issues and have a possible alternative space.")))
+        press = classify(thread(msg("Robin Writer <robin@news.example>", "Media inquiry",
+                                    "I'm a reporter and was sorry to see the post about the future of the club.")))
+        self.assertEqual((lease["kind"], press["kind"]), ("owner", "press"))
+        self.assertTrue(set(events_inbox.OWNER_ONLY) >= {"owner", "press"})
+
+    def test_a_resume_is_a_job_ask(self):
+        row = classify(thread(msg("Sky Applicant <sky@gmail.com>", "Resume attached", "Here is my resume for the bartender position.")))
+        self.assertEqual(row["kind"], "job")
+
+    def test_a_venue_question_with_a_wheelchair_is_access_but_stairs_alone_is_not(self):
+        chair = classify(thread(msg("Alex Guest <alex@gmail.com>", "Lost ticket", "I'm in a wheelchair and hoped to sit near the front.")))
+        stairs = classify(thread(msg("Alex Guest <alex@gmail.com>", "Fall shows", "Had a great time! Saw you up the stairs. Any nights open?")))
+        self.assertEqual(chair["kind"], "access")
+        self.assertNotEqual(stairs["kind"], "access")
+
+    def test_many_thanks_after_our_answer_needs_nothing(self):
+        guest = "Jo Organizer <jo@gmail.com>"
+        row = classify(thread(
+            msg(guest, "Materials for the show", "Can you post the link?", hours_ago=30),
+            msg("Sisyphus <%s>" % EVENTS, "Re: Materials", "Done.", to=("jo@gmail.com",), hours_ago=20),
+            msg(guest, "Re: Materials", "Many thanks, this is so appreciated! See you soon!", hours_ago=2)))
+        self.assertEqual(row["waiting_on"], "them")
+
+
 class PeopleCountTest(unittest.TestCase):
     def test_headcounts_as_written(self):
         self.assertEqual(people_count("a group of about 25"), "25")

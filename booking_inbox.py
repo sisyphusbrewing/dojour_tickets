@@ -108,7 +108,7 @@ REQUEST_WORDS = re.compile(
     r"comedy ideas|one[- ]nighter|hold(ing)? (a )?dates?", re.I)
 
 FOLLOW_UP = re.compile(r"\bbump|follow(ing)?[- ]up|circling back|checking (back )?in|any update", re.I)
-JUST_THANKS = re.compile(r"^(thanks?( you)?|perfect|great|awesome|got it|sounds good|appreciate)\b", re.I)
+JUST_THANKS = re.compile(r"^(thanks?( you)?|many thanks|thx|perfect|great|awesome|got it|sounds (good|great)|appreciate|no worries|will do|ok(ay)?|wonderful)\b", re.I)
 
 
 def just_thanks(text):
