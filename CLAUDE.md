@@ -215,6 +215,15 @@ Dojour gotchas, learned the hard way:
   `booking_threads` (one row per conversation in the booking@ inbox).
   `booking_inbox.py` fills `booking_threads` every hour by reading booking@
   over IMAP, read-only; it never sends, labels or marks anything.
+  Each show on the board also has **"Every show needs"** (Sam, Nov 18 2026:
+  manager, openers, rider, the emails for video, ticket updates and the
+  settlement, how they get paid, the artist has the advance; "This is just
+  the start"). The list is `SHOW_NEEDS` in `booking/index.html`: a new line
+  is one entry there. Typed answers live in `booking_shows.info`; lines
+  something else knows (the advance, the weekly report's `show_agents`,
+  where the video went) fill themselves in, and a gap is flagged from three
+  weeks out. The ticket update email is `show_agents` itself, and an email
+  for the video typed there is where `recording_mail.py` sends it.
 - **The events@ inbox is read the same way** (Sam, Nov 17 2026: "We should
   probably do this for the events@ email as well"). events@ is where the
   public writes and nobody owns it, so things sit. `events_inbox.py` (workflow
@@ -303,7 +312,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_inbox_trash`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_comic_ads_refresh test_inbox_trash test_recording_mail`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.
