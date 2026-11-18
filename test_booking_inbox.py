@@ -141,6 +141,14 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(row["kind"], "counts")
         self.assertEqual(row["waiting_on"], "them")
 
+    def test_a_thank_you_that_asks_something_still_needs_an_answer(self):
+        agent = "Dana Agent <dana.agent@unitedtalent.com>"
+        row = classify(thread(
+            msg(agent, "Lee Newcomer Avails", "Any avails in May?", hours_ago=30),
+            msg("Grace <%s>" % GRACE, "Re: Lee Newcomer Avails", "May 14-15 is open.", to=("dana.agent@unitedtalent.com",), hours_ago=20),
+            msg(agent, "Re: Lee Newcomer Avails", "Great, what would the deal be?", hours_ago=2)), KNOWN)
+        self.assertEqual(row["waiting_on"], "us")
+
     def test_noise_is_dropped(self):
         self.assertIsNone(classify(thread(msg("Shopify <no-reply@shopify.com>", "[Sisyphus] Order #1234 placed", "avails")), KNOWN))
         self.assertIsNone(classify(thread(msg("Sisyphus Box Office <ticketing@sisyphusbrewing.com>",
@@ -208,22 +216,33 @@ class CarryOverTest(unittest.TestCase):
                                         [{"key": "sam:lee", "subject": "Lee Newcomer Avails", "status": None}]), [])
 
 
+def made_up_email(sender, to, subject, text, hours, filename=None, pad=0):
+    m = EmailMessage()
+    m["From"], m["To"], m["Subject"] = sender, to, subject
+    m["Date"] = (NOW - timedelta(hours=hours)).strftime("%a, %d %b %Y %H:%M:%S +0000")
+    m.set_content(text)
+    if filename:
+        m.add_attachment(b"%PDF" + b"0" * pad, maintype="application", subtype="pdf", filename=filename)
+    return m.as_bytes()
+
+
 class FakeGmail:
-    """Answers the way Gmail's IMAP does, for two conversations of made-up mail."""
+    """Answers the way Gmail's IMAP does, for two conversations of made-up
+    mail. Tests change the class attributes to try Gmail's other habits."""
     selected = None
+    grouped_search = True      # False: refuses "this conversation OR that one"
+    uid_after_text = False     # True: names the email after its text, not before
+    mail = None                # {uid: (conversation id, raw email)}; None = the two below
+    asked = []                 # every question put to it, for counting
 
     def __init__(self, host):
-        a, b, c = EmailMessage(), EmailMessage(), EmailMessage()
         agent = "Dana Agent <dana.agent@unitedtalent.com>"
-        for m, sender, to, subject, text, hours in ((a, agent, GRACE, "Lee Newcomer Avails", "Any avails in May?", 5),
-                                                    (b, "Grace <%s>" % GRACE, agent, "Re: Lee Newcomer Avails", "May 14-15 is open.", 3),
-                                                    (c, "Robin Sample <robin@example.com>", GRACE, "W-9", "Attached.", 2)):
-            m["From"], m["To"], m["Subject"] = sender, to, subject
-            m["Date"] = (NOW - timedelta(hours=hours)).strftime("%a, %d %b %Y %H:%M:%S +0000")
-            m.set_content(text)
-        c.add_attachment(b"%PDF", maintype="application", subtype="pdf", filename="Robin Sample W9.pdf")
-        self.mail = {b"11": (b"1700000000000000001", a.as_bytes()), b"12": (b"1700000000000000001", b.as_bytes()),
-                     b"13": (b"1700000000000000002", c.as_bytes())}
+        self.mail = type(self).mail or {
+            11: ("1700000000000000001", made_up_email(agent, GRACE, "Lee Newcomer Avails", "Any avails in May?", 5)),
+            12: ("1700000000000000001", made_up_email("Grace <%s>" % GRACE, agent, "Re: Lee Newcomer Avails", "May 14-15 is open.", 3)),
+            13: ("1700000000000000002", made_up_email("Robin Sample <robin@example.com>", GRACE, "W-9", "Attached.", 2, "Robin Sample W9.pdf")),
+        }
+        type(self).asked = []
 
     def login(self, user, password):
         return "OK", [b"done"]
@@ -232,18 +251,39 @@ class FakeGmail:
         FakeGmail.selected = (name, readonly)
         return "OK", [b"3"]
 
+    @staticmethod
+    def numbers(text):
+        return [int(n) for n in (text.decode() if isinstance(text, bytes) else text).split(",")]
+
     def uid(self, command, *args):
+        type(self).asked.append((command,) + args[1:])
         if command == "SEARCH" and args[1] == "SINCE":
-            return "OK", [b" ".join(sorted(self.mail))]
+            return "OK", [b" ".join(str(u).encode() for u in sorted(self.mail))]
         if command == "SEARCH" and args[1] == "X-GM-THRID":
-            return "OK", [b" ".join(u for u in sorted(self.mail) if self.mail[u][0] == args[2].encode())]
+            return "OK", [b" ".join(str(u).encode() for u in sorted(self.mail) if self.mail[u][0] == args[2])]
+        if command == "SEARCH" and args[1].startswith("OR "):
+            if not self.grouped_search:
+                raise booking_inbox.imaplib.IMAP4.error("UID command error: BAD could not parse command")
+            ids = set(args[1].replace("OR ", "").replace("X-GM-THRID ", "").split())
+            return "OK", [b" ".join(str(u).encode() for u in sorted(self.mail) if self.mail[u][0] in ids)]
         if command == "FETCH" and args[1] == "(X-GM-THRID)":
-            return "OK", [b"1 (X-GM-THRID " + self.mail[u][0] + b" UID " + u + b")" for u in args[0].split(b",")]
+            return "OK", [b"%d (X-GM-THRID %s UID %d)" % (u, self.mail[u][0].encode(), u) for u in self.numbers(args[0])]
         if command == "FETCH" and args[1] == "(RFC822.SIZE)":
-            return "OK", [b"1 (UID " + args[0] + b" RFC822.SIZE " + str(len(self.mail[args[0]][1])).encode() + b")"]
+            return "OK", [b"%d (UID %d RFC822.SIZE %d)" % (u, u, len(self.mail[u][1])) for u in self.numbers(args[0])]
         if command == "FETCH" and args[1] == "(BODY.PEEK[])":
-            raw = self.mail[args[0]][1]
-            return "OK", [(b"1 (UID " + args[0] + b" BODY[] {" + str(len(raw)).encode() + b"}", raw), b")"]
+            answer = []
+            for u in self.numbers(args[0]):
+                raw = self.mail[u][1]
+                if self.uid_after_text:
+                    answer += [(b"%d (BODY[] {%d}" % (u, len(raw)), raw), b" UID %d)" % u]
+                else:
+                    answer += [(b"%d (UID %d BODY[] {%d}" % (u, u, len(raw)), raw), b")"]
+            return "OK", answer
+        if command == "FETCH" and args[1] == "(BODY.PEEK[HEADER] BODYSTRUCTURE)":
+            u = self.numbers(args[0])[0]
+            head = self.mail[u][1].split(b"\n\n")[0] + b"\n\n"
+            return "OK", [(b"%d (UID %d BODY[HEADER] {%d}" % (u, u, len(head)), head),
+                          b' BODYSTRUCTURE (("application" "pdf" ("name" "Big Contract.pdf") NIL NIL "base64" 5000000)))']
         raise AssertionError("unexpected IMAP call: %s %r" % (command, args))
 
     def logout(self):
@@ -251,16 +291,67 @@ class FakeGmail:
 
 
 class ReadMailboxTest(unittest.TestCase):
-    def test_reads_whole_conversations_without_marking_anything_read(self):
+    def setUp(self):
+        FakeGmail.grouped_search, FakeGmail.uid_after_text, FakeGmail.mail = True, False, None
+
+    def read(self, days=3):
         with mock.patch.object(booking_inbox.imaplib, "IMAP4_SSL", FakeGmail):
-            threads = booking_inbox.read_mailbox(3)
-        self.assertEqual(FakeGmail.selected, ('"[Gmail]/All Mail"', True))          # read-only
+            return booking_inbox.read_mailbox(days)
+
+    def check_the_two_conversations(self, threads):
         self.assertEqual([t["key"] for t in threads], ["gm:1700000000000000001", "gm:1700000000000000002"])
         self.assertEqual([m["subject"] for m in threads[0]["messages"]], ["Lee Newcomer Avails", "Re: Lee Newcomer Avails"])
         self.assertTrue(threads[0]["link"].startswith("https://mail.google.com/"))
         rows = [classify(t, KNOWN) for t in threads]
         self.assertEqual((rows[0]["kind"], rows[0]["waiting_on"], rows[0]["act"]), ("request", "them", "Lee Newcomer"))
         self.assertEqual([d["doc"] for d in rows[1]["docs"]], ["w9"])
+
+    def test_reads_whole_conversations_without_marking_anything_read(self):
+        threads = self.read()
+        self.assertEqual(FakeGmail.selected, ('"[Gmail]/All Mail"', True))          # read-only
+        self.check_the_two_conversations(threads)
+        # Nothing but looking: searches, and downloads that leave mail unread.
+        for command, *rest in FakeGmail.asked:
+            self.assertIn(command, ("SEARCH", "FETCH"))
+            self.assertNotIn("BODY[", " ".join(str(r) for r in rest).replace("BODY.PEEK[", ""))
+
+    def test_when_gmail_refuses_the_grouped_question_it_asks_one_by_one(self):
+        FakeGmail.grouped_search = False
+        self.check_the_two_conversations(self.read())
+
+    def test_when_gmail_names_the_email_after_its_text(self):
+        FakeGmail.uid_after_text = True
+        self.check_the_two_conversations(self.read())
+
+    def test_another_mailbox_gets_its_own_link(self):
+        with mock.patch.object(booking_inbox.imaplib, "IMAP4_SSL", FakeGmail):
+            threads = booking_inbox.read_mailbox(3, "events@sisyphusbrewing.com", "made-up-password")
+        self.assertIn("authuser=events@sisyphusbrewing.com", threads[0]["link"])
+
+    def test_a_big_catch_up_is_a_few_questions_not_thousands(self):
+        """The first 60-day read of booking@ asked Gmail about every email one
+        at a time and ran out the clock (Nov 17 2026). 300 conversations of
+        two emails each should now take well under a hundred questions."""
+        FakeGmail.mail = {}
+        for n in range(300):
+            for part in (0, 1):
+                FakeGmail.mail[1000 + n * 2 + part] = (
+                    str(1800000000000000000 + n),
+                    made_up_email("Pat Writer <pat%d@example.com>" % n, GRACE, "Question %d" % n, "Hello %d" % part, 5 - part))
+        threads = self.read(60)
+        self.assertEqual(len(threads), 300)
+        self.assertTrue(all(len(t["messages"]) == 2 for t in threads))
+        self.assertEqual(threads[7]["messages"][1]["text"].strip(), "Hello 1")
+        self.assertLess(len(FakeGmail.asked), 100)
+
+    def test_a_very_large_email_is_read_by_its_headers_only(self):
+        big = made_up_email("Robin Sample <robin@example.com>", GRACE, "Signed contract", "Attached.", 2,
+                            "Big Contract.pdf", pad=booking_inbox.BIG_EMAIL)
+        FakeGmail.mail = {21: ("1900000000000000001", big)}
+        threads = self.read()
+        self.assertEqual(threads[0]["messages"][0]["subject"], "Signed contract")
+        self.assertEqual(threads[0]["messages"][0]["files"], ["Big Contract.pdf"])
+        self.assertNotIn("(BODY.PEEK[])", [q[-1] for q in FakeGmail.asked])       # never downloaded whole
 
 
 if __name__ == "__main__":

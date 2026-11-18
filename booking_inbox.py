@@ -60,6 +60,9 @@ DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 
 OURS = "sisyphusbrewing.com"
 BIG_EMAIL = 4_000_000        # bigger than this, read the headers and attachment names only
+THREADS_PER_ASK = 20         # conversations looked up in one question to Gmail
+EMAILS_PER_ASK = 25          # emails downloaded in one go ...
+BYTES_PER_ASK = 8_000_000    # ... or fewer, when they are large
 
 # Shows that are not booked acts (same list the automatic advances skip).
 REGULARS = re.compile(
@@ -106,6 +109,13 @@ REQUEST_WORDS = re.compile(
 
 FOLLOW_UP = re.compile(r"\bbump|follow(ing)?[- ]up|circling back|checking (back )?in|any update", re.I)
 JUST_THANKS = re.compile(r"^(thanks?( you)?|perfect|great|awesome|got it|sounds good|appreciate)\b", re.I)
+
+
+def just_thanks(text):
+    """A short "Thank you so much!" that needs no answer. One that goes on to
+    ask something ("Great, what does it cost?") still does."""
+    text = text or ""
+    return bool(JUST_THANKS.match(text)) and len(text) < 400 and "?" not in text
 
 MONTHS = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?"
 DATE_PATTERNS = [
@@ -389,7 +399,7 @@ def classify(thread, known_acts):
     waiting = "them" if (last_ours and wrote_out) else "us"
     latest_outside = max(real, key=lambda p: p["date"])
     answered = any(is_ours(m.get("from_email")) and any(not is_ours(a) for a in m.get("to") or []) for m in messages)
-    if answered and JUST_THANKS.match(latest_outside["text"]) and len(latest_outside["text"]) < 400:
+    if answered and just_thanks(latest_outside["text"]):
         waiting = "them"                      # "Thank you so much!" needs no answer
     if kind == "contract" and docs and all(d["state"] == "signed" for d in docs if d["doc"] == "contract"):
         waiting = "them"                      # nothing left to answer on a finished contract
@@ -465,15 +475,81 @@ def parse_message(raw):
     except Exception:
         date = None
     files = [decoded(p.get_filename()) for p in msg.walk() if p.get_filename()]
+    # A mailing-list email says so in its headers ("List-Unsubscribe"). The
+    # events@ reader uses this to tell a newsletter from a person.
+    bulk = bool(msg.get("List-Unsubscribe")) or str(msg.get("Precedence", "")).strip().lower() in ("bulk", "list", "junk")
     return {"from_name": name.strip(), "from_email": addr.lower(), "to": to, "date": date,
-            "subject": decoded(msg.get("Subject", "")), "text": body_text(msg)[:20000], "files": files}
+            "subject": decoded(msg.get("Subject", "")), "text": body_text(msg)[:20000], "files": files, "bulk": bulk}
 
 
-def read_mailbox(days):
+def _line(row):
+    """The text part of one line of an IMAP answer."""
+    return (row if isinstance(row, bytes) else row[0]) or b""
+
+
+def _thread_uids(box, thread_ids):
+    """{conversation id: [its emails, oldest first]}. Asks Gmail about a
+    handful of conversations at a time: one question per conversation took
+    longer than the job is allowed on the first 60-day catch-up (Nov 17 2026)."""
+    found = {t: [] for t in thread_ids}
+    for i in range(0, len(thread_ids), THREADS_PER_ASK):
+        group = thread_ids[i:i + THREADS_PER_ASK]
+        uids = []
+        if len(group) > 1:
+            # "this conversation OR that one OR ..." in IMAP's own wording
+            ask = "X-GM-THRID " + group[-1]
+            for t in reversed(group[:-1]):
+                ask = f"OR X-GM-THRID {t} {ask}"
+            try:
+                status, data = box.uid("SEARCH", None, ask)
+                uids = data[0].split() if status == "OK" and data and data[0] else []
+            except imaplib.IMAP4.error:
+                uids = []
+        if not uids:
+            # One conversation, or Gmail didn't take the grouped question: ask one by one.
+            for t in group:
+                _, data = box.uid("SEARCH", None, "X-GM-THRID", t)
+                found[t] = [int(u) for u in data[0].split()]
+            continue
+        # Which of those emails belongs to which conversation?
+        for j in range(0, len(uids), 200):
+            _, rows = box.uid("FETCH", b",".join(uids[j:j + 200]), "(X-GM-THRID)")
+            for row in rows:
+                t = re.search(rb"X-GM-THRID (\d+)", _line(row))
+                u = re.search(rb"UID (\d+)", _line(row))
+                if t and u and t.group(1).decode() in found:
+                    found[t.group(1).decode()].append(int(u.group(1)))
+    return {t: sorted(set(u)) for t, u in found.items()}
+
+
+def _download(box, uids):
+    """{email: its raw text} for a group of emails asked for in one go.
+    PEEK: nothing gets marked as read."""
+    got = {}
+    if not uids:
+        return got
+    _, parts = box.uid("FETCH", ",".join(str(u) for u in uids), "(BODY.PEEK[])")
+    for n, part in enumerate(parts):
+        if not isinstance(part, tuple):
+            continue
+        # Gmail says which email this is either before the text or right after it.
+        after = parts[n + 1] if n + 1 < len(parts) and isinstance(parts[n + 1], bytes) else b""
+        m = re.search(rb"UID (\d+)", part[0] or b"") or re.search(rb"UID (\d+)", after)
+        if m:
+            got[int(m.group(1))] = part[1]
+        elif len(uids) == 1:
+            got[uids[0]] = part[1]
+    return got
+
+
+def read_mailbox(days, user=None, password=None):
     """Every conversation with a message in the last `days` days, read-only.
-    Returns [{"key", "link", "messages"}]."""
+    Returns [{"key", "link", "messages"}]. It reads booking@ unless another
+    mailbox's address and app password are passed in (events_inbox.py reads
+    events@ with this same function)."""
+    user, password = user or IMAP_USER, password or IMAP_PASS
     box = imaplib.IMAP4_SSL(IMAP_HOST)
-    box.login(IMAP_USER, IMAP_PASS)
+    box.login(user, password)
     try:
         # All Mail has both what came in and what Grace sent, so we can tell
         # whose turn it is. readonly=True: nothing gets marked as read.
@@ -490,35 +566,65 @@ def read_mailbox(days):
         for i in range(0, len(recent), 200):
             _, rows = box.uid("FETCH", b",".join(recent[i:i + 200]), "(X-GM-THRID)")
             for row in rows:
-                line = row if isinstance(row, bytes) else row[0]
-                m = re.search(rb"X-GM-THRID (\d+)", line or b"")
+                m = re.search(rb"X-GM-THRID (\d+)", _line(row))
                 if m:
                     thread_ids.add(m.group(1).decode())
-        threads = []
-        for thrid in sorted(thread_ids):
-            _, data = box.uid("SEARCH", None, "X-GM-THRID", thrid)
-            uids = data[0].split()[-25:]                 # a very long thread: the latest 25 are plenty
-            messages = []
-            for uid in uids:
-                _, size_row = box.uid("FETCH", uid, "(RFC822.SIZE)")
-                m = re.search(rb"RFC822\.SIZE (\d+)", size_row[0] if isinstance(size_row[0], bytes) else size_row[0][0])
-                big = bool(m) and int(m.group(1)) > BIG_EMAIL
-                _, parts = box.uid("FETCH", uid, "(BODY.PEEK[HEADER] BODYSTRUCTURE)" if big else "(BODY.PEEK[])")
+        thread_ids = sorted(thread_ids)
+        # Every email of those conversations, older ones included. A very long
+        # thread: the latest 25 are plenty.
+        in_thread = {t: uids[-25:] for t, uids in _thread_uids(box, thread_ids).items()}
+        wanted = [u for t in thread_ids for u in in_thread[t]]
+        # How big is each one? (asked 200 at a time)
+        sizes = {}
+        for i in range(0, len(wanted), 200):
+            _, rows = box.uid("FETCH", ",".join(str(u) for u in wanted[i:i + 200]), "(RFC822.SIZE)")
+            for row in rows:
+                u, size = re.search(rb"UID (\d+)", _line(row)), re.search(rb"RFC822\.SIZE (\d+)", _line(row))
+                if u and size:
+                    sizes[int(u.group(1))] = int(size.group(1))
+        # Download them a group at a time, not one by one.
+        parsed, group, weight = {}, [], 0
+
+        def take(batch):
+            got = _download(box, batch)
+            for uid in batch:
+                if uid not in got and len(batch) > 1:
+                    got.update(_download(box, [uid]))        # missed in the group: ask for it alone
+                if got.get(uid):
+                    try:
+                        parsed[uid] = parse_message(got[uid])
+                    except Exception:
+                        pass                                 # one unreadable email never stops the run
+
+        for uid in wanted:
+            size = sizes.get(uid, 0)
+            if size > BIG_EMAIL:
+                # Too big to download: read the headers, and take the
+                # attachment names from the email's outline.
+                _, parts = box.uid("FETCH", str(uid), "(BODY.PEEK[HEADER] BODYSTRUCTURE)")
                 raw = next((p[1] for p in parts if isinstance(p, tuple)), None)
-                if not raw:
-                    continue
-                try:
-                    parsed = parse_message(raw)
-                except Exception:
-                    continue                             # one unreadable email never stops the run
-                if big:
-                    # Too big to download: take the attachment names from the outline.
-                    outline = b" ".join(p if isinstance(p, bytes) else p[0] for p in parts)
-                    parsed["files"] = [n.decode("utf-8", "replace") for n in re.findall(rb'"(?:file)?name\*?" "([^"]+)"', outline, re.I)]
-                messages.append(parsed)
+                if raw:
+                    try:
+                        parsed[uid] = parse_message(raw)
+                        outline = b" ".join(_line(p) for p in parts)
+                        parsed[uid]["files"] = [n.decode("utf-8", "replace")
+                                                for n in re.findall(rb'"(?:file)?name\*?" "([^"]+)"', outline, re.I)]
+                    except Exception:
+                        pass
+                continue
+            if group and (len(group) >= EMAILS_PER_ASK or weight + size > BYTES_PER_ASK):
+                take(group)
+                group, weight = [], 0
+            group.append(uid)
+            weight += size
+        take(group)
+
+        threads = []
+        for thrid in thread_ids:
+            messages = [parsed[u] for u in in_thread[thrid] if u in parsed]
             if messages:
                 threads.append({"key": "gm:" + thrid, "messages": messages,
-                                "link": f"https://mail.google.com/mail/u/0/?authuser={IMAP_USER}#all/{int(thrid):x}"})
+                                "link": f"https://mail.google.com/mail/u/0/?authuser={user}#all/{int(thrid):x}"})
         return threads
     finally:
         try:
