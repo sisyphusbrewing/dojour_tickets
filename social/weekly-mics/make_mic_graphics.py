@@ -62,7 +62,7 @@ def hat(img, cx, cy, s):
     d.ellipse((cx - 150 * s, cy - 84 * s, cx + 150 * s, cy - 36 * s), fill=(12, 12, 12))
 
 
-def tuesday(w, h, name):
+def tuesday(w, h, name, timeline="7 PM · COMEDY CLUB · FREE"):
     img = Image.new("RGB", (w, h), CHAR)
     d = ImageDraw.Draw(img)
     story = h > 1500
@@ -73,7 +73,7 @@ def tuesday(w, h, name):
     y += 190
     spaced(d, w / 2, y, "OPEN MIC", B(150), WHITE, 10)
     y += 190
-    spaced(d, w / 2, y, "7 PM · COMEDY CLUB · FREE", fit(d, "7 PM · COMEDY CLUB · FREE", 60, 6, w - 140), WHITE, 6)
+    spaced(d, w / 2, y, timeline, fit(d, timeline, 60, 6, w - 140), WHITE, 6)
     y += 100 if story else 80
     hy = y + (300 if story else 190)
     hat(img, w // 2, hy, 1.15 if story else 0.75)
@@ -127,18 +127,21 @@ def thursday(w, h, name):
     y += 190
     spaced(d, w / 2, y, "8 PM · COMEDY CLUB · FREE", fit(d, "8 PM · COMEDY CLUB · FREE", 60, 6, w - 140), WHITE, 6)
     y += 110 if story else 96
-    for text, size, col in [("THE BEST COMICS IN TOWN,", 46, WHITE), ("BOOKED AHEAD.", 46, WHITE)]:
+    for text, size, col in [("A NEW CURATOR EVERY WEEK", 46, WHITE), ("PICKS THREE COMICS.", 46, WHITE)]:
         spaced(d, w / 2, y, text, fit(d, text, size, 4, w - 140), col, 4)
         y += size + 22
     y += 16
-    d.text((w / 2, y), "The comics are good. The price is suspicious.", font=R(34), fill=GRAY, anchor="ma")
+    d.text((w / 2, y), "The comics get paid. You get in free.", font=R(34), fill=GRAY, anchor="ma")
     y = h - (260 if story else 120)
-    spaced(d, w / 2, y, "FIRST TIME ON STAGE?", fit(d, "FIRST TIME ON STAGE?", 38, 4, w - 140), PALE, 4)
-    spaced(d, w / 2, y + 54, "GET HERE BY 7:30 FOR A FIRST-TIMER SPOT", fit(d, "GET HERE BY 7:30 FOR A FIRST-TIMER SPOT", 30, 3, w - 140), WHITE, 3)
+    spaced(d, w / 2, y, "WANT STAGE TIME? SIGN UP AT THE BAR 6–7 PM", fit(d, "WANT STAGE TIME? SIGN UP AT THE BAR 6–7 PM", 38, 4, w - 140), PALE, 4)
+    spaced(d, w / 2, y + 54, "FIRST-TIMERS ARE GUARANTEED A SPOT", fit(d, "FIRST-TIMERS ARE GUARANTEED A SPOT", 30, 3, w - 140), WHITE, 3)
     img.save(os.path.join(HERE, name), quality=92)
 
 
 tuesday(1080, 1350, "tuesday-open-mic-feed.jpg")
 tuesday(1080, 1920, "tuesday-open-mic-story.jpg")
+# Ad version: the wide (1.91:1) crop cuts off the TUESDAYS band, so the
+# centre line names the day too (Sam's crop rule, Nov 11 2026).
+tuesday(1080, 1350, "tuesday-open-mic-ad.jpg", "EVERY TUESDAY · 7 PM · FREE")
 thursday(1080, 1350, "thursday-showcase-feed.jpg")
 thursday(1080, 1920, "thursday-showcase-story.jpg")
