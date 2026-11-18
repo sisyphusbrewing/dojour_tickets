@@ -13,14 +13,18 @@ Every hour the "Events inbox" action runs this and, for each conversation
 from the last few days:
 
   1. Throws out the noise: receipts, newsletters, our own automatic emails.
-  2. Decides what it is:
+  2. Decides what it is (owner and press are shown to the owner login only):
        private    someone wants to rent the room, hold a party or bring a group
        tickets    a customer with a ticket problem (refund, wrong night, lost email)
        access     an accessibility question
        donation   a request for a donation or a gift card for a fundraiser
        comic      a comic or an agent who wrote to the wrong inbox (it belongs
                   in booking@)
-       pitch      someone selling us something
+       job        a resume or a job ask
+       pitch      someone selling us something (a business we never wrote
+                  back to, writing like a salesman, counts as one)
+       owner      the lease, a new building: Sam's own business
+       press      a reporter
        other      a person wrote and it is none of the above. It is still
                   listed: nothing a person wrote is ever dropped.
   3. Notes the dates and the number of people they mentioned, and whose turn
@@ -61,7 +65,7 @@ DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 # What each kind of email sounds like. Checked in the order used in classify().
 ACCESS_WORDS = re.compile(
     r"wheel ?chair|accessib|\bADA\b|mobility|walker|scooter|hearing (aid|loop|impair)|hard of hearing|\bdeaf\b|"
-    r"interpreter|\bASL\b|service (dog|animal)|elevator|ramp\b|stairs|disab", re.I)
+    r"interpreter|\bASL\b|service (dog|animal)|elevator|wheelchair ramp|disab", re.I)
 PRIVATE_WORDS = re.compile(
     r"private (event|party|show|room|space)|rent(ing|al)?\b.{0,30}(space|room|venue|taproom|brewery)|"
     r"(reserve|reserving|reservation|book(ing)?)\b.{0,40}(space|room|area|tables?|taproom|venue|party|group|event)|"
@@ -91,7 +95,26 @@ PEOPLE = re.compile(
     r"\b(\d{1,3})\s*(?:[-–]|to)\s*(\d{1,3})\s*(?:people|guests|ppl|folks|attendees|employees|coworkers|friends)|"
     r"\b(?:about |around |roughly |approximately |~)?(\d{1,3})\+?\s*(?:people|guests|ppl|folks|attendees|employees|coworkers|friends)\b", re.I)
 
-KINDS = ("private", "tickets", "access", "donation", "comic", "pitch", "other")
+# Sam's own business: the lease, a new building, reporters. Kept off the
+# managers' list (the database hides these two kinds from everyone but the
+# owner login).
+OWNER_WORDS = re.compile(
+    r"\blease\b|landlord|real estate|(new|alternative|possible) (brewery |taproom )?(space|location|building|home)|"
+    r"\bmov(e|ing) (out|locations?)\b|buy(ing)? a building", re.I)
+PRESS_WORDS = re.compile(r"reporter|journalist|media (inquiry|request)|\bpress\b|for (a|an|our) (story|article)|newsroom|on the record", re.I)
+JOB_WORDS = re.compile(r"\bresume\b|résumé|\bcv\b|cover letter|job (posting|opening|application)|appl(y|ying|ication) for|hiring|position", re.I)
+# Cold sales mail that the pitch words alone missed (Nov 18 2026, first read
+# of events@: ad agencies, review-removal offers, photo booths, holiday lights,
+# floor coatings, listing sites, "partnerships").
+COLD_WORDS = re.compile(
+    r"partner(ship)?s?\b|agency|\bads\b|meta ads|line of credit|graphics|photo ?booth|holiday lights|coatings?\b|"
+    r"manufactur|raw material|\breviews?\b|commission|free (service|promo|listing)|on the (twin cities )?map|registration|"
+    r"\bpromote\b|our readers|craft beer space|beverage space|worth mentioning|just following up|circling back|"
+    r"last one from me|make sure this didn'?t get buried|grow(th)?\b|revenue|leads?\b", re.I)
+FREE_MAIL = re.compile(r"@(gmail|yahoo|hotmail|outlook|icloud|aol|msn|comcast|live|me|proton(mail)?|mac)\.", re.I)
+
+KINDS = ("private", "tickets", "access", "donation", "comic", "job", "pitch", "other", "owner", "press")
+OWNER_ONLY = ("owner", "press")
 
 
 def people_count(text):
@@ -135,11 +158,24 @@ def classify(thread):
 
     who = people[-1]
     first_words = subject + " . " + " ".join(p["text"] for p in people)[:2500]
-    if ACCESS_WORDS.search(first_words):
-        kind = "access"
-    elif mail.agency_of(who["email"]) or COMIC_WORDS.search(first_words):
+    answered = any(mail.is_ours(m.get("from_email")) and any(not mail.is_ours(a) for a in m.get("to") or []) for m in messages)
+    # A business we never wrote back to, writing like a salesman.
+    cold = not answered and not FREE_MAIL.search(who["email"]) and not mail.agency_of(who["email"])
+    if OWNER_WORDS.search(first_words):
+        kind = "owner"
+    elif PRESS_WORDS.search(first_words):
+        kind = "press"
+    elif mail.agency_of(who["email"]):
         kind = "comic"
-    elif DONATION_WORDS.search(first_words) and not re.search(r"rent|reserve|host(ing)? (a|an|our)", first_words, re.I):
+    elif cold and (COLD_WORDS.search(first_words) or PITCH_WORDS.search(first_words)) and not DONATION_WORDS.search(first_words):
+        kind = "pitch"
+    elif ACCESS_WORDS.search(first_words):
+        kind = "access"
+    elif JOB_WORDS.search(subject) or (JOB_WORDS.search(first_words) and not PRIVATE_WORDS.search(first_words)):
+        kind = "job"
+    elif COMIC_WORDS.search(first_words):
+        kind = "comic"
+    elif DONATION_WORDS.search(first_words) and not re.search(r"\brent(al|ing)?\b|reserve|host(ing)? (a|an|our)", first_words, re.I):
         kind = "donation"
     elif PRIVATE_WORDS.search(first_words):
         kind = "private"
@@ -155,7 +191,6 @@ def classify(thread):
     wrote_out = any(not mail.is_ours(a) for a in last.get("to") or [])
     waiting = "them" if (mail.is_ours(last.get("from_email")) and wrote_out) else "us"
     latest = max(people, key=lambda p: p["date"])
-    answered = any(mail.is_ours(m.get("from_email")) and any(not mail.is_ours(a) for a in m.get("to") or []) for m in messages)
     if answered and mail.just_thanks(latest["text"]):
         waiting = "them"                      # "Thank you so much!" needs no answer
 

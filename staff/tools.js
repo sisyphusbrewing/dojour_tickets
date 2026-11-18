@@ -65,6 +65,11 @@ var STAFF_TOOLS = [
   // Tickets & events
   { id: 'manager', group: 'events', min: 'manager', ico: '📋', href: '/manager/', title: 'Manager',
     desc: 'Guest lists for every show, ticket counts, new shows, staff logins.', find: 'comps guest list new show logins passwords counts' },
+  // The events@ inbox sorted: private events, ticket questions, accessibility,
+  // with Done / Later (Sam, Nov 17 2026: "We should probably do this for the
+  // events@ email as well").
+  { id: 'inbox', group: 'events', min: 'manager', ico: '📬', href: '/inbox/', title: 'Events inbox',
+    desc: 'Who wrote to events@ and what they want: private events, ticket questions, accessibility. Mark each one done.', find: 'events@ email private event rental party group refund accessibility' },
   { id: 'sales', group: 'events', min: 'manager', ico: '📈', href: '/sales/', title: 'Sales by day',
     desc: 'Tickets bought each day, website vs Dojour, and which shows still sell on Dojour.', find: 'report chart tickets sold' },
   { id: 'exchange', group: 'events', min: 'staff', ico: '🔁', href: '/exchange/', title: 'Swap tickets',

@@ -204,7 +204,11 @@ Dojour gotchas, learned the hard way:
   question, a donation request, a comic who belongs in booking@, a sales
   pitch), the dates and headcount they mentioned, and whose turn it is.
   Managers only. It never sends, labels or marks anything either, and both
-  readers print counts only. Checks: `supabase/tests/events_inbox/`.
+  readers print counts only. Managers work the list on **`inbox/`** (the
+  "Events inbox" tile): To answer, Waiting on them, Done, with Open in Gmail,
+  Done and Later on each; sales pitches sit folded at the bottom. Lease and
+  press emails (kinds `owner`, `press`) are the owner's alone: the database
+  never hands them to a manager login. Checks: `supabase/tests/events_inbox/`.
 - **Reorder buttons** sit at the top of `supplies/` (Sam, Nov 17 2026: "it
   would be nice to have buttons to order stuff like that, Pretzels"). Each is
   the usual order email to one vendor (pretzels Von Hanson's, jerky Ye Olde

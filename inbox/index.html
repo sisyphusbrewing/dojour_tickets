@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Events Inbox</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Events inbox">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="../staff/nav.js"></script>
+  <style>
+    /* The events@ inbox, sorted (Sam, Nov 17 2026: "We should probably do this
+       for the events@ email as well"). events@ is where the public writes and
+       nobody owns it, so things sat. events_inbox.py reads it every hour; this
+       page is the list a manager works through on a phone: who wrote, what
+       they want, open it in Gmail, mark it done. */
+    .group h3 { font-family: var(--body); font-size: 15px; font-weight: 700; color: var(--gray); margin: 26px 0 8px; text-transform: none; letter-spacing: 0; }
+    .row { display: block; }
+    .row .top { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+    .row .who { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .when { flex: 0 0 auto; color: var(--gray); font-size: 14px; }
+    .row .subj { margin-top: 2px; }
+    .row .snip { color: var(--gray); font-size: 15px; margin-top: 4px; overflow-wrap: anywhere; }
+    .row .facts { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .row .facts .tag { background: #3d3a3a; color: var(--white); }
+    .row .acts { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .row .by { color: var(--gray); font-size: 14px; margin-top: 8px; }
+    details.more { margin-top: 26px; }
+    details.more summary { cursor: pointer; color: var(--gray); font-weight: 700; font-size: 15px; padding: 6px 0; }
+    .empty-note { color: var(--gray); padding: 18px 0; }
+    .mail-note { margin-top: 18px; }
+  </style>
+</head>
+<body class="look">
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">Events inbox</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Events inbox</div>
+        </a>
+      </div>
+      <nav class="tabs3 hidden" id="tabs" aria-label="Parts of the inbox">
+        <a href="#answer" data-tab="answer" class="on">To answer<i class="hidden" id="answerCount"></i></a>
+        <a href="#waiting" data-tab="waiting">Waiting on them</a>
+        <a href="#done" data-tab="done">Done</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="empty hidden" id="notManager"></div>
+    <div id="page" class="hidden">
+      <div id="list"></div>
+      <p class="quiet mail-note">"Open in Gmail" opens the conversation in the events@ mailbox, so answer from there. This list catches up every hour.</p>
+    </div>
+  </main>
+  <div class="toast hidden" id="toast"></div>
+
+  <script>
+    // Who can open it: managers and the owner, same as the database
+    // (events_threads). Lease and press emails are the owner's alone; the
+    // database never hands them to a manager login.
+    var OPEN_TO = 'manager';
+    // What each kind is called on the page, in the order the groups appear.
+    var KIND = [
+      ['private', 'Private events and groups'],
+      ['tickets', 'Ticket questions'],
+      ['access', 'Accessibility'],
+      ['donation', 'Donation asks'],
+      ['comic', 'Comics and agents (belongs in booking@)'],
+      ['job', 'Job asks'],
+      ['owner', 'For Sam: lease and building'],
+      ['press', 'For Sam: reporters'],
+      ['other', 'Everything else'],
+      ['pitch', 'Sales pitches']
+    ];
+    // Sales pitches are listed, never answered by default: they sit folded
+    // at the bottom so the real people come first.
+    var FOLDED = { pitch: true };
+
+    var rows = [], tab = 'answer', me = '';
+
+    function shortDate(ts) { return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' }); }
+    function ago(ts) {
+      var days = Math.floor((Date.now() - new Date(ts)) / 86400000);
+      return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days < 14 ? days + ' days ago' : shortDate(ts);
+    }
+    function inTab(r) {
+      if (tab === 'done') return !!r.status;
+      if (r.status) return false;
+      return tab === 'waiting' ? r.waiting_on === 'them' : r.waiting_on !== 'them';
+    }
+
+    async function load() {
+      var res = await sb.from('events_threads')
+        .select('key,kind,subject,from_name,from_email,asked,people,snippet,link,last_at,msg_count,waiting_on,status,status_by,status_at')
+        .gte('last_at', new Date(Date.now() - 120 * 86400000).toISOString())
+        .order('last_at', { ascending: false });
+      if (res.error) { toast('Could not load the inbox: ' + res.error.message, true); return; }
+      rows = res.data || [];
+      draw();
+    }
+
+    function rowHtml(r) {
+      var facts = [];
+      if (r.asked) facts.push('📅 ' + escapeHtml(r.asked));
+      if (r.people) facts.push('👥 ' + escapeHtml(r.people) + ' people');
+      if (r.msg_count > 1) facts.push(r.msg_count + ' emails');
+      var acts = '';
+      if (r.link) acts += '<a class="btn btn-sm btn-primary" href="' + escapeHtml(r.link) + '" target="_blank" rel="noopener">Open in Gmail</a>';
+      if (r.status) acts += '<button class="btn btn-sm" data-set="" data-key="' + escapeHtml(r.key) + '">Put back</button>';
+      else acts += '<button class="btn btn-sm" data-set="done" data-key="' + escapeHtml(r.key) + '">Done</button>' +
+                   '<button class="btn btn-sm btn-ghost" data-set="later" data-key="' + escapeHtml(r.key) + '">Later</button>';
+      return '<div class="row">' +
+        '<div class="top"><span class="who">' + escapeHtml(r.from_name || r.from_email || 'Someone') + '</span><span class="when">' + ago(r.last_at) + '</span></div>' +
+        '<div class="subj">' + escapeHtml(r.subject || '(no subject)') + '</div>' +
+        (r.snippet ? '<div class="snip">' + escapeHtml(r.snippet) + '</div>' : '') +
+        (facts.length ? '<div class="facts">' + facts.map(function (f) { return '<span class="tag">' + f + '</span>'; }).join('') + '</div>' : '') +
+        (r.status ? '<div class="by">' + (r.status === 'done' ? 'Done' : 'Later') + (r.status_by ? ' · ' + escapeHtml(r.status_by) : '') + (r.status_at ? ' · ' + shortDate(r.status_at) : '') + '</div>' : '') +
+        '<div class="acts">' + acts + '</div>' +
+      '</div>';
+    }
+
+    function draw() {
+      var open = rows.filter(function (r) { return !r.status && r.waiting_on !== 'them' && r.kind !== 'pitch'; }).length;
+      var badge = $('answerCount');
+      badge.textContent = open; badge.classList.toggle('hidden', !open);
+      document.querySelectorAll('#tabs a').forEach(function (a) { a.classList.toggle('on', a.dataset.tab === tab); });
+
+      var mine = rows.filter(inTab), html = '';
+      KIND.forEach(function (k) {
+        var list = mine.filter(function (r) { return (r.kind || 'other') === k[0]; });
+        if (!list.length) return;
+        var body = '<div class="list">' + list.map(rowHtml).join('') + '</div>';
+        if (FOLDED[k[0]] && tab !== 'done') html += '<details class="more"><summary>' + k[1] + ' (' + list.length + ')</summary>' + body + '</details>';
+        else html += '<div class="group"><h3>' + k[1] + ' · ' + list.length + '</h3>' + body + '</div>';
+      });
+      if (!html) html = '<p class="empty-note">' + (tab === 'answer' ? 'Nothing waiting on us. 🎉' : tab === 'waiting' ? 'Nobody owes us an answer.' : 'Nothing marked done yet.') + '</p>';
+      $('list').innerHTML = html;
+    }
+
+    async function setStatus(key, status) {
+      var r = rows.find(function (x) { return x.key === key; }); if (!r) return;
+      var patch = { status: status || null, status_by: status ? me : null, status_at: status ? new Date().toISOString() : null };
+      var res = await sb.from('events_threads').update(patch).eq('key', key).select('key');
+      if (res.error || !res.data || !res.data.length) { toast('Could not save that. Try again.', true); return; }
+      Object.assign(r, patch);
+      draw();
+      toast(status === 'done' ? 'Marked done' : status === 'later' ? 'Set aside for later' : 'Put back');
+    }
+
+    $('list').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-key]'); if (!b) return;
+      setStatus(b.dataset.key, b.dataset.set);
+    });
+    document.querySelectorAll('#tabs a').forEach(function (a) {
+      a.addEventListener('click', function (e) { e.preventDefault(); tab = a.dataset.tab; history.replaceState(null, '', '#' + tab); draw(); window.scrollTo(0, 0); });
+    });
+
+    setupSignIn(async function (role) {
+      if (!roleAtLeast(role, OPEN_TO)) { showNoAccess(OPEN_TO, ['page', 'tabs']); return; }
+      var u = (await sb.auth.getUser()).data.user;
+      me = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
+      var h = location.hash.slice(1); if (h === 'waiting' || h === 'done') tab = h;
+      $('page').classList.remove('hidden'); $('tabs').classList.remove('hidden');
+      await load();
+    });
+  </script>
+</body>
+</html>
