@@ -14,6 +14,14 @@ live theme stays off limits (Sam's rule).
 
 Usage:  python shopify_pages.py [file ...]     (default: every known page file)
 Safety: DRY_RUN=1 prints what would change without touching Shopify.
+
+If the repo's Shopify app isn't allowed to read or write pages (it lacks the
+read_content / write_content scopes, as it did on Nov 17 2026), the script
+says so in a warning and stops without failing. A red run here only emailed
+Sam a "failed" notice on every merge (Sam, Nov 17 2026: "Why are we getting
+the GitHub failures in my inbox?"), and the fix for it is a setting in
+Shopify, not anything in the repo. Until that setting is on, page text gets
+pushed with the Shopify connector instead.
 """
 import glob
 import os
@@ -44,6 +52,16 @@ mutation($id: ID!, $page: PageUpdateInput!) {
 }"""
 READ = "query($id: ID!) { page(id: $id) { handle body } }"
 
+NO_ACCESS_NOTE = ("Shopify won't let this app read or write pages (it needs the "
+                  "read_content and write_content access scopes). Nothing was "
+                  "changed. Push the page text with the Shopify connector, or "
+                  "add those scopes to the app in Shopify.")
+
+
+def access_denied(err):
+    """True when a Shopify error is the app missing a permission (scope)."""
+    return "ACCESS_DENIED" in str(err) or "access scope" in str(err)
+
 
 def main(files):
     jobs = []
@@ -60,7 +78,14 @@ def main(files):
     failed = 0
     for path, pid, body in jobs:
         gid = f"gid://shopify/Page/{pid}"
-        live = (shop.gql(READ, {"id": gid}).get("page") or {})
+        try:
+            live = (shop.gql(READ, {"id": gid}).get("page") or {})
+        except RuntimeError as err:
+            if not access_denied(err):
+                raise
+            # A GitHub warning shows on the run's page without failing it.
+            print(f"::warning title=Shopify pages not pushed::{NO_ACCESS_NOTE}")
+            return 0
         if not live:
             print(f"FAIL {path}: page {pid} not found")
             failed += 1

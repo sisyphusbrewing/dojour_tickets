@@ -1,6 +1,9 @@
 import glob
 import unittest
 
+from unittest import mock
+
+import shopify_pages
 from shopify_pages import PAGE_FILES, split_page_file
 
 
@@ -29,6 +32,28 @@ class SplitPageFile(unittest.TestCase):
         for path in PAGE_FILES:
             text = open(path, encoding="utf-8").read()
             self.assertNotRegex(text, r"Thursday[^.<]*\b7(:00)? ?PM", path)
+
+
+class MissingScopes(unittest.TestCase):
+    """Without page access the run warns and passes, so a merge doesn't
+    email Sam a failure (Sam, Nov 17 2026)."""
+
+    def run_with(self, error):
+        shop = mock.Mock()
+        shop.gql.side_effect = RuntimeError(error)
+        with mock.patch("maintain_shows.Shopify", return_value=shop):
+            return shopify_pages.main(["mic/shopify-page.html"]), shop
+
+    def test_access_denied_warns_and_passes_without_writing(self):
+        code, shop = self.run_with(
+            "Shopify error: [{'message': 'Access denied for page field. Required access: "
+            "`read_content` access scope', 'extensions': {'code': 'ACCESS_DENIED'}}]")
+        self.assertEqual(code, 0)
+        self.assertEqual(shop.gql.call_count, 1)  # read only, no pageUpdate
+
+    def test_other_errors_still_fail(self):
+        with self.assertRaises(RuntimeError):
+            self.run_with("Shopify error: Throttled")
 
 
 if __name__ == "__main__":
