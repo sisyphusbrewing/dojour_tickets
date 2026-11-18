@@ -62,7 +62,7 @@ def hat(img, cx, cy, s):
     d.ellipse((cx - 150 * s, cy - 84 * s, cx + 150 * s, cy - 36 * s), fill=(12, 12, 12))
 
 
-def tuesday(w, h, name):
+def tuesday(w, h, name, timeline="7 PM · COMEDY CLUB · FREE"):
     img = Image.new("RGB", (w, h), CHAR)
     d = ImageDraw.Draw(img)
     story = h > 1500
@@ -73,7 +73,7 @@ def tuesday(w, h, name):
     y += 190
     spaced(d, w / 2, y, "OPEN MIC", B(150), WHITE, 10)
     y += 190
-    spaced(d, w / 2, y, "7 PM · COMEDY CLUB · FREE", fit(d, "7 PM · COMEDY CLUB · FREE", 60, 6, w - 140), WHITE, 6)
+    spaced(d, w / 2, y, timeline, fit(d, timeline, 60, 6, w - 140), WHITE, 6)
     y += 100 if story else 80
     hy = y + (300 if story else 190)
     hat(img, w // 2, hy, 1.15 if story else 0.75)
@@ -140,5 +140,8 @@ def thursday(w, h, name):
 
 tuesday(1080, 1350, "tuesday-open-mic-feed.jpg")
 tuesday(1080, 1920, "tuesday-open-mic-story.jpg")
+# Ad version: the wide (1.91:1) crop cuts off the TUESDAYS band, so the
+# centre line names the day too (Sam's crop rule, Nov 11 2026).
+tuesday(1080, 1350, "tuesday-open-mic-ad.jpg", "EVERY TUESDAY · 7 PM · FREE")
 thursday(1080, 1350, "thursday-showcase-feed.jpg")
 thursday(1080, 1920, "thursday-showcase-story.jpg")
