@@ -331,16 +331,17 @@ def battery_warning(name):
                 text=f"{name}\\nPLUG IN DECK\\nbatt $(custom:deck_battery)%")
 
 
-def supabase_call(rpc, body=None, raw_body=None):
+def supabase_call(rpc, body=None, raw_body=None, into=""):
     """Calls one of our Supabase functions (menu board, stage timer). `raw_body` is for a
-    body with a Companion variable in it, which Companion fills in when the key is pressed."""
+    body with a Companion variable in it, which Companion fills in when the key is pressed.
+    `into` = a custom variable that keeps what the function answers (as JSON text)."""
     return action(
         HTTP, "post",
         url=f"{SUPABASE}/rest/v1/rpc/{rpc}",
         body=raw_body if raw_body is not None else json.dumps(body or {}),
         header=json.dumps({"apikey": SUPABASE_KEY}),
         contenttype="application/json",
-        jsonResultDataVariable="",
+        jsonResultDataVariable=into,
         result_stringify=True,
         statusCodeVariable="",
     )
@@ -433,7 +434,103 @@ CUSTOM_VARIABLES = {
     "door_total": ("Door count: tickets for that show", 0),
     "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
     "music_out": ("Music: 1 while it is faded out for a show (START SHOW, or the FADE OUT key)", 0),
+    "mic": ("Open mic lineup: what the mic_deck function last answered (JSON)", '{"on":false}'),
 }
+
+
+# --------------------------------------------------------------------------
+# The open mic lineup (Sam, Nov 17 2026: "Can we have the comedy line up run through the
+# Stream Deck for the tuesday night shows?" ... "When it says start show it pulls the day of
+# the show" ... "it says like who is on, and how much time left and they would hit start
+# next comic when that person has finished").
+#
+# START SHOW asks the database for tonight's lineup (mic_deck 'load'; the function is in
+# supabase/migrations/20261118020000_mic_deck_lineup.sql) and keeps the answer in the custom
+# variable "mic". On a night with a drawn lineup the SHOW screen then has:
+#     ON NOW    the comic on stage and their time left (red with a minute left)
+#     UP NEXT   who is next and their set length; tap = they aren't here, skip them
+#               (they go to the end; skipped twice, they're off)
+#     START NEXT COMIC  (where START CLOCK sits) the next comic goes on and their clock starts
+#               at their length: 3 min drawn, 5 min booked or last (the database decides,
+#               and starts the comic's clock itself)
+# Any other night "mic" says {"on":false}, the two keys stay blank and START CLOCK works
+# the way it always has.
+# --------------------------------------------------------------------------
+LINEUP_OFF = '{"on":false}'
+NEXT_COMIC_GUARD_S = 5   # a second tap this soon after a start is ignored (a double tap would skip a comic)
+
+
+def mic(field):
+    """One field of the lineup answer, e.g. mic('now') = the comic on stage."""
+    return f"jsonpath(jsonparse($(custom:mic)), '$.{field}')"
+
+
+LINEUP_ON = f"{mic('total')} > 0"
+_NOW, _NEXT = mic("now"), mic("next")
+
+
+def lineup_call(move):
+    return supabase_call("mic_deck", {"move": move}, into="mic")
+
+
+def lineup_next():
+    """START NEXT COMIC: the deck's own copy of the clock starts at the next comic's length
+    (read before the answer comes back, so it is still the comic UP NEXT), and the database
+    moves the lineup on and starts the comic's clock."""
+    return [set_var("timer_min", mic("next_min"), expression=True),
+            set_var("timer_t0", "$(internal:time_unix)", expression=True),
+            set_number("timer_wrap", 0),
+            lineup_call("next")]
+
+
+ON_NOW_TEXT = (
+    f"!({LINEUP_ON}) ? '' : "
+    f"{mic('n')} == 0 ? 'HOST\\nIS UP' : "
+    f"{_NOW} == '' ? 'LINEUP\\nDONE' : "
+    f"$(custom:timer_t0) == 0 ? concat('ON NOW\\n', {_NOW}) : "
+    f"{_E} >= {_L} ? concat('ON NOW\\n', {_NOW}, '\\nOVER ', secondsToTimestamp({_E} - {_L}, 'mm:ss')) : "
+    f"concat('ON NOW\\n', {_NOW}, '\\n', secondsToTimestamp({_L} - {_E}, 'mm:ss'), ' left')"
+)
+UP_NEXT_TEXT = (
+    f"!({LINEUP_ON}) ? '' : "
+    f"{_NEXT} == '' ? ({_NOW} == '' ? '' : 'LAST\\nCOMIC\\nIS UP') : "
+    f"concat('UP NEXT\\n', {_NEXT}, '\\n', {mic('next_min')}, ' MIN\\ntap = skip')"
+)
+NEXT_COMIC_TEXT = (
+    f"!({LINEUP_ON}) ? 'START\\nCLOCK' : "
+    f"{_NEXT} != '' ? 'START\\nNEXT\\nCOMIC' : "
+    f"{_NOW} != '' ? 'LAST ONE\\nDONE\\ntap = stop' : 'LINEUP\\nDONE'"
+)
+NEXT_COMIC_STEP = (
+    f"!({LINEUP_ON}) ? 1 : "
+    f"($(custom:timer_t0) != 0 && $(internal:time_unix) - $(custom:timer_t0) < {NEXT_COMIC_GUARD_S}) ? 4 : "
+    f"({_NEXT} != '' ? 2 : 3)"
+)
+
+
+def on_now_key():
+    return button(ON_NOW_TEXT, expression=True, bgcolor=BLACK,
+                  feedbacks=[when(f"{LINEUP_ON} && {CLOCK_RUNNING}", bgcolor=0x1F7A35, color=WHITE),
+                             when(f"{LINEUP_ON} && {CLOCK_RED}", bgcolor=RED, color=WHITE)])
+
+
+def up_next_key():
+    return button(UP_NEXT_TEXT, expression=True, bgcolor=BLACK,
+                  steps=[[], [lineup_call("skip")]],
+                  step_expression=f"({LINEUP_ON}) && {_NEXT} != '' ? 2 : 1",
+                  feedbacks=[when(f"{LINEUP_ON} && {_NEXT} != ''", bgcolor=GREY, color=WHITE)])
+
+
+def next_comic_key():
+    """START CLOCK, or START NEXT COMIC on a night with a lineup."""
+    return button(NEXT_COMIC_TEXT, expression=True, bgcolor=0x1F7A35,
+                  steps=[clock_start() + [lineup_call("load")],   # no lineup: the clock as always
+                         lineup_next(),                           # next comic on
+                         clock_stop() + [lineup_call("next")],    # last comic finished
+                         []],                                     # a double tap: ignored
+                  step_expression=NEXT_COMIC_STEP,
+                  feedbacks=[when(f"!({LINEUP_ON}) && {CLOCK_RUNNING}", bgcolor=0x2FA04A, color=WHITE,
+                                  text="RESTART\\nCLOCK\\nnext comic")])
 
 
 def clock_tile():
@@ -855,8 +952,9 @@ def home_page():
             # the SHOW screen; it does not run the look again. The music fades out with the
             # lights, unless it was already faded out by hand (third choice).
             (0, 2): button(START_SHOW_TEXT, expression=True, bgcolor=SHOW_COLOR,
-                           steps=[look_show() + music_fade_out() + [go(PAGE_SHOW)], [go(PAGE_SHOW)],
-                                  look_show() + [go(PAGE_SHOW)]],
+                           steps=[look_show() + music_fade_out() + [lineup_call("load"), go(PAGE_SHOW)],
+                                  [lineup_call("load"), go(PAGE_SHOW)],
+                                  look_show() + [lineup_call("load"), go(PAGE_SHOW)]],
                            step_expression=f"$(custom:room_look) == 'show' ? 2 : ({MUSIC_OUT} ? 3 : 1)",
                            feedbacks=[when(look_is("show"), bgcolor=RED, color=WHITE)]),
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
@@ -882,9 +980,10 @@ def show_page():
                                                 "text": "SHOW IS ON\\nREC\\n$(obs:recording_timecode)"})]),
             (0, 3): button("END\\nSHOW", bgcolor=GREY, press=[go(PAGE_END)], feedbacks=[battery_warning("END SHOW")]),
             (1, 0): god_mic_key(),
-            (1, 1): button("START\\nCLOCK", bgcolor=0x1F7A35, press=clock_start(),
-                           feedbacks=[when(CLOCK_RUNNING, bgcolor=0x2FA04A, color=WHITE,
-                                           text="RESTART\\nCLOCK\\nnext comic")]),
+            # Tuesday open mic: who is on and who is next (blank any other night)
+            (0, 1): on_now_key(),
+            (0, 2): up_next_key(),
+            (1, 1): next_comic_key(),
             (1, 2): button("WRAP\\nIT UP", bgcolor=0x8A1C1C, press=clock_wrap(),
                            feedbacks=[when("$(custom:timer_wrap) == 1", bgcolor=0xFF2020, color=WHITE,
                                            text="WRAP IT UP\\nIS ON\\ntap = clear")]),
@@ -905,8 +1004,9 @@ def end_show_page():
             (0, 0): button("END THE\\nSHOW?", bgcolor=BLACK),
             (0, 3): button("NO\\nGO BACK", bgcolor=BACK_GREY, press=[go(PAGE_SHOW)]),
             (1, 1): button("YES\\nEND SHOW\\nlights up", bgcolor=RED,
-                           steps=[look_preshow() + clock_stop() + [go(PAGE_HOME)],
-                                  look_preshow() + clock_stop() + music_bring_back() + [go(PAGE_HOME)]],
+                           steps=[look_preshow() + clock_stop() + [set_var("mic", LINEUP_OFF), go(PAGE_HOME)],
+                                  look_preshow() + clock_stop() + music_bring_back()
+                                  + [set_var("mic", LINEUP_OFF), go(PAGE_HOME)]],
                            step_expression=f"{MUSIC_OUT} ? 2 : 1"),
             **main_controls(),
         },

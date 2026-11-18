@@ -66,7 +66,10 @@ class StartShow(unittest.TestCase):
         self.assertEqual(sets(self.normal, "room_look"), ["show"])
 
     def test_show_already_on_only_opens_the_show_screen(self):
-        self.assertEqual(names(self.show_already_on), ["set_page"])
+        # It also re-reads the open mic lineup (Nov 17 2026), which touches no lights or sound.
+        lineup = [n for n, o in self.show_already_on if n == "post" and o["url"].endswith("/rpc/mic_deck")]
+        self.assertEqual(len(lineup), 1)
+        self.assertEqual([n for n in names(self.show_already_on) if n != "post"], ["set_page"])
 
     def test_music_already_out_is_not_remembered_again(self):
         self.assertEqual(music(self.music_already_out, "fad_s"), [])
