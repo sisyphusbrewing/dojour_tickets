@@ -2,9 +2,10 @@ name: Block Website Sales on Dojour
 
 on:
   schedule:
-    # Daily 14:20 UTC = 8:20 AM Central, after a Sync Ticket Sales run. Plan only:
-    # Dojour refuses holds made by scripts, so this emails Sam when holds are
-    # needed and Claude adds them in his Chrome (Nov 10 2026).
+    # Daily 14:20 UTC = 8:20 AM Central. Plan only: Dojour refuses holds made by
+    # scripts. A Claude scheduled task adds the holds in Sam's Chrome at 7:43 AM
+    # and 4:43 PM Central (Nov 18 2026), so this run is the backup: it emails Sam
+    # only if seats are still unblocked.
     - cron: '20 14 * * *'
   workflow_dispatch:
     inputs:

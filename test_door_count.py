@@ -142,3 +142,24 @@ class TellDeck(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OpeningTime(unittest.TestCase):
+    """DAYTIME at opening (Sam, Nov 18 2026): once a day, only right at opening, never over a show."""
+    TODAY = f"{TODAY:%Y-%m-%d}"
+
+    def test_presses_in_the_first_half_hour(self):
+        self.assertTrue(dc.should_open(0, self.TODAY, "", "off"))
+        self.assertTrue(dc.should_open(29, self.TODAY, "2000-01-01", "day"))
+
+    def test_not_before_opening_or_later_in_the_day(self):
+        self.assertFalse(dc.should_open(None, self.TODAY, "", "off"))
+        self.assertFalse(dc.should_open(30, self.TODAY, "", "off"))
+        self.assertFalse(dc.should_open(-1, self.TODAY, "", "off"))
+
+    def test_only_once_a_day(self):
+        self.assertFalse(dc.should_open(5, self.TODAY, self.TODAY, "off"))
+
+    def test_never_over_pre_show_or_a_show(self):
+        self.assertFalse(dc.should_open(5, self.TODAY, "", "pre"))
+        self.assertFalse(dc.should_open(5, self.TODAY, "", "show"))

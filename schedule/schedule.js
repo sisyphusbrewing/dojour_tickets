@@ -12,7 +12,11 @@ var DAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
 // "Text" gets the same notice by email, and the page says so.
 var TEXTS_ON = false;
 
-var role = 'door', me = null, isMgr = false, myRow = null;
+// isMgr: this login may build the schedule. That is a manager, or a staff
+// login the database has marked "builds the schedule" (Sam, Nov 18 2026: one
+// of the bartenders "wants to take over making the schedule"). isBoss: a real manager login, the
+// only kind that changes the numbers behind "how many people a day needs".
+var role = 'door', me = null, isMgr = false, isBoss = false, myRow = null;
 var people = [], nameOf = {};
 var weekStart = null;                 // the Monday of the week on screen, as a Date at noon
 var shifts = [], timeOff = [], avail = [], showsByDay = {};
@@ -64,7 +68,7 @@ function fail(r, what) { toast((r.error && r.error.message) || what || 'That did
 
 // ---------- Start ----------
 setupSignIn(async function (r) {
-  role = r; isMgr = roleAtLeast(role, 'manager');
+  role = r; isBoss = roleAtLeast(role, 'manager'); isMgr = isBoss;
   try { localStorage.setItem('staffRoleSeen', role); } catch (e) {}
   if (!roleAtLeast(role, 'staff')) {
     $('page').classList.remove('hidden');
@@ -72,6 +76,13 @@ setupSignIn(async function (r) {
     return;
   }
   me = (await sb.auth.getUser()).data.user;
+  // A staff login that builds the schedule gets what a manager gets on this
+  // page. The database says who. If it can't say (it doesn't know the
+  // question yet, or the answer didn't arrive), the page stays as it is for
+  // staff.
+  if (!isMgr) {
+    try { var can = await sb.rpc('can_schedule'); if (!can.error && can.data === true) isMgr = true; } catch (e) {}
+  }
   try { view = localStorage.getItem('schedView') || 'all'; } catch (e) {}
   if (view === 'grabs') view = 'all';
   weekStart = mondayOf(new Date());
@@ -293,8 +304,8 @@ $('needCancel').addEventListener('click', function () { $('needDialog').close();
 // The numbers behind it, in a box under the week that managers can change.
 var RULE_BOXES = { rOpen: 'open_people', rShow: 'show_extra', rFree: 'free_extra', rFullAt: 'full_at', rFull: 'full_extra', rLead: 'lead_minutes' };
 function drawRules() {
-  $('needFold').classList.toggle('hidden', !(isMgr && needRules));
-  if (!isMgr || !needRules || $('needFold').contains(document.activeElement)) return;
+  $('needFold').classList.toggle('hidden', !(isBoss && needRules));
+  if (!isBoss || !needRules || $('needFold').contains(document.activeElement)) return;
   Object.keys(RULE_BOXES).forEach(function (id) { $(id).value = needRules[RULE_BOXES[id]]; });
   // An early show is the exception to the minutes box above (Sam, Nov 17
   // 2026): say so, with the numbers the database works from.
@@ -388,7 +399,7 @@ function drawManagerBar() {
   if (!shifts.length) bits.push(usual && usual.length ? 'Nothing on this week yet. Fill the usual week and adjust, or add shifts one at a time.'
     : 'Nothing on this week yet. Add shifts with “+ Shift”, or copy last week and adjust.');
   else {
-    bits.push(drafts ? '<b>' + drafts + ' draft shift' + (drafts > 1 ? 's' : '') + '</b> only managers can see.' : 'Everything on this week is posted.');
+    bits.push(drafts ? '<b>' + drafts + ' draft shift' + (drafts > 1 ? 's' : '') + '</b> only ' + (isBoss ? 'managers' : 'you and the managers') + ' can see.' : 'Everything on this week is posted.');
     if (open) bits.push(open + ' open shift' + (open > 1 ? 's' : '') + ' with nobody on ' + (open > 1 ? 'them' : 'it') + '.');
   }
   $('mgrStatus').innerHTML = bits.join(' ');

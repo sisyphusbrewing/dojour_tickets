@@ -52,8 +52,11 @@ Dojour gotchas, learned the hard way:
 - Dojour **rejects add-reservation calls made by scripts** ("You do not have
   permission"), from GitHub, the office PC and Sam's Mac alike, but accepts
   them through the dashboard in Sam's own signed-in Chrome. So
-  `dojour_holds.py` only plans (daily) and emails Sam; holds get added in his
-  Chrome. Don't try to make a script imitate a browser. Reading from Dojour
+  `dojour_holds.py` only plans, and a Claude scheduled task ("Dojour seat
+  top-up", 7:43 AM and 4:43 PM Central, since Nov 18 2026: Sam, "Dojour seat
+  blocks are supposed to be automated") runs the plan and adds the holds in
+  his Chrome. The 8:20 AM GitHub run emails Sam only if seats are still open
+  (his Mac was asleep). Don't try to make a script imitate a browser. Reading from Dojour
   works from anywhere.
 - Sam's own Dojour holds (rows with no buyer email, e.g. "Shopify Sales")
   are not sales. Leave them out of any sales or agent count; agents read every
@@ -134,6 +137,23 @@ Dojour gotchas, learned the hard way:
   (`usual_shifts`), never in this repo. Rules in
   `supabase/migrations/20261117290000_usual_week.sql`, checks in
   `supabase/tests/usual_week/`.
+- **A staff login can be marked "builds the schedule"** (Sam, Nov 18 2026:
+  one of the bartenders "wants to take over making the schedule"). A manager
+  login opens far more than the Schedule (Payroll's hours and tips, the
+  Manager page with the staff logins, booking, supply orders), so this is a
+  mark on a staff login instead. On the Schedule that login does what a
+  manager does: drafts, posting, the usual week, a day's number set by hand,
+  names and who is on the schedule, and answering time off (never its own; a
+  manager answers that one). It is told the schedule's news that managers
+  are told, but not the time clock's. Everywhere else it is still a staff
+  login, and the box of staffing numbers stays with managers. The mark is
+  `staff_roles.builds_schedule`, set in the database on Sam's word; there is
+  no button for it, and who carries it is not written in this repo.
+  `can_schedule()` is the question the Schedule's rules ask now: a new
+  version of one of the Schedule's functions should ask it, not
+  `is_manager()`. Rules in
+  `supabase/migrations/20261118060000_schedule_builder.sql`, checks in
+  `supabase/tests/schedule_builder/`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones").
   All staff use it since Nov 17 2026 (Sam: "they will be tracking their tips
@@ -204,7 +224,12 @@ Dojour gotchas, learned the hard way:
   question, a donation request, a comic who belongs in booking@, a sales
   pitch), the dates and headcount they mentioned, and whose turn it is.
   Managers only. It never sends, labels or marks anything either, and both
-  readers print counts only. Managers work the list on **`inbox/`** (the
+  readers print counts only.
+  The one exception is `inbox_trash.py` (workflow "Inbox trash", by hand
+  only): it moves conversations Claude names in events@ or booking@ to Trash,
+  never a permanent delete, and refuses any conversation someone at
+  Sisyphus wrote in (Sam, Nov 18 2026: "it would be nice to not have to
+  deal with stuff that is obvious trash ... In all 3 inboxes"). Managers work the list on **`inbox/`** (the
   "Events inbox" tile): To answer, Waiting on them, Done, with Open in Gmail,
   Done and Later on each; sales pitches sit folded at the bottom. Lease and
   press emails (kinds `owner`, `press`) are the owner's alone: the database
@@ -247,7 +272,13 @@ Dojour gotchas, learned the hard way:
   sale and the payment in GoTab and do the balance on the page. Minnesota
   gift cards can't expire or carry fees. Rules in
   `supabase/migrations/20261118000000_gift_cards.sql`, checks in
-  `supabase/tests/gift_cards/`.
+  `supabase/tests/gift_cards/`. **`station/`** is the Boulder, the touch
+  screen at the front bar (Sam, Nov 18 2026): an ESP32 screen board with a
+  PN532 reader (wired in serial mode; on I2C it clashes with the board's own
+  chip) that makes a new card from a blank in one go (`gift_card_new()`,
+  write, read back, lock, load) and does Add and Take off for any card.
+  PlatformIO; the club wifi goes in a gitignored `secrets.h`, and the
+  station signs in with its own staff login typed on the screen.
 - This repo is public, so are its Actions logs. Scripts must not print staff
   names, email addresses, phone numbers or message text.
 
@@ -272,7 +303,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_inbox_trash`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.

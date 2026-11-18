@@ -120,3 +120,16 @@ update gift_card_moves set amount = 1000 where id = 1;
 delete from gift_card_moves where id = 1;
 update gift_cards set active = true where number = 2;
 select case when count(*) = 9 then 'ok' else 'FAIL' end || ' nine rows in the history, none lost' from gift_card_moves;
+
+-- The station's New card button (20261118100000_gift_station_new_card.sql).
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
+create temp table n as select gift_card_new() n;
+select case when (n->>'number')::int = 4 and n->>'code' ~ '^[a-f0-9]{32}$'
+            and (gift_card_look(n->>'code')->>'loaded')::boolean = false
+  then 'ok' else 'FAIL' end || ' staff make one new blank card, #4'
+  from n;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000005', false);
+\echo 'expect 1 ERROR: the door login cannot make a card'
+select gift_card_new();
+reset role;
