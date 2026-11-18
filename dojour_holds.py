@@ -21,9 +21,12 @@ Env: DOJOUR_STATE (JSON or a file path) or DOJOUR_TOKEN. SUPABASE_KEY is optiona
   NOTIFY_TO=email    plan-only runs email this address when holds are needed
 
 Dojour refuses holds made by a script from any machine; it only accepts them
-through the dashboard in Sam's own Chrome. So the daily GitHub run only plans,
-and emails Sam the list when something needs blocking. He then asks Claude in
-the Dojour thread to "top up Dojour", which adds them in his Chrome (Nov 10 2026).
+through the dashboard in Sam's own Chrome. So this script only plans. Since
+Nov 18 2026 (Sam: "Dojour seat blocks are supposed to be automated") a Claude
+scheduled task runs this plan at 7:43 AM and 4:43 PM Central and adds the
+holds in Sam's Chrome by itself. The daily GitHub run (8:20 AM Central) is the
+backup: it emails Sam only when seats are still unblocked, which means the
+morning top-up couldn't reach his Chrome (Mac asleep or Chrome closed).
 """
 import os
 import re
@@ -223,7 +226,9 @@ def notice_text(needed):
     lines = [f"Dojour needs {total} more seat{'s' if total != 1 else ''} blocked for website sales "
              f"on {len(needed)} showing{'s' if len(needed) != 1 else ''}:", ""]
     lines += [f"- {title}, {date}: {seats} ({detail})" for title, date, seats, detail in needed]
-    lines += ["", 'To add them, say "top up Dojour" in the Dojour holds thread while your Mac is on.',
+    lines += ["", "These are normally blocked automatically at 7:43 AM and 4:43 PM, in Chrome on your Mac.",
+              "This morning's top-up couldn't reach Chrome (Mac asleep or Chrome closed), so they are still open.",
+              "Leave Chrome open on the Mac and the 4:43 PM run will add them, or say \"top up Dojour\" in the project.",
               "Until then, Dojour can sell these seats a second time.", "", "Sisyphus Box Office"]
     return "\n".join(lines)
 

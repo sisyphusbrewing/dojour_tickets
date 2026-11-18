@@ -11,6 +11,7 @@ class NoticeText(unittest.TestCase):
         self.assertIn("on 2 showings", text)
         self.assertIn("- Liz Miele, Fri, Feb 26, 2027 • 7:00 PM: 18 (18 Liz Miele /// Comedy)", text)
         self.assertIn("top up Dojour", text)
+        self.assertIn("blocked automatically", text)
 
     def test_singular(self):
         text = notice_text([("Keller", "Fri, Nov 20 • 10:00 PM", 1, "1 Jeffrey Keller")])
