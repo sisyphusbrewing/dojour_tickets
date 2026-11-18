@@ -19,6 +19,14 @@ starts it at sign-in. Every 30 seconds it:
                    this is more than 3 minutes old, so a stale number never
                    sits on the deck if this script or the internet is down.
 
+It also opens the taproom (Sam, Nov 18 2026: "The sign should turn on 15 mins
+before we open and the taproom should also go into daytime mode"). Each reading
+asks Supabase (taproom_opening) how long ago "15 minutes before opening" was
+today. In the first half hour after that, once a day, it presses the deck's
+DAYTIME key, unless the room is already in PRE-SHOW or a show. If the PC was
+off at opening it does nothing later in the day, so it never undoes a look
+someone picked by hand.
+
 It signs in with the staff login "recorder", the same one the recordings job
 uses. The password is in %USERPROFILE%\\.sisyphus\\recordings.env
 (RECORDER_PASSWORD=...), never in the repo. No extra Python packages needed.
@@ -50,6 +58,9 @@ STILL_NEXT = timedelta(hours=1)   # a show stays "the next show" until it has be
 SIGN_IN_EVERY = 45 * 60           # the sign-in lasts an hour; renew before it runs out
 STATE_DIR = Path(os.environ.get("USERPROFILE") or Path.home()) / ".sisyphus"
 LOG = STATE_DIR / "door-count.log"
+OPENED = STATE_DIR / "taproom-opened.txt"   # the last date DAYTIME was pressed for opening
+OPEN_WINDOW = 30                  # minutes after "15 minutes before opening" that it may still press
+DAYTIME_KEY = "/api/location/1/0/0/press"   # HOME page, top-left key: DAYTIME
 
 MONTHS = {m: i for i, m in enumerate("jan feb mar apr may jun jul aug sep oct nov dec".split(), start=1)}
 # The door app writes show times as "Fri, Nov 13 • 8:00 PM" (sometimes with a year).
@@ -173,6 +184,32 @@ def tell_deck(reading, now):
     raise OSError(f"Companion did not answer on {' or '.join(addresses)}: {nobody_home}")
 
 
+def should_open(minutes, today, last_opened, room_look):
+    """Press DAYTIME now? Only in the first half hour of opening, once a day, and never over
+    PRE-SHOW or a show that someone already started."""
+    return (minutes is not None and 0 <= minutes < OPEN_WINDOW and last_opened != today
+            and room_look not in ("pre", "show"))
+
+
+def open_taproom(now):
+    """Once a day at opening: press DAYTIME on the deck. Returns what it did, for the log."""
+    minutes = call(f"{SUPABASE_URL}/rest/v1/rpc/taproom_opening", body={}, headers={"apikey": ANON_KEY}).get("minutes")
+    today = f"{now:%Y-%m-%d}"
+    last = OPENED.read_text().strip() if OPENED.exists() else ""
+    if minutes is None or not (0 <= minutes < OPEN_WINDOW) or last == today:
+        return None
+    address = _answered or companion_addresses()[0]
+    req = urllib.request.Request(f"{address}/api/custom-variable/room_look/value", method="GET")
+    with urllib.request.urlopen(req, timeout=5) as r:
+        look = r.read().decode().strip()
+    if not should_open(minutes, today, last, look):
+        OPENED.write_text(today)   # a show look is on: leave it, and don't try again today
+        return f"opening: left the room as it was ({look})"
+    call(f"{address}{DAYTIME_KEY}", timeout=5)
+    OPENED.write_text(today)
+    return "opening: pressed DAYTIME"
+
+
 def log(message):
     line = f"{datetime.now():%Y-%m-%d %H:%M:%S} {message}"
     print(line, flush=True)
@@ -200,6 +237,12 @@ def main():
                 print(key_text(reading))
                 return
             tell_deck(reading, now)
+            try:
+                opened = open_taproom(now)
+                if opened:
+                    log(opened)
+            except Exception as e:   # never let opening get in the way of the count
+                log(f"opening: {e}")
             if reading != last:   # log changes only, not every 30 seconds
                 log(key_text(reading))
                 last = reading

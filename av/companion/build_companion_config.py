@@ -584,7 +584,8 @@ def govee(bulb, kind, instance, value, sku="R14C0", device=None):
 
 
 # Daytime: all three soft warm white. Sam asked for 2600K; 2700K is the bulbs' warmest (Oct 20 2026).
-HALL_DAYTIME = {bulb: (60, {"kelvin": 2700}) for bulb in HALL_BULBS}
+# 30% (Sam, Nov 18 2026: "the hallway lights should be dimmer for daytime mode"; was 60%).
+HALL_DAYTIME = {bulb: (30, {"kelvin": 2700}) for bulb in HALL_BULBS}
 
 
 def hall_look(look, bulb):
