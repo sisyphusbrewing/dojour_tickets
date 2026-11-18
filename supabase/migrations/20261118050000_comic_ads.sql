@@ -2,7 +2,7 @@
 -- "We should create a simple platform on the staff page for Colin (and other
 -- comics) to access these metrics", and "It should have them login").
 --
--- The page is staff.sisyphusbrewing.com/ads/. Each comic signs in with a
+-- The page is staff.sisyphusbrewing.com/results/. Each comic signs in with a
 -- login and password of their own and sees only their own shows: what we
 -- spent, how many people saw the ads, how many clicked, what a click cost,
 -- per platform (Facebook/Instagram, Reddit), and the ticket counts we've
@@ -218,6 +218,10 @@ $$;
 revoke all on function public.comic_ads_login(text, text), public.comic_ads_client(text),
   public.comic_ads_logout(text), public.comic_ads_report(text),
   public.comic_ads_set_password(text, text, text) from public;
+-- Supabase also grants new functions to anon and authenticated by name, so
+-- the helper is taken back from them explicitly; only the four below are
+-- for the page.
+revoke all on function public.comic_ads_client(text) from anon, authenticated;
 grant execute on function public.comic_ads_login(text, text), public.comic_ads_logout(text),
   public.comic_ads_report(text), public.comic_ads_set_password(text, text, text)
   to anon, authenticated;
