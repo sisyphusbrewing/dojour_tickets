@@ -195,6 +195,16 @@ Dojour gotchas, learned the hard way:
   `booking_threads` (one row per conversation in the booking@ inbox).
   `booking_inbox.py` fills `booking_threads` every hour by reading booking@
   over IMAP, read-only; it never sends, labels or marks anything.
+- **The events@ inbox is read the same way** (Sam, Nov 17 2026: "We should
+  probably do this for the events@ email as well"). events@ is where the
+  public writes and nobody owns it, so things sit. `events_inbox.py` (workflow
+  "Events inbox", hourly) reads it with the same read-only reader as
+  `booking_inbox.py` and keeps one row per conversation in `events_threads`:
+  what it is (a private event or group, a ticket problem, an accessibility
+  question, a donation request, a comic who belongs in booking@, a sales
+  pitch), the dates and headcount they mentioned, and whose turn it is.
+  Managers only. It never sends, labels or marks anything either, and both
+  readers print counts only. Checks: `supabase/tests/events_inbox/`.
 - **Reorder buttons** sit at the top of `supplies/` (Sam, Nov 17 2026: "it
   would be nice to have buttons to order stuff like that, Pretzels"). Each is
   the usual order email to one vendor (pretzels Von Hanson's, jerky Ye Olde
@@ -243,7 +253,8 @@ Workflows read secrets from GitHub Actions: `SHOPIFY_STORE`,
 `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` (or `SHOPIFY_ACCESS_TOKEN`),
 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_HOST/PORT/USER/PASS`,
 `FROM_EMAIL`, `DOJOUR_STATE`, `BOOKING_IMAP_PASS` (an app password for the
-booking@ inbox, read by `booking_inbox.py`), and (for schedule texts, once set
+booking@ inbox, read by `booking_inbox.py`), `EVENTS_IMAP_PASS` (the same for
+events@, read by `events_inbox.py`), and (for schedule texts, once set
 up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or commit their values.
 `service_account.json` and `state.json` are gitignored for that reason.
 
