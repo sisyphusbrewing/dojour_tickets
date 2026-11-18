@@ -1,0 +1,41 @@
+name: Comic ad results
+
+# Keeps staff.sisyphusbrewing.com/results/ up to date: the ad numbers each
+# comic sees when they sign in (Sam, Nov 17 2026). See comic_ads_refresh.py.
+#
+# Reddit numbers refresh every run. Facebook/Instagram numbers refresh here
+# only once the secret META_ADS_TOKEN exists; until then a daily Claude task
+# fills them in. The logs are public: the script prints counts only.
+
+on:
+  schedule:
+    # Every 3 hours at :41 (e.g. 12:41 AM, 3:41 AM ... Central)
+    - cron: '41 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: fetch, save nothing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: comic-ads-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Fetch ad numbers
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          META_ADS_TOKEN: ${{ secrets.META_ADS_TOKEN }}
+        run: python comic_ads_refresh.py
