@@ -18,8 +18,9 @@ the online sign-ups (Sam, Nov 9 2026).
   staff type the night's host; that makes a private link to `picks.html`
   ("Send the link" opens the phone's share sheet). The host types up to 4
   comics there, 5 to 7 minutes each, no login, and can change them all day.
-- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, 12 spots
-  fill: first-timers first ("the first timers automatically get up and should
+- The 6:30 draw (Sam, Nov 17 2026): at 6:30 PM, when sign-ups close, 8 spots
+  fill (12 until Sam cut it to 8 on Nov 18 2026: "Let's put 4 fewer people
+  up randomly on the tuesday mic"): first-timers first ("the first timers automatically get up and should
   be identified online"; "it's 12 - First timers"), the rest drawn at random
   from everyone else, once (the staff page or the host's page,
   whichever is open, asks the database for it; `mic_draw()` only allows it
@@ -28,11 +29,11 @@ the online sign-ups (Sam, Nov 9 2026).
   an inference by name is okay"): each sign-up gets `women_spot`, a guess
   from the first name (`mic_guess_woman()`). It stays behind the scenes, on no
   page (Sam, Nov 17 2026: "This part of the sorting can be done behind the
-  scenes"). The draw makes sure at least 30% of the 12 (4) are
+  scenes"). The draw makes sure at least 30% of the 8 (3) are
   women_spot comics, when that many signed up (Sam: "70/30 is nice!").
 - Running order: the host opens, then a block of drawn names, then a
-  guaranteed comic, then another block, and so on (12 drawn and 4 guaranteed
-  = 3, guaranteed, 3, guaranteed...). `mic_renumber()` keeps it that way when
+  guaranteed comic, then another block, and so on (8 drawn and 4 guaranteed
+  = 2, guaranteed, 2, guaranteed...). `mic_renumber()` keeps it that way when
   anything changes. The host's page shows the whole order after the draw.
 - At 6:35 PM the running order shows by itself at the top of `index.html`
   (so on the website's open mic page), stage names only (Sam, Nov 17 2026:

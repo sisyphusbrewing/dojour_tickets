@@ -91,3 +91,13 @@ select case when mic_guess_woman('Stephanie Smith') and mic_guess_woman('Joslyne
              and not mic_guess_woman('Joshua Z') and not mic_guess_woman(null) then 'ok' else 'FAIL' end as "guess by first name";
 insert into mic_signups (mic_date, name, email, status) select today + 14, 'Elizabeth Q', 'eq@x.co', 'hat' from t_ctx;
 select case when women_spot then 'ok' else 'FAIL' end as "new sign-up gets the guess" from mic_signups where email = 'eq@x.co';
+
+-- 8 open spots by default since Nov 18 2026 (Sam: "Let's put 4 fewer people
+-- up randomly on the tuesday mic"), at least 3 of them women.
+insert into mic_signups (mic_date, name, email, status, women_spot)
+  select today + 14, 'E ' || g, 'e' || g || '@x.co', 'hat', g <= 2 from t_ctx, generate_series(1, 14) g;
+set request.jwt.claim.role = 'authenticated';
+select case when (mic_draw(today + 14, p_by_hand => true)->>'drawn')::int = 8 then 'ok' else 'FAIL' end as "default draw: 8 spots" from t_ctx;
+reset request.jwt.claim.role;
+select case when count(*) filter (where women_spot) >= 3 and count(*) = 8 then 'ok' else 'FAIL' end as "women: at least 30% (3 of 8)"
+  from mic_signups, t_ctx where mic_date = today + 14 and status = 'drawn';
