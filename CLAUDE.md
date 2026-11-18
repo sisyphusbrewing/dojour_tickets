@@ -264,7 +264,13 @@ Dojour gotchas, learned the hard way:
   sale and the payment in GoTab and do the balance on the page. Minnesota
   gift cards can't expire or carry fees. Rules in
   `supabase/migrations/20261118000000_gift_cards.sql`, checks in
-  `supabase/tests/gift_cards/`.
+  `supabase/tests/gift_cards/`. **`station/`** is the Boulder, the touch
+  screen at the front bar (Sam, Nov 18 2026): an ESP32 screen board with a
+  PN532 reader (wired in serial mode; on I2C it clashes with the board's own
+  chip) that makes a new card from a blank in one go (`gift_card_new()`,
+  write, read back, lock, load) and does Add and Take off for any card.
+  PlatformIO; the club wifi goes in a gitignored `secrets.h`, and the
+  station signs in with its own staff login typed on the screen.
 - This repo is public, so are its Actions logs. Scripts must not print staff
   names, email addresses, phone numbers or message text.
 
