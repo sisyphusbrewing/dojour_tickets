@@ -6,6 +6,8 @@ recording into one clip per set, uploads them to Google Drive and lists them
 in public.recordings. Every morning at 9 AM the "Recording links" action runs
 this: each headliner gets one email from Sam with a view-only link to their
 set(s) and the full show, sent to the email on their advance, Bcc booking@.
+If a manager typed an "Email for the video" for the run on the Booking board
+(booking_shows.info, Sam, Nov 18 2026), it goes there instead.
 Links stop working after 60 days, when the PC deletes the files.
 
 A show where nobody pressed the stage timer is split from the host's intros
@@ -79,6 +81,23 @@ def headliner_for(title, day):
     return None
 
 
+def board_footage(title, day):
+    """The "Email for the video" typed on the Booking board for this night's
+    run, if anyone typed one: the act's name in the title (or the other way
+    round) and the night inside the run's dates."""
+    rows = get("booking_shows", {"select": "act,first_night,last_night,stage,info",
+                                 "first_night": f"lte.{day.isoformat()}", "info->>footage": "not.is.null"})
+    t = title.lower()
+    for b in rows:
+        act = (b.get("act") or "").strip().lower()
+        if b.get("stage") == "dropped" or not act or (b.get("last_night") or b["first_night"]) < day.isoformat():
+            continue
+        to = ((b.get("info") or {}).get("footage") or "").strip()
+        if to and "@" in to and (act in t or t in act):
+            return to
+    return None
+
+
 def send(to, subject, body_html, text, bcc):
     if DRY_RUN:
         print(f"[DRY RUN] '{subject}' to {to} (bcc {bcc})\n{text}\n")
@@ -89,7 +108,7 @@ def send(to, subject, body_html, text, bcc):
     msg.attach(MIMEText(body_html, "html"))
     with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as s:
         s.login(SMTP_USER, SMTP_PASS)
-        s.sendmail(FROM_EMAIL, [to] + bcc, msg.as_string())
+        s.sendmail(FROM_EMAIL, [x.strip() for x in to.split(",") if x.strip()] + bcc, msg.as_string())
     print(f"Sent '{subject}' to {to}")
 
 
@@ -140,12 +159,15 @@ def main():
         if "headliner" not in names:
             continue
         a = headliner_for(title, day)
-        if not a:
+        to = board_footage(title, day) or (a["contact_email"].strip() if a else None)
+        if not to:
             print(f"{title} {day}: no advance email, telling booking@")
             batches[(BOOKING, "", f"noemail|{title}|{day}")].extend(p for p in parts if p["part"] in ("headliner", "full"))
             continue
-        first = (a.get("contact_name") or "").split(" ")[0]
-        batches[(a["contact_email"].strip(), first, f"{title}|{day}")].extend(
+        # "Hey <first name>" only when it's going to the person on the advance.
+        same = a and to.lower() == a["contact_email"].strip().lower()
+        first = (a.get("contact_name") or "").split(" ")[0] if same else ""
+        batches[(to, first, f"{title}|{day}")].extend(
             p for p in parts if p["part"] in ("headliner", "full"))
 
     for (to, first, key), parts in batches.items():

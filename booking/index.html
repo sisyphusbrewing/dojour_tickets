@@ -102,6 +102,8 @@
     .item .why { color: var(--muted); font-size: 14px; margin-top: 1px; }
     .item .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     .item .input { min-height: 38px; margin-top: 6px; }
+    .item .why small { color: var(--gray); font-size: 13px; }
+    .item .pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
     @media (max-width: 560px) { .item { grid-template-columns: 22px 1fr; } .item .acts { grid-column: 2; justify-content: flex-start; } }
     .mail { display: block; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--white); text-decoration: none; }
     .mail:last-child { border-bottom: 0; }
@@ -358,14 +360,14 @@
             dnum(a.show_date) >= dnum(r.first) - 3 && dnum(a.show_date) <= dnum(r.last) + 3;
         });
         r.threads = D.threads.filter(function (m) { return m.act && fam(m.act) === r.family; });
-        r.agent = !!agents[r.family];
         r.w9 = !!w9[r.family] || r.threads.some(function (m) { return (m.docs || []).some(function (d) { return d.doc === 'w9'; }); });
         r.pay = D.pay.filter(function (p) { return p.family === r.family && Math.abs(dnum(p.show_end) - dnum(r.last)) <= 4; })
           .reduce(function (s, p) {
             return { paid: s.paid + p.paid, owed: s.owed + p.owed, w9_missing: s.w9_missing + (p.w9_missing || 0),
                      hosts: s.hosts.concat(p.hosts || []), features: s.features.concat(p.features || []) };
           }, { paid: 0, owed: 0, w9_missing: 0, hosts: [], features: [] });
-        r.items = checklist(r);
+        r.need = showNeeds(r);
+        r.items = checklist(r).concat(r.need.item);
         r.needs = r.items.filter(function (i) { return i.state === 'due' || i.state === 'late'; });
         r.tone = r.needs.some(function (i) { return i.state === 'late'; }) ? 'late' : r.needs.length ? 'due' : 'ok';
       });
@@ -428,8 +430,8 @@
         else add(k, p[1], started || pencil || r.days > ADVANCE_DAYS ? 'later' : r.days <= 7 ? 'late' : 'due', started ? 'Nobody written down.' : 'Nobody yet.', { edit: k, value: '', tick: 'na' });
       });
 
-      // Ticket-count contact: someone on the weekly agent report.
-      if (!past) add('report', 'Ticket report', r.agent ? 'done' : 'later', r.agent ? 'Someone gets the weekly ticket counts for this show.' : 'Nobody is signed up for weekly ticket counts. Fine unless an agent asks.');
+      // Who gets the weekly ticket counts is "Ticket update email" under
+      // Every show needs (Sam, Nov 18 2026).
 
       // W-9: needed when the pay tops $2,000.
       if (!byHand('w9', 'W-9')) {
@@ -453,8 +455,106 @@
       return items;
     }
 
+    // ---------- every show needs ----------
+    // Sam, Nov 18 2026: "These are some things we should have for every show"
+    // and "This is just the start". One entry per line, so a new line is one
+    // more entry here. Each entry:
+    //   k       the key it's kept under (booking_shows.info)
+    //   label   what the board calls it
+    //   ph      the hint in the empty box
+    //   choices tap one instead of typing (optional)
+    //   known   what the board already knows for this run from other records:
+    //           { text, from, note }, or with gap: true when it's a start
+    //           but still needs someone to act. Typing always wins over it.
+    //   after   still matters once the show has played (settlement, pay)
+    //   sent    the line is only done once someone taps this button
+    //   save    saves somewhere other than the board (optional)
+    // A line with nothing typed and nothing known is a gap: flagged from three
+    // weeks out (the same time the advance goes), never before.
+    var NEED_DAYS = 21;
+    var EMAIL_RE = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+(\s*,\s*[^\s@,]+@[^\s@,]+\.[^\s@,]+)*$/;
+    var SHOW_NEEDS = [
+      { k: 'manager', label: 'Manager', ph: 'Name, company, email or phone',
+        known: function (r) {
+          var m = r.threads.find(function (t) { return t.agency && t.from_email; });
+          return m && { text: [m.from_name, m.agency, m.from_email].filter(Boolean).join(', '), from: 'the booking@ emails', note: 'Check it\'s the manager, not the agent.' };
+        } },
+      { k: 'openers', label: 'Openers', choices: ['We book them', 'They bring their own', 'No openers'],
+        known: function (r) {
+          var g = r.advance && r.advance.guest_sets;
+          return g && g !== 'No' && { text: 'They want guest sets' + (g === 'Yes' ? '' : ': ' + g), from: 'the advance' };
+        } },
+      { k: 'rider', label: 'Rider requests', ph: 'Green room, drinks, food, allergies, tech',
+        known: function (r) { return r.advance && r.advance.rider && { text: r.advance.rider, from: 'the advance' }; } },
+      { k: 'footage', label: 'Email for the video', ph: 'Where the morning-after video goes', email: true, after: true,
+        known: function (r) {
+          var f = (D.footage || []).filter(function (x) { return x.family === r.family && x.day >= r.first && x.day <= r.last; })[0];
+          if (f) return { text: 'Sent to ' + f.emailed_to + ' on ' + shortDate(f.emailed_at), from: 'the video email' };
+          var a = r.advance;
+          return a && a.contact_email && { text: a.contact_email, from: 'the advance', note: 'The video goes there unless you type another.' };
+        } },
+      { k: 'tickets', label: 'Ticket update email', ph: 'Who gets the weekly ticket counts', email: true,
+        known: function (r) {
+          var e = (D.agent_emails || []).filter(function (x) { return x.family === r.family; }).map(function (x) { return x.email; });
+          return e.length && { text: e.join(', '), from: 'the weekly ticket report', note: 'Typing here changes who gets it.' };
+        },
+        save: saveReportEmail },
+      { k: 'settlement', label: 'Settlement email', ph: 'Who gets the settlement statement', email: true, after: true },
+      { k: 'pay', label: 'How they get paid', ph: 'Check, Venmo, wire...', after: true,
+        known: function (r) { return r.advance && r.advance.pay_method && { text: r.advance.pay_method, from: 'the advance', note: 'The details are on it.' }; } },
+      { k: 'artist', label: 'Artist has the advance', ph: 'Artist\'s own phone or email', sent: 'Sent it to them',
+        known: function (r) {
+          var a = r.advance;
+          if (a && (a.opened || a.submitted)) return { text: (a.contact_name || 'They') + ' opened it', from: 'the advance' };
+          if (a && a.welcomed) return { text: 'Sent to ' + (a.contact_email || 'the email on the advance') + ', not opened yet. Forward or text it to the artist.', from: 'the advance', gap: true };
+        } }
+    ];
+
+    // Works out each line for a run, plus one summary item for the checklist.
+    function showNeeds(r) {
+      var x = r.extra || {}, info = x.info || {}, hand = x.checks || {}, past = r.after > 0;
+      var pencil = !r.onsale && x.stage === 'pencil';
+      var lines = SHOW_NEEDS.map(function (n) {
+        var typed = (info[n.k] || '').trim(), known = (n.known && n.known(r)) || null;
+        var sent = n.sent && hand['sent_' + n.k] === 'yes';
+        var l = { n: n, typed: typed, known: known, sent: sent };
+        if (hand['need_' + n.k] === 'na') l.state = 'na';
+        else if (n.sent ? sent || (known && !known.gap) : typed || (known && !known.gap)) l.state = 'done';
+        else if (pencil || (past && !n.after) || (!past && r.days > NEED_DAYS)) l.state = 'later';
+        else l.state = 'due';
+        return l;
+      });
+      var gaps = lines.filter(function (l) { return l.state === 'due'; });
+      var have = lines.filter(function (l) { return l.state === 'done' || l.state === 'na'; }).length;
+      return { lines: lines, item: { k: 'needs', label: 'Show info', chip: 'Show info ' + have + '/' + lines.length, needs: true,
+        state: gaps.length ? 'due' : have === lines.length ? 'done' : 'later',
+        why: gaps.length ? 'Missing: ' + gaps.map(function (l) { return l.n.label; }).join(', ') + '.' : have === lines.length ? 'All there.' : 'Fill it in as you hear.' } };
+    }
+
+    function needsHtml(r) {
+      var id = jsArg(r.id);
+      return '<div class="sub-h">Every show needs</div>' + r.need.lines.map(function (l) {
+        var n = l.n, k = jsArg(n.k), body = '<b>' + n.label + '</b>', acts = '';
+        if (l.state === 'na') body += '<div class="why">Not needed for this one</div>';
+        else if (l.known && !l.typed) body += '<div class="why">' + escapeHtml(l.known.text) + ' <small>(from ' + escapeHtml(l.known.from) + ')</small>' +
+          (l.known.note ? '<br><small>' + escapeHtml(l.known.note) + '</small>' : '') + '</div>';
+        if (l.state !== 'na') {
+          if (n.choices) body += '<div class="pick">' + n.choices.map(function (c) {
+            return '<button class="btn btn-sm' + (l.typed === c ? ' btn-primary' : '') + '" onclick="saveNeed(' + id + ',' + k + ',' + jsArg(l.typed === c ? '' : c) + ')">' + escapeHtml(c) + '</button>';
+          }).join('') + '</div>';
+          else body += '<input class="input" ' + (n.email ? 'type="text" inputmode="email" autocapitalize="none" ' : '') +
+            'placeholder="' + escapeHtml(l.known && !l.known.gap && !l.typed ? 'Type to change it' : n.ph) + '" value="' + escapeHtml(l.typed) + '" onchange="saveNeed(' + id + ',' + k + ',this.value)">';
+        }
+        if (n.sent && l.state !== 'na') acts += l.sent ? '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg('sent_' + n.k) + ',null)">Undo sent</button>'
+                                                      : '<button class="btn btn-sm" onclick="setCheck(' + id + ',' + jsArg('sent_' + n.k) + ',\'yes\')">' + n.sent + '</button>';
+        if (l.state === 'na') acts += '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg('need_' + n.k) + ',null)">Undo</button>';
+        else if (l.state !== 'done') acts += '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg('need_' + n.k) + ',\'na\')">Not needed</button>';
+        return '<div class="item i-' + l.state + '"><div class="dot">' + MARK[l.state] + '</div><div>' + body + '</div><div class="acts">' + acts + '</div></div>';
+      }).join('');
+    }
+
     // ---------- drawing ----------
-    var MARK = { done: '✓', due: '!', late: '!', wait: '…', later: '', na: '' };
+    var MARK ={ done: '✓', due: '!', late: '!', wait: '…', later: '', na: '' };
     function draw() {
       $('tabs').classList.remove('hidden');
       document.querySelectorAll('#tabs .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.tab === tab); });
@@ -473,7 +573,7 @@
       var counted = r.onsale && (r.sold > 0 || r.after <= 0);      // a played run with no kept count shows no number
       var pct = r.shows ? Math.min(100, Math.round(100 * r.sold / (SEATS * r.shows))) : 0;
       var chips = r.items.map(function (i) {
-        return '<span class="ck ck-' + i.state + '">' + (MARK[i.state] ? MARK[i.state] + ' ' : '') + i.label + '</span>';
+        return '<span class="ck ck-' + i.state + '">' + (MARK[i.state] ? MARK[i.state] + ' ' : '') + (i.chip || i.label) + '</span>';
       }).join('');
       var html = '<div class="run r-' + (pencil ? 'pencil' : r.tone) + '" id="run-' + escapeHtml(r.id) + '">' +
         '<button class="run-head" onclick="toggleRun(' + jsArg(r.id) + ')"><div class="run-top"><div><div class="run-t">' + escapeHtml(r.title) +
@@ -488,7 +588,7 @@
 
     function runBody(r) {
       var x = r.extra || {}, id = jsArg(r.id);
-      var rows = r.items.map(function (i) {
+      var rows = r.items.filter(function (i) { return !i.needs; }).map(function (i) {
         var acts = '';
         if (i.link && /^https:\/\/mail\.google\.com\//.test(i.link)) acts += '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + escapeHtml(i.link) + '">Open email</a>';
         if (i.href) acts += '<a class="btn btn-sm" href="' + escapeHtml(i.href) + '">' + escapeHtml(i.go) + '</a>';
@@ -511,7 +611,7 @@
         '<button class="btn btn-sm" onclick="editRun(' + id + ')">Change dates</button>' +
         '<button class="btn btn-sm btn-danger" onclick="dropRun(' + id + ')">Fell through</button>';
       else stage = '<button class="btn btn-sm btn-ghost" onclick="dropRun(' + id + ')">Cancelled? Take it off</button>';
-      return '<div class="run-body">' + rows +
+      return '<div class="run-body">' + rows + needsHtml(r) +
         (x.contact ? '<div class="sub-h">With</div><div>' + escapeHtml(x.contact) + '</div>' : '') +
         '<div class="sub-h">Notes</div><textarea class="input" style="min-height:64px" placeholder="Deal, show times, hotel, anything" onchange="saveField(' + id + ',\'notes\',this.value)">' + escapeHtml(x.notes || '') + '</textarea>' +
         (mails ? '<div class="sub-h">Emails about this show</div>' + mails : '') +
@@ -662,6 +762,29 @@
       var checks = Object.assign({}, (r.extra || {}).checks || {});
       if (value) checks[k] = value; else delete checks[k];
       if (await saveRun(r, { checks: checks })) toast(value ? 'Ticked' : 'Unticked');
+    }
+    // One line of "Every show needs": typed text, or a choice tapped.
+    async function saveNeed(id, k, value) {
+      var r = findRun(id), n = SHOW_NEEDS.find(function (x) { return x.k === k; }); if (!r || !n) return;
+      value = String(value || '').trim();
+      if (n.email && value) {
+        if (!EMAIL_RE.test(value)) { toast('That doesn\'t look like an email address. For more than one, put a comma between them.', true); return; }
+        value = value.toLowerCase().split(/\s*,\s*/).join(', ');
+      }
+      if (n.save) return n.save(r, value);
+      var info = Object.assign({}, (r.extra || {}).info || {});
+      if (value) info[k] = value; else delete info[k];
+      if (await saveRun(r, { info: info })) toast('Saved');
+    }
+    // The ticket update email is the weekly ticket report's own list
+    // (show_agents, the same one the Manager page changes), so typing it here
+    // is what signs them up. Emptying the box doesn't take anyone off.
+    async function saveReportEmail(r, value) {
+      if (!value) { toast('To stop someone\'s weekly counts, change it on the Manager page.', true); return; }
+      var had = (D.agent_emails || []).find(function (x) { return x.family === r.family; });
+      var res = await sb.from('show_agents').upsert({ show_title: had ? had.title : r.title, agent_email: value, updated_at: new Date().toISOString() }, { onConflict: 'show_title' });
+      if (res.error) { toast('Could not save: ' + res.error.message, true); return; }
+      await load(); toast('They\'ll get the weekly ticket counts');
     }
     async function dropRun(id) {
       var r = findRun(id); if (!r) return;
