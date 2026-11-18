@@ -5,3 +5,7 @@ __pycache__/
 posters/out/
 social/out/
 supabase/functions/ical-proxy/boards.ts
+
+# Gift card station: the club wifi password lives only on the station.
+station/include/secrets.h
+station/.pio/
