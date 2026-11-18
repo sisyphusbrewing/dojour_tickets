@@ -17,7 +17,7 @@
        rest at random. Everything saves to Supabase mic_signups.
        Nov 17 2026 (Sam): staff set the night's host here, which makes a link
        for the host to send 4 guaranteed comics (mic/picks.html); at 6:30 PM
-       12 names are drawn by themselves, and the running order mixes them
+       8 names are drawn by themselves, and the running order mixes them
        between the guaranteed comics. Rules: migration 20261117240000. */
     .linkbox { word-break: break-all; color: #fff; font-size: 14px; background: rgba(255,255,255,.06); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
     .lineup .how { color: var(--gray); font-size: 14px; }
@@ -96,7 +96,7 @@
     <div class="card">
       <p class="hostline hidden" id="hostLine"></p>
       <ol class="lineup" id="lineup"></ol>
-      <div class="muted" id="lineupEmpty">Nobody on the lineup yet. The host's 4 come in from their link; 12 names are drawn at 6:30.</div>
+      <div class="muted" id="lineupEmpty">Nobody on the lineup yet. The host's 4 come in from their link; 8 spots fill at 6:30.</div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" type="button" id="copyBtn">Copy lineup</button>
       </div>
@@ -114,11 +114,11 @@
     <div class="band-row"><span class="band">The draw</span><span class="band-note" id="hatNote"></span></div>
     <div class="card">
       <div class="drawrow">
-        <div class="field"><label for="spots">Open spots</label><input class="input" id="spots" type="number" min="1" max="60" value="12"></div>
+        <div class="field"><label for="spots">Open spots</label><input class="input" id="spots" type="number" min="1" max="60" value="8"></div>
         <button class="btn btn-primary" type="button" id="drawBtn">Draw names</button>
         <button class="btn" type="button" id="undoBtn">Undo the draw</button>
       </div>
-      <p class="muted" style="margin:10px 0 0" id="drawHelp">At 6:30 PM, when online sign-ups close, 12 spots fill by themselves: first-timers first, then names drawn from everyone else. Draw names does it now instead, with this many spots. Drawn comics are spread between the guaranteed ones: a few drawn, then a guaranteed comic, and so on.</p>
+      <p class="muted" style="margin:10px 0 0" id="drawHelp">At 6:30 PM, when online sign-ups close, 8 spots fill by themselves: first-timers first, then names drawn from everyone else. Draw names does it now instead, with this many spots. Drawn comics are spread between the guaranteed ones: a few drawn, then a guaranteed comic, and so on.</p>
     </div>
 
     <div class="band-row"><span class="band">Signed up</span></div>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your ad results · Sisyphus Comedy</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Ad results">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <!-- Ad results for the comics Sisyphus Comedy runs ads for (Sam, Nov 17
+       2026: "We should create a simple platform on the staff page for Colin
+       (and other comics) to access these metrics"; "It should have them
+       login"). A comic signs in with their own login and sees only their
+       own shows. Comic logins are not staff logins: they can't open any
+       staff page, and this page has no staff top bar.
+       The numbers come from comic_ads_report() in the database
+       (supabase/migrations/20261118050000_comic_ads.sql), which
+       comic_ads_refresh.py keeps up to date. -->
+  <style>
+    :root {
+      --bg: #2b2929; --card: #393636; --line: #4a4646;
+      --slate: #4a6c86; --slate-dark: #3b586e; --slate-light: #a9c3d8;
+      --gray: #a19fa0; --white: #ffffff; --muted: #d9d6d6; --bad: #f0b7ac;
+      --head: "Josefin Sans", system-ui, sans-serif;
+      --body: "Assistant", system-ui, -apple-system, sans-serif;
+      color-scheme: dark;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--white); }
+    body { font-family: var(--body); font-size: 17px; line-height: 1.4; -webkit-text-size-adjust: 100%; }
+    [hidden] { display: none !important; }
+    a { color: var(--slate-light); }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+
+    header { border-bottom: 3px solid var(--slate); padding: 12px 0; padding-top: calc(12px + env(safe-area-inset-top)); }
+    header .wrap { display: flex; align-items: center; gap: 12px; }
+    header img { height: 40px; width: auto; }
+    .brand { font-family: var(--head); font-weight: 700; font-size: 20px; letter-spacing: .02em; line-height: 1.1; padding-top: 4px; }
+    .brand small { display: block; font-family: var(--body); font-weight: 600; font-size: 14px; color: var(--slate-light); letter-spacing: 0; }
+
+    h1 { font-family: var(--head); font-size: 26px; margin: 26px 0 4px; line-height: 1.15; }
+    h2 { font-size: 21px; margin: 0; line-height: 1.2; }
+    .quiet { color: var(--gray); margin: 0; }
+    .section { margin: 30px 0 10px; font-size: 15px; font-weight: 700; color: var(--gray); }
+
+    .card { background: var(--card); border-radius: 16px; padding: 18px; margin: 14px 0; }
+    .when { color: var(--slate-light); font-weight: 600; margin-top: 2px; }
+
+    .big { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px; margin: 18px 0 6px; }
+    .big div b { display: block; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .big div span { font-size: 15px; color: var(--muted); }
+
+    .meter { height: 8px; border-radius: 6px; background: #4d4949; overflow: hidden; margin: 14px 0 4px; }
+    .meter i { display: block; height: 100%; background: var(--slate-light); border-radius: 6px; }
+    .meter-note { font-size: 15px; color: var(--gray); }
+
+    .rows { margin-top: 16px; border-top: 1px solid var(--line); }
+    .row { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .row .name { font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+    .row .name span { font-variant-numeric: tabular-nums; }
+    .row .detail { font-size: 15px; color: var(--muted); margin-top: 2px; }
+    .row .detail.quiet { color: var(--gray); }
+
+    .tickets b { font-variant-numeric: tabular-nums; }
+
+    form .field { margin: 14px 0; }
+    label { display: block; font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    input { width: 100%; min-height: 50px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+            background: #242222; color: var(--white); font: inherit; font-size: 17px; }
+    input:focus { outline: 2px solid var(--slate-light); outline-offset: 1px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 10px 20px;
+           border: 0; border-radius: 12px; background: var(--slate); color: #fff; font: inherit; font-weight: 700; cursor: pointer; width: 100%; }
+    .btn:hover { background: var(--slate-dark); }
+    .btn[disabled] { opacity: .6; cursor: default; }
+    .link { background: none; border: 0; padding: 8px 0; color: var(--slate-light); font: inherit; font-weight: 700; cursor: pointer; }
+    .err { color: var(--bad); margin: 10px 0 0; min-height: 1.4em; }
+    .ok { color: #b9d8a6; margin: 10px 0 0; }
+
+    .help { font-size: 15px; color: var(--gray); }
+    .help p { margin: 0 0 8px; }
+    footer { display: flex; gap: 20px; flex-wrap: wrap; margin: 26px 0 40px; padding-bottom: env(safe-area-inset-bottom); }
+    details summary { cursor: pointer; color: var(--slate-light); font-weight: 700; padding: 8px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+      <div class="brand">Sisyphus Comedy<small>Your ad results</small></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Sign in -->
+    <section id="signin" hidden>
+      <h1>Sign in</h1>
+      <p class="quiet">See how your ads are doing: what we spent, who saw them, and who clicked through to buy.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="field"><label for="login">Login</label>
+          <input id="login" name="username" required autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password"></div>
+        <button class="btn" id="loginBtn" type="submit">Sign in</button>
+        <p class="err" id="loginErr" role="alert"></p>
+      </form>
+      <p class="help">Lost your password? Ask Sam and he'll set a new one.</p>
+    </section>
+
+    <!-- Results -->
+    <section id="report" hidden>
+      <h1 id="hello">Your ads</h1>
+      <p class="quiet" id="updated"></p>
+      <div id="upcoming"></div>
+      <div id="pastWrap" hidden>
+        <p class="section">Past shows</p>
+        <div id="past"></div>
+      </div>
+      <div id="none" class="card" hidden>
+        <h2>Nothing running yet</h2>
+        <p class="quiet" style="margin-top:6px">When we start ads for one of your shows, the numbers show up here.</p>
+      </div>
+
+      <div class="card help">
+        <p><b style="color:var(--white)">What the numbers mean</b></p>
+        <p><b>Spent</b> is what the ads cost so far, out of the budget you agreed to.</p>
+        <p><b>People reached</b> is how many different people saw an ad at least once.</p>
+        <p><b>Clicks to tickets</b> counts people who tapped through to the ticket page, not every tap on the ad.</p>
+        <p><b>Cost per click</b> is spent divided by those clicks. Lower is better.</p>
+        <p>Facebook and Instagram report a day late, so their numbers trail Reddit's. Ticket counts are the ones you, the club or Punchup gave us.</p>
+      </div>
+
+      <form id="pwForm" class="card" hidden>
+        <h2>Change your password</h2>
+        <div class="field"><label for="pwOld">Current password</label>
+          <input id="pwOld" type="password" required autocomplete="current-password"></div>
+        <div class="field"><label for="pwNew">New password (8 or more characters)</label>
+          <input id="pwNew" type="password" required minlength="8" autocomplete="new-password"></div>
+        <button class="btn" type="submit">Save new password</button>
+        <p class="err" id="pwErr" role="alert"></p>
+      </form>
+
+      <footer>
+        <button class="link" id="pwToggle" type="button">Change password</button>
+        <button class="link" id="signOut" type="button">Sign out</button>
+      </footer>
+    </section>
+
+    <p id="loading" class="quiet" style="margin-top:26px">Loading…</p>
+  </main>
+
+  <script>
+  (function () {
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    // No Supabase sign-in here: a comic's session is a code from comic_ads_login().
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    var KEY = 'comic-ads-session';
+    var $ = function (id) { return document.getElementById(id); };
+
+    function getToken() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return window.__token || ''; } }
+    function setToken(t) { window.__token = t; try { t ? localStorage.setItem(KEY, t) : localStorage.removeItem(KEY); } catch (e) {} }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function money(n) { n = Number(n) || 0; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function count(n) { return (Number(n) || 0).toLocaleString('en-US'); }
+    function cpc(spend, clicks) { return clicks > 0 ? money(spend / clicks) : '—'; }
+    // Dates come as YYYY-MM-DD; read them as a calendar day, not a UTC moment.
+    function day(d, withYear) {
+      if (!d) return '';
+      var p = String(d).split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2]);
+      var o = { weekday: 'short', month: 'short', day: 'numeric' };
+      if (withYear || dt.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+      return dt.toLocaleDateString('en-US', o);
+    }
+    function shortDay(d) {
+      var p = String(d).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    function isPast(d) {
+      var p = String(d).split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2]); var t = new Date(); t.setHours(0, 0, 0, 0); return dt < t;
+    }
+    var NAMES = { meta: 'Facebook & Instagram', reddit: 'Reddit' };
+
+    function showCard(s) {
+      var ps = s.platforms || [], spend = 0, reach = 0, clicks = 0, through = null;
+      ps.forEach(function (p) { spend += +p.spend || 0; reach += +p.reach || 0; clicks += +p.clicks || 0; });
+      var h = '<div class="card"><h2>' + esc(s.title) + '</h2>' +
+        '<div class="when">' + esc(day(s.show_date)) + (s.show_time ? ' · ' + esc(s.show_time) : '') + '</div>';
+
+      if (!ps.length) {
+        h += '<p class="quiet" style="margin-top:12px">Ads for this show haven\'t started yet.</p>';
+      } else {
+        h += '<div class="big">' +
+          '<div><b>' + money(spend) + '</b><span>spent</span></div>' +
+          '<div><b>' + count(reach) + '</b><span>people reached</span></div>' +
+          '<div><b>' + count(clicks) + '</b><span>clicks to tickets</span></div>' +
+          '<div><b>' + cpc(spend, clicks) + '</b><span>cost per click</span></div></div>';
+        if (+s.budget > 0) {
+          var pct = Math.max(0, Math.min(100, spend / s.budget * 100));
+          h += '<div class="meter" aria-hidden="true"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+               '<div class="meter-note">' + money(spend) + ' of the ' + money(s.budget).replace('.00', '') + ' budget</div>';
+        }
+        h += '<div class="rows">';
+        ps.forEach(function (p) {
+          var note = '';
+          if (+p.spend === 0 && +p.impressions === 0) note = 'Hasn\'t shown yet.';
+          h += '<div class="row"><div class="name">' + esc(NAMES[p.platform] || p.platform) + '<span>' + money(p.spend) + '</span></div>' +
+            (note ? '<div class="detail quiet">' + note + '</div>'
+                  : '<div class="detail">' + count(p.reach) + ' people · ' + count(p.impressions) + ' views · ' +
+                    count(p.clicks) + ' clicks · ' + cpc(+p.spend, +p.clicks) + ' a click</div>') +
+            (p.data_through ? '<div class="detail quiet">Numbers through ' + esc(day(p.data_through)) + '</div>' : '') +
+            '</div>';
+        });
+        h += '</div>';
+      }
+
+      var t = s.tickets || [];
+      if (t.length) {
+        h += '<div class="rows tickets"><div class="row"><div class="name">Tickets sold</div>';
+        t.forEach(function (x) {
+          h += '<div class="detail">' + esc(shortDay(x.counted_on)) + ': <b>' + count(x.sold) + '</b>' + (x.note ? ' · ' + esc(x.note) : '') + '</div>';
+        });
+        if (t.length > 1) {
+          var gain = t[t.length - 1].sold - t[0].sold;
+          if (gain > 0) h += '<div class="detail" style="margin-top:4px">Up ' + count(gain) + ' since ' + esc(shortDay(t[0].counted_on)) + '.</div>';
+        }
+        h += '</div></div>';
+      }
+      return h + '</div>';
+    }
+
+    function render(r) {
+      var first = String(r.name || '').split(' ')[0];
+      $('hello').textContent = first ? 'Hi ' + first + '.' : 'Your ads';
+      var latest = null;
+      (r.shows || []).forEach(function (s) { (s.platforms || []).forEach(function (p) { if (p.refreshed_at && (!latest || p.refreshed_at > latest)) latest = p.refreshed_at; }); });
+      $('updated').textContent = latest ? 'Last checked ' + new Date(latest).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.' : '';
+      var up = '', past = '';
+      (r.shows || []).forEach(function (s) { if (isPast(s.show_date)) past += showCard(s); else up += showCard(s); });
+      $('upcoming').innerHTML = up;
+      $('past').innerHTML = past;
+      $('pastWrap').hidden = !past;
+      $('none').hidden = !!(up || past);
+      $('loading').hidden = true; $('signin').hidden = true; $('report').hidden = false;
+    }
+
+    function showSignin(msg) {
+      $('loading').hidden = true; $('report').hidden = true; $('signin').hidden = false;
+      $('loginErr').textContent = msg || '';
+    }
+
+    async function load() {
+      var t = getToken();
+      if (!t) return showSignin();
+      var res = await sb.rpc('comic_ads_report', { p_token: t });
+      if (res.error) {
+        if (/sign in/i.test(res.error.message)) { setToken(''); return showSignin(); }
+        $('loading').textContent = 'Couldn\'t load your numbers. Check your connection and refresh the page.';
+        return;
+      }
+      render(res.data);
+    }
+
+    $('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('loginBtn'); btn.disabled = true; $('loginErr').textContent = '';
+      var res = await sb.rpc('comic_ads_login', { p_login: $('login').value, p_password: $('password').value });
+      btn.disabled = false;
+      if (res.error) { $('loginErr').textContent = /tries/i.test(res.error.message) ? res.error.message : 'That login and password don\'t match.'; return; }
+      if (!res.data) { $('loginErr').textContent = 'That login and password don\'t match.'; return; }
+      setToken(res.data); $('password').value = '';
+      $('loading').hidden = false; $('signin').hidden = true;
+      load();
+    });
+
+    $('signOut').addEventListener('click', async function () {
+      var t = getToken(); setToken('');
+      if (t) await sb.rpc('comic_ads_logout', { p_token: t });
+      showSignin();
+    });
+
+    $('pwToggle').addEventListener('click', function () { $('pwForm').hidden = !$('pwForm').hidden; if (!$('pwForm').hidden) $('pwOld').focus(); });
+    $('pwForm').addEventListener('submit', async function (e) {
+      e.preventDefault(); $('pwErr').className = 'err'; $('pwErr').textContent = '';
+      var res = await sb.rpc('comic_ads_set_password', { p_token: getToken(), p_old: $('pwOld').value, p_new: $('pwNew').value });
+      if (res.error) { $('pwErr').textContent = res.error.message; return; }
+      $('pwOld').value = ''; $('pwNew').value = '';
+      $('pwErr').className = 'ok'; $('pwErr').textContent = 'Saved. Use the new password next time.';
+    });
+
+    load();
+  })();
+  </script>
+</body>
+</html>
