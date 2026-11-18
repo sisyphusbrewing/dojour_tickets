@@ -52,8 +52,11 @@ Dojour gotchas, learned the hard way:
 - Dojour **rejects add-reservation calls made by scripts** ("You do not have
   permission"), from GitHub, the office PC and Sam's Mac alike, but accepts
   them through the dashboard in Sam's own signed-in Chrome. So
-  `dojour_holds.py` only plans (daily) and emails Sam; holds get added in his
-  Chrome. Don't try to make a script imitate a browser. Reading from Dojour
+  `dojour_holds.py` only plans, and a Claude scheduled task ("Dojour seat
+  top-up", 7:43 AM and 4:43 PM Central, since Nov 18 2026: Sam, "Dojour seat
+  blocks are supposed to be automated") runs the plan and adds the holds in
+  his Chrome. The 8:20 AM GitHub run emails Sam only if seats are still open
+  (his Mac was asleep). Don't try to make a script imitate a browser. Reading from Dojour
   works from anywhere.
 - Sam's own Dojour holds (rows with no buyer email, e.g. "Shopify Sales")
   are not sales. Leave them out of any sales or agent count; agents read every
