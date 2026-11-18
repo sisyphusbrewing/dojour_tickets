@@ -134,6 +134,23 @@ Dojour gotchas, learned the hard way:
   (`usual_shifts`), never in this repo. Rules in
   `supabase/migrations/20261117290000_usual_week.sql`, checks in
   `supabase/tests/usual_week/`.
+- **A staff login can be marked "builds the schedule"** (Sam, Nov 18 2026:
+  one of the bartenders "wants to take over making the schedule"). A manager
+  login opens far more than the Schedule (Payroll's hours and tips, the
+  Manager page with the staff logins, booking, supply orders), so this is a
+  mark on a staff login instead. On the Schedule that login does what a
+  manager does: drafts, posting, the usual week, a day's number set by hand,
+  names and who is on the schedule, and answering time off (never its own; a
+  manager answers that one). It is told the schedule's news that managers
+  are told, but not the time clock's. Everywhere else it is still a staff
+  login, and the box of staffing numbers stays with managers. The mark is
+  `staff_roles.builds_schedule`, set in the database on Sam's word; there is
+  no button for it, and who carries it is not written in this repo.
+  `can_schedule()` is the question the Schedule's rules ask now: a new
+  version of one of the Schedule's functions should ask it, not
+  `is_manager()`. Rules in
+  `supabase/migrations/20261118060000_schedule_builder.sql`, checks in
+  `supabase/tests/schedule_builder/`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones").
   All staff use it since Nov 17 2026 (Sam: "they will be tracking their tips
