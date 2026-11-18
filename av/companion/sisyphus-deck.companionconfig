@@ -134,7 +134,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 60}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"20:48:B0:A6:04:30:E2:FC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 30}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -245,7 +245,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 60}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"E0:49:B0:A6:04:30:C2:68\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 30}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -356,7 +356,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 60}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"02:AF:B0:A6:04:33:26:CC\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 30}}}",
                           "isExpression": false
                         },
                         "header": {
