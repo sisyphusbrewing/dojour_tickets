@@ -1,0 +1,49 @@
+name: Inbox trash
+
+# Moves conversations Claude or Sam names in the events@ or booking@ inbox to
+# Trash (never a permanent delete; Gmail keeps Trash 30 days). Refuses any
+# conversation someone at Sisyphus wrote in. See inbox_trash.py. (Sam, Nov 18
+# 2026: "it would be nice to not have to deal with stuff that is obvious
+# trash ... In all 3 inboxes")
+# Run by hand only. Logs are public: it prints counts only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      inbox:
+        description: "events or booking"
+        type: choice
+        options: [events, booking]
+        default: events
+      keys:
+        description: "Conversation keys (gm:<number>), comma-separated, at most 50"
+        required: true
+      dry_run:
+        description: "Dry run: say what it would do, change nothing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: inbox-trash
+  cancel-in-progress: false
+
+jobs:
+  trash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Move the named conversations to Trash
+        env:
+          INBOX: ${{ inputs.inbox }}
+          KEYS: ${{ inputs.keys }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          EVENTS_IMAP_PASS: ${{ secrets.EVENTS_IMAP_PASS }}
+          BOOKING_IMAP_PASS: ${{ secrets.BOOKING_IMAP_PASS }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python inbox_trash.py
