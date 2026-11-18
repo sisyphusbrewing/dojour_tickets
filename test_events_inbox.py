@@ -140,6 +140,11 @@ class FirstReadTuningTest(unittest.TestCase):
         self.assertEqual((lease["kind"], press["kind"]), ("owner", "press"))
         self.assertTrue(set(events_inbox.OWNER_ONLY) >= {"owner", "press"})
 
+    def test_an_agent_who_mentions_the_lease_is_still_booking_business(self):
+        row = classify(thread(msg("Dana Agent <dana.agent@gersh.com>", "Pat Example x Sisyphus",
+                                  "Confirmed for May. Sorry to hear about the lease, hope you land a new space!")))
+        self.assertEqual(row["kind"], "comic")
+
     def test_a_resume_is_a_job_ask(self):
         row = classify(thread(msg("Sky Applicant <sky@gmail.com>", "Resume attached", "Here is my resume for the bartender position.")))
         self.assertEqual(row["kind"], "job")
