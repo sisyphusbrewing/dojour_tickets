@@ -64,8 +64,8 @@ OUT_DIR = HOME / "Videos" / "Sisyphus clips"
 VIDEO = (".mkv", ".mp4", ".mov")
 DRY = "--dry-run" in sys.argv
 # Re-cutting a recording made before Nov 17 2026, when OBS had no audio sync offset and the sound ran
-# ~0.75 s ahead of the picture (the camera picture comes over the network, late):
-#     python split_and_share.py --redo "2026-11-14 18-03-45.mp4" --audio-delay 0.75
+# ~0.79 s ahead of the picture (the camera picture comes over the network, late):
+#     python split_and_share.py --redo "2026-11-14 18-03-45.mp4" --audio-delay 0.79
 AUDIO_DELAY = float(sys.argv[sys.argv.index("--audio-delay") + 1]) if "--audio-delay" in sys.argv else 0.0
 REDO = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--redo"]
 
@@ -313,10 +313,13 @@ def cut(src, rec_start, a, b, dest):
         return
     at = (a - rec_start).total_seconds()
     if AUDIO_DELAY:
-        # Recordings made before OBS got its audio sync offset (Nov 17 2026): the sound is ~0.75 s ahead of
+        # Recordings made before OBS got its audio sync offset (Nov 17 2026): the sound is ~0.79 s ahead of
         # the picture, so take the sound from slightly earlier in the file.
+        # -itsoffset (not an earlier -ss) so it also works for a clip that starts at 0:00, the full show
+        # and the first comic (Nov 18: those came out unshifted).
         subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", str(at), "-i", str(src),
-                        "-ss", str(max(at - AUDIO_DELAY, 0)), "-i", str(src), "-map", "0:v:0", "-map", "1:a:0",
+                        "-itsoffset", str(AUDIO_DELAY), "-ss", str(at), "-i", str(src),
+                        "-map", "0:v:0", "-map", "1:a:0",
                         "-t", str((b - a).total_seconds()), "-c", "copy", "-movflags", "+faststart", str(dest)],
                        check=True)
         return
