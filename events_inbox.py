@@ -161,12 +161,12 @@ def classify(thread):
     answered = any(mail.is_ours(m.get("from_email")) and any(not mail.is_ours(a) for a in m.get("to") or []) for m in messages)
     # A business we never wrote back to, writing like a salesman.
     cold = not answered and not FREE_MAIL.search(who["email"]) and not mail.agency_of(who["email"])
-    if OWNER_WORDS.search(first_words):
+    if mail.agency_of(who["email"]):
+        kind = "comic"                    # an agent is booking business, even when the lease comes up
+    elif OWNER_WORDS.search(first_words):
         kind = "owner"
     elif PRESS_WORDS.search(first_words):
         kind = "press"
-    elif mail.agency_of(who["email"]):
-        kind = "comic"
     elif cold and (COLD_WORDS.search(first_words) or PITCH_WORDS.search(first_words)) and not DONATION_WORDS.search(first_words):
         kind = "pitch"
     elif ACCESS_WORDS.search(first_words):
