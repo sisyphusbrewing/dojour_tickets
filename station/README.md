@@ -19,7 +19,7 @@ The database rules are the same ones the phone page follows
 - Waveshare ESP32-S3-Touch-LCD-4.3 (the screen and the brains)
 - PN532 card reader, **set to serial mode** (HSU: both DIP switches off)
 - NTAG215 blank white cards
-- Optional: a strip of WS2812 LEDs and a passive buzzer (pins in `include/config.h`)
+- Optional: the MonkMakes LED Arc (10 WS2812 LEDs) and a buzzer (pins in `include/config.h`)
 
 ## Wiring the card reader
 

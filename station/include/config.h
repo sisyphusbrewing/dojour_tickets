@@ -70,6 +70,6 @@
 #define READER_RESET -1
 
 // ---- Lights and buzzer (not wired yet: -1 means none) ----
-#define LED_PIN -1          // a strip of WS2812 LEDs around the boulder
-#define LED_COUNT 24
+#define LED_PIN -1          // the LED Arc (WS2812) around the boulder
+#define LED_COUNT 10          // MonkMakes NeoPixel LED Arc
 #define BUZZER_PIN -1       // a passive buzzer
