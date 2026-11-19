@@ -13,6 +13,7 @@ import requests
 
 from fetch_tickets import get_dojour_token, extract_tickets_count, parse_show_datetime, dojour_ticket_type
 from maintain_shows import Shopify
+from ticket_fee import PRODUCT_FIELDS, card_fee_paid
 
 QUERY = (os.environ.get("SHOW_QUERY") or (sys.argv[1] if len(sys.argv) > 1 else "")).strip()
 FEE_HANDLES = {"ticket-fee"}
@@ -28,15 +29,16 @@ def shopify_sales(query=None):
     q = query.lower()
     shop = Shopify()
     found = shop.gql("""query($q: String!) { products(first: 20, query: $q) {
-        nodes { id legacyResourceId title status } } }""", {"q": query})["products"]["nodes"]
+        nodes { id legacyResourceId title status %s } } }""" % PRODUCT_FIELDS, {"q": query})["products"]["nodes"]
     products = [p for p in found if q in p["title"].lower()]
-    rows = defaultdict(lambda: {"tickets": 0, "orders": 0, "gross": 0.0, "refunded_tickets": 0, "comps": 0})
+    rows = defaultdict(lambda: {"tickets": 0, "orders": 0, "gross": 0.0, "refunded_tickets": 0, "comps": 0,
+                                 "card_fees": 0.0})
     for p in products:
         cursor = None
         while True:
             page = shop.gql("""query($q: String!, $c: String) {
               orders(first: 100, after: $c, query: $q) {
-                nodes { cancelledAt lineItems(first: 50) { nodes {
+                nodes { cancelledAt createdAt lineItems(first: 50) { nodes {
                   product { id } variantTitle quantity currentQuantity
                   discountedTotalSet { shopMoney { amount } } } } }
                 pageInfo { hasNextPage endCursor } } }""",
@@ -56,6 +58,10 @@ def shopify_sales(query=None):
                         rows[key]["gross"] += paid
                         if paid == 0:
                             rows[key]["comps"] += live
+                        else:
+                            # The $1 card-processing part of the fee, on tickets
+                            # sold after the show's price went up (ticket_fee.py).
+                            rows[key]["card_fees"] += card_fee_paid(p, o.get("createdAt")) * live
             if not page["pageInfo"]["hasNextPage"]:
                 break
             cursor = page["pageInfo"]["endCursor"]

@@ -1,0 +1,36 @@
+name: Card fee rollout
+
+# Adds the $1 card-processing fee to every show already on sale (the $3 fee
+# becomes $4: $3 to the comics, $1 for card processing). By hand only, and
+# only after Sam OKs the checkout preview (Sam, Nov 18 2026). Leave "go" empty
+# to see what it would change.
+on:
+  workflow_dispatch:
+    inputs:
+      go:
+        description: 'Type yes to raise the prices (empty = just show the list)'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: card-fee-rollout
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - name: Raise prices by the $1 card fee
+        env:
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          GO: ${{ inputs.go }}
+        run: python card_fee_rollout.py

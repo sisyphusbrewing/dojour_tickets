@@ -12,7 +12,10 @@ Money rules (Sam, Oct 2026): comedians get 100% of the door. Every paid
 website ticket puts $3 in the host/feature pool ($1 host, $2 feature); free
 comp-code tickets add $0. Dojour tickets never charged the $3, so they go to
 the door in full and add nothing to the pool (Sam, Nov 8 2026). Website prices include the $3
-since Oct 10. Card processing and sales tax are not taken out.
+since Oct 10. Tickets sold after a show's price went up to the $4 fee also
+carry $1 for card processing (Sam, Nov 18 2026); that $1 is taken off the
+website door and never added to the pool, so the comics' share is unchanged
+(see ticket_fee.py). Otherwise card processing and sales tax are not taken out.
 
 Skipped: recurring house shows (tagged "recurring: ...") and shows tagged
 "no-settlement".
@@ -34,6 +37,7 @@ import recurring_events
 from sales_report import shopify_sales, dojour_sales
 from maintain_shows import Shopify
 from show_dates import CENTRAL_TZ, parse_show_datetime
+from ticket_fee import COMICS_FEE
 
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "https://idsdwkubqnavkazlteis.supabase.co").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
@@ -44,7 +48,7 @@ FROM_EMAIL = (os.environ.get("FROM_EMAIL") or SMTP_USER).strip()
 TO = [a.strip() for a in (os.environ.get("SETTLEMENT_EMAIL_TO") or "sam@sisyphusbrewing.com").split(",") if a.strip()]
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 SHOW_QUERY = (os.environ.get("SHOW_QUERY") or "").strip()
-FEE = 3
+FEE = COMICS_FEE   # $3 a paid website ticket to the host/feature pool
 HOST_SHARE, FEATURE_SHARE = 1, 2
 
 
@@ -98,7 +102,8 @@ def draft(title):
     lines.append("WEBSITE")
     for (_, night), r in by_night(web):
         paid = r["tickets"] - r["comps"]
-        d = r["gross"] - FEE * paid
+        # The $1 card part of the fee (newer sales only) is neither door nor pool.
+        d = r["gross"] - FEE * paid - r.get("card_fees", 0.0)
         tickets += r["tickets"]; door += d; pool_tix += paid
         comp = f", {r['comps']} free" if r["comps"] else ""
         lines.append(f"  {night}: {r['tickets']} tickets{comp}, door {money(d)}")
@@ -127,8 +132,8 @@ def draft(title):
     tail = [
         "",
         "Still to add by hand: walk-ups, door comps and the lineup per night.",
-        "Dojour holds (rows with no buyer email) are already left out. Card fees",
-        "and sales tax are not taken out. Reply with changes and Claude will build the",
+        "Dojour holds (rows with no buyer email) are already left out. The $1",
+        "card-processing part of the website fee is left out; sales tax is not taken out. Reply with changes and Claude will build the",
         "artist copy.",
         "",
         "Pay sheet: https://staff.sisyphusbrewing.com/payouts/",

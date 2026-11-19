@@ -51,6 +51,7 @@ import requests
 from fetch_tickets import clean_show_title, format_show_date
 from maintain_shows import Shopify, fetch_active_products, date_text, is_show, skip_reason
 from show_dates import parse_show_datetime, CENTRAL_TZ
+from ticket_fee import PRODUCT_FIELDS, card_fee_paid
 
 # Swaps close this long before the original show, and the new show must be at
 # least this far off too. The edge function uses the same number.
@@ -148,7 +149,7 @@ def refresh_showtimes(shop):
 ORDER_QUERY = """
 query Order($q: String!) {
   orders(first: 1, query: $q) { nodes {
-    id name email cancelledAt
+    id name email cancelledAt createdAt
     lineItems(first: 100) { nodes {
       id title variantTitle currentQuantity
       variant { id product { id } }
@@ -163,9 +164,9 @@ query Variant($id: ID!) {
   productVariant(id: $id) {
     id title price inventoryQuantity selectedOptions { name value }
     inventoryItem { tracked }
-    product { id title status handle tags productType isGiftCard }
+    product { id title status handle tags productType isGiftCard %s }
   }
-}"""
+}""" % PRODUCT_FIELDS
 
 BEGIN = """mutation($id: ID!) { orderEditBegin(id: $id) {
   calculatedOrder { id } userErrors { field message } } }"""
@@ -243,7 +244,13 @@ def exchange(shop, ex):
     paid = float(line["discountedUnitPriceAfterAllDiscountsSet"]["shopMoney"]["amount"])
     ratio = paid / original if original > 0 else 1.0
     new_list = float(variant["price"])
-    new_each = round(new_list * ratio, 2)
+    # Tickets bought before the show's price went up by the $1 card fee keep
+    # their old price on a swap (Sam, Nov 18 2026: already-sold tickets stay
+    # unchanged), so that $1 is taken off the new night's price for them.
+    grace = card_fee_paid(variant["product"], datetime.now(timezone.utc).isoformat()) \
+        - card_fee_paid(variant["product"], order.get("createdAt"))
+    new_each = round(max(new_list - grace, 0) * ratio, 2)
+    line_ratio = new_each / new_list if new_list > 0 else 1.0
     diff = round((new_each - paid) * qty, 2)       # - they don't get back; + is refused
     if diff > 0.009:
         raise Refused(f"Those cost {money(diff)} more. Email the box office and we'll sort it out.")
@@ -264,9 +271,10 @@ def exchange(shop, ex):
     run(shop, SET_QTY, {"id": calc, "line": f"gid://shopify/CalculatedLineItem/{old_line_id}", "qty": have - qty},
         "orderEditSetQuantity")
     added = run(shop, ADD_VARIANT, {"id": calc, "variant": variant["id"], "qty": qty}, "orderEditAddVariant")
-    if ratio < 0.995:
+    if line_ratio < 0.995:
         run(shop, ADD_DISCOUNT, {"id": calc, "line": added["calculatedLineItem"]["id"], "discount": {
-            "percentValue": round((1 - ratio) * 100, 2), "description": "Original discount"}}, "orderEditAddLineItemDiscount")
+            "percentValue": round((1 - line_ratio) * 100, 2),
+            "description": "Original discount" if ratio < 0.995 else "Original price"}}, "orderEditAddLineItemDiscount")
     if diff < -0.009:
         run(shop, ADD_CUSTOM, {"id": calc, "title": CREDIT_TITLE,
                                "price": {"amount": f"{-diff:.2f}", "currencyCode": "USD"}}, "orderEditAddCustomItem")
