@@ -28,6 +28,12 @@ picked "text" gets the same notice by email instead.
 
 Several notices for one person go out as one email, not five.
 
+It also watches the office PC (Sam, Nov 18 2026: the PC is the nightly
+backup and the offline fallback until a NAS arrives). The PC checks in every
+10 minutes; device_check() in the database says when it has gone quiet for
+30 minutes, when it is back, and when a nightly backup failed or was missed,
+each once, and this emails Sam. Like the notices, these wait out 1 to 8 AM.
+
 The log of a GitHub Action in this repo is public, so this never prints a
 name, an email address, a phone number or what a notice says.
 
@@ -87,6 +93,63 @@ SUBJECTS = {
     "clock_fixed": "Your hours were changed",
     "clock_open": "Did you forget to clock out?",
 }
+
+
+OWNER_EMAIL = "sam@sisyphusbrewing.com"
+DEVICE_NAMES = {"office-pc": "The office PC"}
+
+
+def device_alerts(rows):
+    """Turn device_check() rows into emails for Sam: [(subject, body)].
+    Pure, so the tests can check the wording."""
+    out = []
+    for r in rows or []:
+        name = DEVICE_NAMES.get(r.get("device"), r.get("device") or "A device")
+        seen = r.get("seen_at")
+        seen_txt = parse_time(seen).astimezone(CENTRAL).strftime("%a %b %-d, %-I:%M %p") if seen else "never"
+        state = r.get("state")
+        if state == "offline":
+            out.append((f"{name} is offline",
+                        f"{name} hasn't checked in since {seen_txt} Central. It may be asleep, turned off, "
+                        "unplugged or off the network. Until it's back, last night's backup is the newest "
+                        "one and the show-night fallback on it isn't running.\n\n"
+                        "You'll get one more email when it checks in again."))
+        elif state == "back":
+            out.append((f"{name} is back online", f"{name} checked in again at {seen_txt} Central."))
+        elif state == "backup_failed":
+            note = (r.get("note") or "").strip()
+            out.append((f"{name}: last night's backup failed",
+                        f"The nightly backup on {name[0].lower() + name[1:]} reported a problem"
+                        + (f": {note}" if note else ".") + "\n\nThe backups from before it are still there. "
+                        "Claude can look into it from the office PC."))
+        elif state == "backup_missed":
+            out.append((f"{name}: no backup in over a day",
+                        f"{name} is on, but its nightly backup hasn't run since "
+                        + (parse_time(r["last_backup_at"]).astimezone(CENTRAL).strftime("%a %b %-d") if r.get("last_backup_at") else "it was set up")
+                        + ". The scheduled task may have been turned off."))
+    return out
+
+
+def send_device_alerts():
+    """Ask the database what changed with the office PC and email Sam."""
+    rows = rpc("device_check", optional=True)
+    alerts = device_alerts(rows)
+    if not alerts:
+        return 0
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"{len(alerts)} device alert(s) not sent: SMTP credentials missing.")
+        return 0
+    with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
+        server.login(SMTP_USER, SMTP_PASS)
+        for subject, body in alerts:
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = f"Sisyphus Box Office <{FROM_EMAIL}>"
+            msg["To"] = OWNER_EMAIL
+            msg.set_content(body + "\n\nSisyphus")
+            server.send_message(msg)
+    print(f"Sent {len(alerts)} device alert(s).")
+    return len(alerts)
 
 
 def texts_on():
@@ -225,6 +288,11 @@ def main(quietly=False):
         nudged = rpc("clock_queue_reminders", optional=True)
         if nudged:
             print(f"Queued {nudged} forgot-to-clock-out nudge(s).")
+        # The office PC: gone quiet, back, or a backup problem.
+        try:
+            send_device_alerts()
+        except (requests.RequestException, smtplib.SMTPException, OSError) as err:
+            print(f"Device check failed ({type(err).__name__}); trying again next look.")
 
     rows = rpc("schedule_outbox_pending")
     if not rows:
