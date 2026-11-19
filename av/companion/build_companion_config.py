@@ -746,9 +746,8 @@ def house_both(pct, fade=3):
 # "Candles IR" at 192.168.86.27 (Sam, Nov 5 2026). Codes learned off the candle remote:
 # NEC 32-bit. Repeat 1 sends each press twice so candles at the edge of the beam still catch it.
 # ON with PRE-SHOW, stay on through SHOW, OFF with DAYTIME and ALL OFF.
-# Nov 19 2026: Candles IR 3 (.81) joined; the first "Candles IR" is off the network and .27 now
-# belongs to a phone, so it is left out until it is back on the wifi.
-CANDLE_BLASTERS = ["192.168.86.45", "192.168.86.81"]  # Candles IR 2, Candles IR 3
+# Nov 19 2026: all three are on the wifi (Sam). "Candles IR" moved from .27 to .74; Candles IR 3 is new.
+CANDLE_BLASTERS = ["192.168.86.74", "192.168.86.45", "192.168.86.81"]  # Candles IR, IR 2, IR 3
 CANDLE_CODES = {True: "0x10ED00FF", False: "0x10ED40BF"}
 
 
