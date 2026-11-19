@@ -115,7 +115,6 @@ begin
   end if;
   return new;
 end $$;
-drop trigger if exists checks_guard on public.checks;
 create trigger checks_guard before insert or update or delete on public.checks
   for each row execute function public.checks_guard();
 
@@ -124,7 +123,6 @@ returns trigger language plpgsql as $$
 begin
   raise exception 'The check log is never changed.';
 end $$;
-drop trigger if exists check_events_guard on public.check_events;
 create trigger check_events_guard before update or delete on public.check_events
   for each row execute function public.check_events_guard();
 
@@ -245,7 +243,7 @@ begin
     raise exception 'Checks already have numbers; the next one follows the last.';
   end if;
   if p_number is null or p_number < 1 or p_number > 99999999 then raise exception 'Pick a number from 1 to 99999999.'; end if;
-  update public.check_settings set first_number = p_number;
+  update public.check_settings set first_number = p_number where id;
   return p_number;
 end $$;
 
