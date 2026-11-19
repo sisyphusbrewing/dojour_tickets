@@ -47,6 +47,12 @@ and Dojour. Counts always mean Shopify + Dojour together.
   reservations. Dojour's 90-seat cap is shared across a run's showtimes, so
   per-show blocking has to be done with holds.
 - `daily_sync.yml` runs the sync every 4 hours.
+- **The website fee is $4** since Nov 18 2026 (Sam OKed the preview): $3 to
+  the host and feature as before, $1 to cover card processing. It is inside
+  the price (all-in pricing). `ticket_fee.py` holds it; each show's product
+  carries `custom.card_fee` and `custom.card_fee_since`, so settlements and
+  swaps know which tickets were sold at the old $3. The $1 is never door or
+  comic money. Advice Column stays at $3 (Sam's pick).
 
 Dojour gotchas, learned the hard way:
 - Dojour **rejects add-reservation calls made by scripts** ("You do not have

@@ -12,6 +12,11 @@ on:
         required: false
         default: ''
         type: string
+      skip:
+        description: 'Shows to leave at $3 (handles, comma-separated)'
+        required: false
+        default: 'advice-column'
+        type: string
 
 concurrency:
   group: card-fee-rollout
@@ -33,4 +38,5 @@ jobs:
           SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
           SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
           GO: ${{ inputs.go }}
+          SKIP: ${{ inputs.skip }}
         run: python card_fee_rollout.py

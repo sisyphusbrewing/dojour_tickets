@@ -154,7 +154,7 @@
       }
       $('feeBox').classList.toggle('hidden', !pool());
       if (pool()) {
-        $('feeIntro').textContent = st.pool_intro || ('Every ticket carried a $3 fee, ' + money(pool()) + ' this run. It all goes to the comics who worked with you. Tell us who gets what.');
+        $('feeIntro').textContent = st.pool_intro || ('Every website ticket carried $3 for the comics, ' + money(pool()) + ' this run. It all goes to the comics who worked with you. Tell us who gets what.');
         var saved = payee.request && payee.request.fee_split;
         $('feeRows').innerHTML = (saved && saved.length ? saved : (st.pool_suggested || [])).map(feeRowHtml).join('');
         syncFee();

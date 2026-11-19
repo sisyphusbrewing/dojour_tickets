@@ -30,6 +30,9 @@ from maintain_shows import Shopify
 from ticket_fee import COMICS_FEE, CARD_FEE, fee_line
 
 GO = (os.environ.get("GO") or "").strip().lower() == "yes"
+# Shows to leave at the $3 fee. Advice Column stays $8 (Sam, Nov 18 2026:
+# "Go live, skip Advice Column"): on a cheap ticket the extra $1 is a big bite.
+SKIP = {h.strip() for h in (os.environ.get("SKIP") or "advice-column").split(",") if h.strip()}
 
 PRODUCTS = """query($c: String) { products(first: 100, after: $c, query: "status:active") {
   nodes { id handle title descriptionHtml
@@ -54,10 +57,12 @@ def money(x):
     return f"{x:.2f}"
 
 
-def plan(products):
+def plan(products, skip=()):
     """What to change: one entry per show that still has only the $3."""
     out = []
     for p in products:
+        if p.get("handle") in skip:
+            continue
         try:
             fee = float((p.get("fee") or {}).get("value") or 0)
             card = float((p.get("card") or {}).get("value") or 0)
@@ -98,7 +103,9 @@ def main():
             break
         cursor = page["pageInfo"]["endCursor"]
 
-    todo = plan(products)
+    todo = plan(products, SKIP)
+    if SKIP:
+        print(f"Left alone on purpose: {', '.join(sorted(SKIP))}")
     print(f"{len(todo)} shows still have only the $3 fee.")
     for t in todo:
         new = sorted({v["price"] for v in t["variants"]})

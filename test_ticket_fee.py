@@ -28,10 +28,9 @@ class CardFeeTest(unittest.TestCase):
         self.assertEqual(tf.card_fee_paid({}, stamp(-1)), 0.0)
         self.assertEqual(tf.card_fee_paid(PRODUCT, None), 0.0)
 
-    def test_new_shows_stay_at_three_until_sam_approves(self):
-        # Flipped in the same change that runs the rollout.
+    def test_new_shows_carry_four_dollars_three_to_the_comics(self):
         total, card = tf.new_show_fees()
-        self.assertEqual(total, 3.0 + card)
+        self.assertEqual((total, card), (4.0, 1.0))
         self.assertEqual(tf.COMICS_FEE, 3.0)
 
     def test_fee_sentence_says_where_the_money_goes(self):
@@ -77,6 +76,9 @@ class RolloutTest(unittest.TestCase):
         self.assertEqual(rollout.plan([self.product(fee=None)]), [])          # free night / class
         self.assertEqual(rollout.plan([self.product(card="1.0", fee="4.0")]), [])  # already done
         self.assertEqual(rollout.plan([self.product(prices=("0.00",))]), [])
+
+    def test_skips_shows_sam_kept_at_three(self):
+        self.assertEqual(rollout.plan([dict(self.product(), handle="advice-column")], {"advice-column"}), [])
 
     def test_keeps_text_it_does_not_recognise(self):
         [t] = rollout.plan([self.product(body="<p>Custom words.</p>")])
