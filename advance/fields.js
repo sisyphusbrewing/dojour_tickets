@@ -393,7 +393,7 @@ window.ADVANCE_SECTIONS = [
   {
     "id": "pay",
     "title": "Getting paid",
-    "intro": "You get 100% of the door. The $3 ticket fee pays the host and the feature. We settle up the night of the show.",
+    "intro": "You get 100% of the door. $3 from every ticket pays the host and the feature. We settle up the night of the show.",
     "fields": [
       {
         "k": "pay_method",

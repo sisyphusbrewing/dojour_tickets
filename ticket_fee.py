@@ -24,7 +24,7 @@ from datetime import datetime
 
 COMICS_FEE = 3.00   # per paid website ticket, 100% host and feature pay
 CARD_FEE = 1.00     # per paid website ticket, covers card processing
-CARD_FEE_ON = False  # new shows include the $1 once Sam approves (see above)
+CARD_FEE_ON = True   # on since Sam OKed the preview, Nov 18 2026
 
 
 def new_show_fees():
