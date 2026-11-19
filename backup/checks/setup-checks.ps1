@@ -81,7 +81,11 @@ if ($keepBank) {
 'Printers on this PC:'
 $printers = @(Get-Printer | Select-Object -ExpandProperty Name)
 for ($i = 0; $i -lt $printers.Count; $i++) { "  $($i + 1). $($printers[$i])" }
-$guess = ($printers | Where-Object { $_ -match 'L2550|Brother' } | Select-Object -First 1)
+# Checks get their own small Brother with MICR toner (Sam, Nov 18 2026: "I do
+# print a lot", so the office Brother keeps its normal toner). Name it with
+# "Check" in Windows, or it is found by model (TN760-size: HL-L2350/2370/2390/2395).
+$guess = ($printers | Where-Object { $_ -match 'Check' } | Select-Object -First 1)
+if (-not $guess) { $guess = ($printers | Where-Object { $_ -match 'L2350|L2370|L2390|L2395' } | Select-Object -First 1) }
 $pick = Ask 'Which one prints checks (number)' $(if ($guess) { [array]::IndexOf($printers, $guess) + 1 } else { 1 })
 $cfg.Printer = $printers[[int]$pick - 1]
 $cfg.Bin = Ask 'Paper tray: Enter for the main tray, or type "Manual" to print only from the manual feed slot' $(if ($old) { $old.Bin } else { '' })
