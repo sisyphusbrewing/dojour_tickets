@@ -467,6 +467,13 @@ CUSTOM_VARIABLES = {
     "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
     "music_out": ("Music: 1 while it is faded out for a show (START SHOW, or the FADE OUT key)", 0),
     "mic": ("Open mic lineup: what the mic_deck function last answered (JSON)", '{"on":false}'),
+    # Walk-on songs, written by av/walkon/walkon.py on the office PC
+    "walkon_count": ("Walk-on songs: people on tonight's show (0 = none, the keys stay blank)", 0),
+    "walkon_name": ("Walk-on songs: who walks on next", ""),
+    "walkon_role": ("Walk-on songs: Host, Feature or Headliner", ""),
+    "walkon_song": ("Walk-on songs: their song ('' = none picked)", ""),
+    "walkon_then": ("Walk-on songs: who comes after them", ""),
+    "walkon_playing": ("Walk-on songs: 1 while a walk-on song is playing", 0),
 }
 
 
@@ -515,8 +522,62 @@ def lineup_next():
             lineup_call("next")]
 
 
+# --------------------------------------------------------------------------
+# Walk-on songs (Sam, Nov 19 2026: "Before a show we should let comics pick a walk up song
+# and we can integrate that into the deck"). Comics pick on the walk-on page or in the
+# advance; av/walkon/walkon.py on the office PC knows tonight's people (host, feature,
+# headliner, in that order) and plays each one's song on Spotify from where they asked.
+# On a night without an open mic lineup, the two keys the lineup uses on the SHOW screen are:
+#     WALK-ON  who walks on next. Tap = their song plays and the music fader comes back up.
+#              Tap again (or START CLOCK, or a minute later the PC does it) = the fader fades
+#              out, the playlist goes back to where it was underneath, and the key moves on.
+#     AFTER    who comes after them; tap = skip the one up next (wraps around).
+# A comic with no song: the tap brings the house music back, like the MUSIC knob push.
+# --------------------------------------------------------------------------
+WALKON_URL = "http://127.0.0.1:8793/walkon"
+WALKON_ON = "$(custom:walkon_count) > 0"
+WALKON_PLAYING = "$(custom:walkon_playing) == 1"
+
+
+def walkon(path):
+    return action(HTTP, "get", url=f"{WALKON_URL}/{path}", header="",
+                  jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
+
+
+def walkon_play():
+    """The song starts on the PC; the fader comes back if the show faded it out."""
+    return [walkon("play"), set_number("walkon_playing", 1)]
+
+
+def walkon_fade():
+    """Fader down over the usual 3 s, then the PC puts the playlist back and moves on."""
+    return music_fade_out() + walkon_stop()
+
+
+def walkon_stop():
+    """The song is over without a fade: someone already faded the music out by hand (fading
+    again would remember silence as the level to come back to)."""
+    return [walkon("stop"), set_number("walkon_playing", 0)]
+
+
+WALKON_TEXT = (
+    f"!({WALKON_ON}) ? '' : "
+    f"{WALKON_PLAYING} ? concat('PLAYING\\n', $(custom:walkon_name), '\\ntap = fade') : "
+    f"concat('WALK-ON\\n', $(custom:walkon_name), '\\n', $(custom:walkon_song) == '' ? 'house music' : 'tap = play')"
+)
+AFTER_TEXT = (
+    f"!({WALKON_ON}) || $(custom:walkon_then) == '' ? '' : "
+    f"concat('AFTER\\n', $(custom:walkon_then), '\\ntap = skip')"
+)
+# 1 nothing (open mic night, or nobody tonight); 2 play, music faded out for the show;
+# 3 play, music already up; 4 playing: fade it out; 5 playing but faded by hand: just stop
+WALKON_STEP = (
+    f"{LINEUP_ON} || !({WALKON_ON}) ? 1 : "
+    f"{WALKON_PLAYING} ? ($(custom:music_out) == 1 ? 5 : 4) : ($(custom:music_out) == 1 ? 2 : 3)"
+)
+
 ON_NOW_TEXT = (
-    f"!({LINEUP_ON}) ? '' : "
+    f"!({LINEUP_ON}) ? ({WALKON_TEXT}) : "
     f"{mic('n')} == 0 ? 'HOST\\nIS UP' : "
     f"{_NOW} == '' ? 'LINEUP\\nDONE' : "
     f"$(custom:timer_t0) == 0 ? concat('ON NOW\\n', {_NOW}) : "
@@ -524,7 +585,7 @@ ON_NOW_TEXT = (
     f"concat('ON NOW\\n', {_NOW}, '\\n', secondsToTimestamp({_L} - {_E}, 'mm:ss'), ' left')"
 )
 UP_NEXT_TEXT = (
-    f"!({LINEUP_ON}) ? '' : "
+    f"!({LINEUP_ON}) ? ({AFTER_TEXT}) : "
     f"{_NEXT} == '' ? ({_NOW} == '' ? '' : 'LAST\\nCOMIC\\nIS UP') : "
     f"concat('UP NEXT\\n', {_NEXT}, '\\n', {mic('next_min')}, ' MIN\\ntap = skip')"
 )
@@ -534,23 +595,30 @@ NEXT_COMIC_TEXT = (
     f"{_NOW} != '' ? 'LAST ONE\\nDONE\\ntap = stop' : 'LINEUP\\nDONE'"
 )
 NEXT_COMIC_STEP = (
-    f"!({LINEUP_ON}) ? 1 : "
+    f"!({LINEUP_ON}) ? ({WALKON_PLAYING} ? ($(custom:music_out) == 1 ? 6 : 5) : 1) : "
     f"($(custom:timer_t0) != 0 && $(internal:time_unix) - $(custom:timer_t0) < {NEXT_COMIC_GUARD_S}) ? 4 : "
     f"({_NEXT} != '' ? 2 : 3)"
 )
 
 
 def on_now_key():
+    """ON NOW on an open mic night; WALK-ON any other night with people on the show."""
     return button(ON_NOW_TEXT, expression=True, bgcolor=BLACK,
-                  feedbacks=[when(f"{LINEUP_ON} && {CLOCK_RUNNING}", bgcolor=0x1F7A35, color=WHITE),
+                  steps=[[], walkon_play() + music_bring_back(1000), walkon_play(), walkon_fade(), walkon_stop()],
+                  step_expression=WALKON_STEP,
+                  feedbacks=[when(f"!({LINEUP_ON}) && {WALKON_ON}", bgcolor=0x16324A, color=WHITE),
+                             when(f"!({LINEUP_ON}) && {WALKON_PLAYING}", bgcolor=0xB06000, color=WHITE),
+                             when(f"{LINEUP_ON} && {CLOCK_RUNNING}", bgcolor=0x1F7A35, color=WHITE),
                              when(f"{LINEUP_ON} && {CLOCK_RED}", bgcolor=RED, color=WHITE)])
 
 
 def up_next_key():
     return button(UP_NEXT_TEXT, expression=True, bgcolor=BLACK,
-                  steps=[[], [lineup_call("skip")]],
-                  step_expression=f"({LINEUP_ON}) && {_NEXT} != '' ? 2 : 1",
-                  feedbacks=[when(f"{LINEUP_ON} && {_NEXT} != ''", bgcolor=GREY, color=WHITE)])
+                  steps=[[], [lineup_call("skip")], [walkon("skip")]],
+                  step_expression=(f"({LINEUP_ON}) ? ({_NEXT} != '' ? 2 : 1) : "
+                                   f"({WALKON_ON} && !({WALKON_PLAYING}) && $(custom:walkon_then) != '' ? 3 : 1)"),
+                  feedbacks=[when(f"{LINEUP_ON} && {_NEXT} != ''", bgcolor=GREY, color=WHITE),
+                             when(f"!({LINEUP_ON}) && {WALKON_ON} && $(custom:walkon_then) != ''", bgcolor=GREY, color=WHITE)])
 
 
 def next_comic_key():
@@ -559,7 +627,9 @@ def next_comic_key():
                   steps=[clock_start() + [lineup_call("load")],   # no lineup: the clock as always
                          lineup_next(),                           # next comic on
                          clock_stop() + [lineup_call("next")],    # last comic finished
-                         []],                                     # a double tap: ignored
+                         [],                                      # a double tap: ignored
+                         clock_start() + [lineup_call("load")] + walkon_fade(),   # comic's up: walk-on fades
+                         clock_start() + [lineup_call("load")] + walkon_stop()],  # ... already faded by hand
                   step_expression=NEXT_COMIC_STEP,
                   feedbacks=[when(f"!({LINEUP_ON}) && {CLOCK_RUNNING}", bgcolor=0x2FA04A, color=WHITE,
                                   text="RESTART\\nCLOCK\\nnext comic")])
@@ -1006,9 +1076,9 @@ def home_page():
             # the SHOW screen; it does not run the look again. The music fades out with the
             # lights, unless it was already faded out by hand (third choice).
             (0, 2): button(START_SHOW_TEXT, expression=True, bgcolor=SHOW_COLOR,
-                           steps=[look_show() + music_fade_out() + [lineup_call("load"), go(PAGE_SHOW)],
-                                  [lineup_call("load"), go(PAGE_SHOW)],
-                                  look_show() + [lineup_call("load"), go(PAGE_SHOW)]],
+                           steps=[look_show() + music_fade_out() + [lineup_call("load"), walkon("load"), go(PAGE_SHOW)],
+                                  [lineup_call("load"), walkon("load"), go(PAGE_SHOW)],
+                                  look_show() + [lineup_call("load"), walkon("load"), go(PAGE_SHOW)]],
                            step_expression=f"$(custom:room_look) == 'show' ? 2 : ({MUSIC_OUT} ? 3 : 1)",
                            feedbacks=[when(look_is("show"), bgcolor=RED, color=WHITE)]),
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
@@ -1058,9 +1128,9 @@ def end_show_page():
             (0, 0): button("END THE\\nSHOW?", bgcolor=BLACK),
             (0, 3): button("NO\\nGO BACK", bgcolor=BACK_GREY, press=[go(PAGE_SHOW)]),
             (1, 1): button("YES\\nEND SHOW\\nlights up", bgcolor=RED,
-                           steps=[look_preshow() + clock_stop() + [set_var("mic", LINEUP_OFF), go(PAGE_HOME)],
+                           steps=[look_preshow() + clock_stop() + [set_var("mic", LINEUP_OFF), walkon("stop"), set_number("walkon_playing", 0), go(PAGE_HOME)],
                                   look_preshow() + clock_stop() + music_bring_back()
-                                  + [set_var("mic", LINEUP_OFF), go(PAGE_HOME)]],
+                                  + [set_var("mic", LINEUP_OFF), walkon("stop"), set_number("walkon_playing", 0), go(PAGE_HOME)]],
                            step_expression=f"{MUSIC_OUT} ? 2 : 1"),
             **main_controls(),
         },

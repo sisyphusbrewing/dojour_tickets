@@ -342,6 +342,21 @@ Dojour gotchas, learned the hard way:
   check waits for him, prints, fails or sticks. Rules in
   `supabase/migrations/20261119060000_comic_checks.sql`, checks in
   `supabase/tests/comic_checks/`.
+- **Walk-on songs** (Sam, Nov 19 2026: "Before a show we should let comics pick
+  a walk up song and we can integrate that into the deck"; he picked Spotify
+  Premium on the office PC). Host, feature and headliner each pick on
+  **`walkon/`** (`?s=<token>`, no login, no staff top bar; one link per run,
+  copied from the Booking board's "Walk-on songs" line), and the headliner
+  can also pick on the advance trip's last stop. Both use `walkon/song.js`
+  (Apple's public song search, a 30-second listen, a start point). The song
+  belongs to the comic and carries over to their next show. On show night
+  the office PC helper `av/walkon/walkon.py` (port 8793, set up by
+  `av/walkon/setup.ps1`, Spotify's key only in `%USERPROFILE%\.sisyphus\spotify.json`)
+  reads `walkon_tonight()` and plays each song on the PC's Spotify; the deck's
+  SHOW screen has WALK-ON and AFTER where the open mic's ON NOW and UP NEXT
+  sit (open mic nights keep those). Rules in
+  `supabase/migrations/20261119230000_walkon_songs.sql`, checks in
+  `supabase/tests/walkon/` and `test_walkon.py`.
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.
@@ -369,7 +384,7 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_comic_ads_refresh test_inbox_trash test_recording_mail test_ticket_fee`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_comic_ads_refresh test_inbox_trash test_recording_mail test_ticket_fee test_walkon`.
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.
