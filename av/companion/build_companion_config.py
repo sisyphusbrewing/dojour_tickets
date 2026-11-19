@@ -74,8 +74,9 @@ TAPROOM_BULBS = {
 # the bulbs are warm against it: Bar 1-4 "a dim like edison bulb light" (the bulbs' white stops at
 # 2700K, so the warmer filament glow is a colour), Ordering 1-2 "a brighter orange", Entryway 1
 # bright (the first thing people see), Entryway 2 dimmer, in our slate blue. The taproom is open
-# through shows, so DAYTIME and PRE-SHOW both bring this look (START SHOW leaves it as it is) and
-# ALL OFF turns it off. DAYTIME is pressed by itself at opening (door_count.py).
+# through shows. DAYTIME (pressed by itself at opening, door_count.py) brings this look and ALL OFF
+# turns it off; in between the BAR page has its own on/off (Sam, Nov 19 2026: a "show page" and a
+# "bar page" until the front bar gets its own Stream Deck). PRE-SHOW and START SHOW leave it alone.
 EDISON = 0xFF8C40
 TAPROOM_LOOK = {
     "Entryway 1": (100, {"kelvin": 2700}),
@@ -466,6 +467,7 @@ CUSTOM_VARIABLES = {
     "door_total": ("Door count: tickets for that show", 0),
     "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
     "music_out": ("Music: 1 while it is faded out for a show (START SHOW, or the FADE OUT key)", 0),
+    "bar_look": ("Front bar lights: on or off, as the deck last set them", "off"),
     "candles": ("Table candles: 1 while the deck last turned them on (PRE-SHOW or the CANDLES key)", 0),
     "mic": ("Open mic lineup: what the mic_deck function last answered (JSON)", '{"on":false}'),
 }
@@ -638,9 +640,10 @@ def bulb_look(level, colour, sku, device):
 
 
 def taproom(on):
+    state = [set_var("bar_look", "on" if on else "off")]
     if not on:
-        return [govee(None, "on_off", "powerSwitch", 0, sku=sku, device=d) for sku, d in TAPROOM_BULBS.values()]
-    return [a for name, (sku, d) in TAPROOM_BULBS.items() for a in bulb_look(*TAPROOM_LOOK[name], sku, d)]
+        return [govee(None, "on_off", "powerSwitch", 0, sku=sku, device=d) for sku, d in TAPROOM_BULBS.values()] + state
+    return [a for name, (sku, d) in TAPROOM_BULBS.items() for a in bulb_look(*TAPROOM_LOOK[name], sku, d)] + state
 
 
 def closet(look):
@@ -831,7 +834,7 @@ def look_daytime():
 
 def look_preshow():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + taproom(True) + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles_set(True)  # house 20% (Sam, Nov 5 2026)
+            + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles_set(True)  # house 20% (Sam, Nov 5 2026)
             + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
 
 
@@ -936,7 +939,7 @@ def music_fade_key():
 # The four knobs and the touch-screen tile above each: MIC, MUSIC, LIGHTS, CLOCK.
 # The same on HOME and SHOW, so a knob never changes what it does mid-night.
 # --------------------------------------------------------------------------
-PAGE_HOME, PAGE_SHOW, PAGE_END, PAGE_MIC, PAGE_MUSIC, PAGE_LIGHTS, PAGE_CLOCK = 1, 2, 3, 4, 5, 6, 7
+PAGE_HOME, PAGE_SHOW, PAGE_END, PAGE_MIC, PAGE_MUSIC, PAGE_LIGHTS, PAGE_CLOCK, PAGE_BAR = 1, 2, 3, 4, 5, 6, 7, 8
 MIC = CHANNEL(1)  # the stage mic. Mics 2-4 are on the MIC page, each on its own knob.
 
 
@@ -1024,9 +1027,10 @@ def home_page():
             (1, 0): god_mic_key(),
             (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
             # PRINT MENUS and REFRESH TV MENU came off the deck (Sam, Nov 19 2026: "we don't need the
-            # print and refresh on the main page"); both now sit on the MUSIC page, and CANDLES
+            # print and refresh on the main page"); both now sit on the BAR page, and CANDLES
             # took the print spot.
             (1, 2): candles_key(),
+            (1, 3): button("FRONT\\nBAR\\n>", bgcolor=0x1E4C7A, press=[go(PAGE_BAR)]),
             **main_controls(),
         },
     }
@@ -1104,8 +1108,25 @@ def music_page():
             (0, 2): button("NEXT\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_NEXT)]),
             (0, 3): button("LAST\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_PREVIOUS)]),
             (1, 1): music_fade_key(),
-            # Off HOME but kept on the deck (Sam, Nov 19 2026: "I didn't want the print menu thing
-            # to go away completely"); tap the MUSIC tile to get here.
+            **main_controls(),
+        },
+    }
+
+
+def bar_page():
+    """The front bar's own page (Sam, Nov 19 2026: a "show page" and a "bar page" until the front
+    bar gets its own Stream Deck): the bar lights, and the menu keys that came off HOME (Sam: "I
+    didn't want the print menu thing to go away completely")."""
+    bar_on = "$(custom:bar_look) == 'on'"
+    return {
+        "name": "BAR",
+        "controls": {
+            (0, 0): button("BACK", bgcolor=BACK_GREY, press=[go(PAGE_HOME)]),
+            (0, 1): button("BAR\\nLIGHTS\\nON", bgcolor=GREY, press=taproom(True),
+                           feedbacks=[when(bar_on, bgcolor=0xB06000, color=WHITE, text="BAR\\nLIGHTS\\non now")]),
+            (0, 2): button("BAR\\nLIGHTS\\nOFF", bgcolor=GREY, press=taproom(False),
+                           feedbacks=[when(f"!({bar_on})", bgcolor=0x555555, color=WHITE, text="BAR\\nLIGHTS\\noff now")]),
+            (1, 0): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
             (1, 2): print_menu_key(),
             (1, 3): menu_refresh_key(),
             **main_controls(),
@@ -1148,6 +1169,7 @@ PAGES = {
     PAGE_MUSIC: music_page(),
     PAGE_LIGHTS: lights_page(),
     PAGE_CLOCK: clock_page(),
+    PAGE_BAR: bar_page(),
 }
 
 
