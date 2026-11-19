@@ -466,6 +466,7 @@ CUSTOM_VARIABLES = {
     "door_total": ("Door count: tickets for that show", 0),
     "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
     "music_out": ("Music: 1 while it is faded out for a show (START SHOW, or the FADE OUT key)", 0),
+    "candles": ("Table candles: 1 while the deck last turned them on (PRE-SHOW or the CANDLES key)", 0),
     "mic": ("Open mic lineup: what the mic_deck function last answered (JSON)", '{"on":false}'),
 }
 
@@ -689,16 +690,22 @@ def candles(on):
 CANDLE_COLOR = 0xB06000
 
 
+CANDLES_ON = "$(custom:candles) == 1"
+
+
+def candles_set(on):
+    """Candles on or off, remembered in custom:candles so the CANDLES key shows what the deck last did."""
+    return candles(on) + [set_number("candles", 1 if on else 0)]
+
+
 def candles_key():
-    """Test key (Sam, Nov 5 2026): each press flips the candles. IR can't report back, so the key
-    keeps its own state in two steps: step 1 sends ON, step 2 sends OFF; amber while it thinks they're on."""
-    key = button("CANDLES\\nOFF\\ntap for on", bgcolor=DARK, size="18", press=candles(True),
-                 feedbacks=[feedback(INTERNAL, "check_expression",
-                                     style={"bgcolor": CANDLE_COLOR, "color": WHITE,
-                                            "text": "CANDLES\\nON\\ntap for off"},
-                                     expression="$(this:step) == 2")])
-    key["steps"]["1"] = {"action_sets": {"down": candles(False), "up": []}, "options": {"runWhileHeld": []}}
-    return key
+    """CANDLES on the HOME page (Sam, Nov 19 2026, where PRINT MENUS used to be): a tap flips the
+    table candles. IR can't report back, so the key follows what the deck last sent: PRE-SHOW
+    turns them on, DAYTIME and ALL OFF turn them off, and so does this key. Amber while on."""
+    return button("CANDLES\\nOFF\\ntap for on", bgcolor=DARK,
+                  steps=[candles_set(True), candles_set(False)],
+                  step_expression=f"{CANDLES_ON} ? 2 : 1",
+                  feedbacks=[when(CANDLES_ON, bgcolor=CANDLE_COLOR, color=WHITE, text="CANDLES\\nON\\ntap for off")])
 
 
 # House-light dimmer knobs on the BAR pages (Sam, Nov 4 2026): knob 1 = TABLES, knob 2 = BAR.
@@ -818,13 +825,13 @@ def record(on):
 
 def look_daytime():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-            + taproom(True) + closet("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
+            + taproom(True) + closet("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles_set(False)
             + record(False) + [set_var("room_look", "day")])
 
 
 def look_preshow():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + taproom(True) + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
+            + taproom(True) + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles_set(True)  # house 20% (Sam, Nov 5 2026)
             + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
 
 
@@ -839,7 +846,7 @@ def look_show():
 
 def look_off():
     return ([govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-            + taproom(False) + closet("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
+            + taproom(False) + closet("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles_set(False)
             + [stage("off")] + record(False) + clock_stop() + [set_var("room_look", "off")])
 
 
@@ -1016,8 +1023,9 @@ def home_page():
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
             (1, 0): god_mic_key(),
             (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
-            # (1, 2) and (1, 3) left blank: PRINT MENUS and REFRESH TV MENU came off the deck (Sam,
-            # Nov 19 2026: "we don't need the print and refresh on the main page").
+            # PRINT MENUS and REFRESH TV MENU came off the deck (Sam, Nov 19 2026: "we don't need the
+            # print and refresh on the main page"); CANDLES took the print spot.
+            (1, 2): candles_key(),
             **main_controls(),
         },
     }
@@ -1107,8 +1115,8 @@ def lights_page():
     for col, (zone, name) in enumerate((("tables", "TABLES"), ("bar", "BAR"))):
         controls[(2, col)] = dimmer_strip(zone, name)
         controls[(3, col)] = dimmer_knob(zone)
-    controls[(2, 2)] = button("CANDLES\\nON\\ntap", bgcolor=CANDLE_COLOR, press=candles(True))
-    controls[(2, 3)] = button("CANDLES\\nOFF\\ntap", bgcolor=DARK, press=candles(False))
+    controls[(2, 2)] = button("CANDLES\\nON\\ntap", bgcolor=CANDLE_COLOR, press=candles_set(True))
+    controls[(2, 3)] = button("CANDLES\\nOFF\\ntap", bgcolor=DARK, press=candles_set(False))
     return {"name": "LIGHTS", "controls": controls}
 
 
