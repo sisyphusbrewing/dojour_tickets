@@ -1024,7 +1024,8 @@ def home_page():
             (1, 0): god_mic_key(),
             (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
             # PRINT MENUS and REFRESH TV MENU came off the deck (Sam, Nov 19 2026: "we don't need the
-            # print and refresh on the main page"); CANDLES took the print spot.
+            # print and refresh on the main page"); both now sit on the MUSIC page, and CANDLES
+            # took the print spot.
             (1, 2): candles_key(),
             **main_controls(),
         },
@@ -1103,6 +1104,10 @@ def music_page():
             (0, 2): button("NEXT\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_NEXT)]),
             (0, 3): button("LAST\\nSONG", bgcolor=0x16324A, press=[media_key(MEDIA_PREVIOUS)]),
             (1, 1): music_fade_key(),
+            # Off HOME but kept on the deck (Sam, Nov 19 2026: "I didn't want the print menu thing
+            # to go away completely"); tap the MUSIC tile to get here.
+            (1, 2): print_menu_key(),
+            (1, 3): menu_refresh_key(),
             **main_controls(),
         },
     }
