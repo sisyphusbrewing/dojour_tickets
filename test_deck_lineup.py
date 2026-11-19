@@ -65,7 +65,7 @@ class StartShow(unittest.TestCase):
 class NextComic(unittest.TestCase):
     def setUp(self):
         self.key = control(deck.PAGE_SHOW, 1, 1)
-        self.no_lineup, self.next_on, self.last_done, self.double_tap = presses(self.key)
+        self.no_lineup, self.next_on, self.last_done, self.double_tap, self.walkon_fade, self.walkon_stop = presses(self.key)
 
     def test_no_lineup_is_the_old_start_clock(self):
         names = [n for n, _ in self.no_lineup]
@@ -93,16 +93,27 @@ class NextComic(unittest.TestCase):
         self.assertIn(f"< {deck.NEXT_COMIC_GUARD_S}) ? 4", self.key["options"]["stepExpression"])
 
     def test_no_lineup_comes_first(self):
-        self.assertTrue(self.key["options"]["stepExpression"].startswith(f"!({deck.LINEUP_ON}) ? 1"))
+        # (1, or a walk-on fade when a walk-on song is still playing as the comic starts)
+        self.assertTrue(self.key["options"]["stepExpression"].startswith(
+            f"!({deck.LINEUP_ON}) ? ({deck.WALKON_PLAYING} ? ($(custom:music_out) == 1 ? 6 : 5) : 1)"))
+
+    def test_start_clock_fades_a_walk_on_still_playing(self):
+        for step in (self.walkon_fade, self.walkon_stop):
+            self.assertTrue(any(n == "get" and o["url"] == deck.WALKON_URL + "/stop" for n, o in step))
+            self.assertEqual(sets(step, "walkon_playing"), ["0"])
+            self.assertTrue(any(n == "post" and o["url"].endswith("/rpc/timer_start") for n, o in step))
+        self.assertTrue(any(n == "fad" for n, _ in self.walkon_fade))       # fader down
+        self.assertFalse(any(n in ("fad", "fad_s") for n, _ in self.walkon_stop))   # already faded by hand
 
 
 class UpNext(unittest.TestCase):
     def test_tap_skips_only_when_someone_is_next(self):
         key = control(deck.PAGE_SHOW, 0, 2)
-        nothing, skip = presses(key)
+        nothing, skip, walkon_skip = presses(key)
         self.assertEqual(nothing, [])
         self.assertEqual(lineup_moves(skip), ["skip"])
-        self.assertEqual(key["options"]["stepExpression"], f"({deck.LINEUP_ON}) && {deck.mic('next')} != '' ? 2 : 1")
+        self.assertEqual(lineup_moves(walkon_skip), [])   # other nights it skips a walk-on instead
+        self.assertTrue(key["options"]["stepExpression"].startswith(f"({deck.LINEUP_ON}) ? ({deck.mic('next')} != '' ? 2 : 1) : "))
 
 
 class EndShow(unittest.TestCase):
@@ -112,9 +123,13 @@ class EndShow(unittest.TestCase):
 
 
 class Blank(unittest.TestCase):
-    def test_no_lineup_keys_are_blank(self):
-        for text in (deck.ON_NOW_TEXT, deck.UP_NEXT_TEXT):
-            self.assertTrue(text.startswith(f"!({deck.LINEUP_ON}) ? '' : "))
+    def test_no_lineup_keys_show_walk_ons_or_nothing(self):
+        # Without a lineup the two keys belong to the walk-on songs (Nov 19 2026), which are
+        # themselves blank on a night with nobody on the show.
+        self.assertTrue(deck.ON_NOW_TEXT.startswith(f"!({deck.LINEUP_ON}) ? ({deck.WALKON_TEXT}) : "))
+        self.assertTrue(deck.UP_NEXT_TEXT.startswith(f"!({deck.LINEUP_ON}) ? ({deck.AFTER_TEXT}) : "))
+        self.assertTrue(deck.WALKON_TEXT.startswith(f"!({deck.WALKON_ON}) ? '' : "))
+        self.assertTrue(deck.AFTER_TEXT.startswith(f"!({deck.WALKON_ON}) || "))
 
 
 if __name__ == "__main__":

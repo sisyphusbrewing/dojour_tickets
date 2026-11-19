@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your Walk-On Song · Sisyphus</title>
+  <meta name="description" content="Pick the song that plays while you walk to the mic at Sisyphus.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="song.js"></script>
+  <style>
+    /* Walk-on songs (Sam, Nov 19 2026). The comic's page: no login, no staff top bar.
+       Same look as the advance trip: charcoal, slate blue, white, tilted band headings. */
+    :root {
+      --bg: #2b2929; --bg2: #232121; --card: #393636; --line: #4a4646; --slate: #4a6c86; --slate-dark: #3b586e; --slate-light: #a9c3d8;
+      --gray: #918f90; --white: #fff; --muted: #d9d6d6;
+      --head: 'Josefin Sans', 'Century Gothic', Futura, sans-serif;
+      --body: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; color: var(--white); background: var(--bg); }
+    body { font-family: var(--body); font-size: 17px; line-height: 1.45; min-height: 100vh; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+    a { color: var(--slate-light); }
+    button, input { font: inherit; color: inherit; }
+    .hidden { display: none !important; }
+    .wrap { max-width: 620px; margin: 0 auto; padding: 18px 16px 40px; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+    .brand img { height: 38px; }
+    .brand b { font-family: var(--head); text-transform: uppercase; letter-spacing: .14em; font-size: 13px; line-height: 1.1; }
+    .brand small { display: block; font-family: var(--body); letter-spacing: .02em; text-transform: none; color: var(--slate-light); font-weight: 600; margin-top: 3px; }
+    .band-wrap { margin: 22px 0 6px; padding: 8px 0; }
+    .band { display: inline-block; background: var(--slate); color: #fff; padding: 8px 16px 5px; font-family: var(--head); font-weight: 700; text-transform: uppercase;
+            letter-spacing: .14em; font-size: 13px; transform: rotate(-1.5deg);
+            box-shadow: 0 -4px 0 -1px var(--bg), 0 -6px 0 -1px #fff, 0 4px 0 -1px var(--bg), 0 6px 0 -1px #fff; }
+    h1 { font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; font-size: clamp(26px, 7vw, 36px); line-height: 1.08; margin: 14px 0 8px; }
+    .sub { color: var(--muted); margin: 0 0 20px; font-size: 17px; }
+    .field { margin-top: 22px; }
+    .field > label, .lab { display: block; font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 12px; color: var(--slate-light); margin-bottom: 8px; }
+    .input { width: 100%; min-height: 50px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg2); color: var(--white); outline: none; font-size: 17px; }
+    .input:focus { border-color: var(--slate-light); }
+    .input::placeholder { color: #7a7677; }
+    .who { display: grid; gap: 10px; }
+    .who button { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 60px; padding: 12px 16px; border-radius: 12px; text-align: left;
+                  background: var(--card); border: 1px solid var(--line); cursor: pointer; font-weight: 700; }
+    .who button:hover { border-color: var(--gray); }
+    .who button[aria-pressed=true] { border-color: var(--slate-light); background: var(--slate-dark); }
+    .who small { display: block; font-weight: 400; color: var(--gray); font-size: 14px; }
+    .who button[aria-pressed=true] small { color: var(--muted); }
+    .who .role { font-family: var(--head); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--slate-light); flex: 0 0 auto; }
+    .btn { display: flex; width: 100%; align-items: center; justify-content: center; min-height: 54px; margin-top: 26px; padding: 14px 22px 10px; border-radius: 12px; border: 0; cursor: pointer;
+           font-family: var(--head); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 16px; background: var(--slate); color: #fff; }
+    .btn:hover { background: var(--slate-dark); }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .msg { margin-top: 12px; text-align: center; min-height: 24px; color: var(--muted); }
+    .msg.bad { color: #f0b7ac; }
+    .camus { text-align: center; font-style: italic; color: var(--slate-light); margin-top: 32px; font-size: 15px; }
+    .foot { text-align: center; color: var(--gray); font-size: 13px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="brand" href="https://www.sisyphusbrewing.com">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="">
+      <b>Sisyphus<small>Comedy &amp; beer · Minneapolis</small></b>
+    </a>
+    <main id="stage"><p class="sub" style="padding:80px 0;text-align:center">Finding your show…</p></main>
+    <p class="camus">Il faut imaginer Sisyphe heureux.</p>
+    <p class="foot">Sisyphus · 712 Ontario Ave W, Minneapolis · <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a></p>
+  </div>
+  <script>
+    var SUPABASE_URL = 'https://idsdwkubqnavkazlteis.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    var $ = function (id) { return document.getElementById(id); };
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    var token = new URLSearchParams(location.search).get('s') || '';
+    var show = null, me = null, pick = null;
+    var ROLE = { host: 'Host', feature: 'Feature', headliner: 'Headliner' };
+
+    function parseDate(d) { var p = d.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+    function fmtRange(a, b) {
+      var x = parseDate(a), y = parseDate(b || a), o = { weekday: 'long', month: 'long', day: 'numeric' };
+      if (a === (b || a)) return x.toLocaleDateString('en-US', o);
+      return x.toLocaleDateString('en-US', { weekday: 'short' }) + '–' + y.toLocaleDateString('en-US', { weekday: 'short' }) + ', ' +
+        x.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) + '–' + y.toLocaleDateString('en-US', x.getMonth() === y.getMonth() ? { day: 'numeric' } : { month: 'long', day: 'numeric' });
+    }
+    function songLine(s) { return s && s.title ? WalkonSong.text(s) : 'No song yet'; }
+
+    function dead(text) {
+      $('stage').innerHTML = '<div class="band-wrap"><span class="band">Walk-on song</span></div><h1>Hmm.</h1><p class="sub">' + esc(text) +
+        ' Write to <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a> and we\'ll sort it out.</p>';
+    }
+
+    function draw() {
+      var people = show.people || [];
+      $('stage').innerHTML = '<div class="band-wrap"><span class="band">Walk-on song</span></div>' +
+        '<h1>What do we play when you walk up?</h1>' +
+        '<p class="sub">' + esc(show.act) + ' · ' + esc(fmtRange(show.first, show.last)) + '. Pick the song that plays while you walk to the mic. ' +
+        'Pick it, or the sound guy will. He likes Creed.</p>' +
+        '<div class="field"><span class="lab">Who are you?</span><div class="who" id="who">' + people.map(function (p, i) {
+          return '<button type="button" data-i="' + i + '" aria-pressed="' + (me === i) + '"><span>' + esc(p.name) + '<small>' + esc(songLine(p.song)) + '</small></span>' +
+            '<span class="role">' + esc(ROLE[p.role] || p.role) + '</span></button>';
+        }).join('') + '</div>' +
+        '<p class="sub" style="font-size:15px;margin:10px 0 0">Not on the list? Write to <a href="mailto:booking@sisyphusbrewing.com">booking@sisyphusbrewing.com</a> and we\'ll add you.</p></div>' +
+        (me == null ? '' : '<div class="field"><span class="lab">Your song</span><div id="song"></div></div>' +
+          '<button class="btn" id="save" type="button" disabled>Save my song</button><div class="msg" id="msg" role="status"></div>');
+      Array.prototype.forEach.call($('who').querySelectorAll('button'), function (b) {
+        b.onclick = function () { me = +b.getAttribute('data-i'); var s = people[me].song; pick = s && s.title ? Object.assign({}, s) : null; draw(); };
+      });
+      if (me == null) return;
+      WalkonSong.mount($('song'), pick, function (v) { pick = v; $('save').disabled = !(v && v.title); $('msg').textContent = ''; $('msg').className = 'msg'; });
+      $('save').disabled = !(pick && pick.title);
+      $('save').onclick = save;
+    }
+
+    async function save() {
+      var btn = $('save'), msg = $('msg'), who = show.people[me];
+      btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving…';
+      var res = await sb.rpc('walkon_pick', { p_token: token, p_name: who.name, p_title: pick.title, p_artist: pick.artist || null,
+        p_start_sec: pick.start_sec || 0, p_apple_id: pick.apple_id || null, p_artwork: pick.artwork || null });
+      btn.disabled = false;
+      if (res.error) { msg.className = 'msg bad'; msg.textContent = 'That didn\'t save: ' + res.error.message + '. Try again?'; return; }
+      who.song = res.data;
+      $('stage').innerHTML = '<div class="band-wrap"><span class="band">Walk-on song</span></div>' +
+        '<h1>Done. That\'s your song.</h1>' +
+        '<p class="sub">' + esc(songLine(res.data)) + '.</p>' +
+        '<p class="sub">It plays when the host brings you up, and it stays your song here every time, until you change it. Same link, any time.</p>' +
+        '<button class="btn" id="again" type="button">Change it, or pick for someone else</button>';
+      $('again').onclick = function () { draw(); };
+    }
+
+    (async function () {
+      if (!/^[a-f0-9]{16,64}$/.test(token)) { dead('This link is missing a piece.'); return; }
+      var res = await sb.rpc('walkon_page', { p_token: token });
+      if (res.error || !res.data) { dead('This link isn\'t working any more.'); return; }
+      show = res.data;
+      if (show.people.length === 1) me = 0;
+      if (me === 0) { var s = show.people[0].song; pick = s && s.title ? Object.assign({}, s) : null; }
+      draw();
+    })();
+  </script>
+</body>
+</html>

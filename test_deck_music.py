@@ -69,7 +69,10 @@ class StartShow(unittest.TestCase):
         # It also re-reads the open mic lineup (Nov 17 2026), which touches no lights or sound.
         lineup = [n for n, o in self.show_already_on if n == "post" and o["url"].endswith("/rpc/mic_deck")]
         self.assertEqual(len(lineup), 1)
-        self.assertEqual([n for n in names(self.show_already_on) if n != "post"], ["set_page"])
+        # ... and tonight's walk-on songs (Nov 19 2026), a GET to the office PC's helper.
+        walkons = [o["url"] for n, o in self.show_already_on if n == "get"]
+        self.assertEqual(walkons, [deck.WALKON_URL + "/load"])
+        self.assertEqual([n for n in names(self.show_already_on) if n not in ("post", "get")], ["set_page"])
 
     def test_music_already_out_is_not_remembered_again(self):
         self.assertEqual(music(self.music_already_out, "fad_s"), [])
@@ -120,16 +123,20 @@ class MusicKnob(unittest.TestCase):
 class WholeDeck(unittest.TestCase):
     def test_level_is_only_remembered_where_music_out_is_checked(self):
         """Any control that remembers the music level must pick its press by music_out,
-        and may only remember it in the first choice (music not out)."""
-        found = 0
+        and may only remember it in a choice it picks when the music is not out: the first
+        choice, or for the walk-on fade (Nov 19 2026) the "4"/"5" side of "music_out == 1 ? 5 : 4"."""
+        found = []
         for page in deck.PAGES.values():
-            for ctrl in page["controls"].values():
+            for spot, ctrl in page["controls"].items():
+                expression = ctrl["options"]["stepExpression"]
                 for i, step in enumerate(presses(ctrl)):
                     if music(step, "fad_s"):
-                        found += 1
-                        self.assertEqual(i, 0)
-                        self.assertIn("$(custom:music_out) == 1", ctrl["options"]["stepExpression"])
-        self.assertEqual(found, 2)   # START SHOW, and the FADE MUSIC OUT key on the MUSIC screen
+                        found.append((page["name"], spot))
+                        self.assertIn("$(custom:music_out) == 1", expression)
+                        if i > 0:
+                            self.assertIn(f"$(custom:music_out) == 1 ? {i + 2} : {i + 1}", expression)
+        # START SHOW, FADE MUSIC OUT, and the walk-on fade on WALK-ON and START CLOCK
+        self.assertEqual(sorted(found), sorted([("HOME", (0, 2)), ("MUSIC", (1, 1)), ("SHOW", (0, 1)), ("SHOW", (1, 1))]))
 
     def test_music_out_variable_starts_at_zero(self):
         self.assertEqual(deck.CUSTOM_VARIABLES["music_out"][1], 0)

@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="fields.js"></script>
+  <script src="../walkon/song.js"></script>
   <style>
     /* The advance as a short trip up the hill, one stop at a time. Same brand
        as the site: charcoal, slate blue, white, tilted band headings. */
@@ -195,7 +196,7 @@
       { land: 'Pay', title: 'Getting paid.', sub: '100% of the door goes to you. We settle up the night of the show.',
         q: ['pay_method', { k: 'pay_handle', ph: '@yourname, or you@email.com', when: ['pay_method', '!Check'] }] },
       { land: 'Last thing', title: 'Walk-on song?', sub: 'Pick it, or the sound guy will. He likes Creed.',
-        q: [{ k: 'walk_on', ph: 'Song and artist' }, { k: 'anything', label: 'Anything else', ph: 'Questions, requests, confessions. I read all of it.' }] },
+        q: [{ k: 'walk_on', label: 'Your walk-on song' }, { k: 'anything', label: 'Anything else', ph: 'Questions, requests, confessions. I read all of it.' }] },
       { kind: 'thanks' },
       { kind: 'finale' },
     ];
@@ -272,6 +273,10 @@
             '<div class="stepper-note" id="gnote_' + i + '">' + crowd(n) + '</div>' +
             '<textarea class="input' + (n ? '' : ' hidden') + '" id="gnames_' + i + '" placeholder="First and last, one per line">' + esc(g.names || '') + '</textarea></div>';
         }).join('');
+      }
+      if (q.k === 'walk_on') {   // the song search shared with the walk-on page (walkon/song.js)
+        return '<div class="field q" data-q="walk_on"><label>' + esc(q.label) + '</label><div id="walkonPick"></div>' +
+          (answers.walk_on && !(answers.walk_on_pick && answers.walk_on_pick.title) ? '<div class="help">You told us: ' + esc(answers.walk_on) + '. Find it here so it plays right.</div>' : '') + '</div>';
       }
       var f = FIELDS[q.k], id = 'f_' + q.k, lab = esc(q.label || f.label) + (f.req ? ' <span class="req">*</span>' : ''), v = answers[q.k];
       var inner;
@@ -366,6 +371,13 @@
           out.guest_names = list.filter(function (g) { return g.n; }).map(function (g) { return nightName(g.d) + ': ' + (g.names ? g.names.split(/\s*\n\s*/).join(', ') : g.n + ' guest' + (g.n > 1 ? 's' : '')); }).join('\n');
           return;
         }
+        if (q.k === 'walk_on') {   // the pick, plus one readable line for the desk and the email
+          var song = walkonPick && walkonPick.get();
+          out.walk_on_pick = song && song.title ? { title: song.title, artist: song.artist || '', start_sec: song.start_sec || 0,
+                                                   apple_id: song.apple_id || '', artwork: song.artwork || '' } : null;
+          out.walk_on = out.walk_on_pick ? WalkonSong.text(out.walk_on_pick) : (answers.walk_on_pick ? '' : answers.walk_on || '');
+          return;
+        }
         var f = FIELDS[q.k], box = document.querySelector('[data-q="' + q.k + '"]'), hidden = box && box.classList.contains('hidden');
         if (f.type === 'file') return;
         if (hidden) { out[q.k] = ''; return; }
@@ -385,7 +397,9 @@
     }
 
     /* ---------- wire up a stop ---------- */
+    var walkonPick = null;
     function wire(s) {
+      walkonPick = $('walkonPick') ? WalkonSong.mount($('walkonPick'), answers.walk_on_pick && answers.walk_on_pick.title ? answers.walk_on_pick : null, function () {}) : null;
       Array.prototype.forEach.call(document.querySelectorAll('.tiles'), function (tiles) {
         var multi = tiles.getAttribute('data-multi') === 'true';
         tiles.addEventListener('click', function (e) {

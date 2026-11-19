@@ -293,9 +293,10 @@
 
     // ---------- load ----------
     async function load() {
-      var both = await Promise.all([sb.rpc('booking_board'), sb.rpc('staff_show_counts')]);
+      var both = await Promise.all([sb.rpc('booking_board'), sb.rpc('staff_show_counts'), sb.rpc('walkon_board')]);
       if (both[0].error) { toast('Could not load the board: ' + both[0].error.message, true); return; }
       D = both[0].data; counts = both[1].data || [];
+      D.walkon = both[2].data || {};   // walk-on songs per run (booking_shows id)
       // Until the booking@ inbox is connected, the only emails here are the
       // ones copied to Sam (keys starting "sam:"). Real ones replace them.
       inboxLive = D.threads.some(function (t) { return /^gm:/.test(t.key); });
@@ -502,6 +503,16 @@
       { k: 'settlement', label: 'Settlement email', ph: 'Who gets the settlement statement', email: true, after: true },
       { k: 'pay', label: 'How they get paid', ph: 'Check, Venmo, wire...', after: true,
         known: function (r) { return r.advance && r.advance.pay_method && { text: r.advance.pay_method, from: 'the advance', note: 'The details are on it.' }; } },
+      // Walk-on songs (Sam, Nov 19 2026): host, feature and headliner each pick on one link
+      // (walkon/?s=...). Done once everyone on the run has a song.
+      { k: 'walkon', label: 'Walk-on songs', noInput: true, copy: 'copyWalkonLink',
+        known: function (r) {
+          var w = r.extra && D.walkon[r.extra.id]; if (!w || !w.people.length) return null;
+          var missing = w.people.filter(function (p) { return !(p.song && p.song.title); });
+          return { text: w.people.map(function (p) { return p.name + ': ' + (p.song && p.song.title ? p.song.title + (p.song.artist ? ' (' + p.song.artist + ')' : '') : 'not picked yet'); }).join(' · '),
+                   from: 'the walk-on page', gap: missing.length > 0,
+                   note: missing.length ? 'Copy the link and send it to ' + missing.map(function (p) { return p.name.split(' ')[0]; }).join(', ') + '. The headliner can also pick in the advance.' : '' };
+        } },
       { k: 'artist', label: 'Artist has the advance', ph: 'Artist\'s own phone or email', sent: 'Sent it to them',
         known: function (r) {
           var a = r.advance;
@@ -542,9 +553,10 @@
           if (n.choices) body += '<div class="pick">' + n.choices.map(function (c) {
             return '<button class="btn btn-sm' + (l.typed === c ? ' btn-primary' : '') + '" onclick="saveNeed(' + id + ',' + k + ',' + jsArg(l.typed === c ? '' : c) + ')">' + escapeHtml(c) + '</button>';
           }).join('') + '</div>';
-          else body += '<input class="input" ' + (n.email ? 'type="text" inputmode="email" autocapitalize="none" ' : '') +
+          else if (!n.noInput) body += '<input class="input" ' + (n.email ? 'type="text" inputmode="email" autocapitalize="none" ' : '') +
             'placeholder="' + escapeHtml(l.known && !l.known.gap && !l.typed ? 'Type to change it' : n.ph) + '" value="' + escapeHtml(l.typed) + '" onchange="saveNeed(' + id + ',' + k + ',this.value)">';
         }
+        if (n.copy && l.state !== 'na') acts += '<button class="btn btn-sm" onclick="' + n.copy + '(' + id + ')">Copy link</button>';
         if (n.sent && l.state !== 'na') acts += l.sent ? '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg('sent_' + n.k) + ',null)">Undo sent</button>'
                                                       : '<button class="btn btn-sm" onclick="setCheck(' + id + ',' + jsArg('sent_' + n.k) + ',\'yes\')">' + n.sent + '</button>';
         if (l.state === 'na') acts += '<button class="btn btn-sm btn-ghost" onclick="setCheck(' + id + ',' + jsArg('need_' + n.k) + ',null)">Undo</button>';
@@ -785,6 +797,17 @@
       var res = await sb.from('show_agents').upsert({ show_title: had ? had.title : r.title, agent_email: value, updated_at: new Date().toISOString() }, { onConflict: 'show_title' });
       if (res.error) { toast('Could not save: ' + res.error.message, true); return; }
       await load(); toast('They\'ll get the weekly ticket counts');
+    }
+    // The walk-on song link for a run (made the first time it is asked for).
+    async function copyWalkonLink(id) {
+      var r = findRun(id); if (!r) return;
+      if (!(r.extra && r.extra.id)) { if (!(await saveRun(r, {}))) return; r = findRun(id); if (!r || !r.extra) return; }
+      var res = await sb.rpc('walkon_link', { p_booking_show_id: r.extra.id });
+      if (res.error) { toast('Could not make the link: ' + res.error.message, true); return; }
+      var url = 'https://staff.sisyphusbrewing.com/walkon/?s=' + res.data;
+      try { await navigator.clipboard.writeText(url); toast('Link copied. Paste it to the host, feature and headliner.'); }
+      catch (e) { prompt('Copy this link:', url); }
+      D.walkon[r.extra.id] = Object.assign({}, D.walkon[r.extra.id] || { people: [] }, { token: res.data });
     }
     async function dropRun(id) {
       var r = findRun(id); if (!r) return;
