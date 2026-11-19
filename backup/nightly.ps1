@@ -5,7 +5,8 @@
 #
 # What it keeps, as restic snapshots on the PC's second drive (the 2 TB
 # Seagate, D:): the show recordings and clips, the OBS and Companion
-# settings, the Companion backups in Downloads, and a copy of this repo.
+# settings, the Companion backups in Downloads, a copy of this repo and a
+# dump of the staff database.
 # restic keeps every night for two weeks, a week for two months and a month
 # for a year, and stores each file only once, so 30 nights of the same
 # recordings take the space of one.
@@ -34,6 +35,20 @@ try {
     Invoke-WebRequest -UseBasicParsing 'https://github.com/sisyphusbrewing/dojour_tickets/archive/refs/heads/main.zip' -OutFile "$staging\dojour_tickets-main.zip"
 } catch { $problems += 'repo download failed' }
 
+# The staff database (tickets, schedule, clock, pay sheet, ...), with the
+# read-only "backup_reader" login Sam OKed on Nov 18 2026. Its password is
+# only in db-pass.txt on this PC. -Fc is pg_dump's own format, which
+# pg_restore can put back whole or one table at a time.
+$pgDump = "$env:USERPROFILE\sisyphus-backup\pgsql\bin\pg_dump.exe"
+if ($conf.PG_HOST -and (Test-Path $pgDump) -and (Test-Path "$state\db-pass.txt")) {
+    $env:PGPASSWORD = (Get-Content "$state\db-pass.txt" -Raw).Trim()
+    $env:PGSSLMODE = 'require'
+    & $pgDump -h $conf.PG_HOST -p 5432 -U $conf.PG_USER -d postgres -n public -Fc --no-owner --no-privileges -f "$staging\supabase-public.dump" 2>> $log
+    if ($LASTEXITCODE -ne 0) { $problems += 'database dump failed' }
+    else { Say "Database dump $([math]::Round((Get-Item "$staging\supabase-public.dump").Length / 1MB, 1)) MB." }
+    Remove-Item Env:PGPASSWORD
+} else { Say 'Database dump skipped (not set up yet).' }
+
 # What to keep. A folder that isn't there is skipped, not an error.
 $paths = @(@(
     "$env:USERPROFILE\Videos",               # OBS recordings + "Sisyphus clips"
@@ -44,7 +59,7 @@ $paths = @(@(
 ) | Where-Object { Test-Path $_ })
 $paths += Get-ChildItem "$env:USERPROFILE\Downloads\*" -File -Include 'companion-backup-*', 'sisyphus-deck-merged-*', 'companion-live-*' -ErrorAction SilentlyContinue | ForEach-Object FullName
 
-$out = restic backup --tag nightly --exclude "$state\restic-pass.txt" --exclude "$state\heartbeat-code.txt" --exclude "$env:APPDATA\obs-studio\logs" --exclude "$env:APPDATA\obs-studio\crashes" @paths 2>&1
+$out = restic backup --tag nightly --exclude "$state\restic-pass.txt" --exclude "$state\heartbeat-code.txt" --exclude "$state\db-pass.txt" --exclude "$env:APPDATA\obs-studio\logs" --exclude "$env:APPDATA\obs-studio\crashes" @paths 2>&1
 if ($LASTEXITCODE -ne 0) { $problems += "restic backup exit $LASTEXITCODE"; Say ($out | Select-Object -Last 5 | Out-String) }
 else { Say (($out | Select-String 'Added to the repository|processed') -join ' | ') }
 
