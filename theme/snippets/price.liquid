@@ -55,6 +55,9 @@
   # Product pages (price--large) show it on its own line under the price;
   # everywhere else it sits on the same line, e.g. "$26.00 USD ($23 ticket + $3 fee)".
   assign sb_fee = product.metafields.custom.ticket_fee.value
+  # Sisyphus: from the $4 fee on (Sam, Nov 18 2026), custom.card_fee is the part
+  # that covers card processing; the rest goes to the comics.
+  assign sb_card = product.metafields.custom.card_fee.value
   if sb_fee and target != null and price > 0 and sb_door == false
     assign sb_fee_cents = sb_fee | times: 100 | round
     assign sb_base_cents = price | minus: sb_fee_cents
@@ -143,7 +146,13 @@
     </div>
     {%- if sb_fee_cents and sb_base_cents > 0 and price_class contains 'price--large' -%}
       <p class="sb-fee-note" style="display: block; flex-basis: 100%; width: 100%; margin: 0.2rem 0 0; font-size: 0.8em; line-height: 1.35; opacity: 0.8; letter-spacing: 0;">
-        Includes {{ sb_base_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticket + {{ sb_fee_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticketing fee &middot; 100% of the fee goes to performers
+        {%- if sb_card and sb_card > 0 -%}
+          {%- assign sb_card_cents = sb_card | times: 100 | round -%}
+          {%- assign sb_comic_cents = sb_fee_cents | minus: sb_card_cents -%}
+          Includes {{ sb_base_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticket + {{ sb_fee_cents | money_without_trailing_zeros | replace: '$ ', '$' }} fee: {{ sb_comic_cents | money_without_trailing_zeros | replace: '$ ', '$' }} goes to the comics, {{ sb_card_cents | money_without_trailing_zeros | replace: '$ ', '$' }} covers card processing
+        {%- else -%}
+          Includes {{ sb_base_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticket + {{ sb_fee_cents | money_without_trailing_zeros | replace: '$ ', '$' }} ticketing fee &middot; 100% of the fee goes to performers
+        {%- endif %}
       </p>
     {%- endif -%}
     {%- comment -%} Sisyphus: low-ticket notice for the selected showtime (cards show theirs in the date box) {%- endcomment -%}

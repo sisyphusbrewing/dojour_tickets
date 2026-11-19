@@ -2,7 +2,9 @@ import os
 import re
 import sys
 import requests
-from datetime import datetime
+
+from ticket_fee import new_show_fees, fee_line
+from datetime import datetime, timezone
 
 from show_dates import parse_show_datetime, CENTRAL_TZ
 import show_links
@@ -32,7 +34,9 @@ VENUE_NAME = "Sisyphus Brewing"
 
 # Ticketing fee built into every paid show's price (not classes or free events).
 # The theme shows it as "$25 ticket + $3 fee" using the custom.ticket_fee field.
-TICKET_FEE = float(os.environ.get("TICKET_FEE") or "3.00")
+# $3 of it is host/feature pay; once Sam approves, $1 more covers card
+# processing (ticket_fee.py, Sam Nov 18 2026).
+TICKET_FEE, CARD_FEE = new_show_fees()
 CLASS_PATTERN = re.compile(r"\b(class|classes|workshop|course)\b", re.IGNORECASE)
 COLLECTION_HANDLE = "comedy-and-events"
 COLLECTION_ID = os.environ.get("SHOPIFY_COLLECTION_ID", "472787812387").strip()
@@ -105,8 +109,7 @@ def format_description_html(raw_bio, is_free, fee_included=0):
             return f"<p>Free live event at {VENUE_NAME}. Walk-ins welcome!</p>"
         default = f"<p>Live comedy at {VENUE_NAME}. 100% Will-Call: check in under your name at the door.</p>"
         if fee_included:
-            default += (f"<p><strong>💵 Price includes a ${fee_included:.0f} ticketing fee</strong> "
-                        "— 100% of the fee goes to performers.</p>")
+            default += fee_line(fee_included, CARD_FEE)
         return default
 
     if "<p>" in raw_bio or "<br" in raw_bio:
@@ -140,10 +143,7 @@ def format_description_html(raw_bio, is_free, fee_included=0):
             "<p><strong>📍 Venue:</strong> Sisyphus Brewing • 712 Ontario Ave W, Minneapolis, MN</p>"
         )
         if fee_included:
-            policy_footer += (
-                f"<p><strong>💵 Price includes a ${fee_included:.0f} ticketing fee</strong> "
-                "— 100% of the fee goes to performers.</p>"
-            )
+            policy_footer += fee_line(fee_included, CARD_FEE)
     return "\n".join(html_parts) + "\n" + policy_footer
 
 # ---------------------------------------------------------------------------
@@ -403,6 +403,12 @@ def main():
             "type": "number_decimal",
             "value": f"{fee:.2f}"
         }]
+        if CARD_FEE:
+            # Every ticket on a new show carries the $1, so it counts from now.
+            product_payload["product"]["metafields"] += [
+                {"namespace": "custom", "key": "card_fee", "type": "number_decimal", "value": f"{CARD_FEE:.2f}"},
+                {"namespace": "custom", "key": "card_fee_since", "type": "date_time",
+                 "value": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}]
 
     if IMAGE_URL and IMAGE_URL.startswith("http"):
         product_payload["product"]["images"] = [{"src": IMAGE_URL}]

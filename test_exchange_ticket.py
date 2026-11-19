@@ -127,6 +127,29 @@ class SwapTest(unittest.TestCase):
         self.assertEqual(set_qty["qty"], 3)
         self.assertIn(("PATCH", f"tickets?unique_id=eq.{REQ['from_unique_id']}", {"tickets": 3}), self.sb_calls)
 
+    def _card_fee_case(self, ordered_hours_ago, paid="26.0"):
+        since = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        var = variant(price="27.00")
+        var["productVariant"]["product"].update({"cardFee": {"value": "1.0"}, "cardFeeSince": {"value": since}})
+        before = order(price=paid)
+        before["orders"]["nodes"][0]["createdAt"] = (datetime.now(timezone.utc) - timedelta(hours=ordered_hours_ago)).isoformat()
+        return FakeShop(var, before, order(new_line=NEW_LINE))
+
+    def test_ticket_bought_before_the_card_fee_swaps_at_its_old_price(self):
+        # Bought at $26 ($23 + $3); the new night is now $27 ($23 + $4). Same seats, no charge.
+        shop = self._card_fee_case(ordered_hours_ago=72)
+        result = ex.exchange(shop, dict(REQ))
+        self.assertEqual(result["diff"], 0)
+        disc = next(v for n, v in shop.calls if n == "orderEditAddLineItemDiscount")
+        self.assertEqual(disc["discount"]["description"], "Original price")
+        self.assertAlmostEqual(27 * (1 - disc["discount"]["percentValue"] / 100), 26.0, places=1)
+
+    def test_ticket_bought_after_the_card_fee_swaps_at_the_same_price(self):
+        shop = self._card_fee_case(ordered_hours_ago=2, paid="27.0")
+        result = ex.exchange(shop, dict(REQ))
+        self.assertEqual(result["diff"], 0)
+        self.assertNotIn("orderEditAddLineItemDiscount", shop.names())
+
     def test_refusals(self):
         cases = [
             (dict(REQ, email="someone@else.com"), variant(), "email"),
