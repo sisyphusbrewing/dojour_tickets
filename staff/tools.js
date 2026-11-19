@@ -45,6 +45,12 @@ var STAFF_TOOLS = [
     desc: 'What every button and knob at the bar does.', find: 'buttons sound lights music mic volume av' },
   { id: 'crash', group: 'show', min: 'staff', ico: '🧯', href: '/av/if-it-crashes.html', title: 'If the show computer restarts', short: 'Computer crashed',
     desc: 'Get sound and lights back, step by step.', find: 'crash broken no sound help pc companion' },
+  // The beers guests picked on their phones before they got here, for the
+  // bar to pour as each guest checks in (Sam, Nov 18 2026: "drinks ready as
+  // you check in"). Only Sam sees the tile for now: guests aren't sent the
+  // "Your night" page yet. When he opens it to the bar, change min to staff.
+  { id: 'firstround', group: 'show', min: 'owner', ico: '🍺', href: '/firstround/', title: 'First round',
+    desc: 'Beers guests picked ahead of time. Pour one when its guest checks in.', find: 'first beer drinks waiting pre order pour your night guest' },
   { id: 'supplies', group: 'show', min: 'staff', ico: '📦', href: '/supplies/', title: 'Supplies',
     desc: 'The stock sheet. Count it, and booking@ hears when something runs low.', find: 'stock inventory order low napkins count' },
 

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus First Round</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="First round">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="../staff/nav.js"></script>
+  <style>
+    /* The bar's side of "Your night" (Sam, Nov 18 2026: more add-ons like
+       "drinks ready as you check in"). A guest picks their first beer on
+       their phone before they get here (night/index.html). This is the list
+       the bar keeps open on a tablet or phone:
+         Pour now       the door just checked them in. Pour it, hand it over,
+                        ring it in GoTab like any other beer, tap "Handed over".
+         Not here yet   picked, but the guest hasn't checked in. The totals
+                        say what's coming.
+         Handed over    done. "Not yet" puts one back if it was tapped by mistake.
+       It asks the database again every 8 seconds and chimes when someone new
+       lands in Pour now. The rules are in
+       supabase/migrations/20261119030000_guest_night.sql. */
+    .intro { margin-top: 18px; }
+    .who { font-size: 21px; font-weight: 700; line-height: 1.2; }
+    .meta { color: var(--gray); font-size: 15px; margin-top: 2px; }
+    .drinks { margin-top: 8px; font-size: 19px; }
+    .drinks span { display: block; }
+    .fr { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .fr .what { min-width: 0; }
+    .fr .btn { flex: 0 0 auto; }
+    #nowList .fr { padding-top: 16px; padding-bottom: 16px; }
+    .totals { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .totals .tag { background: #3d3a3a; color: var(--white); font-size: 15px; padding: 5px 12px; }
+    .empty-note { color: var(--gray); padding: 6px 0 2px; }
+    .example { margin-top: 18px; }
+  </style>
+</head>
+<body class="look">
+  <div id="lock" class="hidden">
+    <div class="card">
+      <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+      <h1 class="hdr-title" style="text-align:center">First round</h1>
+      <form id="loginForm" class="stack">
+        <div class="field"><label for="login">Username</label>
+          <input class="input" id="login" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>
+        <div class="field"><label for="password">Password</label>
+          <input class="input" id="password" type="password" required autocomplete="current-password"></div>
+        <div class="err hidden" id="loginError"></div>
+        <button class="btn btn-primary btn-big" id="loginBtn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">First round</div>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="empty hidden" id="notManager"></div>
+
+    <div id="page" class="hidden">
+      <div class="warn example hidden" id="exampleNote">These are made-up guests, to show how the list works. <a href="./">See tonight’s real list</a>.</div>
+      <p class="quiet intro">Beers guests picked on their phones before they got here. Pour one when its guest checks in. They pay when they pick it up: ring it in GoTab like any other beer.</p>
+
+      <div class="band-row"><h2 class="band">Pour now</h2><span class="band-note" id="nowNote"></span></div>
+      <div class="list hidden" id="nowList"></div>
+      <p class="empty-note" id="nowEmpty">Nobody’s waiting on a beer.</p>
+
+      <div class="band-row"><h2 class="band">Not here yet</h2><span class="band-note" id="soonNote"></span></div>
+      <div class="totals" id="soonTotals"></div>
+      <div class="list hidden" id="soonList"></div>
+      <p class="empty-note" id="soonEmpty">No first beers picked for tonight yet.</p>
+
+      <div id="doneBox" class="hidden">
+        <div class="band-row"><h2 class="band">Handed over</h2><span class="band-note" id="doneNote"></span></div>
+        <div class="list" id="doneList"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    var OPEN_TO = 'staff';
+    // ?example=1 shows made-up guests without touching the database, so the
+    // list can be looked at on a night when nobody has picked anything.
+    var EXAMPLE = /[?&]example=1/.test(location.search);
+    var picks = [];          // what the database last sent
+    var seenNow = null;      // the guests already in "Pour now", so the chime only rings for new ones
+    var busy = false;
+
+    function ago(iso, nowMs) {
+      if (!iso) return '';
+      var m = Math.max(0, Math.round((nowMs - Date.parse(iso)) / 60000));
+      return m < 1 ? 'just now' : m === 1 ? '1 min ago' : m < 60 ? m + ' min ago' : 'a while ago';
+    }
+    function count(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+    // One box per guest: every drink they picked that fits this part of the list.
+    function byGuest(rows) {
+      var map = {}, list = [];
+      rows.forEach(function (p) {
+        if (!map[p.line]) { map[p.line] = { line: p.line, guest: p.guest, show: p.show, when: p.when, here_at: p.here_at, picks: [] }; list.push(map[p.line]); }
+        map[p.line].picks.push(p);
+      });
+      return list;
+    }
+    function drinksHtml(g) {
+      return '<div class="drinks">' + g.picks.map(function (p) { return '<span>' + escapeHtml(p.item) + '</span>'; }).join('') + '</div>';
+    }
+
+    function render(nowMs) {
+      var now = byGuest(picks.filter(function (p) { return p.here && !p.poured_at; }));
+      var soon = byGuest(picks.filter(function (p) { return !p.here && !p.poured_at; }));
+      var done = byGuest(picks.filter(function (p) { return !!p.poured_at; }));
+      var manyShows = {};
+      picks.forEach(function (p) { manyShows[p.show + '|' + p.when] = 1; });
+      manyShows = Object.keys(manyShows).length > 1;
+      function showLine(g) { return manyShows ? escapeHtml(g.show) + ' · ' + escapeHtml(showTime(g.when)) + ' · ' : ''; }
+
+      $('nowNote').textContent = now.length ? count(now.length, 'guest') : '';
+      $('nowList').classList.toggle('hidden', !now.length);
+      $('nowEmpty').classList.toggle('hidden', !!now.length);
+      $('nowList').innerHTML = now.map(function (g) {
+        return '<div class="fr"><div class="what"><div class="who">' + escapeHtml(g.guest) + '</div>' +
+               '<div class="meta">' + showLine(g) + 'Checked in ' + escapeHtml(ago(g.here_at, nowMs)) + '</div>' + drinksHtml(g) + '</div>' +
+               '<button class="btn btn-primary" type="button" data-pour="' + g.picks.map(function (p) { return p.id; }).join(',') + '">Handed over</button></div>';
+      }).join('');
+
+      var totals = {}, n = 0;
+      soon.forEach(function (g) { g.picks.forEach(function (p) { totals[p.item] = (totals[p.item] || 0) + 1; n++; }); });
+      $('soonNote').textContent = n ? count(n, 'drink') : '';
+      $('soonTotals').innerHTML = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a] || a.localeCompare(b); }).map(function (k) {
+        return '<span class="tag">' + escapeHtml(k) + ' × ' + totals[k] + '</span>';
+      }).join('');
+      $('soonList').classList.toggle('hidden', !soon.length);
+      $('soonEmpty').classList.toggle('hidden', !!soon.length);
+      $('soonList').innerHTML = soon.map(function (g) {
+        return '<div class="fr"><div class="what"><div class="who">' + escapeHtml(g.guest) + '</div>' +
+               (manyShows ? '<div class="meta">' + escapeHtml(g.show) + ' · ' + escapeHtml(showTime(g.when)) + '</div>' : '') + drinksHtml(g) + '</div></div>';
+      }).join('');
+
+      $('doneBox').classList.toggle('hidden', !done.length);
+      $('doneNote').textContent = done.length ? count(done.length, 'guest') : '';
+      $('doneList').innerHTML = done.map(function (g) {
+        return '<div class="fr"><div class="what"><div class="who">' + escapeHtml(g.guest) + '</div>' +
+               '<div class="meta">' + escapeHtml(g.picks.map(function (p) { return p.item; }).join(', ')) + '</div></div>' +
+               '<button class="btn btn-ghost btn-sm" type="button" data-unpour="' + g.picks.map(function (p) { return p.id; }).join(',') + '">Not yet</button></div>';
+      }).join('');
+
+      // Chime once for each guest who is new to "Pour now".
+      var ids = now.map(function (g) { return g.line; });
+      if (seenNow && ids.some(function (id) { return seenNow.indexOf(id) < 0; })) chime(true);
+      seenNow = ids;
+    }
+
+    function take(data) {
+      picks = (data && data.picks) || [];
+      render(data && data.now ? Date.parse(data.now) : Date.now());
+    }
+    async function refresh() {
+      if (EXAMPLE || busy || document.hidden) return;
+      var r = await sb.rpc('night_bar');
+      if (!r.error) take(r.data);
+    }
+    // Marks every drink in the box handed over (or not), one after another.
+    async function setPoured(ids, undo) {
+      if (EXAMPLE) {
+        picks.forEach(function (p) { if (ids.indexOf(String(p.id)) >= 0) p.poured_at = undo ? null : new Date().toISOString(); });
+        render(Date.now());
+        return;
+      }
+      busy = true;
+      var last = null;
+      for (var i = 0; i < ids.length; i++) {
+        var r = await sb.rpc('night_poured', { p_pick: parseInt(ids[i], 10), p_undo: !!undo });
+        if (r.error) { toast(r.error.message || 'That didn’t save. Try again.', true); break; }
+        last = r.data;
+      }
+      busy = false;
+      if (last) take(last); else refresh();
+    }
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-pour],[data-unpour]');
+      if (!b || busy) return;
+      setPoured((b.dataset.pour || b.dataset.unpour).split(','), b.dataset.unpour != null);
+    });
+
+    function example() {
+      var t = new Date(Date.now() - 60000).toISOString(), w = 'Tonight • 7:00 PM', s = 'Tonight’s show';
+      return { now: new Date().toISOString(), picks: [
+        { id: 1, line: 'a', guest: 'Pat O’Brien', item: 'Mr. Sparkle’s Lager', show: s, when: w, here: true, here_at: t, poured_at: null },
+        { id: 2, line: 'a', guest: 'Pat O’Brien', item: 'AntiSocial Apple', show: s, when: w, here: true, here_at: t, poured_at: null },
+        { id: 3, line: 'b', guest: 'Lee Nguyen', item: 'Fool’s Gold', show: s, when: w, here: false, here_at: null, poured_at: null },
+        { id: 4, line: 'c', guest: 'Morgan Diaz', item: 'Mr. Sparkle’s Lager', show: s, when: w, here: false, here_at: null, poured_at: null },
+        { id: 5, line: 'c', guest: 'Morgan Diaz', item: 'Hop Water', show: s, when: w, here: false, here_at: null, poured_at: null },
+        { id: 6, line: 'd', guest: 'Sam Rivera', item: 'Scoopshot IPA', show: s, when: w, here: true, here_at: t, poured_at: t }
+      ] };
+    }
+
+    if (EXAMPLE) {
+      // Made-up names only, so it needs no login.
+      $('page').classList.remove('hidden');
+      $('exampleNote').classList.remove('hidden');
+      take(example());
+    } else {
+      setupSignIn(async function (role) {
+        if (!roleAtLeast(role, OPEN_TO)) { showNoAccess(OPEN_TO, ['page']); return; }
+        $('page').classList.remove('hidden');
+        await refresh();
+        setInterval(refresh, 8000);
+        document.addEventListener('visibilitychange', refresh);
+      });
+    }
+  </script>
+</body>
+</html>
