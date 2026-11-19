@@ -304,6 +304,21 @@ Dojour gotchas, learned the hard way:
   minutes, comes back, or a backup fails or is missed. Rules in
   `supabase/migrations/20261119040000_device_heartbeats.sql`. The restic
   password and the check-in code live only on the PC.
+- **Printed checks for comics** (Sam, Nov 18 2026: "Need secure checks for
+  printing at the taproom for comedians, can only work on my approval"; he
+  picked a printed signature). On the pay sheet (`payouts/`), a line paid by
+  Check gets "Print check"; the Checks tab is the register. Only the owner
+  login approves (`check_approve()`); a trigger refuses any other way to
+  approve, even with the service key. The office PC (`backup/checks/`,
+  installed once at the PC by `setup-checks.ps1`, never auto-updated) prints
+  approved checks every minute on MICR toner and blank check stock, marks the
+  line paid, and keeps a positive-pay file. The routing and account numbers
+  and Sam's signature live only on that PC (Windows-encrypted), never in the
+  database or this repo. Nothing is deleted; a voided number is never reused;
+  every step is in `check_events`. `schedule_notify.py` emails Sam when a
+  check waits for him, prints, fails or sticks. Rules in
+  `supabase/migrations/20261119060000_comic_checks.sql`, checks in
+  `supabase/tests/comic_checks/`.
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<!--
+  One printed check for a comic (Sam, Nov 18 2026), on blank letter-size
+  check stock with the check on top and two stubs below.
+
+  The office PC (checks.ps1) fills in the data line below, prints this page
+  to a PDF and sends it to the printer, then deletes the PDF. The bank's
+  routing and account numbers and Sam's signature only ever exist on that PC:
+  this file in the public repo has none of them.
+
+  The line of funny numbers at the bottom (the MICR line) is what the bank's
+  machines read. It has to be in the E-13B shapes (GnuMICR font, GPL, see
+  GnuMICR-COPYING.txt), printed with MICR toner, at exact spots measured from
+  the check's right and bottom edges (ANSI X9.13): every character sits in a
+  1/8 inch slot counted from 5/16 inch in from the right edge, 3/16 inch up
+  from the bottom.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check</title>
+<style>
+  @font-face { font-family: 'GnuMICR'; src: url('GnuMICR.otf') format('opentype'); }
+  @page { size: 8.5in 11in; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  svg { display: block; width: 8.5in; height: 11in; }
+  text { font-family: Arial, Helvetica, sans-serif; fill: #000; }
+  .micr { font-family: 'GnuMICR'; }
+</style>
+</head>
+<body>
+<svg id="page" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8.5 11"></svg>
+<script>
+window.CHECK = /*DATA*/null;
+
+// ---------- words for the amount line ----------
+var ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
+  'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+var TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+function under1000(n) {
+  var out = [];
+  if (n >= 100) { out.push(ONES[Math.floor(n / 100)] + ' hundred'); n %= 100; }
+  if (n >= 20) { out.push(TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '')); }
+  else if (n > 0) { out.push(ONES[n]); }
+  return out.join(' ');
+}
+// 1920 -> "One thousand nine hundred twenty and 00/100"
+function amountWords(amount) {
+  var cents = Math.round(Number(amount) * 100), dollars = Math.floor(cents / 100), c = cents % 100;
+  var parts = [], scales = [[1000000, 'million'], [1000, 'thousand']], n = dollars;
+  scales.forEach(function (s) { if (n >= s[0]) { parts.push(under1000(Math.floor(n / s[0])) + ' ' + s[1]); n %= s[0]; } });
+  if (n > 0) parts.push(under1000(n));
+  var w = parts.length ? parts.join(' ') : 'zero';
+  w = w.charAt(0).toUpperCase() + w.slice(1);
+  return w + ' and ' + (c < 10 ? '0' : '') + c + '/100';
+}
+function money(amount) {
+  return Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ---------- the MICR line ----------
+// GnuMICR: digits as themselves, A = transit, C = on-us, D = dash.
+// Returns [[slot, character], ...]; slot 1 is the rightmost (amount field,
+// left blank for the bank). Fields (ANSI X9.13):
+//   on-us       slots 14-31: account number then the on-us symbol in slot 14
+//   transit     slots 33-43: routing number between two transit symbols
+//   aux on-us   slots 45+  : the check number between two on-us symbols
+function micrSlots(routing, account, number) {
+  var slots = [];
+  function field(text, rightSlot) {
+    for (var i = 0; i < text.length; i++) slots.push([rightSlot + (text.length - 1 - i), text.charAt(i)]);
+  }
+  var acct = String(account).replace(/\s/g, '').replace(/-/g, 'D');
+  field(acct + 'C', 14);
+  field('A' + String(routing) + 'A', 33);
+  field('C' + String(number).padStart(6, '0') + 'C', 45);
+  return slots;
+}
+function slotX(slot, checkRight) { return checkRight - (5 / 16 + slot / 8); }   // left edge of the slot
+
+// ABA check digit, so a typo in the routing number never prints.
+function routingOk(r) {
+  if (!/^\d{9}$/.test(r)) return false;
+  var d = r.split('').map(Number);
+  return (3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + (d[2] + d[5] + d[8])) % 10 === 0;
+}
+
+// ---------- drawing ----------
+var NS = 'http://www.w3.org/2000/svg';
+function el(name, attrs, text) {
+  var e = document.createElementNS(NS, name);
+  Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+  if (text != null) e.textContent = text;
+  return e;
+}
+function draw(d) {
+  var svg = document.getElementById('page');
+  var g = el('g', { transform: 'translate(' + (d.offset_x || 0) + ' ' + (d.offset_y || 0) + ')' });
+  svg.appendChild(g);
+  function t(x, y, s, size, extra) { var a = { x: x, y: y, 'font-size': size / 72 }; Object.assign(a, extra || {}); g.appendChild(el('text', a, s)); }
+  function line(x1, y1, x2, y2, w) { g.appendChild(el('line', { x1: x1, y1: y1, x2: x2, y2: y2, stroke: '#000', 'stroke-width': (w || 0.6) / 72 })); }
+  var date = new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var words = amountWords(d.amount);
+
+  // The check: top 3.5 inches.
+  t(0.4, 0.45, d.company || 'Sisyphus Brewing', 13, { 'font-weight': 700 });
+  (d.address || []).forEach(function (a, i) { t(0.4, 0.62 + i * 0.15, a, 8.5); });
+  if (d.bank_name) t(4.25, 0.45, d.bank_name, 8.5, { 'text-anchor': 'middle', 'font-weight': 700 });
+  if (d.bank_city) t(4.25, 0.6, d.bank_city, 7.5, { 'text-anchor': 'middle' });
+  t(8.0, 0.45, String(d.number), 13, { 'text-anchor': 'end', 'font-weight': 700 });
+  t(6.0, 0.95, 'DATE', 7, { 'letter-spacing': 0.01 });
+  t(6.45, 0.95, date, 11);
+  line(6.4, 1.0, 8.0, 1.0);
+
+  t(0.4, 1.38, 'PAY TO THE', 6.5); t(0.4, 1.48, 'ORDER OF', 6.5);
+  t(1.15, 1.46, d.pay_to, 12, { 'font-weight': 700 });
+  line(1.1, 1.52, 6.45, 1.52);
+  g.appendChild(el('rect', { x: 6.6, y: 1.22, width: 1.4, height: 0.36, fill: 'none', stroke: '#000', 'stroke-width': 0.8 / 72 }));
+  t(6.67, 1.47, '$', 11, { 'font-weight': 700 });
+  t(7.93, 1.47, '**' + money(d.amount), 12, { 'text-anchor': 'end', 'font-weight': 700 });
+
+  // Words, then stars to the end of the line so nothing can be added.
+  var wl = el('text', { x: 0.4, y: 1.98, 'font-size': 11 / 72 }, words + ' ***');
+  g.appendChild(wl);
+  while (wl.getComputedTextLength() < 6.7) wl.textContent += '*';
+  line(0.4, 2.04, 7.2, 2.04);
+  t(7.3, 1.98, 'DOLLARS', 8, { 'font-weight': 700 });
+
+  t(0.4, 2.72, 'MEMO', 7);
+  if (d.memo) t(0.85, 2.71, d.memo, 9.5);
+  line(0.82, 2.76, 4.0, 2.76);
+  if (d.signature) g.appendChild(el('image', { href: d.signature, x: 4.9, y: 2.12, width: 3.1, height: 0.62, preserveAspectRatio: 'xMidYMax meet' }));
+  line(4.9, 2.76, 8.0, 2.76);
+  t(6.45, 2.88, 'AUTHORIZED SIGNATURE', 6, { 'text-anchor': 'middle' });
+  t(8.0, 3.0, 'VOID AFTER 90 DAYS', 6, { 'text-anchor': 'end' });
+
+  // MICR line: baseline 3/16 inch above the bottom of the check (3.5in).
+  micrSlots(d.routing, d.account, d.number).forEach(function (s) {
+    g.appendChild(el('text', { x: slotX(s[0], 8.5), y: 3.5 - 3 / 16, 'font-size': 12 / 72, class: 'micr' }, s[1]));
+  });
+
+  // Two stubs: one stays with the comic, one comes back to us.
+  [['Keep this part', 3.5], ['Sisyphus copy', 7.25]].forEach(function (s) {
+    var y = s[1];
+    t(0.4, y + 0.45, (d.company || 'Sisyphus Brewing') + '   ·   Check ' + d.number + '   ·   ' + date, 10, { 'font-weight': 700 });
+    t(8.0, y + 0.45, s[0], 8, { 'text-anchor': 'end' });
+    line(0.4, y + 0.55, 8.0, y + 0.55);
+    t(0.4, y + 0.85, 'Paid to', 8); t(1.3, y + 0.85, d.pay_to, 11);
+    t(0.4, y + 1.1, 'For', 8); t(1.3, y + 1.1, d.stub || d.memo || '', 11);
+    t(0.4, y + 1.35, 'Amount', 8); t(1.3, y + 1.35, '$' + money(d.amount), 11, { 'font-weight': 700 });
+    t(1.3, y + 1.55, words + ' dollars', 8);
+    t(0.4, y + 2.0, 'Comics get 100% of the door. Thanks for the show.', 8, { 'font-style': 'italic' });
+  });
+
+  if (d.sample) {
+    g.appendChild(el('text', { x: 4.25, y: 2.2, 'font-size': 60 / 72, 'text-anchor': 'middle', fill: '#000', 'fill-opacity': 0.12,
+      'font-weight': 700, transform: 'rotate(-12 4.25 2.0)' }, 'VOID · SAMPLE'));
+  }
+}
+
+if (window.CHECK) {
+  if (!routingOk(String(window.CHECK.routing))) {
+    document.body.textContent = 'STOP: the routing number does not check out. Nothing printed.';
+  } else {
+    draw(window.CHECK);
+  }
+}
+</script>
+</body>
+</html>

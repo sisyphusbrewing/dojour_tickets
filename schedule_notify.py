@@ -152,6 +152,62 @@ def send_device_alerts():
     return len(alerts)
 
 
+CHECKS_LINK = "https://staff.sisyphusbrewing.com/payouts/#checks"
+
+
+def check_alerts(rows):
+    """Turn check_alerts() rows into emails for Sam: [(subject, body)].
+    Printed comic checks only go out on Sam's OK (Sam, Nov 18 2026), so he
+    hears when one is waiting for him, when it printed, and when it didn't.
+    Pure, so the tests can check the wording."""
+    out = []
+    for r in rows or []:
+        who = r.get("pay_to") or "a comic"
+        amt = f"${float(r.get('amount') or 0):,.2f}"
+        num = f"Check {r['number']}" if r.get("number") else "A check"
+        note = (r.get("note") or "").strip()
+        state = r.get("state")
+        if state == "waiting":
+            out.append((f"Check to approve: {amt} to {who}",
+                        f"A check for {amt} to {who}" + (f" ({note})" if note else "") + " is waiting for your OK. "
+                        f"Nothing prints until you approve it.\n\nApprove or void it here: {CHECKS_LINK}"))
+        elif state == "printed":
+            out.append((f"{num} printed: {amt} to {who}",
+                        f"{num} for {amt} to {who} went to the office printer. Its pay line is marked paid.\n\n"
+                        f"Didn't come out right? Void it here and approve a new one: {CHECKS_LINK}"))
+        elif state == "failed":
+            out.append((f"{num} did not print: {amt} to {who}",
+                        f"The office PC couldn't print {num.lower()} for {amt} to {who}"
+                        + (f": {note}." if note else ".") + f"\n\nFix it, then tap Print again: {CHECKS_LINK}"))
+        elif state == "stuck":
+            out.append((f"{num} hasn't printed yet: {amt} to {who}",
+                        f"{num} for {amt} to {who} went to the office PC 10 minutes ago and it never said it printed. "
+                        "The PC may be asleep or the printer jammed.\n\nIf the check came out, keep it and ignore this. "
+                        f"If not, tap Print again; if a bad copy came out, void it: {CHECKS_LINK}"))
+    return out
+
+
+def send_check_alerts():
+    """Ask the database what changed with printed checks and email Sam."""
+    alerts = check_alerts(rpc("check_alerts", optional=True))
+    if not alerts:
+        return 0
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"{len(alerts)} check alert(s) not sent: SMTP credentials missing.")
+        return 0
+    with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
+        server.login(SMTP_USER, SMTP_PASS)
+        for subject, body in alerts:
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = f"Sisyphus Box Office <{FROM_EMAIL}>"
+            msg["To"] = OWNER_EMAIL
+            msg.set_content(body + "\n\nSisyphus")
+            server.send_message(msg)
+    print(f"Sent {len(alerts)} check alert(s).")
+    return len(alerts)
+
+
 def texts_on():
     return bool(TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM)
 
@@ -293,6 +349,11 @@ def main(quietly=False):
             send_device_alerts()
         except (requests.RequestException, smtplib.SMTPException, OSError) as err:
             print(f"Device check failed ({type(err).__name__}); trying again next look.")
+        # Printed comic checks: waiting for Sam's OK, printed, or not.
+        try:
+            send_check_alerts()
+        except (requests.RequestException, smtplib.SMTPException, OSError) as err:
+            print(f"Check alerts failed ({type(err).__name__}); trying again next look.")
 
     rows = rpc("schedule_outbox_pending")
     if not rows:

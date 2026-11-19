@@ -41,6 +41,9 @@
     .linkbox { display: flex; gap: 6px; margin-top: 6px; }
     .linkbox input { flex: 1; min-width: 0; }
     .line.req { border-color: var(--slate-light); }
+    .line.chk { border-color: var(--slate-light); }
+    .chkprev { background: #fff; color: #111; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
+    .chkprev b { font-size: 16px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
@@ -79,6 +82,7 @@
         <div class="chips tabs" id="tabs">
           <button class="chip on" type="button" data-t="owed">Owed</button>
           <button class="chip" type="button" data-t="paid">Paid</button>
+          <button class="chip" type="button" data-t="checks">Checks</button>
           <button class="chip" type="button" data-t="year">This year</button>
         </div>
       </div>
@@ -90,6 +94,7 @@
     <div id="sheet">
       <p class="intro" id="intro">Tap Pay and your Venmo, PayPal or Cash App opens with the amount filled in. Send it, come back, tap Paid so it’s logged.</p>
       <div id="reqs"></div>
+      <div id="waiting"></div>
       <div id="list"><div class="empty">Counting what we owe…</div></div>
     </div>
   </main>
@@ -139,12 +144,25 @@
     </form>
   </dialog>
 
+  <!-- Printed checks (Sam, Nov 18 2026: "can only work on my approval"). -->
+  <dialog id="checkDlg">
+    <form method="dialog">
+      <h2>Print a check</h2>
+      <div class="chkprev" id="chkPrev"></div>
+      <p class="help" id="chkHelp"></p>
+      <div class="d-actions">
+        <button class="btn btn-primary grow" id="chkGo" type="button" onclick="approveCheck()">Approve and print</button>
+        <button class="btn" type="button" onclick="$('checkDlg').close()">Not now</button>
+      </div>
+    </form>
+  </dialog>
+
   <datalist id="names"></datalist>
   <datalist id="shows"></datalist>
   <div id="toast" class="toast hidden"></div>
 
   <script>
-    var payees = [], lines = [], reqs = [], tab = 'owed', editing = null, editingPayee = null, me = '', mailTimer = null;
+    var payees = [], lines = [], reqs = [], checks = [], checksOn = false, firstNumber = null, checkFor = null, tab = location.hash === '#checks' ? 'checks' : 'owed', editing = null, editingPayee = null, me = '', mailTimer = null;
     var GETPAID = 'https://staff.sisyphusbrewing.com/getpaid/?t=';
 
     function money(v) { var n = Number(v), a = Math.abs(n); return (n < 0 ? '−$' : '$') + (a % 1 ? a.toFixed(2) : a.toLocaleString('en-US')); }
@@ -169,6 +187,11 @@
       var r3 = await sb.from('pay_requests').select('*').eq('status', 'new').order('created_at');
       if (r1.error || r2.error) { toast((r1.error || r2.error).message, true); return; }
       payees = r1.data || []; lines = r2.data || []; reqs = r3.data || [];
+      // Printed checks. Missing table (before the change is applied): no check buttons.
+      var r4 = await sb.from('checks').select('*').order('drafted_at', { ascending: false });
+      checksOn = !r4.error; checks = r4.data || [];
+      var r5 = checksOn ? await sb.from('check_settings').select('first_number').maybeSingle() : null;
+      firstNumber = r5 && r5.data ? r5.data.first_number : null;
       render();
     }
 
@@ -183,7 +206,9 @@
         .map(function (s) { return '<option value="' + escapeHtml(s) + '">'; }).join('');
       $('intro').classList.toggle('hidden', tab !== 'owed');
       renderReqs();
+      renderWaiting();
       if (tab === 'year') { renderYear(); return; }
+      if (tab === 'checks') { renderChecks(); return; }
 
       var shown = lines.filter(function (l) { return l.status === tab; });
       if (!shown.length) {
@@ -231,7 +256,15 @@
         else if (p.method === 'Zelle' || (p.method === 'PayPal' && p.handle)) payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="copy">Copy for ' + escapeHtml(p.method) + '</button>';
         else if (!p.method) payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="payee">Get pay info</button>';
         else payBtn = '';
-        act = payBtn + '<button class="btn btn-sm" type="button" data-act="paid">Paid ✓</button>';
+        var ck = liveCheck(l);
+        if (ck) {
+          how += '<br>' + checkState(ck);
+          if (ck.status === 'draft') payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="check">Approve check</button>';
+          else payBtn = '';
+        } else if (checksOn && p.method === 'Check') {
+          payBtn = '<button class="btn btn-sm btn-primary" type="button" data-act="check">Print check</button>';
+        }
+        act = payBtn + (ck ? '' : '<button class="btn btn-sm" type="button" data-act="paid">Paid ✓</button>');
       }
       return '<div class="line' + (l.status === 'paid' ? ' paid' : '') + '" data-id="' + l.id + '">' +
         '<div class="l-main"><div class="l-name" data-act="payee">' + escapeHtml(p.name || '?') + '<span class="amt">' + money(l.amount) + '</span></div>' +
@@ -336,6 +369,127 @@
       var q = reqs.find(function (x) { return x.id === el.dataset.req; });
       if (act.dataset.act === 'approve') approveReq(q); else if (act.dataset.act === 'dismiss') dismissReq(q);
     });
+
+    // ---------- printed checks ----------
+    // A check moves draft -> approved (Sam's tap, owner login only) -> printing
+    // (the office PC took it) -> printed (the line is marked paid), or failed /
+    // void. The database enforces all of it; this page only shows and asks.
+    // The bank numbers and Sam's signature are only on the office PC.
+    function liveCheck(l) { return checks.find(function (c) { return c.payout_id === l.id && c.status !== 'void'; }); }
+    function checkState(c) {
+      var n = c.number ? 'Check ' + c.number : 'Check';
+      if (c.status === 'draft') return '<span class="warn">Check waiting for your OK</span>';
+      if (c.status === 'approved') return '<span class="okay">' + n + ' approved</span> · printing at the office in about a minute';
+      if (c.status === 'printing') return '<span class="okay">' + n + '</span> · at the printer' + (Date.now() - new Date(c.claimed_at) > 600000 ? ' <span class="warn">(no word back yet)</span>' : '');
+      if (c.status === 'printed') return '<span class="okay">' + n + ' printed</span> ' + new Date(c.printed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      if (c.status === 'failed') return '<span class="warn">' + n + ' did not print</span>' + (c.print_note ? ': ' + escapeHtml(c.print_note) : '');
+      return '<span class="warn">Void</span>' + (c.void_reason ? ': ' + escapeHtml(c.void_reason) : '');
+    }
+    function openCheck(l) {
+      var p = payeeOf(l), ck = liveCheck(l);
+      checkFor = l;
+      var payTo = ck ? ck.pay_to : (String(p.legal_name || '').trim() || p.name);
+      $('chkPrev').innerHTML = 'Pay to the order of<br><b>' + escapeHtml(payTo) + '</b><br>' +
+        '<b>$' + Number(ck ? ck.amount : l.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</b><br>' +
+        'For ' + escapeHtml(l.show_name + (l.role ? ' · ' + l.role : ''));
+      $('chkHelp').innerHTML = (!ck && !String(p.legal_name || '').trim()
+          ? '<span class="warn">Made out to their stage name.</span> If their bank account is under another name, Not now, tap their name and add their legal name first.<br>' : '') +
+        'It prints on the office printer about a minute after you approve, signed, and this line is marked paid.';
+      $('checkDlg').showModal();
+    }
+    async function approveCheck() {
+      var l = checkFor; if (!l) return;
+      $('chkGo').disabled = true;
+      try {
+        var ck = liveCheck(l);
+        if (!ck) {
+          var d = await sb.rpc('check_draft', { p_payout: l.id });
+          if (d.error) throw d.error;
+          ck = d.data; checks.unshift(ck);
+        }
+        var a = await sb.rpc('check_approve', { p_id: ck.id });
+        if (a.error) throw a.error;
+        Object.assign(ck, a.data);
+        $('checkDlg').close(); render();
+        toast('Check ' + ck.number + ' approved. It prints at the office in about a minute.');
+      } catch (ex) { toast('Not approved: ' + ex.message, true); }
+      finally { $('chkGo').disabled = false; }
+    }
+    async function approveById(id) {
+      var ck = checks.find(function (c) { return c.id === id; });
+      var l = lines.find(function (x) { return x.id === ck.payout_id; });
+      if (l) { openCheck(l); return; }
+      if (!confirm('Approve and print a $' + Number(ck.amount).toFixed(2) + ' check to ' + ck.pay_to + '?')) return;
+      var a = await sb.rpc('check_approve', { p_id: ck.id });
+      if (a.error) { toast(a.error.message, true); return; }
+      Object.assign(ck, a.data); render();
+    }
+    async function voidCheck(id) {
+      var ck = checks.find(function (c) { return c.id === id; });
+      var why = prompt('Void ' + (ck.number ? 'check ' + ck.number : 'this check') + ' to ' + ck.pay_to + '? Say why' +
+        (ck.status === 'printed' ? ' (tear up the paper check; its line goes back to owed)' : '') + ':', '');
+      if (!why || !why.trim()) return;
+      var r = await sb.rpc('check_void', { p_id: id, p_reason: why.trim() });
+      if (r.error) { toast(r.error.message, true); return; }
+      load();
+      toast('Voided');
+    }
+    async function retryCheck(id) {
+      var ck = checks.find(function (c) { return c.id === id; });
+      if (!confirm('Send check ' + ck.number + ' to the printer again?' + (ck.status === 'printing' ? '\nOnly if no copy came out. If one did, void it instead.' : ''))) return;
+      var r = await sb.rpc('check_retry', { p_id: id });
+      if (r.error) { toast(r.error.message, true); return; }
+      Object.assign(ck, r.data); render();
+      toast('Printing again in about a minute');
+    }
+    async function setFirstNumber() {
+      var n = parseInt(prompt('First printed check number? Pick one far from your paper checkbook\'s numbers.', firstNumber || 10001), 10);
+      if (!(n > 0)) return;
+      var r = await sb.rpc('check_first_number', { p_number: n });
+      if (r.error) { toast(r.error.message, true); return; }
+      firstNumber = r.data; render();
+    }
+    // Drafts someone else asked for, waiting for Sam (top of the Owed tab).
+    function renderWaiting() {
+      var w = checks.filter(function (c) { return c.status === 'draft'; });
+      if (tab !== 'owed' || !w.length) { $('waiting').innerHTML = ''; return; }
+      $('waiting').innerHTML = '<div class="band-row"><span class="band">Checks waiting for your OK</span><span class="group-total">' + w.length + '</span></div>' +
+        '<div class="rows">' + w.map(checkRow).join('') + '</div>';
+    }
+    function checkRow(c) {
+      var btns = '';
+      if (c.status === 'draft') btns = '<button class="btn btn-sm btn-primary" type="button" data-ck="approve">Approve</button>';
+      if (c.status === 'failed' || (c.status === 'printing' && Date.now() - new Date(c.claimed_at) > 600000))
+        btns = '<button class="btn btn-sm btn-primary" type="button" data-ck="retry">Print again</button>';
+      if (c.status !== 'void') btns += '<button class="btn btn-sm" type="button" data-ck="void">Void</button>';
+      var when = c.check_date ? fmtDay(c.check_date) : 'drafted ' + new Date(c.drafted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return '<div class="line chk' + (c.status === 'void' || c.status === 'printed' ? ' paid' : '') + '" data-check="' + c.id + '"><div class="l-main">' +
+        '<div class="l-name">' + (c.number ? '#' + c.number + ' · ' : '') + escapeHtml(c.pay_to) + '<span class="amt">' + money(c.amount) + '</span></div>' +
+        '<div class="l-sub">' + escapeHtml(c.stub || c.memo || '') + ' · ' + when + '</div>' +
+        '<div class="l-sub">' + checkState(c) + '</div></div>' +
+        (btns ? '<div class="l-act">' + btns + '</div>' : '') + '</div>';
+    }
+    // The check register: every check, newest first, void ones included.
+    function renderChecks() {
+      if (!checksOn) { $('list').innerHTML = '<div class="empty"><b>Check printing isn\'t switched on yet</b></div>'; return; }
+      var numbered = checks.some(function (c) { return c.number; });
+      var head = '<div class="band-row"><span class="band">Check register</span><span class="group-total">' +
+        money(checks.filter(function (c) { return c.status === 'printed'; }).reduce(function (s, c) { return s + Number(c.amount); }, 0)) + ' printed</span></div>';
+      var note = '<p class="help">Only your login can approve a check, and nothing prints without that. They print on the office printer, signed, with the bank numbers that live only on that PC. Void a check here if it is lost or wrong; numbers are never reused.' +
+        (!numbered ? ' Printed checks start at number ' + (firstNumber || 10001) + '. <a href="#" data-ck="first">Change</a>' : '') + '</p>';
+      $('list').innerHTML = head + (checks.length ? '<div class="rows">' + checks.map(checkRow).join('') + '</div>'
+        : '<div class="empty"><b>No checks yet</b>Tap Print check on an owed line paid by check.</div>') + note;
+    }
+    function onCheckClick(e) {
+      var b = e.target.closest('[data-ck]'); if (!b) return;
+      if (b.dataset.ck === 'first') { e.preventDefault(); setFirstNumber(); return; }
+      var id = e.target.closest('[data-check]').dataset.check;
+      if (b.dataset.ck === 'approve') approveById(id);
+      else if (b.dataset.ck === 'void') voidCheck(id);
+      else if (b.dataset.ck === 'retry') retryCheck(id);
+    }
+    $('waiting').addEventListener('click', onCheckClick);
+    $('list').addEventListener('click', onCheckClick);
 
     // The 1099 view: what each person got this calendar year, and W-9 status.
     function renderYear() {
@@ -516,7 +670,7 @@
     $('tabs').addEventListener('click', function (e) { var b = e.target.closest('[data-t]'); if (b) { tab = b.dataset.t; render(); } });
     $('list').addEventListener('click', function (e) {
       var act = e.target.closest('[data-act]'); if (!act) return;
-      var el = e.target.closest('.line'); if (!el) return;
+      var el = e.target.closest('.line'); if (!el || !el.dataset.id) return;
       var l = lines.find(function (x) { return x.id === el.dataset.id; });
       var a = act.dataset.act;
       if (a === 'edit') { e.preventDefault(); editLine(l.id); }
@@ -524,6 +678,7 @@
       else if (a === 'addfee') { e.preventDefault(); addFeeSplit(l); }
       else if (a === 'paid') markPaid(l, true);
       else if (a === 'unpay') markPaid(l, false);
+      else if (a === 'check') openCheck(l);
       else if (a === 'copy') { var p = payeeOf(l); copyText(p.handle + '  ' + Number(l.amount).toFixed(2), 'Copied ' + p.handle + ' and ' + money(l.amount) + '. Open your bank app.'); }
     });
 
