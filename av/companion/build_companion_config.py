@@ -73,13 +73,13 @@ TAPROOM_BULBS = {
 # The taproom look (Sam, Nov 19 2026). Blue is our color and the room already has blue LEDs, so
 # the bulbs are warm against it: Bar 1-4 "a dim like edison bulb light" (the bulbs' white stops at
 # 2700K, so the warmer filament glow is a colour), Ordering 1-2 "a brighter orange", Entryway 1
-# bright (the first thing people see), Entryway 2 dimmer, in our slate blue. The taproom is open
+# (the first thing people see) and Entryway 2 both in our slate blue, Entryway 1 the brighter one. The taproom is open
 # through shows. DAYTIME (pressed by itself at opening, door_count.py) brings this look and ALL OFF
 # turns it off; in between the BAR page has its own on/off (Sam, Nov 19 2026: a "show page" and a
 # "bar page" until the front bar gets its own Stream Deck). PRE-SHOW and START SHOW leave it alone.
 EDISON = 0xFF8C40
 TAPROOM_LOOK = {
-    "Entryway 1": (60, {"kelvin": 2700}),  # was 100; Sam, Nov 19 2026: "First bulb is too bright"
+    "Entryway 1": (70, {"rgb": 0x3F6E9A}),  # Sam, Nov 19 2026: "What if the first bulb as you come in is still blue but brighter"
     "Entryway 2": (35, {"rgb": 0x3F6E9A}),
     "Ordering 1": (100, {"rgb": 0xFF7200}),
     "Ordering 2": (100, {"rgb": 0xFF7200}),
