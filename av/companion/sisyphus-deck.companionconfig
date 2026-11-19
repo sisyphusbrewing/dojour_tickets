@@ -467,7 +467,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 70}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -20923,7 +20923,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 70}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.range\", \"instance\": \"brightness\", \"value\": 100}}}",
                           "isExpression": false
                         },
                         "header": {
