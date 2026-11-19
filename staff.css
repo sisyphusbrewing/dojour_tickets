@@ -146,6 +146,9 @@ input[type=date].input, input[type=time].input { color-scheme: dark; }
          border-radius: 10px; font-weight: 600; z-index: 60; box-shadow: 0 8px 24px rgba(0,0,0,.4); max-width: calc(100% - 32px); text-align: center; }
 .toast.bad { background: #f0b7ac; }
 
+/* Door page with no connection: working from the list saved on the phone. */
+.offline-bar { background: #f3d58a; color: #2b2929; border-radius: 10px; padding: 12px 14px; margin: 14px 0 4px; font-size: 15px; line-height: 1.35; }
+
 .foot { color: var(--gray); font-size: 13px; text-align: center; padding: 30px 16px 0; }
 
 /* Same comic, other shows (a "do I have tickets?" caller with the wrong date) */

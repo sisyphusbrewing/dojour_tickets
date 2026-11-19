@@ -316,6 +316,19 @@ Dojour gotchas, learned the hard way:
   door time. Rules in `supabase/migrations/20261119030000_guest_night.sql`,
   checks in `supabase/tests/guest_night/`. The bartender's register (tabs,
   payments, our own card reader) is the next piece, not built here.
+- **`backup/`** is the nightly backup on the office PC (Sam, Nov 18 2026:
+  "Can we use my PC currently as a back up?", until a NAS arrives). restic
+  snapshots on the PC's 2 TB second drive of the recordings, OBS and
+  Companion settings and this repo, 3:15 AM; the PC pulls `nightly.ps1` and
+  `heartbeat.ps1` from main before each run. The PC checks in every 10
+  minutes (`device_heartbeat()`, which also puts its power settings back to
+  never sleep) and `schedule_notify.py` emails Sam when it goes quiet for 30
+  minutes, comes back, or a backup fails or is missed. Rules in
+  `supabase/migrations/20261119040000_device_heartbeats.sql`. The restic
+  password and the check-in code live only on the PC.
+- The door page (`index.html`) keeps working with no internet (Nov 18 2026):
+  it saves tonight's lists on the phone, queues check-ins and sends them when
+  the connection is back; `door-sw.js` keeps the page opening offline.
 - This repo is public, so are its Actions logs. Scripts must not print staff
   names, email addresses, phone numbers or message text.
 

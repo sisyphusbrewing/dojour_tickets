@@ -59,12 +59,13 @@
   </header>
 
   <main class="wrap">
+    <div id="offlineBar" class="offline-bar hidden" role="status"></div>
     <div id="guestList"><div class="empty">Loading tonight…</div></div>
     <!-- The people at the door are mostly comics, not on the time clock: this
          is how they say they worked, so Sam can pay them (Sam, Nov 17 2026). -->
     <div class="foot door-pay" style="font-size:15px"><a href="doorshift/">Worked the door tonight? Send it in here so you get paid.</a></div>
     <div class="foot">
-      <span id="whoami"></span> · <button class="btn-link" onclick="signOut()">Sign out</button>
+      <span id="whoami"></span> · <button class="btn-link" onclick="signOutDoor()">Sign out</button>
       <span id="staffLink" class="hidden"> · <a href="staff/">Staff page</a></span>
       <span id="managerLink" class="hidden"> · <a href="manager/">Manager page</a></span>
     </div>
@@ -78,6 +79,89 @@
     var guests = [];
     var doneOpen = false;
 
+    // ---------- Works without internet ----------
+    // Sam, Nov 18 2026: "For every show there needs to be the ability for it
+    // to run in every scenario except a power outage." This phone keeps a copy
+    // of tonight's lists every time they load. If the wifi or the database
+    // goes down, the door keeps working from that copy, check-ins wait on the
+    // phone, and they are sent as soon as the connection is back.
+    // door-sw.js keeps the page itself opening with no internet.
+    // The copy lives only on this phone and is wiped on Sign out.
+    var SAVED = 'door.saved.v1';    // { at, shows, guests: { showKey: [...] } }
+    var WAITING = 'door.waiting.v1'; // check-ins not sent yet: [{ id, count, key, at }]
+    var offline = false;
+
+    function readStore(name, empty) {
+      try { var v = JSON.parse(localStorage.getItem(name)); return v == null ? empty : v; } catch (e) { return empty; }
+    }
+    function writeStore(name, value) {
+      try { localStorage.setItem(name, JSON.stringify(value)); } catch (e) {}
+    }
+    function saved() { return readStore(SAVED, null) || { at: 0, shows: [], guests: {} }; }
+    function waiting() { return readStore(WAITING, []); }
+
+    // A copy older than 14 hours is last night's: don't show it.
+    function savedForTonight() {
+      var s = saved();
+      return s.at && Date.now() - s.at < 14 * 60 * 60 * 1000 && s.shows.length ? s : null;
+    }
+    function saveShows(list) { var s = saved(); s.at = Date.now(); s.shows = list; writeStore(SAVED, s); }
+    function saveGuests(key, list) { var s = saved(); s.at = Date.now(); s.guests[key] = list; writeStore(SAVED, s); }
+
+    // A failed call because there's no connection (keep the check-in and try
+    // again later), as opposed to the database saying no (don't keep it).
+    function isNoConnection(error) {
+      if (!navigator.onLine) return true;
+      var m = String((error && (error.message || error)) || '');
+      return /fetch|network|load failed|timed? ?out|connection/i.test(m);
+    }
+
+    // Check-ins made offline win over an older list from the server.
+    function applyWaiting(list) {
+      var w = waiting();
+      list.forEach(function (g) {
+        var hit = w.filter(function (x) { return x.id === g.unique_id; }).pop();
+        if (hit) g.checked_in_count = hit.count;
+      });
+      return list;
+    }
+
+    function setOffline(on) {
+      offline = on;
+      var n = waiting().length;
+      var bar = $('offlineBar');
+      if (!on && !n) { bar.classList.add('hidden'); return; }
+      var at = saved().at;
+      var time = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+      bar.innerHTML = on
+        ? '<b>No connection.</b> Using the list saved on this phone' + (time ? ' at ' + escapeHtml(time) : '') +
+          '. Keep checking people in; ' + (n ? n + ' check-in' + (n > 1 ? 's' : '') + ' will be sent' : 'it all gets sent') + ' when the wifi is back.'
+        : 'Sending ' + n + ' saved check-in' + (n > 1 ? 's' : '') + '…';
+      bar.classList.remove('hidden');
+    }
+
+    // Sends the check-ins waiting on this phone, oldest first.
+    var sending = false;
+    async function sendWaiting() {
+      if (sending) return;
+      sending = true;
+      try {
+        var w = waiting();
+        while (w.length) {
+          var item = w[0];
+          var res;
+          try { res = await sb.rpc('door_check_in', { p_unique_id: item.id, p_count: item.count }); }
+          catch (e) { res = { error: e }; }
+          if (res.error && isNoConnection(res.error)) { setOffline(true); return; }
+          // Sent, or refused by the database (a refund, a removed ticket): either way it's done here.
+          if (res.error || !res.data || !res.data.length) toast('One saved check-in couldn’t be sent (the ticket may have changed).', true);
+          w = waiting().filter(function (x) { return !(x.id === item.id && x.at === item.at); });
+          writeStore(WAITING, w);
+        }
+      } finally { sending = false; }
+      setOffline(false);
+    }
+
     function showKey(s) { return s.show_date + '|' + s.show_title; }
     function currentShow() { return shows.find(function (s) { return showKey(s) === currentKey; }); }
 
@@ -90,9 +174,46 @@
     }
 
     async function loadShows() {
-      var res = await sb.rpc('door_shows');
-      if (res.error) { toast('Couldn’t load tonight: ' + res.error.message, true); return; }
-      shows = (res.data || []).map(function (s) {
+      await sendWaiting();
+      var res;
+      try { res = await sb.rpc('door_shows'); } catch (e) { res = { error: e }; }
+      if (res.error) {
+        var copy = savedForTonight();
+        if (isNoConnection(res.error) && copy) { showSaved(copy); return; }
+        toast('Couldn’t load tonight: ' + res.error.message, true);
+        return;
+      }
+      if (!waiting().length) setOffline(false);
+      saveShows(res.data || []);
+      useShows(res.data || []);
+      await loadGuests();
+      saveAllGuests();
+    }
+
+    // Draws the lists from this phone's copy (no connection).
+    function showSaved(copy) {
+      setOffline(true);
+      useShows(copy.shows);
+      var s = currentShow();
+      guests = applyWaiting((s && copy.guests[showKey(s)]) || []);
+      render();
+    }
+
+    // Keeps every one of tonight's lists on the phone, not just the one on
+    // screen, so switching shows still works with no connection.
+    async function saveAllGuests() {
+      for (var i = 0; i < shows.length; i++) {
+        var s = shows[i];
+        if (showKey(s) === currentKey) continue;   // just saved by loadGuests
+        try {
+          var r = await sb.rpc('door_guests', { p_show_date: s.show_date, p_show_title: s.show_title });
+          if (!r.error) saveGuests(showKey(s), r.data || []);
+        } catch (e) {}
+      }
+    }
+
+    function useShows(list) {
+      shows = (list || []).map(function (s) {
         s.ts = parseShowDateToMillis(s.show_date);
         return s;
       }).sort(function (a, b) { return a.ts - b.ts; });
@@ -106,7 +227,6 @@
       $('tonightLabel').textContent = 'Tonight · ' + shows[0].show_date.split('•')[0].trim();
       if (!currentShow()) currentKey = showKey(pickDefaultShow());
       renderChips();
-      await loadGuests();
     }
 
     function renderChips() {
@@ -123,6 +243,11 @@
       currentKey = key;
       doneOpen = false;
       renderChips();
+      if (offline) {
+        guests = applyWaiting(saved().guests[key] || []);
+        render();
+        return;
+      }
       $('guestList').innerHTML = '<div class="empty">Loading…</div>';
       loadGuests();
     }
@@ -130,16 +255,24 @@
     async function loadGuests() {
       var s = currentShow();
       if (!s) return;
-      var res = await sb.rpc('door_guests', { p_show_date: s.show_date, p_show_title: s.show_title });
-      if (res.error) { toast('Couldn’t load the list: ' + res.error.message, true); return; }
+      var res;
+      try { res = await sb.rpc('door_guests', { p_show_date: s.show_date, p_show_title: s.show_title }); } catch (e) { res = { error: e }; }
       if (showKey(s) !== currentKey) return;   // switched shows while loading
-      guests = res.data || [];
+      if (res.error) {
+        var copy = saved().guests[showKey(s)];
+        if (isNoConnection(res.error) && copy) { setOffline(true); guests = applyWaiting(copy); render(); return; }
+        toast('Couldn’t load the list: ' + res.error.message, true);
+        return;
+      }
+      saveGuests(showKey(s), res.data || []);
+      guests = applyWaiting(res.data || []);
       // VIP answers from the pre-show form; the list still works if this fails.
       try {
         var v = await sb.rpc('door_vip', { p_show_date: s.show_date, p_show_title: s.show_title });
         var by = {};
         (v.data || []).forEach(function (p) { by[p.unique_id] = p; });
-        guests.forEach(function (g) { var p = by[g.unique_id]; if (p) Object.assign(g, p, { unique_id: g.unique_id }); });
+        guests.forEach(function (g) { var p = by[g.unique_id]; if (p) Object.assign(g, p, { unique_id: g.unique_id, checked_in_count: g.checked_in_count }); });
+        if (!v.error) saveGuests(showKey(s), guests);
       } catch (e) {}
       render();
     }
@@ -174,14 +307,42 @@
       g.checked_in_count = count;
       render();
       chime(count > before);
-      var res = await sb.rpc('door_check_in', { p_unique_id: id, p_count: count });
+      var s = currentShow();
+      if (s) saveGuests(showKey(s), guests);
+      // Waiting check-ins go out first, in order, so this one can't jump ahead.
+      if (offline || waiting().length) { keepForLater(id, count); return; }
+      var res;
+      try { res = await sb.rpc('door_check_in', { p_unique_id: id, p_count: count }); } catch (e) { res = { error: e }; }
+      if (res.error && isNoConnection(res.error)) { keepForLater(id, count); return; }
       if (res.error || !res.data || !res.data.length) {
         g.checked_in_count = before;
+        if (s) saveGuests(showKey(s), guests);
         render();
         chime(false);
-        toast('Not saved. Check the wifi and tap again.', true);
+        toast('Not saved: ' + (res.error ? res.error.message : 'that ticket wasn’t found') + '.', true);
       }
     }
+
+    // No connection: the check-in stays on this phone and goes out later.
+    function keepForLater(id, count) {
+      var w = waiting();
+      w.push({ id: id, count: count, key: currentKey, at: Date.now() });
+      writeStore(WAITING, w);
+      setOffline(true);
+      sendWaiting();
+    }
+
+    // Sign out wipes this phone's copy of the lists (after sending what's waiting).
+    async function signOutDoor() {
+      await sendWaiting();
+      var n = waiting().length;
+      if (n && !confirm(n + ' check-in' + (n > 1 ? 's haven’t' : ' hasn’t') + ' been sent yet (no connection). Sign out anyway and lose ' + (n > 1 ? 'them' : 'it') + '?')) return;
+      try { localStorage.removeItem(SAVED); localStorage.removeItem(WAITING); } catch (e) {}
+      signOut();
+    }
+
+    window.addEventListener('online', function () { loadShows(); });
+    window.addEventListener('offline', function () { if (savedForTonight()) setOffline(true); });
 
     async function sync() {
       $('syncIcon').classList.add('spin');
@@ -201,6 +362,37 @@
       $('search').focus();
     });
 
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/door-sw.js').catch(function () {});
+    }
+
+    // Opened with no connection: the sign-in can't be checked, so go straight
+    // to the list this phone saved tonight (only a phone that was signed in has one).
+    var startedOffline = false;
+    function startOffline() {
+      var copy = savedForTonight();
+      if (!copy || startedOffline) return false;
+      startedOffline = true;
+      $('lock').classList.add('hidden');
+      showSaved(copy);
+      // Once the connection is back, start over the normal way.
+      window.addEventListener('online', function () { location.reload(); });
+      setInterval(async function () { if (await serverReachable()) location.reload(); }, 20000);
+      return true;
+    }
+    // The wifi can be up while the internet behind it is down, so ask the
+    // database directly instead of trusting the phone's "online".
+    async function serverReachable() {
+      try {
+        var ctl = new AbortController();
+        var t = setTimeout(function () { ctl.abort(); }, 4000);
+        var r = await fetch(SUPABASE_URL + '/auth/v1/health', { headers: { apikey: SUPABASE_ANON_KEY }, signal: ctl.signal, cache: 'no-store' });
+        clearTimeout(t);
+        return r.status < 500;
+      } catch (e) { return false; }
+    }
+    if (!navigator.onLine) startOffline();
+
     setupSignIn(async function (role) {
       var u = (await sb.auth.getUser()).data.user;
       $('whoami').textContent = u ? u.email.replace('@' + LOGIN_DOMAIN, '') : '';
@@ -209,6 +401,11 @@
       await loadShows();
       // Keep every door device in step.
       setInterval(function () { if (!document.hidden) loadShows(); }, 20000);
+    }, async function () {
+      // No login found. With no connection and a list saved tonight, use it.
+      if (startedOffline) return true;
+      if (!savedForTonight() || await serverReachable()) return false;
+      return startOffline();
     });
   </script>
 </body>

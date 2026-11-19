@@ -195,5 +195,43 @@ class WatchTest(unittest.TestCase):
         self.assertIn("ConnectionError", said)
 
 
+class DeviceAlertTest(unittest.TestCase):
+    """The office PC's emails to Sam (Nov 18 2026)."""
+    def row(self, state, **kw):
+        r = {"device": "office-pc", "state": state, "seen_at": (NOW - timedelta(minutes=40)).isoformat(),
+             "last_backup_at": (NOW - timedelta(hours=31)).isoformat(), "note": None}
+        r.update(kw)
+        return r
+
+    def test_offline_says_when_it_was_last_seen(self):
+        [(subject, body)] = sn.device_alerts([self.row("offline")])
+        self.assertEqual(subject, "The office PC is offline")
+        self.assertIn("hasn't checked in since", body)
+
+    def test_back_online(self):
+        [(subject, _)] = sn.device_alerts([self.row("back")])
+        self.assertEqual(subject, "The office PC is back online")
+
+    def test_failed_backup_carries_the_reason(self):
+        [(subject, body)] = sn.device_alerts([self.row("backup_failed", note="drive D: is full")])
+        self.assertIn("backup failed", subject)
+        self.assertIn("the office PC reported a problem: drive D: is full", body)
+
+    def test_missed_backup(self):
+        [(subject, body)] = sn.device_alerts([self.row("backup_missed")])
+        self.assertIn("no backup in over a day", subject)
+
+    def test_nothing_to_say(self):
+        self.assertEqual(sn.device_alerts([]), [])
+        self.assertEqual(sn.device_alerts(None), [])
+
+    def test_a_look_sends_device_alerts_and_survives_their_failure(self):
+        with mock.patch.object(sn, "rpc", side_effect=lambda name, optional=False: [] if name != "device_check" else []), \
+             mock.patch.object(sn, "send_device_alerts", side_effect=requests.ConnectionError()) as alerts, \
+             mock.patch.object(sn, "DRY_RUN", False):
+            sn.main(quietly=True)
+        alerts.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
