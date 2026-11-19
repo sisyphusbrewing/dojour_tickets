@@ -57,6 +57,33 @@ HALL_BULBS = {
     "Hallway 2": "E0:49:B0:A6:04:30:C2:68",
     "Middle hallway": "02:AF:B0:A6:04:33:26:CC",
 }
+# Front taproom Govee bulbs (Sam added them Nov 19 2026), as (sku, device id). Same cloud API and key.
+TAPROOM_BULBS = {
+    # Entryway 1 is the first bulb you see coming in (Sam, Nov 19 2026). It and Bar 4 still carry the
+    # app's default name "Govee Edison Bulb"; Entryway 2 is named just "Entryway" in the app.
+    "Entryway 1": ("H14C0", "02:B0:7C:E8:B1:25:64:58"),
+    "Entryway 2": ("R14C0", "07:CC:B0:A6:04:33:69:DC"),
+    "Ordering 1": ("H14C0", "02:F3:7C:E8:B1:24:C3:84"),
+    "Ordering 2": ("H14C0", "02:AC:7C:E8:B1:3D:27:F0"),
+    "Bar 1": ("H14C0", "02:AF:7C:E8:B1:3B:2C:9C"),
+    "Bar 2": ("H14C0", "02:A8:7C:E8:B1:1E:3E:6C"),
+    "Bar 3": ("H14C0", "04:C7:7C:E8:B1:26:60:38"),
+    "Bar 4": ("H14C0", "06:60:7C:E8:B1:21:17:BC"),
+}
+# The taproom look (Sam, Nov 19 2026). Blue is our color and the room already has blue LEDs, so
+# the bulbs are warm against it: Bar 1-4 "a dim like edison bulb light" (the bulbs' white stops at
+# 2700K, so the warmer filament glow is a colour), Ordering 1-2 "a brighter orange", Entryway 1
+# bright (the first thing people see), Entryway 2 dimmer, in our slate blue. The taproom is open
+# through shows, so DAYTIME and PRE-SHOW both bring this look (START SHOW leaves it as it is) and
+# ALL OFF turns it off. DAYTIME is pressed by itself at opening (door_count.py).
+EDISON = 0xFF8C40
+TAPROOM_LOOK = {
+    "Entryway 1": (100, {"kelvin": 2700}),
+    "Entryway 2": (35, {"rgb": 0x3F6E9A}),
+    "Ordering 1": (100, {"rgb": 0xFF7200}),
+    "Ordering 2": (100, {"rgb": 0xFF7200}),
+    **{f"Bar {n}": (20, {"rgb": EDISON}) for n in range(1, 5)},
+}
 # Govee smart plugs (H5083, on/off only), switched with the hall lights (Sam, Oct 30 2026):
 # ON with PRE-SHOW, OFF with HALL LIGHTS OFF.
 PLUGS = {
@@ -595,6 +622,21 @@ def hall_look(look, bulb):
     return [govee(bulb, "on_off", "powerSwitch", 1), colour_cmd, govee(bulb, "range", "brightness", level)]
 
 
+def bulb_look(level, colour, sku, device):
+    """Power on, colour (RGB or white in K), then brightness, for one bulb."""
+    colour_cmd = (govee(None, "color_setting", "colorRgb", colour["rgb"], sku=sku, device=device)
+                  if "rgb" in colour else
+                  govee(None, "color_setting", "colorTemperatureK", colour["kelvin"], sku=sku, device=device))
+    return [govee(None, "on_off", "powerSwitch", 1, sku=sku, device=device), colour_cmd,
+            govee(None, "range", "brightness", level, sku=sku, device=device)]
+
+
+def taproom(on):
+    if not on:
+        return [govee(None, "on_off", "powerSwitch", 0, sku=sku, device=d) for sku, d in TAPROOM_BULBS.values()]
+    return [a for name, (sku, d) in TAPROOM_BULBS.items() for a in bulb_look(*TAPROOM_LOOK[name], sku, d)]
+
+
 def plugs(on, which=PLUGS):
     return [govee(None, "on_off", "powerSwitch", 1 if on else 0, sku="H5083", device=d) for d in which.values()]
 
@@ -763,13 +805,13 @@ def record(on):
 
 def look_daytime():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-            + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
+            + taproom(True) + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
             + record(False) + [set_var("room_look", "day")])
 
 
 def look_preshow():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
+            + taproom(True) + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
             + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
 
 
@@ -784,7 +826,7 @@ def look_show():
 
 def look_off():
     return ([govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-            + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
+            + taproom(False) + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
             + [stage("off")] + record(False) + clock_stop() + [set_var("room_look", "off")])
 
 
