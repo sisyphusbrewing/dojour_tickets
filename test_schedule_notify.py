@@ -233,5 +233,40 @@ class DeviceAlertTest(unittest.TestCase):
         alerts.assert_called_once()
 
 
+class CheckAlertTest(unittest.TestCase):
+    """Printed comic checks: emails to Sam (Nov 18 2026)."""
+    def test_waiting_asks_for_his_ok_with_the_link(self):
+        [(subject, body)] = sn.check_alerts([{"state": "waiting", "number": None, "pay_to": "Nathan Varrone",
+                                              "amount": "1920.00", "note": "Nate Varrone · Headliner"}])
+        self.assertEqual(subject, "Check to approve: $1,920.00 to Nathan Varrone")
+        self.assertIn("Nothing prints until you approve it", body)
+        self.assertIn(sn.CHECKS_LINK, body)
+
+    def test_printed_names_the_number(self):
+        [(subject, body)] = sn.check_alerts([{"state": "printed", "number": 5001, "pay_to": "Aiden Thibault", "amount": 288}])
+        self.assertEqual(subject, "Check 5001 printed: $288.00 to Aiden Thibault")
+        self.assertIn("marked paid", body)
+
+    def test_failed_carries_the_reason(self):
+        [(subject, body)] = sn.check_alerts([{"state": "failed", "number": 5002, "pay_to": "X", "amount": 50, "note": "Out of paper"}])
+        self.assertIn("did not print", subject)
+        self.assertIn("couldn't print check 5002 for $50.00 to X: Out of paper.", body)
+
+    def test_stuck(self):
+        [(subject, _)] = sn.check_alerts([{"state": "stuck", "number": 5003, "pay_to": "X", "amount": 50}])
+        self.assertEqual(subject, "Check 5003 hasn't printed yet: $50.00 to X")
+
+    def test_nothing_to_say(self):
+        self.assertEqual(sn.check_alerts(None), [])
+
+    def test_a_look_survives_a_check_alert_failure(self):
+        with mock.patch.object(sn, "rpc", side_effect=lambda name, optional=False: []), \
+             mock.patch.object(sn, "send_device_alerts"), \
+             mock.patch.object(sn, "send_check_alerts", side_effect=requests.ConnectionError()) as alerts, \
+             mock.patch.object(sn, "DRY_RUN", False):
+            sn.main(quietly=True)
+        alerts.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
