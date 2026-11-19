@@ -74,8 +74,9 @@ TAPROOM_BULBS = {
 # the bulbs are warm against it: Bar 1-4 "a dim like edison bulb light" (the bulbs' white stops at
 # 2700K, so the warmer filament glow is a colour), Ordering 1-2 "a brighter orange", Entryway 1
 # bright (the first thing people see), Entryway 2 dimmer, in our slate blue. The taproom is open
-# through shows, so DAYTIME and PRE-SHOW both bring this look (START SHOW leaves it as it is) and
-# ALL OFF turns it off. DAYTIME is pressed by itself at opening (door_count.py).
+# through shows. DAYTIME (pressed by itself at opening, door_count.py) brings this look and ALL OFF
+# turns it off; in between the BAR page has its own on/off (Sam, Nov 19 2026: a "show page" and a
+# "bar page" until the front bar gets its own Stream Deck). PRE-SHOW and START SHOW leave it alone.
 EDISON = 0xFF8C40
 TAPROOM_LOOK = {
     "Entryway 1": (100, {"kelvin": 2700}),
@@ -466,6 +467,8 @@ CUSTOM_VARIABLES = {
     "door_total": ("Door count: tickets for that show", 0),
     "door_at": ("Door count: unix time of the last reading (old = don't show it)", 0),
     "music_out": ("Music: 1 while it is faded out for a show (START SHOW, or the FADE OUT key)", 0),
+    "bar_look": ("Front bar lights: on or off, as the deck last set them", "off"),
+    "candles": ("Table candles: 1 while the deck last turned them on (PRE-SHOW or the CANDLES key)", 0),
     "mic": ("Open mic lineup: what the mic_deck function last answered (JSON)", '{"on":false}'),
     # Walk-on songs, written by av/walkon/walkon.py on the office PC
     "walkon_count": ("Walk-on songs: people on tonight's show (0 = none, the keys stay blank)", 0),
@@ -707,9 +710,10 @@ def bulb_look(level, colour, sku, device):
 
 
 def taproom(on):
+    state = [set_var("bar_look", "on" if on else "off")]
     if not on:
-        return [govee(None, "on_off", "powerSwitch", 0, sku=sku, device=d) for sku, d in TAPROOM_BULBS.values()]
-    return [a for name, (sku, d) in TAPROOM_BULBS.items() for a in bulb_look(*TAPROOM_LOOK[name], sku, d)]
+        return [govee(None, "on_off", "powerSwitch", 0, sku=sku, device=d) for sku, d in TAPROOM_BULBS.values()] + state
+    return [a for name, (sku, d) in TAPROOM_BULBS.items() for a in bulb_look(*TAPROOM_LOOK[name], sku, d)] + state
 
 
 def closet(look):
@@ -742,7 +746,9 @@ def house_both(pct, fade=3):
 # "Candles IR" at 192.168.86.27 (Sam, Nov 5 2026). Codes learned off the candle remote:
 # NEC 32-bit. Repeat 1 sends each press twice so candles at the edge of the beam still catch it.
 # ON with PRE-SHOW, stay on through SHOW, OFF with DAYTIME and ALL OFF.
-CANDLE_BLASTERS = ["192.168.86.27", "192.168.86.45"]  # Candles IR, Candles IR 2
+# Nov 19 2026: Candles IR 3 (.81) joined; the first "Candles IR" is off the network and .27 now
+# belongs to a phone, so it is left out until it is back on the wifi.
+CANDLE_BLASTERS = ["192.168.86.45", "192.168.86.81"]  # Candles IR 2, Candles IR 3
 CANDLE_CODES = {True: "0x10ED00FF", False: "0x10ED40BF"}
 
 
@@ -757,16 +763,22 @@ def candles(on):
 CANDLE_COLOR = 0xB06000
 
 
+CANDLES_ON = "$(custom:candles) == 1"
+
+
+def candles_set(on):
+    """Candles on or off, remembered in custom:candles so the CANDLES key shows what the deck last did."""
+    return candles(on) + [set_number("candles", 1 if on else 0)]
+
+
 def candles_key():
-    """Test key (Sam, Nov 5 2026): each press flips the candles. IR can't report back, so the key
-    keeps its own state in two steps: step 1 sends ON, step 2 sends OFF; amber while it thinks they're on."""
-    key = button("CANDLES\\nOFF\\ntap for on", bgcolor=DARK, size="18", press=candles(True),
-                 feedbacks=[feedback(INTERNAL, "check_expression",
-                                     style={"bgcolor": CANDLE_COLOR, "color": WHITE,
-                                            "text": "CANDLES\\nON\\ntap for off"},
-                                     expression="$(this:step) == 2")])
-    key["steps"]["1"] = {"action_sets": {"down": candles(False), "up": []}, "options": {"runWhileHeld": []}}
-    return key
+    """CANDLES on the HOME page (Sam, Nov 19 2026, where PRINT MENUS used to be): a tap flips the
+    table candles. IR can't report back, so the key follows what the deck last sent: PRE-SHOW
+    turns them on, DAYTIME and ALL OFF turn them off, and so does this key. Amber while on."""
+    return button("CANDLES\\nOFF\\ntap for on", bgcolor=DARK,
+                  steps=[candles_set(True), candles_set(False)],
+                  step_expression=f"{CANDLES_ON} ? 2 : 1",
+                  feedbacks=[when(CANDLES_ON, bgcolor=CANDLE_COLOR, color=WHITE, text="CANDLES\\nON\\ntap for off")])
 
 
 # House-light dimmer knobs on the BAR pages (Sam, Nov 4 2026): knob 1 = TABLES, knob 2 = BAR.
@@ -886,13 +898,13 @@ def record(on):
 
 def look_daytime():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-            + taproom(True) + closet("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
+            + taproom(True) + closet("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles_set(False)
             + record(False) + [set_var("room_look", "day")])
 
 
 def look_preshow():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + taproom(True) + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
+            + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles_set(True)  # house 20% (Sam, Nov 5 2026)
             + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
 
 
@@ -907,7 +919,7 @@ def look_show():
 
 def look_off():
     return ([govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-            + taproom(False) + closet("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
+            + taproom(False) + closet("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles_set(False)
             + [stage("off")] + record(False) + clock_stop() + [set_var("room_look", "off")])
 
 
@@ -997,7 +1009,7 @@ def music_fade_key():
 # The four knobs and the touch-screen tile above each: MIC, MUSIC, LIGHTS, CLOCK.
 # The same on HOME and SHOW, so a knob never changes what it does mid-night.
 # --------------------------------------------------------------------------
-PAGE_HOME, PAGE_SHOW, PAGE_END, PAGE_MIC, PAGE_MUSIC, PAGE_LIGHTS, PAGE_CLOCK = 1, 2, 3, 4, 5, 6, 7
+PAGE_HOME, PAGE_SHOW, PAGE_END, PAGE_MIC, PAGE_MUSIC, PAGE_LIGHTS, PAGE_CLOCK, PAGE_BAR = 1, 2, 3, 4, 5, 6, 7, 8
 MIC = CHANNEL(1)  # the stage mic. Mics 2-4 are on the MIC page, each on its own knob.
 
 
@@ -1084,8 +1096,11 @@ def home_page():
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
             (1, 0): god_mic_key(),
             (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
-            # (1, 2) and (1, 3) left blank: PRINT MENUS and REFRESH TV MENU came off the deck (Sam,
-            # Nov 19 2026: "we don't need the print and refresh on the main page").
+            # PRINT MENUS and REFRESH TV MENU came off the deck (Sam, Nov 19 2026: "we don't need the
+            # print and refresh on the main page"); both now sit on the BAR page, and CANDLES
+            # took the print spot.
+            (1, 2): candles_key(),
+            (1, 3): button("FRONT\\nBAR\\n>", bgcolor=0x1E4C7A, press=[go(PAGE_BAR)]),
             **main_controls(),
         },
     }
@@ -1168,6 +1183,27 @@ def music_page():
     }
 
 
+def bar_page():
+    """The front bar's own page (Sam, Nov 19 2026: a "show page" and a "bar page" until the front
+    bar gets its own Stream Deck): the bar lights, and the menu keys that came off HOME (Sam: "I
+    didn't want the print menu thing to go away completely")."""
+    bar_on = "$(custom:bar_look) == 'on'"
+    return {
+        "name": "BAR",
+        "controls": {
+            (0, 0): button("BACK", bgcolor=BACK_GREY, press=[go(PAGE_HOME)]),
+            (0, 1): button("BAR\\nLIGHTS\\nON", bgcolor=GREY, press=taproom(True),
+                           feedbacks=[when(bar_on, bgcolor=0xB06000, color=WHITE, text="BAR\\nLIGHTS\\non now")]),
+            (0, 2): button("BAR\\nLIGHTS\\nOFF", bgcolor=GREY, press=taproom(False),
+                           feedbacks=[when(f"!({bar_on})", bgcolor=0x555555, color=WHITE, text="BAR\\nLIGHTS\\noff now")]),
+            (1, 0): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
+            (1, 2): print_menu_key(),
+            (1, 3): menu_refresh_key(),
+            **main_controls(),
+        },
+    }
+
+
 def lights_page():
     """Tap LIGHTS: the stage looks on the keys, the two house dimmers on knobs 1 and 2, and
     the candles on the touch screen (IR can't report back, so ON and OFF are separate taps)."""
@@ -1175,8 +1211,8 @@ def lights_page():
     for col, (zone, name) in enumerate((("tables", "TABLES"), ("bar", "BAR"))):
         controls[(2, col)] = dimmer_strip(zone, name)
         controls[(3, col)] = dimmer_knob(zone)
-    controls[(2, 2)] = button("CANDLES\\nON\\ntap", bgcolor=CANDLE_COLOR, press=candles(True))
-    controls[(2, 3)] = button("CANDLES\\nOFF\\ntap", bgcolor=DARK, press=candles(False))
+    controls[(2, 2)] = button("CANDLES\\nON\\ntap", bgcolor=CANDLE_COLOR, press=candles_set(True))
+    controls[(2, 3)] = button("CANDLES\\nOFF\\ntap", bgcolor=DARK, press=candles_set(False))
     return {"name": "LIGHTS", "controls": controls}
 
 
@@ -1203,6 +1239,7 @@ PAGES = {
     PAGE_MUSIC: music_page(),
     PAGE_LIGHTS: lights_page(),
     PAGE_CLOCK: clock_page(),
+    PAGE_BAR: bar_page(),
 }
 
 
