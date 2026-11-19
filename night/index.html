@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Your night · Sisyphus</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="night.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- "Your night" (Sam, Nov 18 2026: "I want to focus on the customer
+       experience from check-out, through arrival, to that first beer and
+       knowing what is going on. Helping people get comfortable in a new space
+       quickly is key").
+
+       One page a guest opens on their phone, from the link we send with their
+       tickets or by tapping the tag by the door. It answers, in order:
+         - What is happening right now? (the blue box at the top: doors in 40
+           minutes, doors are open, you're in, the show's on)
+         - How does tonight go? (five steps, with "You are here" on the one
+           they are at)
+         - What can I drink? (the tap list, the same one the TV shows)
+       A guest with tickets can pick their first beer ahead of time. The bar
+       sees it on /firstround/ when the door checks them in.
+
+       Three ways in:
+         /night/?k=<key>     a guest's own link (their name, tickets, picks)
+         /night/             no link: tonight's show and the steps, nothing
+                             private. "Find my tickets" (email + last name)
+                             turns it into their own, and the phone remembers.
+         /night/?preview=1   a made-up guest, for looking at each moment of
+                             the night without waiting for it. Saves nothing.
+
+       The rules (who can see what, one beer per ticket) live in the database:
+       supabase/migrations/20261119030000_guest_night.sql. This page only
+       shows and asks. No staff top bar: guests see this page.
+
+       NOT SENT TO GUESTS YET. Nothing links here until Sam says so. -->
+  <header class="top">
+    <a href="https://sisyphusbrewing.com" aria-label="Sisyphus"><img src="../posters/assets/sisyphus-badge-dark-bg.png" alt=""></a>
+    <span>Your night at Sisyphus</span>
+  </header>
+
+  <main class="wrap">
+    <p class="quiet" id="loading">Getting tonight ready…</p>
+
+    <div id="page" class="hidden">
+      <!-- The show, and what's happening right now -->
+      <section class="hero">
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 class="show" id="showTitle"></h1>
+        <div class="times" id="times"></div>
+        <div class="now" id="now" aria-live="polite">
+          <div class="live"><i class="dot" id="nowDot"></i><span id="nowLive"></span></div>
+          <h2 id="nowHead"></h2>
+          <p id="nowBody"></p>
+        </div>
+        <p class="also quiet hidden" id="also"></p>
+      </section>
+
+      <!-- The night, one step at a time -->
+      <section id="pathBox">
+        <div class="band-wrap"><span class="band">How tonight goes</span></div>
+        <ol class="path" id="path"></ol>
+      </section>
+
+      <!-- What's pouring -->
+      <section id="tapBox" class="hidden">
+        <div class="band-wrap"><span class="band" id="tapBand">On tap tonight</span></div>
+        <div class="taps" id="taps"></div>
+      </section>
+
+      <footer class="foot">
+        <p>Lost, or something's off? Ask anyone behind the bar. Before you get here: <a href="mailto:events@sisyphusbrewing.com">events@sisyphusbrewing.com</a>.</p>
+        <p class="hidden" id="notYou"><a href="#" id="forget">Not you? Start over</a></p>
+      </footer>
+    </div>
+
+    <div id="noShow" class="hidden">
+      <div class="now"><h2>Nothing on the calendar right now.</h2>
+        <p>The taproom's still here. <a href="https://sisyphusbrewing.com">See what's coming up</a>.</p></div>
+    </div>
+  </main>
+
+  <!-- Find my tickets -->
+  <dialog class="sheet" id="findSheet">
+    <form id="findForm">
+      <h2>Find my tickets</h2>
+      <p class="quiet">The email you bought them with, and your last name.</p>
+      <label for="findEmail">Email</label>
+      <input class="input" id="findEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" required>
+      <label for="findLast">Last name</label>
+      <input class="input" id="findLast" autocomplete="family-name" required>
+      <p class="err hidden" id="findErr"></p>
+      <button class="btn btn-primary" id="findGo" type="submit">Find them</button>
+      <button class="btn btn-ghost" id="findCancel" type="button">Never mind</button>
+    </form>
+  </dialog>
+
+  <!-- Only with ?preview=1: jump to any moment of the night -->
+  <nav class="preview hidden" id="preview" aria-label="Preview">
+    <div class="preview-note">Preview with a made-up guest. Tap a moment:</div>
+    <div class="preview-row" id="previewRow"></div>
+  </nav>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="night.js"></script>
+</body>
+</html>

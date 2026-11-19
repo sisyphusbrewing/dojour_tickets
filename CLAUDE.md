@@ -294,6 +294,28 @@ Dojour gotchas, learned the hard way:
   write, read back, lock, load) and does Add and Take off for any card.
   PlatformIO; the club wifi goes in a gitignored `secrets.h`, and the
   station signs in with its own staff login typed on the screen.
+- **`night/`** is "Your night", the guest's page, and the first piece of our
+  own point of sale (Sam, Nov 18 2026: "let's focus on building our own
+  system that we can switch over to" and "I want to focus on the customer
+  experience from check-out, through arrival, to that first beer and knowing
+  what is going on. Helping people get comfortable in a new space quickly is
+  key"). One phone page: a blue box that says what is happening right now
+  (doors in 40 minutes, doors are open, you're in, the show's on), the night
+  in five steps with "You are here" on the guest's step, and the tap list.
+  A guest with tickets can pick a first beer, one per ticket; it costs
+  nothing to pick and is paid at the bar. **`firstround/`** is the bar's
+  list: a pick moves to "Pour now" when the door checks its guest in. No
+  login for guests and no staff top bar on `night/`: `?k=<key>` is a guest's
+  own link, no key shows only tonight's show, "Find my tickets" (email and
+  last name) gets a key, and `?preview=1` walks a made-up guest through the
+  night and saves nothing. **Guests are not sent this page yet** and the
+  First round tile is owner only; don't email the link, put it on a tag or
+  open the tile to staff until Sam says so. The words on the page are a
+  first pass for Sam to change. Doors are taken as 30 minutes before
+  showtime (the website's FAQ); a second show of the night never promises a
+  door time. Rules in `supabase/migrations/20261119030000_guest_night.sql`,
+  checks in `supabase/tests/guest_night/`. The bartender's register (tabs,
+  payments, our own card reader) is the next piece, not built here.
 - **`backup/`** is the nightly backup on the office PC (Sam, Nov 18 2026:
   "Can we use my PC currently as a back up?", until a NAS arrives). restic
   snapshots on the PC's 2 TB second drive of the recordings, OBS and
