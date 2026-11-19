@@ -84,6 +84,11 @@ TAPROOM_LOOK = {
     "Ordering 2": (100, {"rgb": 0xFF7200}),
     **{f"Bar {n}": (20, {"rgb": EDISON}) for n in range(1, 5)},
 }
+# Storage Closet bulb (H14C0, Sam added it Nov 19 2026). Sam: "Red at full brightness for preshow and
+# then during show drop to a brightness where you can still see a little but it's red". By day it is a
+# plain work light; ALL OFF turns it off at close.
+CLOSET = ("H14C0", "02:BB:7C:E8:B1:22:E5:34")
+CLOSET_LOOK = {"day": (100, {"kelvin": 4000}), "pre": (100, {"rgb": 0xFF0000}), "show": (10, {"rgb": 0xFF0000})}
 # Govee smart plugs (H5083, on/off only), switched with the hall lights (Sam, Oct 30 2026):
 # ON with PRE-SHOW, OFF with HALL LIGHTS OFF.
 PLUGS = {
@@ -637,6 +642,12 @@ def taproom(on):
     return [a for name, (sku, d) in TAPROOM_BULBS.items() for a in bulb_look(*TAPROOM_LOOK[name], sku, d)]
 
 
+def closet(look):
+    if look == "off":
+        return [govee(None, "on_off", "powerSwitch", 0, sku=CLOSET[0], device=CLOSET[1])]
+    return bulb_look(*CLOSET_LOOK[look], *CLOSET)
+
+
 def plugs(on, which=PLUGS):
     return [govee(None, "on_off", "powerSwitch", 1 if on else 0, sku="H5083", device=d) for d in which.values()]
 
@@ -805,13 +816,13 @@ def record(on):
 
 def look_daytime():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-            + taproom(True) + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
+            + taproom(True) + closet("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles(False)
             + record(False) + [set_var("room_look", "day")])
 
 
 def look_preshow():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + taproom(True) + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
+            + taproom(True) + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles(True)  # house 20% (Sam, Nov 5 2026)
             + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
 
 
@@ -819,14 +830,14 @@ def look_show():
     # house lights off (Sam, Nov 2); hallway same as PRE-SHOW (Sam, Nov 5 2026). The stage mic
     # is switched on in case it was left muted.
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + house_both(0) + [stage(STAGE_SHOW)]
+            + closet("show") + house_both(0) + [stage(STAGE_SHOW)]
             + [action(XAIR, "mute", mute="1", type="/ch/", num=1)]
             + record(True) + [set_var("room_look", "show")])
 
 
 def look_off():
     return ([govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-            + taproom(False) + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
+            + taproom(False) + closet("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles(False)
             + [stage("off")] + record(False) + clock_stop() + [set_var("room_look", "off")])
 
 
