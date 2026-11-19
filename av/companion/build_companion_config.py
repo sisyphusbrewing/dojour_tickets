@@ -1014,8 +1014,8 @@ def home_page():
             (0, 3): look_key("ALL OFF", "off", look_off(), 0x555555, extra=[battery_warning("ALL OFF")]),
             (1, 0): god_mic_key(),
             (1, 1): button("NEXT\\nSONG", bgcolor=GREY, press=[media_key(MEDIA_NEXT)]),
-            (1, 2): print_menu_key(),
-            (1, 3): menu_refresh_key(),
+            # (1, 2) and (1, 3) left blank: PRINT MENUS and REFRESH TV MENU came off the deck (Sam,
+            # Nov 19 2026: "we don't need the print and refresh on the main page").
             **main_controls(),
         },
     }
