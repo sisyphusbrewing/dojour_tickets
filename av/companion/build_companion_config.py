@@ -79,7 +79,7 @@ TAPROOM_BULBS = {
 # "bar page" until the front bar gets its own Stream Deck). PRE-SHOW and START SHOW leave it alone.
 EDISON = 0xFF8C40
 TAPROOM_LOOK = {
-    "Entryway 1": (70, {"rgb": 0x3F6E9A}),  # Sam, Nov 19 2026: "What if the first bulb as you come in is still blue but brighter"
+    "Entryway 1": (100, {"rgb": 0x3F6E9A}),  # Sam, Nov 19 2026: "The first entryway light should be at 100% brightness with the blue color"
     "Entryway 2": (35, {"rgb": 0x3F6E9A}),
     "Ordering 1": (100, {"rgb": 0xFF7200}),
     "Ordering 2": (100, {"rgb": 0xFF7200}),
