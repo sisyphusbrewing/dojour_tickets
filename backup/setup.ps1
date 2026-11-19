@@ -35,7 +35,7 @@ $env:RESTIC_PASSWORD_FILE = "$state\restic-pass.txt"
 if (-not (Test-Path "$RepoPath\config")) { restic init }
 
 $raw = 'https://raw.githubusercontent.com/sisyphusbrewing/dojour_tickets/main/backup'
-$pull = "foreach (`$f in 'nightly.ps1','heartbeat.ps1') { Invoke-WebRequest -UseBasicParsing '$raw/' + `$f -OutFile ('$dir\' + `$f) -ErrorAction SilentlyContinue }; "
+$pull = "foreach (`$f in 'nightly.ps1','heartbeat.ps1') { Invoke-WebRequest -UseBasicParsing ('$raw/' + `$f) -OutFile ('$dir\' + `$f) -ErrorAction SilentlyContinue }; "
 Invoke-Expression ($pull)
 
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -WakeToRun -ExecutionTimeLimit (New-TimeSpan -Hours 4) -MultipleInstances IgnoreNew
