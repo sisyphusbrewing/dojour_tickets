@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+@page{size:8.5in 11in;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--slate:#4e6a8a;--char:#2b2e33;--gray:#6b7280;--pale:#dde4ec}
+body{width:8.5in;height:11in;background:#fff}
+.half{width:8.5in;height:5.5in;padding:.32in .4in;position:relative}
+.half.top{transform:rotate(180deg)}
+.fold{position:absolute;left:0;right:0;top:5.5in;border-top:1px dashed #bbb}
+.fold span{position:absolute;right:.2in;top:-.09in;font:500 7pt Oswald;letter-spacing:.15em;color:#aaa;background:#fff;padding:0 4px}
+.frame{height:100%;border:3px solid var(--char);padding:6px}
+.inner{height:100%;border:1px solid #aaa;position:relative;display:flex;flex-direction:column;align-items:center;padding-top:.22in}
+.kicker{font:500 12pt Oswald;letter-spacing:.42em;color:var(--gray);margin-left:.42em}
+.band{position:relative;margin-top:.12in;transform:rotate(-2.2deg)}
+.band::before{content:"";position:absolute;inset:0;background:var(--char);transform:translate(9px,9px)}
+.band div{position:relative;background:var(--slate);color:#fff;font:900 54pt/1 'Playfair Display';padding:.1in .42in .16in}
+.band em{font-style:italic;font-weight:700;color:var(--pale)}
+.press{margin-top:.32in;font:600 30pt Oswald;letter-spacing:.16em;color:var(--char);margin-left:.16em}
+.tag{margin-top:.04in;font:italic 700 18pt 'Playfair Display';color:#4b5563}
+.hill{width:1.15in;flex:none}
+.foot{position:absolute;left:.3in;bottom:.3in;display:flex;align-items:flex-end;gap:.14in;font:italic 700 11pt 'Playfair Display';color:var(--gray)}
+.badge{position:absolute;right:.22in;bottom:.16in;width:1.0in}
+</style></head><body>
+<div class="fold"><span>FOLD</span></div>
+<template id="t">
+<div class="frame"><div class="inner">
+ <div class="kicker">SISYPHUS</div>
+ <div class="band"><div>Need <em>help?</em></div></div>
+ <div class="press">PRESS THE BUTTON</div>
+ <div class="tag">and someone will be right over.</div>
+ <div class="foot"><svg class="hill" viewBox="0 0 310 70" aria-hidden="true">
+  <path d="M0 66 L150 14 L215 38 L310 66" fill="none" stroke="#2b2e33" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="118" cy="16" r="9" fill="#4e6a8a"/>
+  <path d="M96 30 l-10 4 M92 22 l-11 2 M97 39 l-8 5" stroke="#4e6a8a" stroke-width="2.4" stroke-linecap="round"/>
+ </svg><span>One must imagine Sisyphus happy to help.</span></div>
+ <img class="badge" src="badge.png" alt="">
+</div></div>
+</template>
+<div class="half top"></div>
+<div class="half"></div>
+<script>document.querySelectorAll('.half').forEach(h=>h.appendChild(document.getElementById('t').content.cloneNode(true)))</script>
+</body></html>
