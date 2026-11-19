@@ -333,7 +333,8 @@ Dojour gotchas, learned the hard way:
   login approves (`check_approve()`); a trigger refuses any other way to
   approve, even with the service key. The office PC (`backup/checks/`,
   installed once at the PC by `setup-checks.ps1`, never auto-updated) prints
-  approved checks every minute on MICR toner and blank check stock, marks the
+  approved checks every minute on its own small Brother (MICR toner, so the
+  office Brother keeps normal toner; Sam prints a lot) and blank check stock, marks the
   line paid, and keeps a positive-pay file. The routing and account numbers
   and Sam's signature live only on that PC (Windows-encrypted), never in the
   database or this repo. Nothing is deleted; a voided number is never reused;
