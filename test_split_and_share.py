@@ -75,6 +75,29 @@ class AudioSets(unittest.TestCase):
         self.assertEqual(sas.fix_name("Kellen", KNOWN), "Kellen Schneider")
 
 
+class Cleanup(unittest.TestCase):
+    """Old clip folders go even when they hold a "transcripts" folder (the
+    Nov 18 2026 run stopped with Access denied on one)."""
+    def test_old_folder_with_subfolder_is_removed(self):
+        import os, tempfile, time
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "clips"
+            old = out / "2026-01-01 show"
+            (old / "transcripts").mkdir(parents=True)
+            (old / "transcripts" / "a.json").write_text("{}")
+            (old / "full show.mp4").write_text("x")
+            new = out / "today show"
+            new.mkdir()
+            past = time.time() - 30 * 86400
+            os.utime(old, (past, past))
+            with mock.patch.object(sas, "OUT_DIR", out), mock.patch.object(sas, "DRY", False), \
+                 mock.patch.object(sas.subprocess, "run"), mock.patch.dict(os.environ, {"OBS_DIR": tmp}):
+                sas.cleanup({})
+            self.assertFalse(old.exists())
+            self.assertTrue(new.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
 

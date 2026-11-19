@@ -38,6 +38,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -425,9 +426,13 @@ def cleanup(done):
                     p.unlink()
     for folder in OUT_DIR.glob("*"):
         if folder.is_dir() and datetime.fromtimestamp(folder.stat().st_mtime, timezone.utc) < cutoff:
-            for f in folder.iterdir():
-                f.unlink()
-            folder.rmdir()
+            # A show folder can hold a "transcripts" folder too; unlinking a
+            # folder is "Access denied" on Windows and stopped the Nov 18 run.
+            # One folder that won't go must not stop the rest.
+            try:
+                shutil.rmtree(folder)
+            except OSError as err:
+                print(f"Couldn't remove an old clips folder ({type(err).__name__}); trying again tomorrow.")
 
 
 def main():
