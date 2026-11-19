@@ -262,7 +262,10 @@ function showNoAccess(min, hide) {
 }
 
 // onReady(role) runs once a login is confirmed; role is door, staff, manager or owner.
-function setupSignIn(onReady) {
+// noSession(), if given, runs instead of showing the sign-in box when no login
+// is found; it returns true when the page has handled it (the door page uses
+// this to keep working from its saved list when there's no connection).
+function setupSignIn(onReady, noSession) {
   var started = false;
   async function ready() {
     var r = await sb.rpc('my_role');
@@ -291,10 +294,14 @@ function setupSignIn(onReady) {
       btn.disabled = false; btn.textContent = 'Sign in';
     }
   });
+  async function showLock() {
+    if (noSession && await noSession()) return;
+    $('lock').classList.remove('hidden');
+  }
   sb.auth.getSession().then(function (res) {
     if (res.data && res.data.session) ready();
-    else $('lock').classList.remove('hidden');
-  }).catch(function () { $('lock').classList.remove('hidden'); });
+    else showLock();
+  }).catch(showLock);
   sb.auth.onAuthStateChange(function (event, session) {
     if (event === 'SIGNED_OUT' && started) location.reload();
   });
