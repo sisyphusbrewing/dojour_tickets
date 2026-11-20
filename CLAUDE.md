@@ -357,6 +357,19 @@ Dojour gotchas, learned the hard way:
   sit (open mic nights keep those). Rules in
   `supabase/migrations/20261119230000_walkon_songs.sql`, checks in
   `supabase/tests/walkon/` and `test_walkon.py`.
+- **Show recordings** are cut on the office PC at 4 AM by
+  `av/recordings/split_and_share.py` (one clip per comic, uploaded to Drive,
+  a row each in `recordings`); `recording_mail.py` emails the links at 9 AM.
+  The Task Scheduler task runs the plain local file
+  `av/recordings/run-recordings.ps1`, which pulls the newest script and runs
+  it. **A scheduled task on the office PC must only ever run a local file
+  (`powershell -File ...`).** On Nov 20 2026 Microsoft Defender judged the
+  old task, one hidden PowerShell line that downloaded the script from GitHub
+  and ran it, to be malware and blocked it; nothing was cut that night and
+  nothing said so. When a task there silently does nothing, read Defender's
+  log first. Don't add Defender exclusions. `backup/setup.ps1` still
+  registers its nightly task in the old shape and needs the same change
+  before it is installed.
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.

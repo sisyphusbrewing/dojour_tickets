@@ -3,7 +3,8 @@ Sisyphus - cut each night's show recording into one clip per comic and put
 it on Google Drive (Sam, Nov 4 2026).
 
 Runs on the office PC (DESKTOP-8QOGQGK) every morning at 4 AM from Task
-Scheduler (setup.ps1 makes the task). For every OBS recording it hasn't
+Scheduler (setup.ps1 makes the task; the task runs run-recordings.ps1, which
+pulls the newest copy of this file and then runs it). For every OBS recording it hasn't
 handled yet:
 
 1. Finds the show it belongs to (public.show_nights) and the stage timer
