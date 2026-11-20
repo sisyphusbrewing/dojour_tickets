@@ -92,23 +92,18 @@ create or replace function public.staff_show_counts()
 $$;
 
 -- 3. The open mic tables: any real login, as before, but not a stranger.
-drop policy if exists "Allow authenticated staff full access to mic_signups" on public.mic_signups;
-create policy "Logins with a role: mic_signups" on public.mic_signups
-  for all to authenticated
+--    (alter, not drop and re-create, so the policies' names stay and the
+--    Supabase SQL editor has no drop to stop on.)
+alter policy "Allow authenticated staff full access to mic_signups" on public.mic_signups
   using ((select public.my_role()) is not null) with check ((select public.my_role()) is not null);
-
-drop policy if exists "Allow authenticated staff full access to mic_hosts" on public.mic_hosts;
-create policy "Logins with a role: mic_hosts" on public.mic_hosts
-  for all to authenticated
+alter policy "Allow authenticated staff full access to mic_hosts" on public.mic_hosts
   using ((select public.my_role()) is not null) with check ((select public.my_role()) is not null);
-
-drop policy if exists "Allow authenticated staff to read mic_draws" on public.mic_draws;
-create policy "Logins with a role: read mic_draws" on public.mic_draws
-  for select to authenticated using ((select public.my_role()) is not null);
+alter policy "Allow authenticated staff to read mic_draws" on public.mic_draws
+  using ((select public.my_role()) is not null);
 
 -- 4. The job post closed Nov 16 2026, so the public can't upload resumes any
 --    more. Resumes already there stay, readable by managers as before.
-drop policy if exists "Anyone can upload a resume" on storage.objects;
+alter policy "Anyone can upload a resume" on storage.objects with check (false);
 
 -- 5. Pin where these helpers look things up, so nothing can slip a lookalike
 --    function in front of them (Supabase's own security check flags this).
