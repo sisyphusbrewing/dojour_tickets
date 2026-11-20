@@ -100,10 +100,12 @@ TAPROOM_LOOK = {
     **{f"Bar {n}": (20, {"rgb": EDISON}) for n in range(1, 5)},
     # The rest of the room (Sam, Nov 20 2026: "Set a good cozy vibe for all of them"): everything
     # warm and low so the whole room reads as one cozy space with the bar's Edison glow, against the
-    # blue LEDs. The tables get soft warm white to see faces and drinks by; the shuffleboard gets a
+    # blue LEDs. The shuffleboard gets a
     # bit more so people can see the pucks.
-    **{f"Row {n}": (30, {"rgb": EDISON}) for n in range(1, 7)},
-    **{f"Taproom table {n}": (40, {"kelvin": 2700}) for n in range(1, 4)},
+    **{f"Row {n}": (55, {"rgb": EDISON}) for n in range(1, 7)},  # Sam, Nov 20 2026: "Up the brightness on the row lights"
+    # Sam, Nov 20 2026: "The tables could use warmer light and be brighter too" (warmer than the
+    # bulbs' 2700K white, so a soft amber colour).
+    **{f"Taproom table {n}": (70, {"rgb": 0xFF9E4F}) for n in range(1, 4)},
     **{f"Pinball {n}": (35, {"rgb": EDISON}) for n in range(1, 3)},
     "Shuffleboard 3": (70, {"kelvin": 2700}),
 }
