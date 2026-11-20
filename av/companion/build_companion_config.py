@@ -69,6 +69,20 @@ TAPROOM_BULBS = {
     "Bar 2": ("H14C0", "02:A8:7C:E8:B1:1E:3E:6C"),
     "Bar 3": ("H14C0", "04:C7:7C:E8:B1:26:60:38"),
     "Bar 4": ("H14C0", "06:60:7C:E8:B1:21:17:BC"),
+    # 12 more over the rest of the front taproom (Sam added them Nov 20 2026 and named each spot
+    # while we turned them green one at a time).
+    "Row 1": ("H14C0", "02:AE:7C:E8:B1:3D:17:3C"),
+    "Row 2": ("H14C0", "02:AF:68:EE:8F:16:B9:38"),
+    "Row 3": ("H14C0", "03:2D:7C:E8:B1:3C:77:E8"),
+    "Row 4": ("H14C0", "03:61:7C:E8:B1:1D:ED:70"),
+    "Row 5": ("H14C0", "03:7A:7C:E8:B1:25:89:C8"),
+    "Row 6": ("H14C0", "04:BB:7C:E8:B1:25:AF:40"),
+    "Taproom table 1": ("H14C0", "06:05:7C:E8:B1:26:AD:74"),
+    "Taproom table 2": ("H14C0", "1C:93:7C:E8:B1:3B:34:48"),
+    "Taproom table 3": ("H14C0", "1B:45:7C:E8:B1:3C:66:40"),
+    "Pinball 1": ("H14C0", "02:A7:7C:E8:B1:3C:34:64"),
+    "Pinball 2": ("H14C0", "04:49:7C:E8:B1:3C:07:4C"),
+    "Shuffleboard 3": ("H14C0", "04:01:7C:E8:B1:20:A8:70"),
 }
 # The taproom look (Sam, Nov 19 2026). Blue is our color and the room already has blue LEDs, so
 # the bulbs are warm against it: Bar 1-4 "a dim like edison bulb light" (the bulbs' white stops at
@@ -84,6 +98,14 @@ TAPROOM_LOOK = {
     "Ordering 1": (100, {"rgb": 0xFF7200}),
     "Ordering 2": (100, {"rgb": 0xFF7200}),
     **{f"Bar {n}": (20, {"rgb": EDISON}) for n in range(1, 5)},
+    # The rest of the room (Sam, Nov 20 2026: "Set a good cozy vibe for all of them"): everything
+    # warm and low so the whole room reads as one cozy space with the bar's Edison glow, against the
+    # blue LEDs. The tables get soft warm white to see faces and drinks by; the shuffleboard gets a
+    # bit more so people can see the pucks.
+    **{f"Row {n}": (30, {"rgb": EDISON}) for n in range(1, 7)},
+    **{f"Taproom table {n}": (40, {"kelvin": 2700}) for n in range(1, 4)},
+    **{f"Pinball {n}": (35, {"rgb": EDISON}) for n in range(1, 3)},
+    "Shuffleboard 3": (70, {"kelvin": 2700}),
 }
 # Storage Closet bulb (H14C0, Sam added it Nov 19 2026). Sam: "Red at full brightness for preshow and
 # then during show drop to a brightness where you can still see a little but it's red". By day it is a
