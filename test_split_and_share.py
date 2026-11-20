@@ -152,7 +152,7 @@ class NightlyTaskCommand(unittest.TestCase):
         # downloads to a side file, checks it is Python, and only then replaces the real one
         self.assertIn("split_and_share.new.py", text)
         self.assertIn("py_compile", text)
-        self.assertLess(text.index("py_compile"), text.index("Move-Item"))
+        self.assertLess(text.index("py_compile"), text.index("Move-Item -Force $new $script"))
         self.assertIn("py -3 $script @args", text)
 
     def test_the_runner_writes_the_log_in_one_encoding(self):
