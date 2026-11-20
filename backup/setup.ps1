@@ -24,6 +24,7 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [En
 function NewSecret { $b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); ([BitConverter]::ToString($b) -replace '-', '').ToLower() }
 if (-not (Test-Path "$state\restic-pass.txt")) { Set-Content "$state\restic-pass.txt" (NewSecret) -NoNewline }
 if (-not (Test-Path "$state\heartbeat-code.txt")) { Set-Content "$state\heartbeat-code.txt" (NewSecret) -NoNewline }
+# (No "at log on" trigger: that one needs admin, and every 10 minutes covers it.)
 # Only this Windows user can read the two secret files.
 foreach ($f in "$state\restic-pass.txt", "$state\heartbeat-code.txt") {
     icacls $f /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
@@ -32,7 +33,13 @@ foreach ($f in "$state\restic-pass.txt", "$state\heartbeat-code.txt") {
 Set-Content "$state\backup.env" "RESTIC_REPOSITORY=$($RepoPath -replace '\\', '\\')"
 $env:RESTIC_REPOSITORY = $RepoPath
 $env:RESTIC_PASSWORD_FILE = "$state\restic-pass.txt"
-if (-not (Test-Path "$RepoPath\config")) { restic init }
+# winget installs restic as restic_<version>_windows_amd64.exe in its own
+# package folder, which isn't always on PATH (found Nov 20 2026). Use the
+# newest one there, so a winget upgrade is picked up by itself.
+$restic = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\restic.restic*\restic*.exe" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+if (-not $restic) { $restic = (Get-Command restic -ErrorAction Stop).Source }
+if (-not (Test-Path "$RepoPath\config")) { & $restic init }
 
 $raw = 'https://raw.githubusercontent.com/sisyphusbrewing/dojour_tickets/main/backup'
 $pull = "foreach (`$f in 'nightly.ps1','heartbeat.ps1') { Invoke-WebRequest -UseBasicParsing ('$raw/' + `$f) -OutFile ('$dir\' + `$f) -ErrorAction SilentlyContinue }; "
@@ -47,7 +54,7 @@ $hb = New-ScheduledTaskAction -Execute 'powershell.exe' -WorkingDirectory $dir `
     -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$dir\heartbeat.ps1`""
 $every10 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Days 3650)
 $hbSettings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
-Register-ScheduledTask -TaskName 'Sisyphus heartbeat' -Action $hb -Trigger @($every10, (New-ScheduledTaskTrigger -AtLogOn)) -Settings $hbSettings -Force | Out-Null
+Register-ScheduledTask -TaskName 'Sisyphus heartbeat' -Action $hb -Trigger $every10 -Settings $hbSettings -Force | Out-Null
 
 $sha = [Security.Cryptography.SHA256]::Create()
 $fp = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes((Get-Content "$state\heartbeat-code.txt" -Raw).Trim()))) -replace '-', '').ToLower()
