@@ -3,7 +3,7 @@ Dates are built relative to today so the tests never go stale."""
 import unittest
 from datetime import datetime, time, timedelta
 
-from advance_auto import CENTRAL, plan, website_nights
+from advance_auto import CENTRAL, plan, still_missing, website_nights
 
 
 def night(title, days, hour=19):
@@ -153,3 +153,23 @@ class SpreadOutRunTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReminderTest(unittest.TestCase):
+    """An advance with no email gets booking@ asked again 7, 3 and 1 days out
+    (Jeffrey Keller, Nov 19 2026, got one note and was never sent his)."""
+
+    def row(self, days, **kw):
+        r = {"id": f"a{days}", "show_name": "Pat Example", "show_date": (TODAY + timedelta(days=days)).isoformat(),
+             "contact_email": None, "staff_notes": "Made automatically Nov 10", "welcome_sent_at": None}
+        r.update(kw)
+        return r
+
+    def test_reminders_on_7_3_and_1_days_out_only(self):
+        rows = [self.row(d) for d in range(0, 22)]
+        self.assertEqual(sorted(int(a["id"][1:]) for a in still_missing(rows, TODAY)), [1, 3, 7])
+
+    def test_no_reminder_once_an_email_is_added_or_it_was_sent_or_filled_in(self):
+        rows = [self.row(3, contact_email="pat@gmail.com"), self.row(3, welcome_sent_at="2026-01-01"),
+                self.row(3, submitted_at="2026-01-01"), self.row(3, staff_notes="Grace made it")]
+        self.assertEqual(still_missing(rows, TODAY), [])

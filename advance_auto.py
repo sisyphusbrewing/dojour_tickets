@@ -27,6 +27,11 @@ run starting in the next 21 days that has no advance yet gets one.
      If not, the advance is made with no email and booking@ gets one short
      note asking for it. Once someone adds the email on the booking desk, the
      next morning's run sends the welcome by itself.
+  5. If the email is still missing a week before the first night, booking@
+     is asked again 7, 3 and 1 days out, and the note carries the comic's own
+     link so it can simply be forwarded or shown. (Jeffrey Keller's Nov 19
+     2026 run got one note on Nov 10 and nothing after, so he never got his
+     advance; Sam showed him the link at the club.)
 
     python advance_auto.py
     DRY_RUN=1 python advance_auto.py   says what it would do, sends nothing
@@ -54,6 +59,8 @@ BOOKING = "booking@sisyphusbrewing.com"
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 CENTRAL = ZoneInfo("America/Chicago")
 DESK = "https://staff.sisyphusbrewing.com/advance/booking.html#/a/"
+TRIP_URL = "https://www.sisyphusbrewing.com/pages/advance?s="
+REMIND_DAYS = (7, 3, 1)   # ask booking@ again this many days before the first night
 
 DAYS_OUT = 21          # make the advance this many days before the first night
 # Nights of one show up to a week apart are one run and get one advance. It
@@ -208,6 +215,16 @@ def plan(history, advances, agents, today, payees=(), past_advances=(), board=()
     return todo, later
 
 
+def still_missing(advances, today):
+    """Advances this script made that still have no email and no welcome, on a
+    reminder day (7, 3 or 1 days before the first night). Pure, for the tests.
+    One note on the day the advance is made was easy to miss (Nov 19 2026)."""
+    return [a for a in advances
+            if AUTO_NOTE in (a.get("staff_notes") or "") and not (a.get("contact_email") or "").strip()
+            and not a.get("welcome_sent_at") and not a.get("submitted_at") and a.get("show_date")
+            and (date.fromisoformat(a["show_date"]) - today).days in REMIND_DAYS]
+
+
 # ---------- Supabase + email ----------
 
 def sb(method, path, **kw):
@@ -239,15 +256,19 @@ def when(run):
     return f"{a:%a %b %-d}–{b:%-d}" if a.month == b.month else f"{a:%a %b %-d} – {b:%b %-d}"
 
 
-def ask_booking(run, advance_id):
-    """One short note to booking@: we need an email for this show."""
+def ask_booking(run, advance_id, token=None, days_left=None):
+    """A short note to booking@: we need an email for this show. The reminders
+    (days_left set) also carry the comic's own link, ready to forward."""
     link = DESK + advance_id
-    subject = f"Advance needs a contact: {run['title']}, {when(run)}"
-    text = (f"{run['title']} plays {when(run)}, and we don't have an email for the comic or their tour manager (agents rarely fill these in).\n\n"
-            f"Add it on the booking desk: {link}\n\n"
+    soon = f"Still no email, {days_left} day{'s' if days_left != 1 else ''} to go. " if days_left else ""
+    subject = f"{'Reminder: ' if days_left else ''}Advance needs a contact: {run['title']}, {when(run)}"
+    trip = (f"Or forward the comic their own advance link: {TRIP_URL}{token}\n\n") if token else ""
+    trip_html = (f'<p>Or forward the comic their own advance link: <a href="{TRIP_URL}{token}">{TRIP_URL}{token}</a></p>') if token else ""
+    text = (f"{soon}{run['title']} plays {when(run)}, and we don't have an email for the comic or their tour manager (agents rarely fill these in).\n\n"
+            f"Add it on the booking desk: {link}\n\n{trip}"
             "That's it. The advance and the \"You're booked\" email go out the next morning by themselves.")
-    html = (f"<p>{run['title']} plays {when(run)}, and we don't have an email for the comic or their tour manager (agents rarely fill these in).</p>"
-            f'<p><a href="{link}">Add it on the booking desk</a></p>'
+    html = (f"<p>{soon}{run['title']} plays {when(run)}, and we don't have an email for the comic or their tour manager (agents rarely fill these in).</p>"
+            f'<p><a href="{link}">Add it on the booking desk</a></p>{trip_html}'
             "<p>That's it. The advance and the \"You're booked\" email go out the next morning by themselves.</p>")
     msg = MIMEMultipart("alternative")
     msg["Subject"], msg["From"], msg["To"] = subject, f"Sisyphus <{FROM_EMAIL}>", BOOKING
@@ -268,15 +289,16 @@ def main():
     history += website_nights(sb("GET", "exchange_showtimes", params={"select": "show_title,starts_at,price", **window}))
     board = sb("GET", "booking_shows", params={"select": "act,first_night,last_night,stage,checks",
                                                "first_night": f"gte.{today - timedelta(days=LOOK_BACK_DAYS)}"})
-    advances = sb("GET", "advances", params={"select": "id,show_name,act_name,show_date,show_end_date,contact_email,staff_notes,welcome_sent_at",
+    advances = sb("GET", "advances", params={"select": "id,token,show_name,act_name,show_date,show_end_date,contact_email,staff_notes,welcome_sent_at,submitted_at",
                                              "show_date": f"gte.{today - timedelta(days=LOOK_BACK_DAYS)}"})
     agents = sb("GET", "show_agents", params={"select": "show_title,agent_name,agent_email"})
     past = sb("GET", "advances", params={"select": "show_name,act_name,show_date,contact_email",
                                          "contact_email": "not.is.null"})
     payees = sb("GET", "payees", params={"select": "name,email"})
     todo, later = plan(history, advances, agents, today, payees, past, board)
+    remind = still_missing(advances, today)
 
-    if not todo and not later:
+    if not todo and not later and not remind:
         print("Nothing to do: every headliner run in the next 3 weeks already has an advance.")
     for action, run, emails, name in todo:
         # The log is public: say how many addresses, never the addresses.
@@ -293,6 +315,13 @@ def main():
         print(f"{a['show_date']} {a['show_name']}: email added on the desk, sending the welcome")
         if not DRY_RUN:
             send_welcome(a["id"])
+    for a in remind:
+        first = date.fromisoformat(a["show_date"])
+        run = {"title": a["show_name"], "first": first,
+               "last": date.fromisoformat(a["show_end_date"]) if a.get("show_end_date") else first}
+        print(f"{when(run)} {a['show_name']}: still no email, reminding booking@")
+        if not DRY_RUN:
+            ask_booking(run, a["id"], a.get("token"), (first - today).days)
     if DRY_RUN:
         print("[DRY RUN] nothing made or sent.")
 
