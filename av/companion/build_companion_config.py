@@ -91,10 +91,15 @@ TAPROOM_BULBS = {
 # through shows. DAYTIME (pressed by itself at opening, door_count.py) brings this look and ALL OFF
 # turns it off; in between the BAR page has its own on/off (Sam, Nov 19 2026: a "show page" and a
 # "bar page" until the front bar gets its own Stream Deck). PRE-SHOW and START SHOW leave it alone.
-EDISON = 0xFF8C40
+# Golden amber, not orange: Sam's Nov 20 2026 walk-through video showed #FF8C40 reading red/pink on
+# these bulbs at low brightness, so the glow is pushed toward gold to look like a real filament.
+EDISON = 0xFFA347
+# Our blue for the entry bulbs. The old slate #3F6E9A came out teal on the bulbs in the same video;
+# with less green it reads as the logo's blue.
+ENTRY_BLUE = 0x2A4FD0
 TAPROOM_LOOK = {
-    "Entryway 1": (100, {"rgb": 0x3F6E9A}),  # Sam, Nov 19 2026: "The first entryway light should be at 100% brightness with the blue color"
-    "Entryway 2": (35, {"rgb": 0x3F6E9A}),
+    "Entryway 1": (100, {"rgb": ENTRY_BLUE}),  # Sam, Nov 19 2026: "The first entryway light should be at 100% brightness with the blue color"
+    "Entryway 2": (35, {"rgb": ENTRY_BLUE}),
     "Ordering 1": (100, {"rgb": 0xFF7200}),
     "Ordering 2": (100, {"rgb": 0xFF7200}),
     **{f"Bar {n}": (20, {"rgb": EDISON}) for n in range(1, 5)},

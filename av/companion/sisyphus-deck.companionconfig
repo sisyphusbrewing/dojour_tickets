@@ -430,7 +430,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 4157082}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 2772944}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -541,7 +541,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"07:CC:B0:A6:04:33:69:DC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 4157082}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"07:CC:B0:A6:04:33:69:DC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 2772944}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -874,7 +874,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:7C:E8:B1:3B:2C:9C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:7C:E8:B1:3B:2C:9C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -985,7 +985,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A8:7C:E8:B1:1E:3E:6C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A8:7C:E8:B1:1E:3E:6C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1096,7 +1096,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:C7:7C:E8:B1:26:60:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:C7:7C:E8:B1:26:60:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1207,7 +1207,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"06:60:7C:E8:B1:21:17:BC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"06:60:7C:E8:B1:21:17:BC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1318,7 +1318,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AE:7C:E8:B1:3D:17:3C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AE:7C:E8:B1:3D:17:3C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1429,7 +1429,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:68:EE:8F:16:B9:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:68:EE:8F:16:B9:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1540,7 +1540,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:2D:7C:E8:B1:3C:77:E8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:2D:7C:E8:B1:3C:77:E8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1651,7 +1651,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:61:7C:E8:B1:1D:ED:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:61:7C:E8:B1:1D:ED:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1762,7 +1762,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:7A:7C:E8:B1:25:89:C8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:7A:7C:E8:B1:25:89:C8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -1873,7 +1873,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:BB:7C:E8:B1:25:AF:40\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:BB:7C:E8:B1:25:AF:40\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -2317,7 +2317,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A7:7C:E8:B1:3C:34:64\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A7:7C:E8:B1:3C:34:64\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -2428,7 +2428,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:49:7C:E8:B1:3C:07:4C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:49:7C:E8:B1:3C:07:4C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -2539,7 +2539,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:01:7C:E8:B1:20:A8:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:01:7C:E8:B1:20:A8:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -22662,7 +22662,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 4157082}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:B0:7C:E8:B1:25:64:58\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 2772944}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -22773,7 +22773,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"07:CC:B0:A6:04:33:69:DC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 4157082}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"R14C0\", \"device\": \"07:CC:B0:A6:04:33:69:DC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 2772944}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23106,7 +23106,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:7C:E8:B1:3B:2C:9C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:7C:E8:B1:3B:2C:9C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23217,7 +23217,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A8:7C:E8:B1:1E:3E:6C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A8:7C:E8:B1:1E:3E:6C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23328,7 +23328,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:C7:7C:E8:B1:26:60:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:C7:7C:E8:B1:26:60:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23439,7 +23439,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"06:60:7C:E8:B1:21:17:BC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"06:60:7C:E8:B1:21:17:BC\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23550,7 +23550,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AE:7C:E8:B1:3D:17:3C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AE:7C:E8:B1:3D:17:3C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23661,7 +23661,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:68:EE:8F:16:B9:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:AF:68:EE:8F:16:B9:38\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23772,7 +23772,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:2D:7C:E8:B1:3C:77:E8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:2D:7C:E8:B1:3C:77:E8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23883,7 +23883,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:61:7C:E8:B1:1D:ED:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:61:7C:E8:B1:1D:ED:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -23994,7 +23994,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:7A:7C:E8:B1:25:89:C8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"03:7A:7C:E8:B1:25:89:C8\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -24105,7 +24105,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:BB:7C:E8:B1:25:AF:40\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:BB:7C:E8:B1:25:AF:40\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -24549,7 +24549,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A7:7C:E8:B1:3C:34:64\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"02:A7:7C:E8:B1:3C:34:64\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -24660,7 +24660,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:49:7C:E8:B1:3C:07:4C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:49:7C:E8:B1:3C:07:4C\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
@@ -24771,7 +24771,7 @@
                           "isExpression": false
                         },
                         "body": {
-                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:01:7C:E8:B1:20:A8:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16747584}}}",
+                          "value": "{\"requestId\": \"deck\", \"payload\": {\"sku\": \"H14C0\", \"device\": \"04:01:7C:E8:B1:20:A8:70\", \"capability\": {\"type\": \"devices.capabilities.color_setting\", \"instance\": \"colorRgb\", \"value\": 16753479}}}",
                           "isExpression": false
                         },
                         "header": {
