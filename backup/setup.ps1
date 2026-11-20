@@ -10,7 +10,8 @@
 #   database row device_heartbeats 'office-pc' (the code never leaves the PC)
 # - adds two Task Scheduler tasks, each pulling the newest script from main
 #   before it runs: "Sisyphus backup" (3:15 AM, before the 4 AM recordings
-#   upload) and "Sisyphus heartbeat" (every 10 minutes).
+#   upload) and "Sisyphus heartbeat" (every 10 minutes). Each runs a local
+#   file; the backup's run-backup.ps1 pulls the newest scripts from main.
 param([string]$RepoPath = 'D:\SisyphusBackup\restic')
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -41,13 +42,17 @@ $restic = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\restic.rest
 if (-not $restic) { $restic = (Get-Command restic -ErrorAction Stop).Source }
 if (-not (Test-Path "$RepoPath\config")) { & $restic init }
 
+# The scripts are copied here once; after that run-backup.ps1 pulls the newest
+# ones from main each night. Each task runs a plain local file (-File), never
+# a download-and-run line, which Defender blocks as malware (Nov 20 2026).
 $raw = 'https://raw.githubusercontent.com/sisyphusbrewing/dojour_tickets/main/backup'
-$pull = "foreach (`$f in 'nightly.ps1','heartbeat.ps1') { Invoke-WebRequest -UseBasicParsing ('$raw/' + `$f) -OutFile ('$dir\' + `$f) -ErrorAction SilentlyContinue }; "
-Invoke-Expression ($pull)
+foreach ($f in 'run-backup.ps1', 'nightly.ps1', 'heartbeat.ps1') {
+    Invoke-WebRequest -UseBasicParsing "$raw/$f" -OutFile "$dir\$f"
+}
 
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -WakeToRun -ExecutionTimeLimit (New-TimeSpan -Hours 4) -MultipleInstances IgnoreNew
 $a = New-ScheduledTaskAction -Execute 'powershell.exe' -WorkingDirectory $dir `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$pull & '$dir\nightly.ps1'`""
+    -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$dir\run-backup.ps1`""
 Register-ScheduledTask -TaskName 'Sisyphus backup' -Action $a -Trigger (New-ScheduledTaskTrigger -Daily -At 3:15am) -Settings $settings -Force | Out-Null
 
 $hb = New-ScheduledTaskAction -Execute 'powershell.exe' -WorkingDirectory $dir `
