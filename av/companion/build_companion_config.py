@@ -751,10 +751,18 @@ CANDLE_BLASTERS = ["192.168.86.74", "192.168.86.45", "192.168.86.81"]  # Candles
 CANDLE_CODES = {True: "0x10ED00FF", False: "0x10ED40BF"}
 
 
+# Each ON or OFF goes out in CANDLE_BURSTS bursts half a second apart (Sam, Nov 19 2026: "they
+# should probably send the pulse multiple times for each on and for each off"), so a candle that
+# missed the first one still catches it. The blaster spaces them itself (Tasmota Backlog + Delay,
+# in tenths of a second); ON and OFF are separate codes, so a repeat can never flip a candle back.
+CANDLE_BURSTS = 3
+
+
 def candles(on):
-    body = quote(json.dumps({"Protocol": "NEC", "Bits": 32, "Data": CANDLE_CODES[on], "Repeat": 1},
-                            separators=(",", ":")))
-    return [action(HTTP, "get", url=f"http://{ip}/cm?cmnd=IRsend%20{body}", header="",
+    send = "IRsend " + json.dumps({"Protocol": "NEC", "Bits": 32, "Data": CANDLE_CODES[on], "Repeat": 1},
+                                  separators=(",", ":"))
+    body = quote("Backlog " + ";Delay 5;".join([send] * CANDLE_BURSTS), safe="")
+    return [action(HTTP, "get", url=f"http://{ip}/cm?cmnd={body}", header="",
                    jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")
             for ip in CANDLE_BLASTERS]
 
