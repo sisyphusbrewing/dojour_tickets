@@ -141,6 +141,54 @@ input[type=date].input, input[type=time].input { color-scheme: dark; }
 #lock h1 { text-align: center; margin: 4px 0 18px; }
 #lock .err { margin-top: 10px; }
 
+/* The sign-in box every staff page shares, built by buildSignIn() in staff.js
+   (Sam, Nov 19 2026: "simpler and more visual for people to understand").
+   Two numbered steps, a picture of what a username looks like, big targets. */
+#lock { overflow-y: auto; align-items: flex-start; }
+#lock .card.si { margin: auto; max-width: 400px; padding: 18px 18px 16px; border-radius: 18px; }
+#lock .si-logo { width: 78px; margin: 0 auto 8px; }
+#lock .si-band-wrap { text-align: center; margin: 4px 0 8px; }
+#lock h1.si-band { display: inline-block; margin: 0; background: var(--slate); color: #fff; padding: 9px 18px 6px; font-family: var(--head); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .14em; font-size: 17px; line-height: 1.1; transform: rotate(-1.5deg);
+  box-shadow: 0 -4px 0 -1px var(--card), 0 -6px 0 -1px #fff, 0 4px 0 -1px var(--card), 0 6px 0 -1px #fff; }
+#lock .si-for { text-align: center; color: var(--muted); font-size: 16px; margin: 10px 0 16px; }
+#lock .si-for b { color: #fff; }
+#lock .si-step { display: flex; gap: 12px; margin-bottom: 16px; }
+#lock .si-num { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--slate); color: #fff; font-family: var(--head); font-weight: 700;
+  font-size: 18px; display: flex; align-items: center; justify-content: center; padding-top: 3px; box-sizing: border-box; margin-top: -2px; }
+#lock .si-body { flex: 1; min-width: 0; }
+#lock .si-body label { display: block; font-size: 17px; font-weight: 700; color: #fff; margin: 3px 0 8px; text-transform: none; letter-spacing: 0; }
+#lock .si-input { position: relative; display: flex; align-items: center; }
+#lock .si-input > svg { position: absolute; left: 13px; width: 22px; height: 22px; pointer-events: none; }
+#lock svg { fill: none; stroke: var(--slate-light); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#lock .si-input input { width: 100%; min-height: 54px; box-sizing: border-box; padding: 10px 14px 10px 46px; border-radius: 12px; border: 2px solid var(--line);
+  background: #242222; color: #fff; font-size: 19px; font-family: var(--body); outline: none; }
+#lock .si-input input:focus { border-color: var(--slate-light); }
+#lock .si-input input::placeholder { color: #6f6b6c; }
+#lock #password { padding-right: 56px; }
+#lock .si-eye { position: absolute; right: 4px; top: 4px; bottom: 4px; width: 48px; border: 0; border-radius: 9px; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; }
+#lock .si-eye svg { width: 24px; height: 24px; stroke: var(--gray); }
+#lock .si-eye.on svg { stroke: var(--slate-light); }
+#lock .si-example { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 15px; }
+#lock .si-ex-name { color: var(--muted); background: #2f2d2d; border: 1px dashed var(--line); border-radius: 8px; padding: 3px 9px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lock .si-arrow { color: var(--slate-light); font-weight: 700; }
+#lock .si-ex-user { color: #fff; background: var(--slate-dark); border-radius: 8px; padding: 3px 9px; font-weight: 700; letter-spacing: .02em; }
+#lock .si-example.live .si-ex-user { background: var(--slate); }
+#lock .si-example.live::before { content: "You\2019ll sign in as"; color: var(--muted); }
+#lock .si-example.live .si-ex-name, #lock .si-example.live .si-arrow { display: none; }
+#lock .si-hint { color: var(--gray); font-size: 14px; line-height: 1.35; margin-top: 8px; }
+#lock .si-err { background: rgba(201,106,90,.16); border: 1px solid var(--danger); color: #f6cfc7; border-radius: 12px; padding: 11px 13px; font-size: 15px;
+  font-weight: 600; line-height: 1.35; margin: -4px 0 14px; text-align: left; }
+#lock .si-go { width: 100%; min-height: 58px; border: 0; border-radius: 14px; background: var(--slate); color: #fff; cursor: pointer; font-family: var(--head);
+  font-weight: 700; font-size: 19px; text-transform: uppercase; letter-spacing: .12em; padding-top: 5px; }
+#lock .si-go:hover { background: var(--slate-dark); }
+#lock .si-go:disabled { opacity: .7; cursor: default; }
+#lock .si-foot { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 14px; display: grid; gap: 10px; }
+#lock .si-foot > div { display: flex; gap: 10px; align-items: flex-start; color: var(--muted); font-size: 15px; line-height: 1.35; }
+#lock .si-foot svg { flex: 0 0 22px; width: 22px; height: 22px; }
+
 /* ---------- Toast ---------- */
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #fff; color: var(--bg); padding: 10px 16px;
          border-radius: 10px; font-weight: 600; z-index: 60; box-shadow: 0 8px 24px rgba(0,0,0,.4); max-width: calc(100% - 32px); text-align: center; }

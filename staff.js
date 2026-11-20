@@ -23,8 +23,17 @@ function jsArg(value) {
 }
 
 // Staff type a username ("rjoseph"); the login is rjoseph@sisyphusbrewing.com.
-function loginToEmail(login) {
+// Someone who types their whole name ("Jane Smith") gets the username it
+// makes ("jsmith"), since every staff login is first initial + last name.
+function loginName(login) {
   var v = String(login || '').trim().toLowerCase();
+  if (v.indexOf('@') !== -1) return v;
+  var parts = v.split(/\s+/).filter(Boolean);
+  if (parts.length > 1) v = parts[0].charAt(0) + parts[parts.length - 1];
+  return v.replace(/[^a-z0-9._-]/g, '');
+}
+function loginToEmail(login) {
+  var v = loginName(login);
   return v.indexOf('@') === -1 ? v + '@' + LOGIN_DOMAIN : v;
 }
 
@@ -265,8 +274,90 @@ function showNoAccess(min, hide) {
 // noSession(), if given, runs instead of showing the sign-in box when no login
 // is found; it returns true when the page has handled it (the door page uses
 // this to keep working from its saved list when there's no connection).
+// The sign-in box, the same on every staff page (Sam, Nov 19 2026: "We
+// should make the staff log in simpler and more visual for people to
+// understand"). Two numbered steps with a picture of what a username looks
+// like, an eye to see the password, and the two answers people need most:
+// you only do this once on a phone, and a manager can reset a password.
+// The page keeps its own #lock box; this fills it, keeping the page's name.
+var SI_ICON = {
+  person: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
+  key: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>',
+  help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg>'
+};
+function buildSignIn() {
+  var lock = $('lock');
+  if (!lock || lock.dataset.si) return;
+  lock.dataset.si = '1';
+  var h = lock.querySelector('h1, h2');
+  var page = h ? h.textContent.trim() : 'Staff';
+  var forWhat = page === 'Staff' ? 'the staff site' : 'the <b>' + escapeHtml(page) + '</b> page';
+  var badge = lock.querySelector('img');
+  var src = badge ? badge.getAttribute('src') : '/posters/assets/sisyphus-badge-dark-bg.png';
+  lock.innerHTML =
+    '<div class="card si">' +
+      '<img class="si-logo" src="' + escapeHtml(src) + '" alt="Sisyphus">' +
+      '<div class="si-band-wrap"><h1 class="si-band">Staff sign in</h1></div>' +
+      '<p class="si-for">To open ' + forWhat + '</p>' +
+      '<form id="loginForm" autocomplete="on">' +
+        '<div class="si-step">' +
+          '<div class="si-num">1</div>' +
+          '<div class="si-body">' +
+            '<label for="login">Your username</label>' +
+            '<div class="si-input">' + SI_ICON.person +
+              '<input id="login" name="username" required placeholder="jsmith" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username"></div>' +
+            '<div class="si-example" id="siExample">' +
+              '<span class="si-ex-name" id="siExName">Jane Smith</span><span class="si-arrow">→</span><span class="si-ex-user" id="siExUser">jsmith</span>' +
+            '</div>' +
+            '<div class="si-hint" id="siHint">First letter of your first name, then your last name. All lowercase, no spaces.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="si-step">' +
+          '<div class="si-num">2</div>' +
+          '<div class="si-body">' +
+            '<label for="password">Your password</label>' +
+            '<div class="si-input">' + SI_ICON.key +
+              '<input id="password" name="password" type="password" required autocomplete="current-password">' +
+              '<button class="si-eye" id="siEye" type="button" aria-label="Show password" aria-pressed="false">' + SI_ICON.eye + '</button></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="si-err hidden" id="loginError" role="alert"></div>' +
+        '<button class="si-go" id="loginBtn" type="submit">Sign in</button>' +
+      '</form>' +
+      '<div class="si-foot">' +
+        '<div>' + SI_ICON.phone + '<span>You only do this once. This phone remembers you.</span></div>' +
+        '<div>' + SI_ICON.help + '<span>Forgot your password? Ask a manager to reset it.</span></div>' +
+      '</div>' +
+    '</div>';
+  // As someone types, the example turns into what they will sign in as.
+  $('login').addEventListener('input', function () {
+    var typed = this.value.trim();
+    var ex = $('siExample');
+    if (!typed) {
+      $('siExName').textContent = 'Jane Smith'; $('siExUser').textContent = 'jsmith';
+      ex.classList.remove('live'); $('siHint').classList.remove('hidden');
+      return;
+    }
+    // Shown as "You'll sign in as jsmith", so someone who typed their whole
+    // name sees what it became.
+    $('siExUser').textContent = loginName(typed);
+    ex.classList.add('live');
+    $('siHint').classList.add('hidden');
+  });
+  $('siEye').addEventListener('click', function () {
+    var pw = $('password'), show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    this.setAttribute('aria-pressed', show ? 'true' : 'false');
+    this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    this.classList.toggle('on', show);
+  });
+}
+
 function setupSignIn(onReady, noSession) {
   var started = false;
+  buildSignIn();
   async function ready() {
     var r = await sb.rpc('my_role');
     var role = r.data || 'door';
@@ -281,14 +372,16 @@ function setupSignIn(onReady, noSession) {
     try {
       var res = await sb.auth.signInWithPassword({ email: loginToEmail($('login').value), password: $('password').value });
       if (res.error) {
-        err.textContent = /invalid/i.test(res.error.message) ? 'That username and password don’t match.' : res.error.message;
+        err.textContent = /invalid/i.test(res.error.message)
+          ? 'That username and password don’t go together. Check the spelling, or ask a manager to reset your password.'
+          : res.error.message;
         err.classList.remove('hidden');
         return;
       }
       $('password').value = '';
       await ready();
     } catch (ex) {
-      err.textContent = 'Could not reach the server. Check the wifi.';
+      err.textContent = 'Couldn’t reach the internet. Check the wifi and try again.';
       err.classList.remove('hidden');
     } finally {
       btn.disabled = false; btn.textContent = 'Sign in';
