@@ -220,3 +220,33 @@ input[type=date].input, input[type=time].input { color-scheme: dark; }
 .all-caught { color: var(--gray); margin: 0; }
 #postForm textarea { min-height: 110px; resize: vertical; font: inherit; }
 #postForm select { font: inherit; }
+
+/* One "What's new" update, drawn by updateHtml() in staff/news.js, on the staff
+   home, Manager and the Clock's "Before you clock in" box (Sam, Nov 19 2026:
+   "comprehension is key"): a picture beside the headline, the screenshot, one
+   short line, numbered steps. */
+.up-head { display: flex; gap: 12px; align-items: center; }
+.up-ico { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 12px; background: var(--slate); display: flex; align-items: center; justify-content: center; }
+.up-ico svg { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.up-titles { min-width: 0; }
+.up-titles h3 { margin: 0; }
+.note.up .up-titles .when { margin-top: 2px; }
+.note.read .up-ico { background: var(--line); }
+.up-pic { display: block; margin: 12px 0 0; border-radius: 12px; overflow: hidden; background: #242222; border: 1px solid var(--line); }
+.up-pic img { display: block; width: 100%; max-height: 300px; object-fit: cover; object-position: top; }
+p.up-body { margin: 10px 0 0; font-size: 17px; line-height: 1.4; color: #f1efef; white-space: pre-line; overflow-wrap: anywhere; }
+.up-steps { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.up-steps li { display: flex; gap: 11px; align-items: flex-start; font-size: 16px; line-height: 1.35; color: #f1efef; overflow-wrap: anywhere; }
+.up-num { flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--slate-dark); border: 2px solid var(--slate-light); color: #fff; font-weight: 700; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.up-steps li > span:last-child { padding-top: 3px; }
+/* Read ones stay readable, only quieter. */
+.note.read .up-steps li, .note.read p.up-body { color: var(--muted); }
+/* In the Clock's box: a bit bigger, it is the only thing on screen. */
+.up-sheet { margin-top: 2px; }
+.up-sheet .up-head h3 { font-family: var(--body); font-size: 21px; line-height: 1.2; font-weight: 700; }
+.up-sheet .when { color: var(--gray); font-size: 14px; }
+/* Managers posting: the row of pictures to pick from. */
+.up-icons { display: flex; flex-wrap: wrap; gap: 8px; }
+.up-icons .up-ico { border: 2px solid transparent; background: var(--line); cursor: pointer; padding: 0; }
+.up-icons .up-ico.on { background: var(--slate); border-color: #fff; }

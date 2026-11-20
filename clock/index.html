@@ -20,6 +20,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../staff.js"></script>
   <script src="../staff/nav.js"></script>
+  <script src="../staff/news.js"></script>
 </head>
 <body class="clock-page look">
   <!-- The time clock (Sam, Nov 16 2026: "I want to make the staff portal the
@@ -223,9 +224,7 @@
   <dialog id="newsDialog" class="sheet">
     <div class="stack">
       <p class="help" id="newsCount" style="margin:0"></p>
-      <h2 id="newsTitle"></h2>
-      <p class="help" id="newsWhen" style="margin:0"></p>
-      <p class="news-body" id="newsBody"></p>
+      <div class="up up-sheet" id="newsCard"></div>
       <div class="sheet-acts">
         <button class="btn btn-primary" type="button" id="newsGot">Got it</button>
         <button class="btn btn-ghost" type="button" id="newsNot">Not now</button>
