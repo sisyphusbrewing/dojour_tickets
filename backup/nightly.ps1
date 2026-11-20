@@ -23,6 +23,12 @@ $env:RESTIC_REPOSITORY = $conf.RESTIC_REPOSITORY
 $env:RESTIC_PASSWORD_FILE = "$state\restic-pass.txt"
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 $log = "$state\backup.log"
+# winget installs restic as restic_<version>_windows_amd64.exe in its own
+# package folder, which isn't always on PATH (found Nov 20 2026). Use the
+# newest one there, so a winget upgrade is picked up by itself.
+$restic = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\restic.restic*\restic*.exe" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+if (-not $restic) { $restic = (Get-Command restic -ErrorAction Stop).Source }
 $problems = @()
 function Say($text) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  $text" | Add-Content $log }
 
@@ -59,23 +65,23 @@ $paths = @(@(
 ) | Where-Object { Test-Path $_ })
 $paths += Get-ChildItem "$env:USERPROFILE\Downloads\*" -File -Include 'companion-backup-*', 'sisyphus-deck-merged-*', 'companion-live-*' -ErrorAction SilentlyContinue | ForEach-Object FullName
 
-$out = restic backup --tag nightly --exclude "$state\restic-pass.txt" --exclude "$state\heartbeat-code.txt" --exclude "$state\db-pass.txt" --exclude "$env:APPDATA\obs-studio\logs" --exclude "$env:APPDATA\obs-studio\crashes" @paths 2>&1
+$out = & $restic backup --tag nightly --exclude "$state\restic-pass.txt" --exclude "$state\heartbeat-code.txt" --exclude "$state\db-pass.txt" --exclude "$env:APPDATA\obs-studio\logs" --exclude "$env:APPDATA\obs-studio\crashes" @paths 2>&1
 if ($LASTEXITCODE -ne 0) { $problems += "restic backup exit $LASTEXITCODE"; Say ($out | Select-Object -Last 5 | Out-String) }
 else { Say (($out | Select-String 'Added to the repository|processed') -join ' | ') }
 
 # Keep 14 nights, 8 weeks, 12 months; drop the rest.
-restic forget --tag nightly --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune *>> $log
+& $restic forget --tag nightly --keep-daily 14 --keep-weekly 8 --keep-monthly 12 --prune 2>&1 | Add-Content $log
 if ($LASTEXITCODE -ne 0) { $problems += 'restic forget/prune failed' }
 
 # Sundays: read back a slice of the stored data to prove it's still good.
 if ((Get-Date).DayOfWeek -eq 'Sunday') {
-    restic check --read-data-subset=5% *>> $log
+    & $restic check --read-data-subset=5% 2>&1 | Add-Content $log
     if ($LASTEXITCODE -ne 0) { $problems += 'restic check found a problem' }
 }
 
 $drive = Get-PSDrive -Name ($conf.RESTIC_REPOSITORY.Substring(0, 1)) -ErrorAction SilentlyContinue
 $freeGb = if ($drive) { [math]::Round($drive.Free / 1GB) } else { -1 }
-$snaps = (restic snapshots --json 2>$null | ConvertFrom-Json).Count
+$snaps = (& $restic snapshots --json 2>$null | ConvertFrom-Json).Count
 if ($freeGb -ge 0 -and $freeGb -lt 100) { $problems += "backup drive has only $freeGb GB free" }
 
 $ok = $problems.Count -eq 0

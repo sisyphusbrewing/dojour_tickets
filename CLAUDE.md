@@ -318,14 +318,17 @@ Dojour gotchas, learned the hard way:
   payments, our own card reader) is the next piece, not built here.
 - **`backup/`** is the nightly backup on the office PC (Sam, Nov 18 2026:
   "Can we use my PC currently as a back up?", until a NAS arrives). restic
-  snapshots on the PC's 2 TB second drive of the recordings, OBS and
-  Companion settings and this repo, 3:15 AM; the PC pulls `nightly.ps1` and
-  `heartbeat.ps1` from main before each run. The PC checks in every 10
+  snapshots of the recordings, OBS and Companion settings, this repo and a
+  dump of the database (read-only login `backup_reader`, Sam OKed Nov 18
+  2026), 3:15 AM, in `C:\SisyphusBackup\restic` until the PC's 2 TB second
+  drive gets a partition (needs one admin click at the PC). The task runs
+  `run-backup.ps1`, which pulls `nightly.ps1` and `heartbeat.ps1` from main
+  first. The PC checks in every 10
   minutes (`device_heartbeat()`, which also puts its power settings back to
   never sleep) and `schedule_notify.py` emails Sam when it goes quiet for 30
   minutes, comes back, or a backup fails or is missed. Rules in
   `supabase/migrations/20261119040000_device_heartbeats.sql`. The restic
-  password and the check-in code live only on the PC.
+  password, the database password and the check-in code live only on the PC.
 - **Printed checks for comics** (Sam, Nov 18 2026: "Need secure checks for
   printing at the taproom for comedians, can only work on my approval"; he
   picked a printed signature). On the pay sheet (`payouts/`), a line paid by
@@ -367,9 +370,8 @@ Dojour gotchas, learned the hard way:
   old task, one hidden PowerShell line that downloaded the script from GitHub
   and ran it, to be malware and blocked it; nothing was cut that night and
   nothing said so. When a task there silently does nothing, read Defender's
-  log first. Don't add Defender exclusions. `backup/setup.ps1` still
-  registers its nightly task in the old shape and needs the same change
-  before it is installed.
+  log first. Don't add Defender exclusions. The backup does the same:
+  its task runs `backup/run-backup.ps1` (Nov 20 2026).
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.
