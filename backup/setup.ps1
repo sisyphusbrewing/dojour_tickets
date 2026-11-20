@@ -31,7 +31,10 @@ foreach ($f in "$state\restic-pass.txt", "$state\heartbeat-code.txt") {
     icacls $f /inheritance:r /grant:r "$($env:USERNAME):F" | Out-Null
 }
 
-Set-Content "$state\backup.env" "RESTIC_REPOSITORY=$($RepoPath -replace '\\', '\\')"
+# backup.env: the store's path, plus any other lines already there (the
+# database's PG_HOST and PG_USER), which a re-run must not drop.
+$keep = @(Get-Content "$state\backup.env" -ErrorAction SilentlyContinue | Where-Object { $_ -notmatch '^RESTIC_REPOSITORY=' })
+Set-Content "$state\backup.env" (@("RESTIC_REPOSITORY=$($RepoPath -replace '\\', '\\')") + $keep)
 $env:RESTIC_REPOSITORY = $RepoPath
 $env:RESTIC_PASSWORD_FILE = "$state\restic-pass.txt"
 # winget installs restic as restic_<version>_windows_amd64.exe in its own
