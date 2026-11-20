@@ -98,14 +98,14 @@ TAPROOM_LOOK = {
     "Ordering 1": (100, {"rgb": 0xFF7200}),
     "Ordering 2": (100, {"rgb": 0xFF7200}),
     **{f"Bar {n}": (20, {"rgb": EDISON}) for n in range(1, 5)},
-    # The rest of the room (Nov 20 2026, Sam left the look to us): the rows carry the bar's Edison
-    # glow a little brighter so the whole room reads as one warm space; the tables get soft warm
-    # white to see faces and drinks by; the pinball corner picks up our blue; the shuffleboard
-    # gets full warm white because people need to see the pucks.
+    # The rest of the room (Sam, Nov 20 2026: "Set a good cozy vibe for all of them"): everything
+    # warm and low so the whole room reads as one cozy space with the bar's Edison glow, against the
+    # blue LEDs. The tables get soft warm white to see faces and drinks by; the shuffleboard gets a
+    # bit more so people can see the pucks.
     **{f"Row {n}": (30, {"rgb": EDISON}) for n in range(1, 7)},
-    **{f"Taproom table {n}": (50, {"kelvin": 2700}) for n in range(1, 4)},
-    **{f"Pinball {n}": (60, {"rgb": 0x3F6E9A}) for n in range(1, 3)},
-    "Shuffleboard 3": (100, {"kelvin": 2700}),
+    **{f"Taproom table {n}": (40, {"kelvin": 2700}) for n in range(1, 4)},
+    **{f"Pinball {n}": (35, {"rgb": EDISON}) for n in range(1, 3)},
+    "Shuffleboard 3": (70, {"kelvin": 2700}),
 }
 # Storage Closet bulb (H14C0, Sam added it Nov 19 2026). Sam: "Red at full brightness for preshow and
 # then during show drop to a brightness where you can still see a little but it's red". By day it is a
