@@ -48,8 +48,8 @@
   // With no picture picked, the page the update points to picks one.
   function guessIcon(n) {
     var t = (n.link || '') + ' ' + n.title;
-    var rules = [[/clock|tips/i, 'clock'], [/schedul|shift/i, 'calendar'], [/stream.?deck|deck/i, 'deck'], [/safe|unsafe/i, 'safe'],
-      [/door/i, 'door'], [/suppl|order/i, 'box'], [/mic/i, 'mic'], [/pay|venmo|money/i, 'money'], [/sign.?in|phone|log.?in/i, 'phone'], [/group|people|party/i, 'people']];
+    var rules = [[/clock|tips/i, 'clock'], [/door/i, 'door'], [/schedul|shift/i, 'calendar'], [/stream.?deck|deck/i, 'deck'], [/safe|unsafe/i, 'safe'],
+      [/suppl|order/i, 'box'], [/mic/i, 'mic'], [/pay|venmo|money/i, 'money'], [/sign.?in|phone|log.?in/i, 'phone'], [/group|people|party/i, 'people']];
     for (var i = 0; i < rules.length; i++) if (rules[i][0].test(t)) return rules[i][1];
     return 'star';
   }
