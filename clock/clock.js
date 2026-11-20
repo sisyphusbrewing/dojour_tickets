@@ -321,7 +321,7 @@ async function loadUnread() {
   try {
     var from = me.created_at && new Date(me.created_at) > new Date(NEWS_FROM) ? me.created_at : NEWS_FROM;
     var got = await Promise.all([
-      sb.from('staff_updates').select('id,title,body,created_at').gte('created_at', from).order('created_at', { ascending: true }).limit(40),
+      sb.from('staff_updates').select('*').gte('created_at', from).order('created_at', { ascending: true }).limit(40),
       sb.from('staff_update_reads').select('update_id').eq('user_id', me.id)
     ]);
     if (!got[0].error && !got[1].error) {
@@ -337,9 +337,9 @@ async function loadUnread() {
 function drawNews() {
   var n = unread[newsAt], left = unread.length - newsAt;
   $('newsCount').textContent = 'Before you clock in' + (unread.length > 1 ? ' · ' + (newsAt + 1) + ' of ' + unread.length : '');
-  $('newsTitle').textContent = n.title;
-  $('newsWhen').textContent = 'Posted ' + new Date(n.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: TZ });
-  $('newsBody').textContent = n.body || '';
+  // Drawn like What's new on the staff home: picture, headline, one line, steps.
+  $('newsCard').innerHTML = updateHtml(n, { when: 'Posted ' + new Date(n.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: TZ }) });
+  fillUpdatePictures($('newsCard'));
   $('newsGot').textContent = left > 1 ? 'Got it, next' : 'Got it, clock me in';
 }
 // Clock in, by the button or by a tap on the tag: the updates first, if there are any.
