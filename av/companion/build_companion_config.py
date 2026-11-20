@@ -117,8 +117,8 @@ TAPROOM_LOOK = {
 # then during show drop to a brightness where you can still see a little but it's red". By day it is a
 # plain work light; ALL OFF turns it off at close.
 CLOSET = ("H14C0", "02:BB:7C:E8:B1:22:E5:34")
-# Sam, Nov 20 2026: "The closet preshow light needs to be normal light at like 50%".
-CLOSET_LOOK = {"day": (100, {"kelvin": 4000}), "pre": (50, {"kelvin": 4000}), "show": (10, {"rgb": 0xFF0000})}
+# Sam, Nov 20 2026: "The closet preshow light needs to be normal light at like 50%" and "then do a 100% red for showtime".
+CLOSET_LOOK = {"day": (100, {"kelvin": 4000}), "pre": (50, {"kelvin": 4000}), "show": (100, {"rgb": 0xFF0000})}
 # Govee smart plugs (H5083, on/off only), switched with the hall lights (Sam, Oct 30 2026):
 # ON with PRE-SHOW, OFF with HALL LIGHTS OFF.
 PLUGS = {
