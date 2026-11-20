@@ -154,3 +154,10 @@ class NightlyTaskCommand(unittest.TestCase):
         self.assertIn("py_compile", text)
         self.assertLess(text.index("py_compile"), text.index("Move-Item"))
         self.assertIn("py -3 $script @args", text)
+
+    def test_the_runner_writes_the_log_in_one_encoding(self):
+        # Windows PowerShell's ">>" writes UTF-16; mixing that with UTF-8 made recordings.log unreadable
+        # on Nov 20 2026. Everything goes through Log (UTF-8) instead.
+        code = [line for line in self.runner.read_text().splitlines() if not line.lstrip().startswith("#")]
+        self.assertFalse([line for line in code if ">>" in line])
+        self.assertTrue(any("Add-Content" in line and "-Encoding UTF8" in line for line in code))
