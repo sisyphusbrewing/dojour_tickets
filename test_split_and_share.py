@@ -122,3 +122,35 @@ class TimerCoverage(unittest.TestCase):
     def test_two_short_presses_in_a_long_show_are_not_trusted(self):
         sets = [(self.m(5), self.m(15), None), (self.m(15), self.m(25), None)]
         self.assertFalse(sas.timer_covers_show(sets, self.t0, self.m(100)))
+
+
+class NightlyTaskCommand(unittest.TestCase):
+    """Nov 20 2026: the 4 AM task was one hidden PowerShell line that downloaded this script from GitHub and
+    ran it. Microsoft Defender judged that line to be malware and stopped the task, so no recording was cut
+    or sent that night. The task must only ever run a plain local file."""
+
+    def setUp(self):
+        folder = Path(__file__).parent / "av/recordings"
+        self.setup = (folder / "setup.ps1").read_text()
+        self.runner = folder / "run-recordings.ps1"
+
+    def test_the_task_runs_a_local_file_not_a_one_liner(self):
+        actions = [line for line in self.setup.splitlines() if "New-ScheduledTaskAction" in line]
+        self.assertEqual(len(actions), 1)
+        self.assertIn("-File", actions[0])
+        self.assertIn("run-recordings.ps1", actions[0])
+        self.assertNotIn("-Command", actions[0])
+        self.assertNotIn("Invoke-WebRequest", actions[0])
+        self.assertNotIn("http", actions[0])
+
+    def test_setup_puts_the_runner_on_the_pc(self):
+        self.assertTrue(self.runner.exists())
+        self.assertIn("'run-recordings.ps1'", self.setup)
+
+    def test_the_runner_keeps_the_working_script_when_the_download_is_bad(self):
+        text = self.runner.read_text()
+        # downloads to a side file, checks it is Python, and only then replaces the real one
+        self.assertIn("split_and_share.new.py", text)
+        self.assertIn("py_compile", text)
+        self.assertLess(text.index("py_compile"), text.index("Move-Item"))
+        self.assertIn("py -3 $script @args", text)
