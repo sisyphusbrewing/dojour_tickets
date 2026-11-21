@@ -12,8 +12,14 @@ What it shows (the mock-up Sam approved, Nov 12 2026): every beer and slushie
 on tap from the GoTab menu, 12 seconds each, with a little animated cartoon,
 its name, style, ABV and price. Between beers come pictures Claude
 drew from a guest's suggestion (Supabase rpc sign_next), and at the end of a
-lap, at most once every 10 minutes, "DRAW ON THIS SIGN AT SISYPHUSBREWING.COM/DRAW". Each frame is drawn
-off-screen and swapped in whole.
+drawn from a guest's suggestion, and the invitation to draw one: a QR code
+and SISYPHUSBREWING.COM/DRAW with a line that changes each time. Getting people
+to draw comes first (Sam, Nov 20 2026: "Prioritize getting drawings vs balancing
+beers vs balancing what people submit"): a guest slot with no drawing due
+shows the invitation, and it comes up at least every 2 minutes even when there
+are drawings. Which drawing is due is up to sign_next (new ones first, none
+shown so often it gets boring). Each frame is drawn off-screen and swapped in
+whole.
 
 It keeps itself up to date: every 5 minutes it compares itself with
 https://staff.sisyphusbrewing.com/sign/pi/sign.py and, if that changed, saves
@@ -61,7 +67,11 @@ SHOW = float(os.getenv("SIGN_SHOW") or 12)  # seconds per beer or picture, as in
 FPS = 20  # frames a second while something moves
 MENU_EVERY = 600
 UPDATE_EVERY = 300
-PLUG_GAP = 600  # "draw on this sign" at most once every 10 minutes (Sam, Nov 12 2026)
+# The invitation to draw on the sign (Sam, Nov 20 2026: get people drawing first,
+# but nothing shown so often it gets boring). It fills a guest slot that has no
+# drawing due, at most every 45 seconds, and comes up at least every 2 minutes.
+INVITE_GAP = 45
+INVITE_EVERY = 120
 SCROLL = 20  # pixels a second for captions too long to sit still
 AMBER = (224, 144, 0)
 WHITE = (180, 180, 180)  # warm gray: pure white glares
@@ -1094,21 +1104,54 @@ def beer_screen(item):
     return s
 
 
-def plug_screen():
-    """'Draw on this sign', scrolling between two marching dotted lines."""
-    s = Screen()
-    # the short address goes to the drawing page (a Shopify redirect, Sam, Nov 13 2026)
-    msg = "DRAW ON THIS SIGN AT " + DRAW_URL
-    span = SIZE + len(msg) * 12
+# The QR code for HTTPS://SISYPHUSBREWING.COM/DRAW (version 2, medium error
+# correction; capitals so it fits the smallest code). 1 = dark square.
+QR = (
+    "1111111010101100101111111", "1000001010000100001000001", "1011101011110000101011101",
+    "1011101001100010001011101", "1011101010111011101011101", "1000001000110001001000001",
+    "1111111010101010101111111", "0000000000001101100000000", "1001111111100001010010111",
+    "1111110000100110011101100", "0111101010101011010110001", "1000110100001110110001110",
+    "1110011100111111010011110", "1000100001000100110001000", "1111011100011100101001000",
+    "1000110111010110011010111", "1000001001100100111110111", "0000000010011010100011000",
+    "1111111011010110101010111", "1000001011001100100011101", "1011101010101101111110101",
+    "1011101011100011101001111", "1011101000001010010001011", "1000001001000000011011010",
+    "1111111011101111011000011",
+)
+QR_PX = 3  # LEDs per square: 25 squares + a 2-square white edge = 87 LEDs across
+QR_LIGHT = (150, 150, 150)  # the light squares; the dark ones are LEDs off
+# One line on top of the code, a different one each time it comes up, in
+# order, so none comes back until all have had a turn. Two rows of 21 letters.
+INVITES = (
+    ("THIS SIGN TAKES", "REQUESTS."),
+    ("TELL IT WHAT TO DRAW.", "IT WILL TRY."),
+    ("WE FIRED THE ARTIST.", "YOUR TURN."),
+    ("YOUR NAME HERE.", "LITERALLY."),
+    ("BORED? SO IS", "THIS SIGN."),
+    ("DRAW ON THIS SIGN.", "NO CRAYONS."),
+    ("YOU THINK IT UP.", "IT DRAWS IT."),
+)
 
-    def draw(img, t):
-        p = img.load()
-        step = int(t * 8)
-        for i in range(0, SIZE, 2):
-            p[i, 44] = DOT_DIM if (i // 2 + step) % 4 else DOT_LIT
-            p[i + 1, 83] = DOT_DIM if (i // 2 + step) % 4 else DOT_LIT
-        pixel_text(img, msg, SIZE - int(t * 40) % span, 57, AMBER, 2)
-    s.layers.append(draw)
+
+def plug_screen(n=0):
+    """The invitation to draw: a line from INVITES, the QR code and the short
+    address scrolling along the bottom (Sam, Nov 20 2026)."""
+    s = Screen()
+    top, bottom = INVITES[n % len(INVITES)]
+    centered_text(s.base, top, 1, AMBER)
+    centered_text(s.base, bottom, 10, AMBER)
+    side = (len(QR) + 4) * QR_PX
+    x0, y0 = (SIZE - side) // 2, 19
+    d = ImageDraw.Draw(s.base)
+    d.rectangle((x0, y0, x0 + side - 1, y0 + side - 1), fill=QR_LIGHT)
+    for r, row in enumerate(QR):
+        for c, bit in enumerate(row):
+            if bit == "1":
+                x, y = x0 + (c + 2) * QR_PX, y0 + (r + 2) * QR_PX
+                d.rectangle((x, y, x + QR_PX - 1, y + QR_PX - 1), fill=(0, 0, 0))
+    # the short address goes to the drawing page (a Shopify redirect, Sam, Nov 13 2026)
+    msg = "SCAN OR GO TO " + DRAW_URL
+    span = SIZE + 6 * len(msg)
+    s.layers.append(lambda img, t: pixel_text(img, msg, SIZE - int(t * 30) % span, SIZE - 8, WHITE))
     return s
 
 
@@ -1293,21 +1336,19 @@ def to_panels(img, layout, turn_all=0):
 
 
 def playlist(beers):
-    """One lap of the sign: a guest's picture first and then after every beer,
-    and "draw on this sign" once, at the end of the lap (Sam, Nov 12 2026:
-    every 5 beers was too often). Sam, Nov 15 2026: "Prioritize showing the
-    customer ones over the beer ones", so guests get a slot after each beer,
-    not every 3rd. Drawings take turns with no waiting time (Sam, same day),
-    and a slot is skipped only when there are no approved drawings."""
+    """One lap of the sign: a guest's picture first and then after every beer
+    (Sam, Nov 15 2026: "Prioritize showing the customer ones over the beer
+    ones"). A guest slot with no drawing due shows the invitation to draw
+    instead (Sam, Nov 20 2026), and main() also puts the invitation up before
+    a beer when it hasn't been on for 2 minutes."""
     out = [("guest", None)]
     for beer in beers:
         out.append(("beer", beer))
         out.append(("guest", None))
-    out.append(("plug", None))
     return out
 
 
-def screen_for(kind, beer):
+def screen_for(kind, beer, invite_n=0):
     if kind == "beer":
         return beer_screen(beer)
     if kind == "guest":
@@ -1316,15 +1357,15 @@ def screen_for(kind, beer):
         if a and a.get("kind") != "beer":
             return art_screen(a)
         return None
-    return plug_screen()
+    return plug_screen(invite_n)
 
 
 def main():
     preview = os.getenv("SIGN_PREVIEW")
     if preview:  # draw screens to PNGs, for checking the layout off the Pi
-        laps = playlist(load_beers())
+        laps = playlist(load_beers()) + [("plug", None)] * len(INVITES)
         for n, (kind, beer) in enumerate(laps):
-            sc = screen_for(kind, beer)
+            sc = screen_for(kind, beer, n)
             if sc:
                 img = sc.frame(float(os.getenv("SIGN_PREVIEW_T") or 2.2))
                 img.resize((SIZE * 4, SIZE * 4), Image.NEAREST).save(preview.replace(".png", "-%02d.png" % n))
@@ -1375,7 +1416,8 @@ def main():
     show(words_screen("SISYPHUS"), 2)
     beers, menu_at, update_at = [], -1e9, time.monotonic()
     seconds, hidden, config_at = SHOW, set(), -1e9
-    plug_at = time.monotonic()  # first plug 10 minutes after start-up
+    invite_at = -1e9  # the invitation comes up as soon as there's room
+    invite_n = 0  # which line it says next
     empty = 0  # laps in a row with nothing shown
     while True:
         now = time.monotonic()
@@ -1409,12 +1451,13 @@ def main():
                     print("config", e, flush=True)
                 if os.getenv("SIGN_SHOW"):
                     seconds = SHOW
-            if kind == "plug":
-                if "plug" in hidden or time.monotonic() - plug_at < PLUG_GAP:
-                    continue
-                plug_at = time.monotonic()
+            invites = "plug" not in hidden  # the review page's switch for it
             if kind == "beer" and slide_key(beer.get("name") or "") in hidden:
                 continue
+            if kind == "beer" and invites and time.monotonic() - invite_at >= INVITE_EVERY:
+                # it's been 2 minutes: the invitation first, then the beer
+                show(plug_screen(invite_n), seconds)
+                invite_at, invite_n, shown = time.monotonic(), invite_n + 1, True
             # One guest try per beer actually on screen: switched-off beers
             # would otherwise leave guest slots back to back, each one a call
             # to Supabase.
@@ -1423,9 +1466,12 @@ def main():
             last_kind = kind
             try:
                 screen = screen_for(kind, beer)
-            except Exception as e:  # no Wi-Fi for a guest's picture: skip it
+            except Exception as e:  # no Wi-Fi for a guest's picture: invite instead
                 print("sign", e, flush=True)
-                continue
+                screen = None
+            if not screen and kind == "guest" and invites and time.monotonic() - invite_at >= INVITE_GAP:
+                # no drawing due: ask for one (Sam, Nov 20 2026)
+                screen, invite_at, invite_n = plug_screen(invite_n), time.monotonic(), invite_n + 1
             if screen:
                 show(screen, seconds)
                 shown = True

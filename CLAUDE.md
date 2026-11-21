@@ -383,6 +383,14 @@ Dojour gotchas, learned the hard way:
   `still.ps1 -Cam <name>` (or `-All`) for a picture in
   `sisyphus-av\cams\stills\`, e.g. to check the taproom lights after a look.
   Wyze OG and Pan v4 cameras don't work with it.
+- **Hubspace lights** (Sam, Nov 20 2026): the LED string light over the sink
+  area is Hubspace (Home Depot), not Govee, and has no official API. The
+  office PC runs `av/hubspace/hubspace.py` (127.0.0.1:8794, started at logon
+  by the "Sisyphus Hubspace helper" task running the local
+  `run-hubspace.ps1`), which uses Hubspace's cloud through `aioafero`. Sam's
+  login lives only in Windows Credential Locker ("sisyphus-hubspace"); he
+  stores it himself with `set-login.ps1`. The deck's looks call
+  `/set?name=Comedy&...` (`SINK_LOOK` in `build_companion_config.py`).
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.
