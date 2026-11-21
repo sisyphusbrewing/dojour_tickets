@@ -54,6 +54,18 @@ class VideoEmailTest(unittest.TestCase):
         self.assertTrue(sent[0][2].startswith("Hey Pat,"))
         self.assertEqual(sent[0][3], [rm.BOOKING])
 
+    def test_show_in_pieces_goes_to_booking(self):
+        # Nov 19 2026: OBS saved one show as several files; the later ones are
+        # "(from 8.54PM)". Nobody guesses which piece is the headliner's.
+        starts = self.recordings[0]["starts_at"]
+        self.recordings.append({"id": 3, "show_title": "Pat Example", "starts_at": starts,
+                                "part": "headliner (from 8.54PM)", "link": "https://drive.example/3", "note": None})
+        sent = self.run_main()
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(sent[0][0], rm.BOOKING)
+        self.assertIn("pieces", sent[0][1])
+        self.assertIn("https://drive.example/3", sent[0][2])
+
     def test_board_email_wins(self):
         self.board = [{"act": "Pat Example", "first_night": iso(self.day), "last_night": iso(self.day + timedelta(days=1)),
                        "stage": "confirmed", "info": {"footage": "pat@example.com"}}]
