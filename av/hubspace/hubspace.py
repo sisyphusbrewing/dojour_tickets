@@ -103,6 +103,10 @@ def describe(dev, kind):
            "on": dev.on.on if dev.on else None, "available": dev.available}
     if kind == "light":
         out["brightness"] = dev.dimming.brightness if dev.dimming else None
+        out["mode"] = dev.color_mode.mode if dev.color_mode else None
+        out["color"] = "%02X%02X%02X" % (dev.color.red, dev.color.green, dev.color.blue) if dev.color else None
+        out["white_k"] = dev.color_temperature.temperature if dev.color_temperature else None
+        out["effect"] = dev.effect.effect if dev.effect else None
         out["supports"] = {
             "brightness": dev.supports_dimming,
             "color": dev.supports_color,

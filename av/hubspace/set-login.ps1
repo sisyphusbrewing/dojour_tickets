@@ -21,6 +21,6 @@ py -3 $py --login
 if ($LASTEXITCODE -eq 0) {
     # Restart the helper so it picks up the new login.
     Get-CimInstance Win32_Process -Filter "Name like 'py%.exe'" |
-        Where-Object CommandLine -like '*hubspace.py"' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+        Where-Object CommandLine -like '*hubspace.py*' | Where-Object CommandLine -notlike '*--*' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 }
 Read-Host 'Done. Press Enter to close'
