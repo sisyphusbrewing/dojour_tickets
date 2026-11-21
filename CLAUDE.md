@@ -372,6 +372,14 @@ Dojour gotchas, learned the hard way:
   nothing said so. When a task there silently does nothing, read Defender's
   log first. Don't add Defender exclusions. The backup does the same:
   its task runs `backup/run-backup.ps1` (Nov 20 2026).
+- **Hubspace lights** (Sam, Nov 20 2026): the LED string light over the sink
+  area is Hubspace (Home Depot), not Govee, and has no official API. The
+  office PC runs `av/hubspace/hubspace.py` (127.0.0.1:8794, started at logon
+  by the "Sisyphus Hubspace helper" task running the local
+  `run-hubspace.ps1`), which uses Hubspace's cloud through `aioafero`. Sam's
+  login lives only in Windows Credential Locker ("sisyphus-hubspace"); he
+  stores it himself with `set-login.ps1`. The deck's looks call
+  `/set?name=Comedy&...` (`SINK_LOOK` in `build_companion_config.py`).
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.

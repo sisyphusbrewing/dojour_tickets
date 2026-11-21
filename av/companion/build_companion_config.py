@@ -798,6 +798,21 @@ def candles(on):
 
 CANDLE_COLOR = 0xB06000
 
+# Hubspace LED string light over the sink area (Hubspace app name "Comedy"), run through the
+# Hubspace helper on the office PC (av/hubspace/hubspace.py, 127.0.0.1:8794). Sam, Nov 20 2026:
+# solid blue at full for showtime ("the current color is great"); other times "bright task
+# lighting". ALL OFF turns it off.
+HUBSPACE = "http://127.0.0.1:8794"
+SINK_LIGHT = "Comedy"
+SINK_LOOK = {"day": "brightness=100&color=4000K", "pre": "brightness=100&color=4000K",
+             "show": "brightness=100&color=0000FF", "off": "on=0"}
+
+
+def sink(look):
+    return [action(HTTP, "get", url=f"{HUBSPACE}/set?name={quote(SINK_LIGHT)}&{SINK_LOOK[look]}", header="",
+                   jsonResultDataVariable="", result_stringify=True, statusCodeVariable="")]
+
+
 
 CANDLES_ON = "$(custom:candles) == 1"
 
@@ -934,13 +949,13 @@ def record(on):
 
 def look_daytime():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_DAYTIME, bulb)]
-            + taproom(True) + closet("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles_set(False)
+            + taproom(True) + closet("day") + sink("day") + plugs(True, DAY_PLUGS) + [house("full")] + candles_set(False)
             + record(False) + [set_var("room_look", "day")])
 
 
 def look_preshow():
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + closet("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles_set(True)  # house 20% (Sam, Nov 5 2026)
+            + closet("pre") + sink("pre") + plugs(True) + plugs(True, DAY_PLUGS) + house_both(20) + candles_set(True)  # house 20% (Sam, Nov 5 2026)
             + [stage(STAGE_PRESHOW)] + record(False) + [set_var("room_look", "pre")])
 
 
@@ -948,14 +963,14 @@ def look_show():
     # house lights off (Sam, Nov 2); hallway same as PRE-SHOW (Sam, Nov 5 2026). The stage mic
     # is switched on in case it was left muted.
     return ([a for bulb in HALL_BULBS for a in hall_look(HALL_PRESHOW, bulb)]
-            + closet("show") + house_both(0) + [stage(STAGE_SHOW)]
+            + closet("show") + sink("show") + house_both(0) + [stage(STAGE_SHOW)]
             + [action(XAIR, "mute", mute="1", type="/ch/", num=1)]
             + record(True) + [set_var("room_look", "show")])
 
 
 def look_off():
     return ([govee(bulb, "on_off", "powerSwitch", 0) for bulb in HALL_BULBS]
-            + taproom(False) + closet("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles_set(False)
+            + taproom(False) + closet("off") + sink("off") + plugs(False) + plugs(False, DAY_PLUGS) + [house("off")] + candles_set(False)
             + [stage("off")] + record(False) + clock_stop() + [set_var("room_look", "off")])
 
 
