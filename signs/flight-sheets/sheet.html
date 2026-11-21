@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,700&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Flight order slips: 6 per Letter page, 2 across x 3 down, 4in x 3.5in each.
+   Slips butt edge to edge so each cut is one straight pass of the paper cutter;
+   0.25in white margin all round so nothing runs to the paper edge. */
+@page{size:8.5in 11in;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--slate:#4e6a8a;--char:#2b2e33;--gray:#6b7280;--pale:#dde4ec;--rule:#9aa3ad}
+body{width:8.5in;height:11in;background:#fff;position:relative;color:var(--char)}
+.grid{position:absolute;left:.25in;top:.25in;width:8in;height:10.5in;display:grid;grid-template-columns:4in 4in;grid-template-rows:repeat(3,3.5in)}
+.slip{position:relative;padding:.17in}
+.frame{height:100%;border:1.5px solid var(--char);padding:3px}
+.inner{height:100%;border:.6px solid #b8bec5;position:relative;padding:.13in .2in 0}
+.kicker{font:500 7.5pt Oswald;letter-spacing:.42em;color:var(--gray);text-align:center;margin-left:.42em}
+.band{position:relative;width:max-content;margin:.06in auto 0;transform:rotate(-2.2deg)}
+.band::before{content:"";position:absolute;inset:0;background:var(--char);transform:translate(4px,4px)}
+.band div{position:relative;background:var(--slate);color:#fff;font:900 20pt/1 'Playfair Display';padding:.04in .2in .07in;white-space:nowrap}
+.band em{font-style:italic;font-weight:700;color:var(--pale)}
+.tag{text-align:center;margin-top:.1in;font:italic 700 10.5pt 'Playfair Display';color:#4b5563}
+.prices{margin:.06in .1in 0;font:500 8.4pt/1.45 Oswald;letter-spacing:.06em;text-transform:uppercase;color:var(--char)}
+.prices div{display:flex;align-items:baseline;gap:.06in}
+.prices div::after{content:"";order:1;flex:1;border-bottom:.8px dotted #9aa3ad;transform:translateY(-2px)}
+.prices b{order:2;font-weight:600;color:var(--slate)}
+.prices i{order:3;font-style:normal;color:var(--gray);width:.36in;text-align:right}
+ol{list-style:none;margin-top:.06in}
+li{display:flex;align-items:flex-end;height:.24in;font:500 9pt Oswald;color:var(--gray)}
+li span{width:.18in}
+li:nth-child(n+5){margin-right:.5in}
+li::after{content:"";flex:1;border-bottom:.8px solid var(--rule);margin-bottom:2px}
+.badge{position:absolute;right:.06in;bottom:.06in;width:.48in;opacity:.95}
+/* cut guides: hairlines in the margin only, so no ink lands on the slips */
+.mark{position:absolute;background:#999}
+.v{width:.5px;height:.17in}.h{height:.5px;width:.17in}
+</style></head><body>
+<div class="grid" id="g"></div>
+<template id="t"><div class="slip"><div class="frame"><div class="inner">
+ <div class="kicker">SISYPHUS</div>
+ <div class="band"><div>Build a <em>flight</em></div></div>
+ <div class="tag">Choose as many as you like.</div>
+ <div class="prices"><div>Regular beers<b>$4</b><i>5 oz</i></div><div>Imperial stouts / specialty<b>$5</b><i>5 oz</i></div></div>
+ <ol><li><span>1</span></li><li><span>2</span></li><li><span>3</span></li><li><span>4</span></li><li><span>5</span></li><li><span>6</span></li></ol>
+ <img class="badge" src="badge.png" alt="">
+</div></div></div></template>
+<script>
+const g=document.getElementById('g'),t=document.getElementById('t');
+for(let i=0;i<6;i++)g.appendChild(t.content.cloneNode(true));
+// crop marks at every cut line (x = .25, 4.25, 8.25in; y = .25, 3.75, 7.25, 10.75in)
+const add=(c,x,y)=>{const m=document.createElement('div');m.className='mark '+c;m.style.left=x+'in';m.style.top=y+'in';document.body.appendChild(m)};
+for(const x of [.25,4.25,8.25]){add('v',x,0.04);add('v',x,10.79)}
+for(const y of [.25,3.75,7.25,10.75]){add('h',0.04,y);add('h',8.29,y)}
+</script>
+</body></html>
