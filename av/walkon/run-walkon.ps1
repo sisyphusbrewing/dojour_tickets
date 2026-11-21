@@ -3,8 +3,8 @@
 # Keeps the walk-on helper (walkon.py, http://127.0.0.1:8793) running, so START SHOW, the
 # WALK-ON key and END SHOW always find it: starts it, and if it ever stops, starts it again
 # 10 seconds later. On Fri Nov 20 2026 nothing was listening on 8793 and every START SHOW
-# and END SHOW press got "connection refused": the helper had only a Startup shortcut, which
-# starts it once at sign-in and never again after it stops.
+# and END SHOW press got "connection refused": setup.ps1 had never been run on the PC, and
+# even when it was, its Startup shortcut started the helper once and never again.
 # It only runs local files; it downloads nothing (a task that downloads and runs things
 # hidden is what Microsoft Defender blocked on Nov 20 2026). Updates come from setup.ps1.
 #
