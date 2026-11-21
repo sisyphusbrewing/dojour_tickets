@@ -72,6 +72,10 @@ UPDATE_EVERY = 300
 # drawing due, at most every 45 seconds, and comes up at least every 2 minutes.
 INVITE_GAP = 45
 INVITE_EVERY = 120
+# A guest's drawing stays up 10 seconds; beers and the invitation use the
+# seconds set on /sign/review.html, 6 (Sam, Nov 20 2026).
+GUEST_SHOW = float(os.getenv("SIGN_GUEST_SHOW") or 10)
+GUEST_RUN = 3  # drawings in a row between beers, while any are due (Sam, Nov 20 2026)
 SCROLL = 20  # pixels a second for captions too long to sit still
 AMBER = (224, 144, 0)
 WHITE = (180, 180, 180)  # warm gray: pure white glares
@@ -1340,11 +1344,13 @@ def playlist(beers):
     (Sam, Nov 15 2026: "Prioritize showing the customer ones over the beer
     ones"). A guest slot with no drawing due shows the invitation to draw
     instead (Sam, Nov 20 2026), and main() also puts the invitation up before
-    a beer when it hasn't been on for 2 minutes."""
-    out = [("guest", None)]
+    a beer when it hasn't been on for 2 minutes. Sam, Nov 20 2026 (9:25 PM):
+    "The sign is showing the beers too much prioritize what people submit", so
+    up to GUEST_RUN drawings that are due go up between beers, not one."""
+    out = [("guest", None)] * GUEST_RUN
     for beer in beers:
         out.append(("beer", beer))
-        out.append(("guest", None))
+        out += [("guest", None)] * GUEST_RUN
     return out
 
 
@@ -1427,7 +1433,7 @@ def main():
             except Exception as e:  # no Wi-Fi: keep the last list
                 print("menu", e, flush=True)
         shown = False
-        last_kind = None
+        guest_dry = False  # no drawing was due in this run of guest slots
         for kind, beer in playlist(beers):
             if time.monotonic() - update_at > UPDATE_EVERY:
                 update_at = time.monotonic()
@@ -1458,22 +1464,26 @@ def main():
                 # it's been 2 minutes: the invitation first, then the beer
                 show(plug_screen(invite_n), seconds)
                 invite_at, invite_n, shown = time.monotonic(), invite_n + 1, True
-            # One guest try per beer actually on screen: switched-off beers
-            # would otherwise leave guest slots back to back, each one a call
-            # to Supabase.
-            if kind == "guest" and last_kind == "guest":
+            # Once no drawing is due, the rest of that run of guest slots is
+            # skipped until the next beer, so switched-off beers don't turn
+            # into back-to-back calls to Supabase.
+            if kind == "beer":
+                guest_dry = False
+            elif kind == "guest" and guest_dry:
                 continue
-            last_kind = kind
             try:
                 screen = screen_for(kind, beer)
             except Exception as e:  # no Wi-Fi for a guest's picture: invite instead
                 print("sign", e, flush=True)
                 screen = None
+            secs = GUEST_SHOW if screen and kind == "guest" else seconds
+            if not screen and kind == "guest":
+                guest_dry = True
             if not screen and kind == "guest" and invites and time.monotonic() - invite_at >= INVITE_GAP:
                 # no drawing due: ask for one (Sam, Nov 20 2026)
                 screen, invite_at, invite_n = plug_screen(invite_n), time.monotonic(), invite_n + 1
             if screen:
-                show(screen, seconds)
+                show(screen, secs)
                 shown = True
         if not shown:  # everything switched off or no Wi-Fi: don't spin
             # Say why in the log, and after 3 empty laps in a row start over
