@@ -214,7 +214,7 @@ async def serve():
 
 if __name__ == "__main__":
     # The library names its loggers after the account email, so keep logger names out.
-    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(level=logging.WARNING, stream=sys.stdout, format="%(asctime)s %(levelname)s %(message)s")
     arg = sys.argv[1] if len(sys.argv) > 1 else ""
     if arg == "--store":
         store()
