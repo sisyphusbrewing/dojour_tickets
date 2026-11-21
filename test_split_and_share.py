@@ -75,6 +75,24 @@ class AudioSets(unittest.TestCase):
         self.assertEqual(sas.fix_name("Kellen", KNOWN), "Kellen Schneider")
 
 
+class SplitRecording(unittest.TestCase):
+    """Nov 19 2026: OBS saved the open mic as three files and each was going to
+    upload as the same "full show.mp4", overwriting the one before."""
+
+    def test_later_files_of_a_show_get_their_own_names(self):
+        import tempfile
+        from datetime import datetime, timezone
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d)
+            first = datetime(2026, 11, 20, 2, 49, tzinfo=timezone.utc)   # 8:49 PM Central
+            later = datetime(2026, 11, 20, 2, 54, tzinfo=timezone.utc)   # 8:54 PM Central
+            self.assertEqual(sas.piece_label(out, Path("2026-11-19 20-49-25.mkv"), first), "")
+            self.assertEqual(sas.piece_label(out, Path("2026-11-19 20-54-17.mkv"), later), "from 8.54PM")
+            # A re-run of either file gets the same name back.
+            self.assertEqual(sas.piece_label(out, Path("2026-11-19 20-49-25.mkv"), first), "")
+            self.assertEqual(sas.piece_label(out, Path("2026-11-19 20-54-17.mkv"), later), "from 8.54PM")
+
+
 class Cleanup(unittest.TestCase):
     """Old clip folders go even when they hold a "transcripts" folder (the
     Nov 18 2026 run stopped with Access denied on one)."""

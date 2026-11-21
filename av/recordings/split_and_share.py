@@ -353,6 +353,26 @@ def save_row(h, row):
     r.raise_for_status()
 
 
+def piece_label(out, src, rec_start):
+    """'' for the first OBS file of a show, else 'from 8.54PM' (Nov 19 2026).
+
+    OBS sometimes saves one show as several files (the Nov 19 open mic came out
+    as three). Each file used to be cut as the same "<show> - full show.mp4"
+    and the same database rows, so each upload overwrote the one before. Now
+    the first file a show sees keeps the plain names and every later file gets
+    its recording's start time added. The pick is kept in the show's folder
+    (pieces.json) so a re-run gives a file the same name again.
+    """
+    book = out / "pieces.json"
+    seen = json.loads(book.read_text()) if book.exists() else {}
+    if src.name not in seen:
+        local = rec_start.astimezone(CHICAGO)
+        clock = f"{local.hour % 12 or 12}.{local.minute:02d}{'PM' if local.hour >= 12 else 'AM'}"
+        seen[src.name] = f"from {clock}" if seen else ""
+        book.write_text(json.dumps(seen, indent=1))
+    return seen[src.name]
+
+
 def handle(h, src):
     rec_start = recording_start(src)
     dur = duration(src)
@@ -395,17 +415,22 @@ def handle(h, src):
         notes.append(camera)
     print(f"{src.name}: {show['title']} {local:%a %b %d %I:%M %p}, {len(sets)} set(s)" + "".join(f"\n  {n}" for n in notes))
 
-    full = out / f"{folder} - full show.mp4"
+    piece = piece_label(out, src, rec_start)
+    tail = f", {piece}" if piece else ""        # file names: "... - full show, from 8.54PM.mp4"
+    more = f" ({piece})" if piece else ""       # database part: "unsorted (from 8.54PM)"
+    if piece:
+        print(f"  another recording of the same show, named {piece!r} so it doesn't overwrite the first")
+    full = out / f"{folder} - full show{tail}.mp4"
     cut(src, rec_start, rec_start, rec_end, full)
-    parts = [("full" if sets else "unsorted", rec_start, rec_end, full, " ".join(notes) or None)]
+    parts = [(("full" if sets else "unsorted") + more, rec_start, rec_end, full, " ".join(notes) or None)]
     if sets:
         longest = max(range(len(sets)), key=lambda i: sets[i][1] - sets[i][0])
         for i, (a, b, name) in enumerate(sets):
             part = "headliner" if i == longest else f"set {i + 1}"
             label = slug(name) if name else part
-            dest = out / f"{folder} - {label}.mp4"
+            dest = out / f"{folder} - {label}{tail}.mp4"
             cut(src, rec_start, a, b, dest)
-            parts.append((part, a, b, dest, None))
+            parts.append((part + more, a, b, dest, None))
     for part, a, b, local_file, note in parts:
         path, link = upload(local_file, folder)
         save_row(h, {"show_title": show["title"], "starts_at": show["starts_at"], "part": part,

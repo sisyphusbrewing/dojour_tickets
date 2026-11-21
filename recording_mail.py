@@ -153,6 +153,12 @@ def main():
         if any((p.get("note") or "").startswith("CAMERA") for p in parts):
             batches[(BOOKING, "", f"camera|{title}|{day}")].extend(parts)
             continue
+        if any(" (from " in n for n in names):
+            # OBS saved this show as several files (split_and_share.py names the
+            # later ones "... (from 8.54PM)"). Which piece holds the headliner
+            # isn't safe to guess, so booking@ gets every piece to sort out.
+            batches[(BOOKING, "", f"pieces|{title}|{day}")].extend(parts)
+            continue
         if "unsorted" in names:
             batches[(BOOKING, "", f"unsorted|{title}|{day}")].extend(parts)
             continue
@@ -190,6 +196,15 @@ def main():
                     + f"</ul><p>So the headliner wasn't sent anything. The recordings:</p><ul>{links}</ul>"
                     f"<p>If the sound is fine, send them on yourself. Then check the camera is on the stage preset.</p>")
             text = f"The camera check flagged {title}: " + " ".join(notes) + " Recordings: " + ", ".join(p["link"] for p in parts)
+            bcc = []
+        elif key.startswith("pieces"):
+            subject = f"Recording came out in pieces: {title}"
+            links = "".join(f'<li><a href="{html.escape(p["link"])}">{html.escape(p["part"])}, '
+                            f'{html.escape(show_label(p))}</a></li>' for p in parts)
+            body = (f"<p>The recording of {html.escape(title)} was saved as more than one file, so the headliner "
+                    f"wasn't sent anything. Every piece:</p><ul>{links}</ul>"
+                    f"<p>Send the headliner their set yourself.</p>")
+            text = f"The recording of {title} came out in pieces: " + ", ".join(f"{p['part']}: {p['link']}" for p in parts)
             bcc = []
         elif key.startswith("noemail"):
             subject = f"Recording ready, no email for the headliner: {title}"
