@@ -72,6 +72,9 @@ UPDATE_EVERY = 300
 # drawing due, at most every 45 seconds, and comes up at least every 2 minutes.
 INVITE_GAP = 45
 INVITE_EVERY = 120
+# A guest's drawing stays up 10 seconds; beers and the invitation use the
+# seconds set on /sign/review.html, 6 (Sam, Nov 20 2026).
+GUEST_SHOW = float(os.getenv("SIGN_GUEST_SHOW") or 10)
 GUEST_RUN = 3  # drawings in a row between beers, while any are due (Sam, Nov 20 2026)
 SCROLL = 20  # pixels a second for captions too long to sit still
 AMBER = (224, 144, 0)
@@ -1473,13 +1476,14 @@ def main():
             except Exception as e:  # no Wi-Fi for a guest's picture: invite instead
                 print("sign", e, flush=True)
                 screen = None
+            secs = GUEST_SHOW if screen and kind == "guest" else seconds
             if not screen and kind == "guest":
                 guest_dry = True
             if not screen and kind == "guest" and invites and time.monotonic() - invite_at >= INVITE_GAP:
                 # no drawing due: ask for one (Sam, Nov 20 2026)
                 screen, invite_at, invite_n = plug_screen(invite_n), time.monotonic(), invite_n + 1
             if screen:
-                show(screen, seconds)
+                show(screen, secs)
                 shown = True
         if not shown:  # everything switched off or no Wi-Fi: don't spin
             # Say why in the log, and after 3 empty laps in a row start over
