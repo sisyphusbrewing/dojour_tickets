@@ -23,7 +23,8 @@ nine pages behind one NEXT PAGE key hard to use):
   * No RECORD key and nothing to hold down. Recording follows the SHOW look: START SHOW
     starts it, every other look stops it. (On Nov 12 the old "tap to start, hold 3 s to
     stop" key got five taps that did nothing, so it looked broken, and a tap after the stop
-    started a second file.)
+    started a second file.) Starting it also puts OBS on the scene that has the room's
+    sound (Nov 20 2026), so a show can't record silent because OBS was left on another scene.
   * The comic clock just starts (START CLOCK or push the CLOCK knob). The knob sets the
     set length, before or during the set.
 
@@ -936,12 +937,23 @@ def stage_keys():
 CAMERA_URL = "http://192.168.86.31/camera/sdk"  # OBSBOT Tail 2 stage camera
 
 
+# The one OBS scene a show is recorded on: both cameras, and the only scene with the room's
+# sound on it ("Room " and "Audience"). The other scenes ("OBSBOT backup", "Blackmagic wide")
+# are picture only. On Nov 20 2026 a test take started while OBS sat on "Blackmagic wide"
+# came out silent, and a show started that way would have too, so starting the recording
+# now puts OBS back on this scene first. If the scene is ever renamed in OBS, rename it here.
+OBS_SHOW_SCENE = "Scene"
+
+
 def record(on):
-    """OBS module v4 "Recording - Controls". Start also points the camera at its Stage preset
-    (preset 1, id 0), which undoes any drift: on Nov 8 it followed a front table all show."""
+    """OBS module v4 "Scene - Set Program Scene" and "Recording - Controls". Start first puts
+    OBS on the show scene (see OBS_SHOW_SCENE), then starts the recording, and also points the
+    camera at its Stage preset (preset 1, id 0), which undoes any drift: on Nov 8 it followed
+    a front table all show."""
     if not on:
         return [action(OBS, "recording", action="stop")]
-    return [action(OBS, "recording", action="start"),
+    return [action(OBS, "set_scene", scene=OBS_SHOW_SCENE),
+            action(OBS, "recording", action="start"),
             action(HTTP, "put", url=f"{CAMERA_URL}/ptz/preset", body='{"operation":"call","id":0}', header="",
                    contenttype="application/json", jsonResultDataVariable="", result_stringify=True,
                    statusCodeVariable="")]
