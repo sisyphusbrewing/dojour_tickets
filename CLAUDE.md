@@ -372,6 +372,17 @@ Dojour gotchas, learned the hard way:
   nothing said so. When a task there silently does nothing, read Defender's
   log first. Don't add Defender exclusions. The backup does the same:
   its task runs `backup/run-backup.ps1` (Nov 20 2026).
+- **Wyze cameras** (Sam, Nov 20 2026: "Do Wyze cams integrate?" ... "Yeah set
+  that up"). `av/cams/setup.ps1` installs go2rtc on the office PC (one Windows
+  program, no Docker; it talks to the cameras directly on the club network).
+  Sam adds his Wyze login and API key on go2rtc's own page on that PC; they
+  stay in `%USERPROFILE%\.sisyphus\go2rtc.yaml`, which Claude never opens.
+  Everything listens on 127.0.0.1 only, so nothing reaches either Wi-Fi. The
+  task "Sisyphus cameras" runs the local `run-cams.ps1`, which keeps it up.
+  Uses: OBS Media Source `rtsp://127.0.0.1:8554/<name>`, and
+  `still.ps1 -Cam <name>` (or `-All`) for a picture in
+  `sisyphus-av\cams\stills\`, e.g. to check the taproom lights after a look.
+  Wyze OG and Pan v4 cameras don't work with it.
 - **Hubspace lights** (Sam, Nov 20 2026): the LED string light over the sink
   area is Hubspace (Home Depot), not Govee, and has no official API. The
   office PC runs `av/hubspace/hubspace.py` (127.0.0.1:8794, started at logon
