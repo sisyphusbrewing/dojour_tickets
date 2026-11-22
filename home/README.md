@@ -13,6 +13,11 @@ reloads when a new version is published (plus a 4 am reload as a backstop).
 - Next at Sisyphus: next headliner and the next shows, from the store's products.json
 - Calendar: rotates every 20 s between the Sisyphus calendar (next 4 show nights) and the personal calendar (next 4 days, only when `ical=` is set)
 - Sailing word of the day, and what's on tap (GoTab feed)
+- Our house (Sam, Nov 22 2026): house projects, goals and ideas that Sam and Lindsey keep together. Takes turns with Next at Sisyphus every 30 s. Each project is a trail of its steps in order (filled = done, glowing = next); ideas are sticky notes. Read with the board's `k=` key
+
+## Our house, the phone page
+
+`/home/projects/?k=<edit key>` is where Sam and Lindsey add and change projects, goals and ideas: tap a step's stone to check it off, drag the ⠿ handle to reorder, + to add. `/home/projects/?preview=1` is a made-up board that saves nothing. The rules are in `supabase/migrations/20261122230000_home_projects.sql` (checks in `supabase/tests/home_projects/`). The keys live only in the database table `home_boards`: `view_key` is the wall's `k=`, `edit_key` is the phone link. Nothing is ever deleted; a removed project or step can be put back.
 
 ## URL options
 

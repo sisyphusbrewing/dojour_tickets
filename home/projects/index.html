@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0f1820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Our house">
+<title>Our House</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Our house: the phone page where Sam and Lindsey add house projects (each a
+     path of steps, in the order they need doing), goals and ideas. The same
+     board shows on the Apolosign wall at home (/home/). Visual first (Sam,
+     Nov 22 2026: "Lindsey likes graphical interactive stuff"). */
+  :root {
+    --bg: #0f1820; --card: #18242f; --card2: #1f2e3b; --line: rgba(159,176,193,.22);
+    --text: #eef2f6; --muted: #9fb0c1; --slate: #4f6d8c; --accent: #7f9cbb; --go: #6fcf97;
+  }
+  :root[data-theme="light"] { --bg: #f2f4f6; --card: #fff; --card2: #eef2f6; --line: rgba(15,24,32,.12); --text: #0f1820; --muted: #5b6b7b; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--bg); color: var(--text); }
+  body { font-family: Nunito, system-ui, sans-serif; font-size: 17px; min-height: 100vh; padding-bottom: 110px; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input, textarea { font: inherit; color: var(--text); }
+
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: calc(env(safe-area-inset-top) + 12px) 16px 8px; }
+  .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  h1 { font-family: Oswald, sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; font-size: 20px;
+       background: var(--slate); color: #fff; padding: 3px 14px; transform: rotate(-2deg); display: inline-block; }
+  .me { display: flex; background: var(--card); border-radius: 99px; padding: 3px; border: 1px solid var(--line); }
+  .me button { padding: 6px 12px; border-radius: 99px; font-weight: 700; font-size: 14px; color: var(--muted); }
+  .me button.on { background: var(--accent); color: #0f1820; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .tabs button { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 4px; font-weight: 800; font-size: 15px; }
+  .tabs button .e { display: block; font-size: 24px; line-height: 1.1; }
+  .tabs button.on { background: var(--card2); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .tabs .n { color: var(--muted); font-weight: 700; }
+
+  main { padding: 8px 16px; }
+  .empty { text-align: center; color: var(--muted); padding: 50px 20px; }
+  .empty .big { font-size: 60px; display: block; margin-bottom: 8px; }
+
+  /* A project or goal card */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; margin: 12px 0; overflow: hidden;
+          border-top: 6px solid var(--c, var(--slate)); }
+  .card .head { display: grid; grid-template-columns: 28px 52px 1fr auto; gap: 10px; align-items: center; padding: 12px 12px 10px 6px; }
+  .grip { color: var(--muted); font-size: 20px; text-align: center; touch-action: none; cursor: grab; user-select: none; }
+  .emo { font-size: 38px; line-height: 1; text-align: center; }
+  .title { font-weight: 800; font-size: 19px; line-height: 1.15; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .sub b { color: var(--text); }
+  .ring { width: 54px; height: 54px; position: relative; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+  .card .dots { display: flex; gap: 5px; padding: 0 14px 12px 92px; flex-wrap: wrap; }
+  .card .dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--c, var(--accent)); opacity: .7; }
+  .card .dots i.d { background: var(--c, var(--accent)); opacity: 1; }
+  .card .dots i.nx { opacity: 1; box-shadow: 0 0 0 3px rgba(255,255,255,.18); }
+  .card.open .dots { display: none; }
+  .note { padding: 0 16px 10px; color: var(--muted); font-size: 15px; white-space: pre-wrap; }
+
+  /* The path of steps */
+  .path { list-style: none; padding: 4px 14px 6px; display: none; }
+  .card.open .path, .card.open .addstep, .card.open .tools { display: flex; }
+  .card.open .path { display: block; }
+  .path li { display: grid; grid-template-columns: 22px 44px 1fr; align-items: center; gap: 8px; position: relative; min-height: 54px; }
+  .path li::before { content: ""; position: absolute; left: 51px; top: 0; bottom: 0; width: 4px; background: var(--line); }
+  .path li:first-child::before { top: 50%; } .path li:last-child::before { bottom: 50%; }
+  .path li:only-child::before { display: none; }
+  .path li.d::before { background: var(--c, var(--accent)); }
+  .stone { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--c, var(--accent)); background: var(--card);
+           position: relative; z-index: 1; display: grid; place-items: center; font-weight: 800; font-size: 15px; transition: transform .15s; }
+  .stone:active { transform: scale(.88); }
+  li.d .stone { background: var(--c, var(--accent)); color: #fff; font-size: 20px; }
+  li.nx .stone { animation: pulse 1.8s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.35); } 50% { box-shadow: 0 0 0 9px rgba(255,255,255,0); } }
+  .st { font-size: 17px; line-height: 1.2; padding: 6px 0; }
+  li.d .st { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+  li.nx .st { font-weight: 800; }
+  .st small { display: block; font-size: 12px; color: var(--muted); text-decoration: none; }
+  .tag { font-family: Oswald, sans-serif; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; background: var(--c, var(--accent));
+         color: #fff; border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 2px; }
+  .addstep { display: none; gap: 8px; padding: 6px 14px 12px 36px; }
+  .addstep input { flex: 1; background: var(--card2); border: 2px dashed var(--line); border-radius: 12px; padding: 11px 12px; min-width: 0; }
+  .addstep button, .btn { background: var(--c, var(--accent)); color: #fff; font-weight: 800; border-radius: 12px; padding: 0 16px; min-height: 46px; }
+  .tools { display: none; gap: 6px; padding: 0 14px 14px; flex-wrap: wrap; }
+  .tools button { background: var(--card2); border: 1px solid var(--line); border-radius: 99px; padding: 8px 12px; font-size: 14px; font-weight: 700; }
+
+  /* Ideas: a wall of sticky notes */
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding-top: 10px; }
+  .sticky { background: var(--c, #f2c94c); color: #1b1b1b; border-radius: 4px 4px 4px 18px; padding: 14px 12px 12px; min-height: 120px;
+            box-shadow: 0 6px 14px rgba(0,0,0,.28); text-align: left; display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .sticky:nth-child(3n+1) { transform: rotate(-2deg); } .sticky:nth-child(3n+2) { transform: rotate(1.5deg); } .sticky:nth-child(3n) { transform: rotate(-.5deg); }
+  .sticky .e { font-size: 30px; line-height: 1; }
+  .sticky .t { font-weight: 800; font-size: 17px; line-height: 1.15; }
+  .sticky .w { font-size: 12px; opacity: .7; margin-top: auto; }
+  .sticky .grip { position: absolute; top: 6px; right: 8px; color: rgba(0,0,0,.4); }
+
+  .shelf { margin: 26px 0 0; }
+  .shelf summary { color: var(--muted); font-weight: 800; padding: 10px 0; list-style: none; }
+  .shelf .card { opacity: .75; }
+
+  /* Add button and sheets */
+  .fab { position: fixed; right: 18px; bottom: calc(env(safe-area-inset-bottom) + 18px); width: 64px; height: 64px; border-radius: 50%;
+         background: var(--accent); color: #0f1820; font-size: 38px; font-weight: 700; box-shadow: 0 8px 20px rgba(0,0,0,.4); z-index: 6; }
+  .veil { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 8; display: none; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--card); border-radius: 22px 22px 0 0;
+           padding: 18px 16px calc(env(safe-area-inset-bottom) + 18px); transform: translateY(105%); transition: transform .25s; max-height: 92vh; overflow-y: auto; }
+  .sheet.on { transform: none; } .veil.on { display: block; }
+  .sheet h2 { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .1em; font-size: 18px; margin-bottom: 12px; }
+  .sheet label { display: block; font-weight: 800; font-size: 14px; color: var(--muted); margin: 14px 0 6px; }
+  .sheet input[type=text], .sheet textarea { width: 100%; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 17px; }
+  .sheet textarea { min-height: 70px; resize: vertical; }
+  .kinds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .kinds button { background: var(--card2); border: 2px solid var(--line); border-radius: 12px; padding: 10px 4px; font-weight: 800; }
+  .kinds button.on { border-color: var(--accent); }
+  .emojis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .emojis button { font-size: 26px; padding: 4px 0; border-radius: 10px; }
+  .emojis button.on { background: var(--card2); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .colors { display: flex; gap: 10px; flex-wrap: wrap; }
+  .colors button { width: 38px; height: 38px; border-radius: 50%; border: 3px solid transparent; }
+  .colors button.on { border-color: var(--text); }
+  .row { display: flex; gap: 10px; margin-top: 20px; }
+  .row .btn { flex: 1; background: var(--accent); color: #0f1820; }
+  .row .ghost { background: var(--card2); color: var(--text); flex: 0 0 auto; padding: 0 18px; border-radius: 12px; font-weight: 800; }
+
+  .toast { position: fixed; left: 16px; right: 96px; bottom: calc(env(safe-area-inset-bottom) + 24px); background: #eef2f6; color: #0f1820;
+           border-radius: 14px; padding: 12px 14px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+           z-index: 10; transform: translateY(250%); visibility: hidden; transition: transform .25s, visibility .25s; }
+  .toast.on { transform: none; visibility: visible; }
+  .toast button { color: #2c5b8a; font-weight: 800; }
+  .gate { padding: 80px 24px; text-align: center; color: var(--muted); }
+  .sortable-ghost { opacity: .35; }
+  canvas#boom { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+</style>
+</head>
+<body>
+<header>
+  <div class="toprow"><h1>Our house</h1><div class="me" id="me"></div></div>
+  <div class="tabs" id="tabs">
+    <button data-k="project"><span class="e">🛠️</span>Projects <span class="n" id="n-project"></span></button>
+    <button data-k="goal"><span class="e">🎯</span>Goals <span class="n" id="n-goal"></span></button>
+    <button data-k="idea"><span class="e">💡</span>Ideas <span class="n" id="n-idea"></span></button>
+  </div>
+</header>
+<main id="main"><div class="gate">Loading…</div></main>
+<button class="fab" id="fab" aria-label="Add">+</button>
+
+<div class="veil" id="veil"></div>
+<div class="sheet" id="sheet">
+  <h2 id="sh-h">Add</h2>
+  <div class="kinds" id="sh-kind">
+    <button data-k="project">🛠️ Project</button><button data-k="goal">🎯 Goal</button><button data-k="idea">💡 Idea</button>
+  </div>
+  <label for="sh-title">What is it?</label>
+  <input type="text" id="sh-title" maxlength="120" placeholder="Redo the front porch" autocomplete="off">
+  <label>Pick a picture</label>
+  <div class="emojis" id="sh-emoji"></div>
+  <label>Pick a color</label>
+  <div class="colors" id="sh-color"></div>
+  <label for="sh-note">Notes (optional)</label>
+  <textarea id="sh-note" maxlength="2000" placeholder="Budget, links, measurements…"></textarea>
+  <label for="sh-steps" id="sh-steps-l">Steps, one per line, in order (optional)</label>
+  <textarea id="sh-steps" placeholder="Pick a stain color&#10;Buy supplies&#10;Power wash&#10;Stain"></textarea>
+  <div class="row"><button class="ghost" id="sh-cancel">Cancel</button><button class="btn" id="sh-save">Add it</button></div>
+</div>
+<div class="toast" id="toast"><span id="toast-t"></span><button id="toast-b"></button></div>
+<canvas id="boom"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+var SB = 'https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/';
+var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+var Q = new URLSearchParams(location.search);
+var KEY = Q.get('k') || '';
+var PREVIEW = Q.get('preview') === '1';     // a made-up board that saves nothing
+var EMOJI = ['🏡','🛠️','🪵','🎨','🪴','🌷','🛋️','🛁','🍳','💡','🪟','🚪','🧱','🔨','🧹','📦','⛵','🐕','💰','🎯','✈️','🏃','📚','🎉'];
+var COLORS = ['#4f6d8c','#3f8f7a','#c0793b','#b5525e','#7a5ea8','#a8741a','#5b8c3a','#6b7785'];
+var NOTE_COLORS = ['#f2c94c','#f4a6a6','#9ad1c4','#a8c5f0','#d6b8f0','#ffd59e'];
+var KIND = { project: 'Project', goal: 'Goal', idea: 'Idea' };
+
+function $(id) { return document.getElementById(id); }
+function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+var BOARD = null, TAB = store('home-tab') || 'project', OPEN = {}, ME = store('home-me') || '';
+try { OPEN = JSON.parse(store('home-open') || '{}') || {}; } catch (e) {}
+
+function rpc(fn, body) {
+  return fetch(SB + fn, { method: 'POST', headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body) }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || 'That didn\'t save.'); return j; });
+    });
+}
+function load() {
+  if (PREVIEW) { if (!BOARD) BOARD = demo(); draw(); return Promise.resolve(); }
+  return rpc('home_board', { k: KEY }).then(function (b) {
+    if (!b) { $('main').innerHTML = '<div class="gate">This link doesn\'t open the board. Ask for the link again.</div>'; $('fab').style.display = 'none'; return; }
+    BOARD = b; draw();
+  }).catch(function () { if (!BOARD) $('main').innerHTML = '<div class="gate">Can\'t reach the board. Check the connection.</div>'; });
+}
+var busy = 0;
+function edit(op, args) {
+  args = args || {}; if (ME) args.who = ME;
+  if (PREVIEW) { demoEdit(op, args); draw(); return Promise.resolve(); }
+  busy++;
+  return rpc('home_board_edit', { k: KEY, op: op, args: args }).then(function (b) { BOARD = b; draw(); })
+    .catch(function (e) { toast(e.message); load(); }).then(function () { busy--; });
+}
+
+// ---------- Who's holding the phone ----------
+function drawMe() {
+  var people = (BOARD && BOARD.people) || [];
+  $('me').innerHTML = people.map(function (p) { return '<button class="' + (p === ME ? 'on' : '') + '" data-p="' + esc(p) + '">' + esc(p) + '</button>'; }).join('');
+}
+$('me').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; ME = b.dataset.p; store('home-me', ME); drawMe(); });
+
+// ---------- Drawing ----------
+function items(kind, done) { return (BOARD.items || []).filter(function (i) { return i.kind === kind && !!i.done_at === !!done; }); }
+function nextIndex(steps) { for (var i = 0; i < steps.length; i++) if (!steps[i].done_at) return i; return -1; }
+function ring(done, total, color, size) {
+  var r = 22, c = 2 * Math.PI * r, f = total ? done / total : 0;
+  return '<div class="ring"><svg width="' + size + '" height="' + size + '" viewBox="0 0 54 54"><circle cx="27" cy="27" r="' + r + '" fill="none" stroke="rgba(159,176,193,.25)" stroke-width="6"/>' +
+    '<circle cx="27" cy="27" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + (c * f) + ' ' + c + '"/></svg>' +
+    '<span>' + (total ? Math.round(f * 100) + '%' : '') + '</span></div>';
+}
+function card(i) {
+  var color = i.color || COLORS[0], steps = i.steps || [], nx = nextIndex(steps), done = steps.filter(function (s) { return s.done_at; }).length;
+  var open = !!OPEN[i.id];
+  var sub = steps.length ? (nx >= 0 ? 'Next: <b>' + esc(steps[nx].title) + '</b>' : '<b>Every step done 🎉</b>') : (i.kind === 'goal' ? 'Tap to add milestones' : 'Tap to add the steps');
+  var path = steps.map(function (s, k) {
+    var cls = s.done_at ? 'd' : k === nx ? 'nx' : '';
+    var who = s.done_at && s.done_by ? 'done by ' + esc(s.done_by) : '';
+    return '<li class="' + cls + '" data-s="' + s.id + '"><span class="grip sgrip">⠿</span><button class="stone" data-act="step" aria-label="Done">' + (s.done_at ? '✓' : (k + 1)) + '</button>' +
+      '<div class="st" data-act="steptext">' + esc(s.title) + (k === nx ? '<span class="tag">Next</span>' : '') + (who ? '<small>' + who + '</small>' : '') + '</div></li>';
+  }).join('');
+  return '<div class="card' + (open ? ' open' : '') + '" data-id="' + i.id + '" style="--c:' + color + '">' +
+    '<div class="head" data-act="toggle"><span class="grip igrip">⠿</span><div class="emo">' + esc(i.emoji || (i.kind === 'goal' ? '🎯' : '🛠️')) + '</div>' +
+    '<div><div class="title">' + esc(i.title) + '</div><div class="sub">' + sub + '</div></div>' + ring(done, steps.length, color, 54) + '</div>' +
+    '<div class="dots">' + steps.map(function (s, k) { return '<i class="' + (s.done_at ? 'd' : k === nx ? 'nx' : '') + '"></i>'; }).join('') + '</div>' +
+    (open && i.note ? '<div class="note">' + esc(i.note) + '</div>' : '') +
+    '<ol class="path">' + path + '</ol>' +
+    '<form class="addstep" data-act="addstep"><input type="text" maxlength="160" placeholder="' + (steps.length ? 'Add the next step' : 'First step') + '" enterkeyhint="done"><button>Add</button></form>' +
+    '<div class="tools"><button data-act="edititem">✏️ Edit</button>' +
+    (i.done_at ? '<button data-act="undone">↩️ Not done yet</button>' : '<button data-act="done">🎉 Finished</button>') +
+    '<button data-act="remove">🗑️ Remove</button></div></div>';
+}
+function sticky(i, k) {
+  var color = i.color && NOTE_COLORS.indexOf(i.color) >= 0 ? i.color : NOTE_COLORS[k % NOTE_COLORS.length];
+  return '<button class="sticky" data-id="' + i.id + '" data-act="edititem" style="--c:' + color + '"><span class="grip igrip">⠿</span><span class="e">' + esc(i.emoji || '💡') + '</span>' +
+    '<span class="t">' + esc(i.title) + '</span>' + (i.added_by ? '<span class="w">' + esc(i.added_by) + '\'s idea</span>' : '') + '</button>';
+}
+function draw() {
+  if (!BOARD) return;
+  drawMe();
+  ['project', 'goal', 'idea'].forEach(function (k) { var n = items(k).length; $('n-' + k).textContent = n ? n : ''; });
+  [].forEach.call($('tabs').children, function (b) { b.classList.toggle('on', b.dataset.k === TAB); });
+  var live = items(TAB), done = items(TAB, true), html;
+  if (TAB === 'idea') {
+    html = live.length ? '<div class="notes" id="list">' + live.map(sticky).join('') + '</div>'
+      : '<div class="empty"><span class="big">💡</span>No ideas yet. Tap + and throw one on the wall.</div>';
+  } else {
+    html = live.length ? '<div id="list">' + live.map(card).join('') + '</div>'
+      : '<div class="empty"><span class="big">' + (TAB === 'goal' ? '🎯' : '🛠️') + '</span>No ' + (TAB === 'goal' ? 'goals' : 'projects') + ' yet. Tap + to start one.</div>';
+  }
+  if (done.length) html += '<details class="shelf"' + (store('home-shelf') === '1' ? ' open' : '') + '><summary>🎉 Done (' + done.length + ')</summary>' +
+    (TAB === 'idea' ? '<div class="notes">' + done.map(sticky).join('') + '</div>' : done.map(card).join('')) + '</details>';
+  // Keep a half-typed step if the board redraws underneath it.
+  var typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.addstep');
+  var keep = typing ? { id: typing.closest('.card').dataset.id, v: document.activeElement.value } : null;
+  $('main').innerHTML = html;
+  if (keep) { var f = document.querySelector('.card[data-id="' + keep.id + '"] .addstep input'); if (f) { f.value = keep.v; f.focus(); } }
+  var sh = document.querySelector('.shelf'); if (sh) sh.addEventListener('toggle', function () { store('home-shelf', sh.open ? '1' : '0'); });
+  sortables();
+}
+
+// ---------- Drag to reorder (the ⠿ handles) ----------
+function sortables() {
+  if (!window.Sortable) return;
+  var list = $('list');
+  if (list) Sortable.create(list, { handle: '.igrip', animation: 150, onEnd: function () {
+    var ids = [].map.call(list.children, function (c) { return c.dataset.id; });
+    var others = (BOARD.items || []).filter(function (i) { return ids.indexOf(i.id) < 0; }).map(function (i) { return i.id; });
+    edit('order_items', { ids: ids.concat(others) });
+  } });
+  [].forEach.call(document.querySelectorAll('#list .path'), function (p) {
+    Sortable.create(p, { handle: '.sgrip', animation: 150, onEnd: function () {
+      edit('order_steps', { item_id: p.closest('.card').dataset.id, ids: [].map.call(p.children, function (c) { return c.dataset.s; }) });
+    } });
+  });
+}
+
+// ---------- Taps ----------
+function find(id) { return (BOARD.items || []).filter(function (i) { return i.id === id; })[0]; }
+$('main').addEventListener('click', function (e) {
+  var a = e.target.closest('[data-act]'); if (!a || e.target.closest('.grip')) return;
+  var c = a.closest('[data-id]'), id = c && c.dataset.id, li = a.closest('li'), act = a.dataset.act;
+  if (act === 'toggle') { OPEN[id] = !OPEN[id]; store('home-open', JSON.stringify(OPEN)); draw(); }
+  else if (act === 'step') {
+    var item = find(id), s = item.steps.filter(function (x) { return x.id === li.dataset.s; })[0], now = !s.done_at;
+    if (now) { boom(a, c.style.getPropertyValue('--c')); if (navigator.vibrate) navigator.vibrate(30); }
+    s.done_at = now ? new Date().toISOString() : null; s.done_by = now ? ME : null; draw();   // feel instant
+    edit('done_step', { id: s.id, done: now }).then(function () {
+      var it = find(id); if (now && it && it.steps.length && nextIndex(it.steps) < 0) { bigBoom(); toast('All done with ' + it.title + '! 🎉', 'Mark finished', function () { edit('done_item', { id: id, done: true }); }); }
+    });
+  }
+  else if (act === 'steptext') {
+    var st = find(id).steps.filter(function (x) { return x.id === li.dataset.s; })[0];
+    var t = prompt('Change this step (empty it to remove it)', st.title);
+    if (t === null) return;
+    if (!t.trim()) { edit('remove_step', { id: st.id }); toast('Step removed', 'Undo', function () { edit('restore_step', { id: st.id }); }); }
+    else edit('update_step', { id: st.id, title: t.trim() });
+  }
+  else if (act === 'edititem') openSheet(find(id));
+  else if (act === 'done') { bigBoom(); edit('done_item', { id: id, done: true }); }
+  else if (act === 'undone') edit('done_item', { id: id, done: false });
+  else if (act === 'remove') { var it = find(id); edit('remove_item', { id: id }); toast('Removed ' + it.title, 'Undo', function () { edit('restore_item', { id: id }); }); }
+});
+$('main').addEventListener('submit', function (e) {
+  e.preventDefault(); var f = e.target, inp = f.querySelector('input'), t = inp.value.trim(); if (!t) return;
+  inp.value = ''; edit('add_step', { item_id: f.closest('.card').dataset.id, title: t }).then(function () {
+    var n = document.querySelector('.card[data-id="' + f.closest('.card').dataset.id + '"] .addstep input'); if (n) n.focus();
+  });
+});
+$('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.k; store('home-tab', TAB); draw(); scrollTo(0, 0); });
+
+// ---------- The add / edit sheet ----------
+var SH = null;
+function pick(box, attr, v) { [].forEach.call($(box).children, function (b) { b.classList.toggle('on', b.dataset[attr] === v); }); }
+function openSheet(item) {
+  if (!ME && BOARD.people && BOARD.people.length) { toast('First tap your name up top 👆'); return; }
+  SH = item ? { id: item.id, kind: item.kind, emoji: item.emoji || '', color: item.color || '' } : { kind: TAB, emoji: '', color: '' };
+  $('sh-h').textContent = item ? 'Edit' : 'Add';
+  $('sh-title').value = item ? item.title : ''; $('sh-note').value = item ? item.note || '' : ''; $('sh-steps').value = '';
+  $('sh-save').textContent = item ? 'Save' : 'Add it';
+  sheetKind(); $('sheet').classList.add('on'); $('veil').classList.add('on');
+  if (!item) setTimeout(function () { $('sh-title').focus(); }, 250);
+}
+function sheetKind() {
+  pick('sh-kind', 'k', SH.kind);
+  var cols = SH.kind === 'idea' ? NOTE_COLORS : COLORS;
+  if (cols.indexOf(SH.color) < 0) SH.color = cols[0];
+  $('sh-color').innerHTML = cols.map(function (c) { return '<button data-c="' + c + '" style="background:' + c + '" aria-label="color"></button>'; }).join('');
+  pick('sh-color', 'c', SH.color); pick('sh-emoji', 'e', SH.emoji);
+  var showSteps = !SH.id && SH.kind !== 'idea';
+  $('sh-steps').style.display = $('sh-steps-l').style.display = showSteps ? '' : 'none';
+  $('sh-title').placeholder = SH.kind === 'idea' ? 'Hot tub on the deck?' : SH.kind === 'goal' ? 'Run a 10K together' : 'Redo the front porch';
+}
+$('sh-emoji').innerHTML = EMOJI.map(function (e) { return '<button data-e="' + e + '">' + e + '</button>'; }).join('');
+$('sh-emoji').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { SH.emoji = b.dataset.e; pick('sh-emoji', 'e', SH.emoji); } });
+$('sh-color').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { SH.color = b.dataset.c; pick('sh-color', 'c', SH.color); } });
+$('sh-kind').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { SH.kind = b.dataset.k; sheetKind(); } });
+function closeSheet() { $('sheet').classList.remove('on'); $('veil').classList.remove('on'); document.activeElement.blur && document.activeElement.blur(); }
+$('sh-cancel').onclick = closeSheet; $('veil').onclick = closeSheet;
+$('sh-save').onclick = function () {
+  var t = $('sh-title').value.trim(); if (!t) { $('sh-title').focus(); return; }
+  var args = { title: t, note: $('sh-note').value.trim(), emoji: SH.emoji, color: SH.color, kind: SH.kind };
+  var steps = $('sh-steps').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+  closeSheet();
+  if (SH.id) { edit('update_item', Object.assign({ id: SH.id }, args)); return; }
+  var before = (BOARD.items || []).map(function (i) { return i.id; });
+  TAB = SH.kind; store('home-tab', TAB);
+  edit('add_item', args).then(function () {
+    var added = (BOARD.items || []).filter(function (i) { return before.indexOf(i.id) < 0; })[0];
+    if (!added) return;
+    OPEN[added.id] = true; store('home-open', JSON.stringify(OPEN));
+    return steps.reduce(function (p, s) { return p.then(function () { return edit('add_step', { item_id: added.id, title: s }); }); }, Promise.resolve())
+      .then(function () { draw(); if (SH.kind === 'idea') boom($('fab'), '#f2c94c'); });
+  });
+};
+$('fab').onclick = function () { openSheet(null); };
+
+// ---------- Toast with an undo ----------
+var toastTimer;
+function toast(text, label, fn) {
+  $('toast-t').textContent = text; $('toast-b').textContent = label || ''; $('toast-b').onclick = function () { $('toast').classList.remove('on'); if (fn) fn(); };
+  $('toast').classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { $('toast').classList.remove('on'); }, 5000);
+}
+
+// ---------- A little confetti when a step gets done ----------
+var cv = $('boom'), cx = cv.getContext('2d'), bits = [], running = false;
+function size() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener('resize', size); size();
+function burst(x, y, color, n, speed) {
+  for (var i = 0; i < n; i++) { var a = Math.random() * Math.PI * 2, v = (1 + Math.random() * speed) * devicePixelRatio;
+    bits.push({ x: x * devicePixelRatio, y: y * devicePixelRatio, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3 * devicePixelRatio, life: 60 + Math.random() * 30,
+      c: Math.random() < .5 ? (color || '#7f9cbb') : ['#f2c94c', '#6fcf97', '#eef2f6', '#f4a6a6'][i % 4], s: (3 + Math.random() * 4) * devicePixelRatio }); }
+  if (!running) { running = true; requestAnimationFrame(frame); }
+}
+function boom(el, color) { var r = el.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, color, 26, 5); }
+function bigBoom() { for (var k = 0; k < 4; k++) burst(innerWidth * (.2 + .2 * k), innerHeight * .4, null, 40, 9); if (navigator.vibrate) navigator.vibrate([40, 60, 40]); }
+function frame() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  bits = bits.filter(function (b) { return b.life-- > 0; });
+  bits.forEach(function (b) { b.x += b.vx; b.y += b.vy; b.vy += .25 * devicePixelRatio; cx.globalAlpha = Math.min(1, b.life / 30); cx.fillStyle = b.c; cx.fillRect(b.x, b.y, b.s, b.s * .6); });
+  if (bits.length) requestAnimationFrame(frame); else { running = false; cx.clearRect(0, 0, cv.width, cv.height); }
+}
+
+// ---------- Preview: a made-up board, nothing saved ----------
+function demo() {
+  function st(t, d) { return { id: Math.random().toString(36).slice(2), title: t, done_at: d ? '2026-11-20' : null, done_by: d ? 'Lindsey' : null }; }
+  return { can_edit: true, people: ['Sam', 'Lindsey'], items: [
+    { id: 'p1', kind: 'project', title: 'Redo the front porch', emoji: '🏡', color: '#4f6d8c', note: 'Keep the swing.', steps: [st('Pick a stain color', 1), st('Measure the boards', 1), st('Buy boards and stain'), st('Rip out the rotten steps'), st('Power wash'), st('Stain'), st('Hang the swing back up')] },
+    { id: 'p2', kind: 'project', title: 'Paint the guest room', emoji: '🎨', color: '#3f8f7a', steps: [st('Pick paint', 1), st('Patch the walls'), st('Paint')] },
+    { id: 'p3', kind: 'project', title: 'Squirrel house with a camera', emoji: '🐿️', color: '#c0793b', steps: [st('Find plans'), st('Build it'), st('Mount the camera')] },
+    { id: 'g1', kind: 'goal', title: 'Sail to the Apostles 5 times', emoji: '⛵', color: '#7a5ea8', steps: [st('Trip 1', 1), st('Trip 2', 1), st('Trip 3'), st('Trip 4'), st('Trip 5')] },
+    { id: 'i1', kind: 'idea', title: 'Hot tub on the deck?', emoji: '🛁', color: '#9ad1c4', added_by: 'Lindsey', steps: [] },
+    { id: 'i2', kind: 'idea', title: 'String lights over the yard', emoji: '💡', color: '#f2c94c', added_by: 'Sam', steps: [] },
+    { id: 'i3', kind: 'idea', title: 'Herb garden by the kitchen door', emoji: '🪴', color: '#a8c5f0', added_by: 'Lindsey', steps: [] }
+  ] };
+}
+function demoEdit(op, a) {
+  var I = BOARD.items, it = function (id) { return I.filter(function (i) { return i.id === id; })[0]; };
+  if (op === 'add_item') I.push({ id: 'n' + Date.now(), kind: a.kind, title: a.title, note: a.note, emoji: a.emoji, color: a.color, added_by: a.who, steps: [] });
+  else if (op === 'update_item') Object.assign(it(a.id), { title: a.title, note: a.note, emoji: a.emoji, color: a.color, kind: a.kind });
+  else if (op === 'done_item') it(a.id).done_at = a.done ? new Date().toISOString() : null;
+  else if (op === 'remove_item') { it(a.id).removed = true; BOARD.items = I.filter(function (i) { return !i.removed; }); BOARD.trash = (BOARD.trash || []).concat(it(a.id) || []); }
+  else if (op === 'add_step') it(a.item_id).steps.push({ id: 's' + Date.now() + Math.random(), title: a.title });
+  else if (op === 'order_items') BOARD.items = a.ids.map(it).filter(Boolean);
+  else if (op === 'order_steps') { var p = it(a.item_id); p.steps = a.ids.map(function (s) { return p.steps.filter(function (x) { return x.id === s; })[0]; }); }
+  else if (op === 'update_step' || op === 'remove_step') I.forEach(function (i) { i.steps = i.steps.filter(function (s) { if (s.id === a.id && op === 'update_step') s.title = a.title; return !(s.id === a.id && op === 'remove_step'); }); });
+}
+
+if (!KEY && !PREVIEW) { $('main').innerHTML = '<div class="gate">Open this from your own link.</div>'; $('fab').style.display = 'none'; }
+else { load(); setInterval(function () { if (!busy && !document.hidden && !$('sheet').classList.contains('on')) load(); }, 20000); }
+document.addEventListener('visibilitychange', function () { if (!document.hidden && KEY) load(); });
+</script>
+</body>
+</html>
