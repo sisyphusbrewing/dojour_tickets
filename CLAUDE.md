@@ -391,6 +391,13 @@ Dojour gotchas, learned the hard way:
   login lives only in Windows Credential Locker ("sisyphus-hubspace"); he
   stores it himself with `set-login.ps1`. The deck's looks call
   `/set?name=Comedy&...` (`SINK_LOOK` in `build_companion_config.py`).
+- **`home/`** is Sam's home wall board (the Apolosign, not a staff page). Its
+  "Our house" part (Sam, Nov 22 2026) is house projects, goals and ideas Sam
+  and Lindsey keep together on the phone page `home/projects/` (no login: a
+  link key kept only in `home_boards`). Projects are steps in order; the wall
+  shows each as a trail of stones. Rules in
+  `supabase/migrations/20261122230000_home_projects.sql`, checks in
+  `supabase/tests/home_projects/`.
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.

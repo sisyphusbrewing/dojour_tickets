@@ -91,6 +91,31 @@
   #term .j { font-size: 2.3vw; font-style: italic; color: var(--slate-hi); margin-top: .3vw; }
   #tap { font-size: 2.2vw; color: var(--muted); white-space: nowrap; overflow: hidden; }
   #tap b { font-family: Oswald, sans-serif; font-weight: 500; letter-spacing: .12em; font-size: 1.5vw; color: var(--sis); margin-right: 1vw; }
+
+  /* Our house: projects, goals and ideas from the phone page /home/projects/ */
+  /* It takes turns with Next at Sisyphus in the same space, every 30 s. */
+  #ours { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  #sis, #ours { transition: opacity .6s; } #sis.fade, #ours.fade { opacity: 0; }
+  #ours .band { background: #3f8f7a; }
+  #hplist { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6vw; }
+  .hp { background: var(--card); border: 1px solid var(--line); border-top: .7vw solid var(--c); border-radius: 1vw; padding: 1vw 1.3vw; min-width: 0; }
+  .hp .t { display: flex; gap: 1vw; align-items: center; font-size: 2.4vw; font-weight: 700; line-height: 1.02; }
+  .hp .t .e { font-size: 3.6vw; line-height: 1; flex: 0 0 auto; }
+  .hp .t em { margin-left: auto; font-family: Oswald, sans-serif; font-style: normal; font-size: 1.5vw; letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
+  .trail { display: flex; align-items: center; margin: .9vw 0 .6vw; }
+  .trail i { flex: 0 0 auto; width: 1.9vw; height: 1.9vw; border-radius: 50%; border: .4vw solid var(--c); background: var(--ink); }
+  .trail i.d { background: var(--c); }
+  .trail i.nx { width: 2.6vw; height: 2.6vw; box-shadow: 0 0 0 .5vw rgba(255,255,255,.16); animation: hpulse 2.4s infinite; }
+  .trail b { flex: 1 1 auto; height: .4vw; background: var(--line); max-width: 3.4vw; min-width: .4vw; }
+  .trail b.d { background: var(--c); }
+  @keyframes hpulse { 50% { box-shadow: 0 0 0 1vw rgba(255,255,255,0); } }
+  .hp .nx-t { font-size: 2.1vw; line-height: 1.1; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .hp .nx-t span { color: var(--text); font-weight: 600; }
+  #ideas { display: flex; gap: 1.6vw; margin-top: 1.4vw; }
+  #ideas div { flex: 1 1 0; min-width: 0; background: var(--c); color: #1b1b1b; border-radius: .4vw .4vw .4vw 1.6vw; padding: .9vw 1.1vw;
+    font-family: Oswald, sans-serif; font-size: 1.9vw; line-height: 1.15; box-shadow: 0 .6vw 1.2vw rgba(0,0,0,.35); }
+  #ideas div:nth-child(odd) { transform: rotate(-2deg); } #ideas div:nth-child(even) { transform: rotate(1.5deg); }
+  #ideas div i { font-style: normal; margin-right: .5vw; }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -122,6 +147,12 @@
   <span class="band">Next at Sisyphus</span>
   <div id="next"><img id="nextimg" alt=""><div class="cap"><div class="who" id="nextwho"></div><div class="when" id="nextwhen"></div></div></div>
   <ul id="shows"></ul>
+</section>
+
+<section id="ours" class="hidden">
+  <span class="band">Our house</span>
+  <div id="hplist"></div>
+  <div id="ideas"></div>
 </section>
 
 <section id="cal" class="hidden">
@@ -601,6 +632,56 @@ function loadTap() {
   }).catch(function () {});
 }
 
+
+// ---------- Our house: projects, goals and ideas (Sam, Nov 22 2026) ----------
+// Sam and Lindsey keep these on the phone page /home/projects/; the board's
+// own key (?k=) reads them. Each project is a trail of its steps in order:
+// filled stones are done, the glowing one is next.
+var HOUSE_RPC = 'https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/home_board';
+var HOUSE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+var NOTE_COLORS = ['#f2c94c', '#f4a6a6', '#9ad1c4', '#a8c5f0', '#d6b8f0', '#ffd59e'];
+function loadHouse() {
+  if (!BOARD_KEY) return;
+  fetch(HOUSE_RPC, { method: 'POST', cache: 'no-store', headers: { apikey: HOUSE_ANON, Authorization: 'Bearer ' + HOUSE_ANON, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ k: BOARD_KEY }) }).then(function (r) { return r.ok ? r.json() : null; }).then(function (b) {
+    if (!b || !b.items) return;
+    var live = b.items.filter(function (i) { return !i.done_at; });
+    var work = live.filter(function (i) { return i.kind !== 'idea'; }).sort(function (a, c) { return (a.kind === 'goal') - (c.kind === 'goal'); }).slice(0, 3);
+    var ideas = live.filter(function (i) { return i.kind === 'idea'; }).slice(-4).reverse();
+    HOUSE_ON = !!(work.length || ideas.length);
+    if (!HOUSE_ON) { $('ours').classList.add('hidden'); $('sis').classList.remove('hidden'); return; }
+    $('hplist').innerHTML = work.map(function (i) {
+      var st = i.steps || [], nx = -1, done = 0;
+      st.forEach(function (s, k) { if (s.done_at) done++; else if (nx < 0) nx = k; });
+      var shown = st.slice(0, 10), trail = shown.map(function (s, k) {
+        return (k ? '<b class="' + (s.done_at ? 'd' : '') + '"></b>' : '') + '<i class="' + (s.done_at ? 'd' : k === nx ? 'nx' : '') + '"></i>';
+      }).join('');
+      var next = !st.length ? 'No steps yet' : nx < 0 ? 'Every step done' : '<span>Next: ' + esc(st[nx].title) + '</span>';
+      return '<div class="hp" style="--c:' + esc(i.color || '#7f9cbb') + '">' +
+        '<div class="t"><span class="e">' + esc(i.emoji || (i.kind === 'goal' ? '🎯' : '🛠️')) + '</span><span>' + esc(i.title) + '</span>' + (st.length ? '<em>' + done + '/' + st.length + '</em>' : '') + '</div>' +
+        (st.length ? '<div class="trail">' + trail + '</div>' : '') + '<div class="nx-t">' + next + '</div></div>';
+    }).join('');
+    $('ideas').innerHTML = ideas.map(function (i, k) {
+      var c = NOTE_COLORS.indexOf(i.color) >= 0 ? i.color : NOTE_COLORS[k % NOTE_COLORS.length];
+      return '<div style="--c:' + c + '"><i>' + esc(i.emoji || '💡') + '</i>' + esc(i.title) + '</div>';
+    }).join('');
+    $('ideas').classList.toggle('hidden', !ideas.length);
+  }).catch(function () {});
+}
+// Next at Sisyphus and Our house share one space and take turns.
+var HOUSE_ON = false, houseView = false;
+setInterval(function () {
+  if (!HOUSE_ON) return;
+  var out = houseView ? $('ours') : $('sis'), into = houseView ? $('sis') : $('ours');
+  out.classList.add('fade');
+  setTimeout(function () {
+    out.classList.add('hidden'); out.classList.remove('fade');
+    into.classList.add('fade'); into.classList.remove('hidden');
+    requestAnimationFrame(function () { into.classList.remove('fade'); });
+    houseView = !houseView;
+  }, 600);
+}, 30000);
+
 every(loadHome, 10);
 every(loadWater, 15);
 every(loadNws, 30);
@@ -609,6 +690,7 @@ every(loadShows, 30);
 every(loadCal, 10);
 every(loadTerm, 60);
 every(loadTap, 30);
+every(loadHouse, 2);
 </script>
 </body>
 </html>
