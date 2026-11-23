@@ -90,6 +90,7 @@ setupSignIn(async function (r) {
   $('page').classList.remove('hidden');
   $('tabs').classList.remove('hidden');
   await loadPeople();
+  if (location.hash === '#settings') loadCalendar();
   await Promise.all([loadWeek(), loadShows(), loadSide(), loadNotices(), loadUsual()]);
   drawWeek();
 });
@@ -113,6 +114,7 @@ function showTab() {
 window.addEventListener('hashchange', function () {
   if (!me) return;
   showTab(); window.scrollTo(0, 0);
+  if (location.hash === '#settings') loadCalendar();
   if (shifts) drawWeek();
 });
 
@@ -762,3 +764,35 @@ async function dismissNotice(ids) {
   if (r.error) return fail(r);
   loadNotices();
 }
+
+// ---------- My shifts on my phone's calendar ----------
+// A staff member asked (Nov 23 2026): "sync our schedule from the staff portal
+// to our iCal or Google Calendar". Each person gets a private link to a
+// calendar of their own posted shifts (the "schedule-calendar" Edge Function).
+// Apple and Google subscribe to it and keep checking it, so nothing has to be
+// pressed again. The link is made the first time this tab is opened.
+var calUrl = null;
+function drawCalendar(token) {
+  calUrl = SUPABASE_URL + '/functions/v1/schedule-calendar?t=' + token;
+  var webcal = calUrl.replace(/^https:/, 'webcal:');
+  $('calApple').href = webcal;
+  $('calGoogle').href = 'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent(webcal);
+  $('calWait').classList.add('hidden');
+  ['calActs', 'calHow', 'calPrivate'].forEach(function (id) { $(id).classList.remove('hidden'); });
+}
+async function loadCalendar(fresh) {
+  if (calUrl && !fresh) return;
+  var r = await sb.rpc('my_calendar_feed', { p_new: !!fresh });
+  if (r.error || !r.data) { $('calWait').textContent = 'Your calendar link didn’t load. Try again in a minute.'; return false; }
+  drawCalendar(r.data);
+  return true;
+}
+$('calCopy').addEventListener('click', async function () {
+  if (!calUrl) return;
+  try { await navigator.clipboard.writeText(calUrl); toast('Copied. Paste it where your calendar asks for a calendar “from the internet”.'); }
+  catch (e) { window.prompt('Copy your calendar link:', calUrl); }
+});
+$('calNew').addEventListener('click', async function () {
+  if (!confirm('Make a new link? The old one stops working, so any calendar using it stops getting your shifts.')) return;
+  if (await loadCalendar(true)) toast('New link made. Tap a button above to add it again.');
+});

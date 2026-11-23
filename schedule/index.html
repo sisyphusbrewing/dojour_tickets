@@ -97,6 +97,7 @@
       </section>
 
       <p class="my-week hidden" id="myWeek"></p>
+      <p class="help cal-hint"><a href="#settings">Put my shifts on my phone’s calendar</a></p>
       <div class="week" id="week"><p class="quiet">Loading the week…</p></div>
       <p class="quiet hidden" id="weekNone"></p>
       <button class="btn-link hidden" id="earlierBtn"></button>
@@ -181,6 +182,21 @@
           <p class="help hidden" id="textsNote" style="margin-bottom:0">Texts aren’t switched on yet. Until they are, a text is sent as an email, so add your email too.</p>
           <button class="btn btn-primary" type="submit" id="reachBtn">Save</button>
         </form>
+      </div>
+
+      <!-- Your shifts on your phone's calendar (asked for by staff, Nov 23 2026).
+           A private link the calendar app subscribes to and keeps checking. -->
+      <div class="card stack cal-card" id="calCard">
+        <h2>Put my shifts on my calendar</h2>
+        <p class="help" style="margin-top:4px">Your posted shifts show up in your phone’s calendar and stay up to date by themselves: a new shift, a change or a swap follows along. Tap once.</p>
+        <p class="quiet" id="calWait">Getting your link…</p>
+        <div class="cal-acts hidden" id="calActs">
+          <a class="btn btn-primary" id="calApple" href="#">iPhone or Mac calendar</a>
+          <a class="btn" id="calGoogle" href="#" target="_blank" rel="noopener">Google Calendar</a>
+          <button type="button" class="btn btn-ghost" id="calCopy">Copy the link</button>
+        </div>
+        <p class="help hidden" id="calHow" style="margin-bottom:0">iPhone: tap the first button, then Subscribe, then Add. Android: tap Google Calendar, then Add; if your phone opens the Calendar app instead, open this page on a computer once and do it there, and it shows on your phone too. Google checks for changes every few hours, Apple about every hour, so the Schedule here is always the latest word. Outlook or anything else: copy the link and add it as a calendar “from the internet”.</p>
+        <p class="help hidden" id="calPrivate" style="margin-bottom:0">The link is yours alone; anyone with it can see your shifts. Shared it by mistake? <button type="button" class="linklike" id="calNew">Make a new link</button> and the old one stops working.</p>
       </div>
 
       <!-- Managers only: what everyone has marked, and who is on the schedule. -->

@@ -113,6 +113,15 @@ Dojour gotchas, learned the hard way:
   by hand (Actions > Schedule notices > Run workflow). It sends nothing
   between 1 and 8 AM Central. Check rule changes with
   `supabase/tests/staff_schedule/` before applying them.
+- **Shifts on your phone's calendar** (staff asked, Nov 23 2026: "sync our
+  schedule from the staff portal to our iCal or Google Calendar"). My settings
+  on the Schedule gives each person a private link (`my_calendar_feed()`) to
+  the Edge Function `schedule-calendar` (deployed with Verify JWT off), an
+  .ics of their own posted shifts that Apple or Google Calendar subscribes to
+  and keeps checking. "Make a new link" stops the old one. What it shows is
+  `schedule_calendar()`, service key only. Rules in
+  `supabase/migrations/20261123230000_schedule_calendar.sql`, checks in
+  `supabase/tests/schedule_calendar/`.
 - **The Schedule says how many people each day needs** (Sam, Nov 17 2026:
   "The scheduler should read the calendar for upcoming events and then say
   how many people we need to schedule because of it"). The calendar is
