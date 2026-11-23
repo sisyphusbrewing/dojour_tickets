@@ -398,6 +398,15 @@ Dojour gotchas, learned the hard way:
   shows each as a trail of stones. Rules in
   `supabase/migrations/20261122230000_home_projects.sql`, checks in
   `supabase/tests/home_projects/`.
+  **`home/kitchen/`** is the kitchen display, the Google Nest Hub in Sam and
+  Lindsey's kitchen (Sam, Nov 22 2026: "Lindsey wants more control over what
+  shows up"): clock, weather, a big note, the family calendar, the kitchen
+  list, Our house and (off at first) Sisyphus shows. It reads with the wall
+  board's key; Lindsey changes it from `home/kitchen/phone/?k=<edit key>`.
+  A Nest Hub can't open a web page by itself, so Sam's Mac puts it there by
+  casting (a launchd job, `home/kitchen/cast/`), only when the Hub is idle.
+  Rules in `supabase/migrations/20261123030000_home_kitchen.sql`, checks in
+  `supabase/tests/home_kitchen/`.
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.
