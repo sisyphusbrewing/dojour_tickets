@@ -141,3 +141,10 @@ section { margin-top: 14px; }
 .rule .input { flex: 0 0 76px; width: 76px; text-align: center; }
 .person { flex-wrap: wrap; justify-content: flex-start; }
 .person .input { flex: 1 1 180px; min-height: 44px; }
+
+/* My shifts on my calendar (My settings). */
+.cal-card { margin-top: 22px; max-width: 980px; }
+.cal-acts { display: flex; flex-wrap: wrap; gap: 10px; }
+.cal-acts .btn { text-decoration: none; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+.cal-hint { margin: 0 0 10px; }
