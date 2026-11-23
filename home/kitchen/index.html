@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kitchen</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+  /* The kitchen display: the Google Nest Hub in Sam and Lindsey's kitchen
+     (Sam, Nov 22 2026: "Lindsey wants more control over what shows up").
+     Landscape, about 1024 x 600. Lindsey picks what shows and writes the note
+     and the list from her phone (/home/kitchen/phone/?k=<edit key>); this page
+     only shows. Everything is sized in vh so it fits whatever screen it's on. */
+  :root {
+    --bg: #14110f; --card: #1f1a17; --line: rgba(255,240,225,.12);
+    --text: #f7efe6; --muted: #b9a999; --warm: #f2b56b; --sage: #9cc5a1; --sky: #8fb8e0; --rose: #f0a3a3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); height: 100%; overflow: hidden; }
+  body { font-family: Nunito, system-ui, sans-serif; font-size: 3.6vh; cursor: none; }
+  .hidden { display: none !important; }
+  main { display: grid; grid-template-columns: 38fr 62fr; gap: 2.6vh; height: 100vh; padding: 3.2vh 3.6vh; }
+  main.solo { grid-template-columns: 1fr; }
+  .col { display: flex; flex-direction: column; gap: 2.4vh; min-height: 0; }
+
+  #clock .t { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 21vh; line-height: .9; letter-spacing: -.02em; }
+  #clock .t small { font-size: 6vh; margin-left: 1vh; color: var(--muted); }
+  #clock .d { font-size: 4.4vh; color: var(--muted); font-weight: 700; margin-top: 1vh; }
+
+  #weather { display: flex; flex-direction: column; gap: 1.2vh; }
+  #weather .now { display: flex; align-items: center; gap: 2vh; }
+  #weather .ic { font-size: 10vh; line-height: 1; }
+  #weather .tp { font-family: Fraunces, Georgia, serif; font-size: 11vh; line-height: 1; }
+  #weather .sm { color: var(--muted); font-weight: 700; font-size: 3.4vh; line-height: 1.3; }
+  #weather .hrs { display: flex; gap: 1.2vh; }
+  #weather .hr { flex: 1; text-align: center; background: var(--card); border-radius: 1.6vh; padding: 1vh 0; font-size: 2.8vh; font-weight: 700; }
+  #weather .hr b { display: block; font-size: 4vh; }
+  #weather .hr i { font-style: normal; color: var(--sky); font-size: 2.4vh; }
+
+  .box { background: var(--card); border-radius: 2.4vh; padding: 2vh 2.4vh; min-height: 0; overflow: hidden; }
+  .box h2 { font-size: 2.6vh; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); font-weight: 800; margin-bottom: 1.2vh; }
+
+  #note { background: var(--warm); color: #2a1a08; border-radius: 2.4vh; padding: 2vh 2.6vh; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 5vh; line-height: 1.15; }
+  #note.long { font-size: 3.8vh; }
+
+  #cal .day { display: grid; grid-template-columns: 19vh 1fr; gap: 1.4vh; padding: .9vh 0; border-top: 1px solid var(--line); }
+  #cal .day:first-of-type { border-top: 0; }
+  #cal .dn { font-weight: 800; color: var(--sage); }
+  #cal .ev { display: flex; gap: 1.4vh; line-height: 1.35; }
+  #cal .ev i { font-style: normal; color: var(--muted); min-width: 10vh; }
+  #cal .none { color: var(--muted); }
+
+  #list ul { list-style: none; columns: 2; column-gap: 3vh; }
+  #list li { padding: .5vh 0; break-inside: avoid; display: flex; gap: 1.2vh; align-items: baseline; }
+  #list li::before { content: ''; flex: none; width: 2.4vh; height: 2.4vh; border: .35vh solid var(--warm); border-radius: .7vh; transform: translateY(.3vh); }
+  #list li.done { color: var(--muted); text-decoration: line-through; }
+  #list li.done::before { background: var(--warm); }
+  #list .none { color: var(--muted); }
+
+  #house .p { display: flex; align-items: center; gap: 1.4vh; padding: .6vh 0; }
+  #house .p .e { font-size: 4vh; }
+  #house .p span { color: var(--muted); }
+  #shows .s { display: flex; justify-content: space-between; gap: 2vh; padding: .4vh 0; }
+  #shows .s i { font-style: normal; color: var(--muted); }
+
+  .grow { flex: 1; }
+</style>
+</head>
+<body>
+<main id="main">
+  <div class="col" id="left">
+    <div id="clock"><div class="t" id="time"></div><div class="d" id="date"></div></div>
+    <div id="weather" class="hidden">
+      <div class="now"><div class="ic" id="wic"></div><div><div class="tp" id="wtp"></div><div class="sm" id="wsm"></div></div></div>
+      <div class="hrs" id="whrs"></div>
+    </div>
+  </div>
+  <div class="col" id="right">
+    <div id="note" class="hidden"></div>
+    <div class="box hidden" id="cal"><h2>Coming up</h2><div id="calrows"></div></div>
+    <div class="box hidden grow" id="list"><h2>Kitchen list</h2><ul id="items"></ul></div>
+    <div class="box hidden" id="house"><h2>Our house</h2><div id="hrows"></div></div>
+    <div class="box hidden" id="shows"><h2>At Sisyphus</h2><div id="srows"></div></div>
+  </div>
+</main>
+<script src="/home/ics.js"></script>
+<script>
+// ?k=KEY  the home board's key (the same one the wall board uses). It reads
+//         the family calendar and the kitchen settings. ?home=lat,lon moves
+//         the weather (default: Minneapolis).
+var Q = new URLSearchParams(location.search);
+var KEY = Q.get('k') || '';
+var HOME = (function (s) { var p = String(s || '').split(',').map(Number); return p.length === 2 && !isNaN(p[0]) && !isNaN(p[1]) ? p : [44.9706, -93.2862]; })(Q.get('home'));
+var SB = 'https://idsdwkubqnavkazlteis.supabase.co';
+var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+var SHOP = 'https://www.sisyphusbrewing.com/products.json?limit=250';
+// What shows when Lindsey hasn't said otherwise. Sisyphus shows start off:
+// this is the family's kitchen, not the club's.
+var DEFAULTS = { clock: true, weather: true, calendar: true, list: true, note: true, house: true, shows: false };
+var SHOW = Object.assign({}, DEFAULTS), BOARD = null;
+
+function $(id) { return document.getElementById(id); }
+function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function every(fn, minutes) { fn(); setInterval(fn, minutes * 60000); }
+function hm(d) { var h = d.getHours() % 12 || 12, m = d.getMinutes(); return h + (m ? ':' + (m < 10 ? '0' : '') + m : '') + (d.getHours() < 12 ? ' am' : ' pm'); }
+var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// ---------- Clock ----------
+function tick() {
+  var d = new Date(), h = d.getHours() % 12 || 12, m = d.getMinutes();
+  $('time').innerHTML = h + ':' + (m < 10 ? '0' : '') + m + '<small>' + (d.getHours() < 12 ? 'am' : 'pm') + '</small>';
+  $('date').textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  if (d.getHours() === 4 && d.getMinutes() === 0 && d.getSeconds() < 30) location.reload();   // nightly backstop
+}
+setInterval(tick, 10000); tick();
+
+// Reload within a few minutes whenever a new version of this page is published.
+var PAGE_VERSION = null;
+setInterval(function () {
+  fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : null; }).then(function (html) {
+    if (!html) return;
+    if (PAGE_VERSION === null) PAGE_VERSION = html; else if (html !== PAGE_VERSION) location.reload();
+  }).catch(function () {});
+}, 5 * 60000);
+
+// ---------- Weather (Open-Meteo, no key) ----------
+var SKY = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 56: '🌧️', 57: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️',
+  66: '🌧️', 67: '🌧️', 71: '🌨️', 73: '🌨️', 75: '❄️', 77: '🌨️', 80: '🌦️', 81: '🌧️', 82: '⛈️', 85: '🌨️', 86: '❄️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
+var WORD = { 0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Cloudy', 45: 'Fog', 48: 'Fog', 51: 'Drizzle', 53: 'Drizzle', 55: 'Drizzle', 61: 'Rain', 63: 'Rain', 65: 'Heavy rain',
+  71: 'Snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow', 80: 'Showers', 81: 'Showers', 82: 'Downpours', 85: 'Snow showers', 86: 'Snow showers', 95: 'Storms', 96: 'Storms', 99: 'Storms' };
+function loadWeather() {
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=' + HOME[0] + '&longitude=' + HOME[1] +
+    '&current=temperature_2m,apparent_temperature,weather_code&hourly=temperature_2m,weather_code,precipitation_probability' +
+    '&daily=temperature_2m_max,temperature_2m_min&forecast_days=2&temperature_unit=fahrenheit&timezone=America/Chicago', { cache: 'no-store' })
+  .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (w) {
+    var c = w.current;
+    $('wic').textContent = SKY[c.weather_code] || '';
+    $('wtp').textContent = Math.round(c.temperature_2m) + '°';
+    $('wsm').innerHTML = esc(WORD[c.weather_code] || '') + ' · feels ' + Math.round(c.apparent_temperature) + '°<br>High ' +
+      Math.round(w.daily.temperature_2m_max[0]) + '° · Low ' + Math.round(w.daily.temperature_2m_min[0]) + '°';
+    // The next few hours, every third hour from the next whole hour.
+    var now = Date.now(), hrs = [];
+    w.hourly.time.forEach(function (t, i) {
+      var d = new Date(t);   // local time string, read as local: the screen is in Central too
+      if (d.getTime() > now && hrs.length < 4 && (hrs.length === 0 || d.getTime() - hrs[hrs.length - 1].d.getTime() >= 3 * 3600000)) hrs.push({ d: d, i: i });
+    });
+    $('whrs').innerHTML = hrs.map(function (h) {
+      var p = w.hourly.precipitation_probability[h.i];
+      return '<div class="hr">' + hm(h.d).replace(':00', '') + '<b>' + (SKY[w.hourly.weather_code[h.i]] || '') + ' ' + Math.round(w.hourly.temperature_2m[h.i]) + '°</b>' +
+        (p >= 30 ? '<i>' + p + '% wet</i>' : '<i>&nbsp;</i>') + '</div>';
+    }).join('');
+    $('weather').dataset.ok = '1';
+    layout();
+  }).catch(function () { setTimeout(loadWeather, 60000); });
+}
+
+// ---------- Family calendar (the wall board's calendars, by key) ----------
+var EVENTS = null;
+function loadCal() {
+  if (!KEY) return;
+  var from = new Date(); from.setHours(0, 0, 0, 0);
+  var to = new Date(from); to.setDate(to.getDate() + 3);
+  fetch(SB + '/functions/v1/ical-proxy?k=' + encodeURIComponent(KEY), { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (text) { if (text) { EVENTS = parseIcs(text, from, to); drawCal(); } })
+    .catch(function () {});
+}
+function drawCal() {
+  if (!EVENTS) return;
+  var start = new Date(); start.setHours(0, 0, 0, 0);
+  var now = new Date(), rows = [];
+  for (var i = 0; i < 3; i++) {
+    var d = new Date(start); d.setDate(start.getDate() + i);
+    var evs = EVENTS.filter(function (e) {
+      return dayKey(e.at) === dayKey(d) && (e.allDay || i > 0 || e.at.getTime() > now.getTime() - 3600000);   // today's finished ones drop off
+    }).sort(function (a, b) { return (a.allDay ? 0 : 1) - (b.allDay ? 0 : 1) || a.at - b.at; });
+    if (i === 2 && !evs.length) continue;
+    rows.push('<div class="day"><div class="dn">' + (i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DOW[d.getDay()]) + '</div><div>' +
+      (evs.length ? evs.slice(0, 4).map(function (e) { return '<div class="ev"><i>' + (e.allDay ? 'All day' : hm(e.at)) + '</i>' + esc(e.title) + '</div>'; }).join('') +
+        (evs.length > 4 ? '<div class="ev"><i></i>+ ' + (evs.length - 4) + ' more</div>' : '')
+      : '<div class="none">Nothing on the calendar</div>') + '</div></div>');
+  }
+  $('calrows').innerHTML = rows.join('');
+  layout();
+}
+
+// ---------- Kitchen settings, note, list and house projects ----------
+function loadBoard() {
+  if (!KEY) return;
+  fetch(SB + '/rest/v1/rpc/kitchen_board', { method: 'POST', cache: 'no-store',
+    headers: { apikey: ANON, Authorization: 'Bearer ' + ANON, 'Content-Type': 'application/json' }, body: JSON.stringify({ k: KEY }) })
+  .then(function (r) { return r.ok ? r.json() : null; }).then(function (b) {
+    if (!b) return;
+    BOARD = b;
+    SHOW = Object.assign({}, DEFAULTS, (b.kitchen && b.kitchen.show) || {});
+    var note = b.kitchen && b.kitchen.note;
+    $('note').textContent = note || '';
+    $('note').classList.toggle('long', !!note && note.length > 90);
+    // The list: open things first, then ones ticked off in the last 3 hours.
+    var recent = Date.now() - 3 * 3600000;
+    var list = (b.items || []).filter(function (i) { return i.kind === 'list' && (!i.done_at || new Date(i.done_at).getTime() > recent); })
+      .sort(function (a, c) { return (!!a.done_at) - (!!c.done_at); });
+    $('items').innerHTML = list.length ? list.slice(0, 16).map(function (i) {
+      return '<li class="' + (i.done_at ? 'done' : '') + '">' + esc(i.title) + '</li>';
+    }).join('') : '<li class="none" style="list-style:none">All clear</li>';
+    $('list').dataset.n = list.length;
+    // Our house: the next step of each open project or goal.
+    var work = (b.items || []).filter(function (i) { return (i.kind === 'project' || i.kind === 'goal') && !i.done_at; }).slice(0, 3);
+    $('hrows').innerHTML = work.map(function (i) {
+      var nx = (i.steps || []).filter(function (s) { return !s.done_at; })[0];
+      return '<div class="p"><div class="e">' + esc(i.emoji || (i.kind === 'goal' ? '🎯' : '🛠️')) + '</div><div>' + esc(i.title) +
+        (nx ? ' <span>· next: ' + esc(nx.title) + '</span>' : '') + '</div></div>';
+    }).join('');
+    $('house').dataset.n = work.length;
+    layout();
+  }).catch(function () {});
+}
+
+// ---------- Sisyphus shows (off unless Lindsey turns it on) ----------
+var SHOWS = [];
+function parseShowDate(str) {
+  var md = String(str).match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+  if (!md) return null;
+  var month = MON.map(function (m) { return m.toLowerCase(); }).indexOf(md[1].slice(0, 3).toLowerCase());
+  var day = +md[2], hour = 19, min = 0;
+  var tm = String(str).match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+  if (tm) { hour = (+tm[1] % 12) + (tm[3].toLowerCase() === 'pm' ? 12 : 0); min = tm[2] ? +tm[2] : 0; }
+  var ym = String(str).match(/\b(20\d{2})\b/), now = new Date();
+  if (ym) return new Date(+ym[1], month, day, hour, min);
+  var cands = [now.getFullYear(), now.getFullYear() + 1].map(function (y) { return new Date(y, month, day, hour, min); });
+  var wd = String(str).match(/^\s*(Sun|Mon|Tue|Wed|Thu|Fri|Sat)/i);
+  if (wd) { var t = DOW.map(function (x) { return x.toLowerCase(); }).indexOf(wd[1].slice(0, 3).toLowerCase()); var ok = cands.filter(function (d) { return d.getDay() === t; }); if (ok.length) cands = ok; }
+  var floor = now.getTime() - 86400000;
+  return cands.filter(function (d) { return d.getTime() >= floor; })[0] || null;
+}
+
+function loadShows() {
+  if (!SHOW.shows) return;
+  fetch(SHOP, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    var now = Date.now() - 3 * 3600000, rows = [];
+    (j.products || []).forEach(function (p) {
+      // A show is a product whose variants read as a date with a clock time (same rule as the wall board).
+      var byDate = {};
+      (p.variants || []).forEach(function (v) {
+        var label = v.option1 || v.title;
+        if (!/\d\s*(am|pm)\b/i.test(label)) return;
+        var d = parseShowDate(label);
+        if (d && d.getTime() >= now) byDate[d.getTime()] = d;
+      });
+      Object.keys(byDate).forEach(function (k) { rows.push({ at: byDate[k], name: p.title }); });
+    });
+    rows.sort(function (a, b) { return a.at - b.at; });
+    SHOWS = rows;
+    $('srows').innerHTML = rows.slice(0, 3).map(function (r) {
+      return '<div class="s"><span>' + esc(r.name) + '</span><i>' + DOW[r.at.getDay()] + ' ' + hm(r.at) + '</i></div>';
+    }).join('');
+    layout();
+  }).catch(function () {});
+}
+
+// Show what's switched on and has something to say.
+function layout() {
+  $('clock').classList.toggle('hidden', !SHOW.clock);
+  $('weather').classList.toggle('hidden', !SHOW.weather || !$('weather').dataset.ok);
+  $('note').classList.toggle('hidden', !SHOW.note || !$('note').textContent);
+  $('cal').classList.toggle('hidden', !SHOW.calendar || !EVENTS);
+  $('list').classList.toggle('hidden', !SHOW.list || !BOARD);
+  $('house').classList.toggle('hidden', !SHOW.house || !+$('house').dataset.n);
+  $('shows').classList.toggle('hidden', !SHOW.shows || !SHOWS.length);
+  var leftOn = SHOW.clock || SHOW.weather;
+  var rightOn = ['note', 'cal', 'list', 'house', 'shows'].some(function (id) { return !$(id).classList.contains('hidden'); });
+  $('left').classList.toggle('hidden', !leftOn);
+  $('right').classList.toggle('hidden', !rightOn);
+  $('main').classList.toggle('solo', !leftOn || !rightOn);
+}
+
+every(loadBoard, 1);        // the note and list change from Lindsey's phone: show them within a minute
+every(loadWeather, 15);
+every(loadCal, 10);
+setInterval(drawCal, 5 * 60000);
+setTimeout(function () { every(loadShows, 30); }, 3000);
+</script>
+</body>
+</html>
