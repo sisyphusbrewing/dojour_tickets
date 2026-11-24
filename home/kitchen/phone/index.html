@@ -65,6 +65,20 @@
   .who { display: flex; gap: 6px; }
   .who button { background: var(--card); border: 2px solid var(--line); border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 14px; }
   .who button.on { border-color: var(--warm); }
+  /* Our house: next step of each project, tick it off, add a new one
+     (Sam, Nov 24 2026: the remote "should then let you edit or add more
+     stuff (like to the house project list)"). The full board is one tap. */
+  .hp { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-top: 1px solid var(--line); }
+  .hp:first-child { border-top: 0; }
+  .hp .e { font-size: 24px; flex: none; }
+  .hp .t { flex: 1; min-width: 0; }
+  .hp .t b { display: block; font-weight: 800; }
+  .hp .t small { color: var(--muted); }
+  .hp .tick { flex: none; border: 3px solid var(--warm); border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 14px; }
+  .kinds { display: flex; gap: 6px; margin-top: 10px; }
+  .kinds button { background: var(--card2); border: 2px solid transparent; border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 14px; }
+  .kinds button.on { border-color: var(--warm); }
+  .full { display: block; text-align: center; margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--card2); color: var(--text); font-weight: 800; text-decoration: none; }
   .bad { background: var(--card); border-radius: 18px; padding: 18px; margin-top: 20px; }
   .hidden { display: none !important; }
 </style>
@@ -89,6 +103,14 @@
     <button class="ghost clear hidden" id="clearDone">Clear the ticked-off ones</button>
   </div>
 
+  <h2>Our house</h2>
+  <div class="card">
+    <div id="house"></div>
+    <form class="add" id="houseform" style="margin-top:10px"><input id="houseitem" maxlength="120" placeholder="Add a project or idea" autocomplete="off"><button class="btn">Add</button></form>
+    <div class="kinds" id="kinds"><button type="button" data-k="project" class="on">🛠️ Project</button><button type="button" data-k="goal">🎯 Goal</button><button type="button" data-k="idea">💡 Idea</button></div>
+    <a class="full" id="fullboard" href="/home/projects/">Open the house board: steps, goals, ideas →</a>
+  </div>
+
   <h2>What shows</h2>
   <div class="tiles" id="tiles"></div>
 
@@ -111,7 +133,7 @@ var PARTS = [
   ['shows', '🎤', 'Sisyphus', 'Next shows at the club']
 ];
 var DEFAULTS = { clock: true, weather: true, calendar: true, list: true, note: true, house: true, shows: false };
-var BOARD = null, WHO = '';
+var BOARD = null, WHO = '', HKIND = 'project';
 
 function $(id) { return document.getElementById(id); }
 function esc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -130,7 +152,30 @@ function edit(op, args) {
     .catch(function (e) { toast(e.message || 'That didn\'t save. Try again.'); throw e; });
 }
 
+function houseEdit(op, args) {
+  if (PREVIEW) { fakeHouse(op, args); draw(); return Promise.resolve(); }
+  return call('home_board_edit', { k: KEY, op: op, args: Object.assign({ who: WHO || null }, args || {}) })
+    .then(function () { return call('kitchen_board', { k: KEY }); })
+    .then(function (b) { BOARD = b; draw(); })
+    .catch(function (e) { toast(e.message || 'That didn\'t save. Try again.'); throw e; });
+}
+function nextStep(i) { return (i.steps || []).filter(function (s) { return !s.done_at; })[0]; }
+function drawHouse() {
+  var work = (BOARD.items || []).filter(function (i) { return (i.kind === 'project' || i.kind === 'goal') && !i.done_at; });
+  var ideas = (BOARD.items || []).filter(function (i) { return i.kind === 'idea' && !i.done_at; }).length;
+  $('house').innerHTML = (work.length ? work.map(function (i) {
+    var n = nextStep(i), steps = i.steps || [], left = steps.filter(function (s) { return !s.done_at; }).length;
+    var sub = n ? 'Next: ' + esc(n.title) + (left > 1 ? ' · ' + left + ' steps left' : '') : (steps.length ? 'Every step done 🎉' : 'No steps yet');
+    return '<div class="hp"><span class="e">' + esc(i.emoji || (i.kind === 'goal' ? '🎯' : '🛠️')) + '</span><span class="t"><b>' + esc(i.title) + '</b><small>' + sub + '</small></span>' +
+      (n ? '<button class="tick" data-step="' + n.id + '">Done ✓</button>' : '') + '</div>';
+  }).join('') : '<div class="empty">No projects yet. Add one below.</div>') +
+    (ideas ? '<div class="empty">💡 ' + ideas + (ideas === 1 ? ' idea' : ' ideas') + ' on the board</div>' : '');
+  [].forEach.call($('kinds').children, function (b) { b.classList.toggle('on', b.dataset.k === HKIND); });
+  $('houseitem').placeholder = HKIND === 'idea' ? 'Add an idea' : HKIND === 'goal' ? 'Add a goal' : 'Add a project';
+}
+
 function draw() {
+  drawHouse();
   var show = Object.assign({}, DEFAULTS, (BOARD.kitchen && BOARD.kitchen.show) || {});
   $('tiles').innerHTML = PARTS.map(function (p) {
     return '<button class="tile' + (show[p[0]] ? ' on' : '') + '" data-k="' + p[0] + '"><span class="e">' + p[1] + '</span><span><b>' + p[2] + '</b><small>' + p[3] + '</small></span></button>';
@@ -177,10 +222,25 @@ $('clearDone').addEventListener('click', function () {
   var done = (BOARD.items || []).filter(function (i) { return i.kind === 'list' && i.done_at; });
   done.reduce(function (p, i) { return p.then(function () { return edit('remove_item', { id: i.id }); }); }, Promise.resolve()).then(function () { toast('Cleared'); });
 });
+$('house').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-step]'); if (!b) return;
+  b.disabled = true;
+  houseEdit('done_step', { id: b.dataset.step, done: true }).then(function () { toast('Nice, step done 🎉'); });
+});
+$('kinds').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; HKIND = b.dataset.k; drawHouse(); });
+$('houseform').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var t = $('houseitem').value.trim(); if (!t) return;
+  $('houseitem').value = '';
+  houseEdit('add_item', { kind: HKIND, title: t }).then(function () {
+    toast(HKIND === 'idea' ? 'Idea added 💡' : 'Added. Open the house board to give it steps.');
+  }).catch(function () { $('houseitem').value = t; });
+});
 $('who').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; WHO = b.textContent; store('kitchen-who', WHO); draw(); });
 
 function start() {
   WHO = store('kitchen-who') || '';
+  $('fullboard').href = '/home/projects/?' + (PREVIEW ? 'preview=1' : 'k=' + encodeURIComponent(KEY));
   if (PREVIEW) $('sub').textContent = 'Preview: try anything, nothing is saved.';
   call('kitchen_board', { k: KEY }).then(function (b) {
     if (!b || !b.can_edit) throw new Error();
@@ -188,12 +248,14 @@ function start() {
   }).catch(function () { $('bad').classList.remove('hidden'); });
 }
 // Pick up changes made from the other phone.
-setInterval(function () { if (BOARD && !PREVIEW && document.visibilityState === 'visible' && document.activeElement !== $('note') && document.activeElement !== $('additem'))
+setInterval(function () { if (BOARD && !PREVIEW && document.visibilityState === 'visible' && document.activeElement !== $('note') && document.activeElement !== $('additem') && document.activeElement !== $('houseitem'))
   call('kitchen_board', { k: KEY }).then(function (b) { if (b) { BOARD = b; draw(); } }).catch(function () {}); }, 30000);
 
 // ?preview=1: a made-up kitchen, changed in memory only.
 var DEMO = { can_edit: true, people: ['Sam', 'Lindsey'], kitchen: { note: 'Pizza night! Picking up at 6.', show: {} },
-  items: [{ id: 'a', kind: 'list', title: 'Milk' }, { id: 'b', kind: 'list', title: 'Dog food' }, { id: 'c', kind: 'list', title: 'Call the vet', done_at: new Date().toISOString() }] };
+  items: [{ id: 'p1', kind: 'project', emoji: '🏡', title: 'Redo the front porch', steps: [{ id: 's1', title: 'Pick a stain color', done_at: new Date().toISOString() }, { id: 's2', title: 'Buy supplies' }, { id: 's3', title: 'Power wash' }] },
+    { id: 'i1', kind: 'idea', title: 'Herb garden by the back door' },
+    { id: 'a', kind: 'list', title: 'Milk' }, { id: 'b', kind: 'list', title: 'Dog food' }, { id: 'c', kind: 'list', title: 'Call the vet', done_at: new Date().toISOString() }] };
 function fake(fn, b) {
   if (fn === 'kitchen_edit') {
     var a = b.args, it = function (id) { return DEMO.items.filter(function (i) { return i.id === id; })[0]; };
@@ -203,6 +265,11 @@ function fake(fn, b) {
     else if (b.op === 'remove_item') DEMO.items = DEMO.items.filter(function (i) { return i.id !== a.id; });
   }
   return JSON.parse(JSON.stringify(DEMO));
+}
+function fakeHouse(op, a) {
+  if (op === 'done_step') DEMO.items.forEach(function (i) { (i.steps || []).forEach(function (s) { if (s.id === a.id) s.done_at = new Date().toISOString(); }); });
+  else if (op === 'add_item') DEMO.items.push({ id: 'n' + Date.now(), kind: a.kind, title: a.title, steps: [] });
+  BOARD = JSON.parse(JSON.stringify(DEMO));
 }
 start();
 </script>

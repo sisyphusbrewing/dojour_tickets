@@ -29,7 +29,7 @@
 
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: calc(env(safe-area-inset-top) + 12px) 16px 8px; }
   .toprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  h1 { font-family: Oswald, sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; font-size: 20px;
+  h1 { flex: none; font-family: Oswald, sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; font-size: 20px;
        background: var(--slate); color: #fff; padding: 3px 14px; transform: rotate(-2deg); display: inline-block; }
   .me { display: flex; background: var(--card); border-radius: 99px; padding: 3px; border: 1px solid var(--line); }
   .me button { padding: 6px 12px; border-radius: 99px; font-weight: 700; font-size: 14px; color: var(--muted); }
@@ -133,6 +133,8 @@
            z-index: 10; transform: translateY(250%); visibility: hidden; transition: transform .25s, visibility .25s; }
   .toast.on { transform: none; visibility: visible; }
   .toast button { color: #2c5b8a; font-weight: 800; }
+  /* Back to the kitchen screen's remote, same link key (Sam, Nov 24 2026). */
+  .kback { margin-left: auto; margin-right: 10px; white-space: nowrap; color: var(--muted); font-weight: 700; font-size: 14px; text-decoration: none; }
   .gate { padding: 80px 24px; text-align: center; color: var(--muted); }
   .sortable-ghost { opacity: .35; }
   canvas#boom { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
@@ -140,7 +142,7 @@
 </head>
 <body>
 <header>
-  <div class="toprow"><h1>Our house</h1><div class="me" id="me"></div></div>
+  <div class="toprow"><h1>Our house</h1><a class="kback" id="kback" href="/home/kitchen/phone/">🍳 Kitchen</a><div class="me" id="me"></div></div>
   <div class="tabs" id="tabs">
     <button data-k="project"><span class="e">🛠️</span>Projects <span class="n" id="n-project"></span></button>
     <button data-k="goal"><span class="e">🎯</span>Goals <span class="n" id="n-goal"></span></button>
@@ -425,6 +427,7 @@ function demoEdit(op, a) {
   else if (op === 'update_step' || op === 'remove_step') I.forEach(function (i) { i.steps = i.steps.filter(function (s) { if (s.id === a.id && op === 'update_step') s.title = a.title; return !(s.id === a.id && op === 'remove_step'); }); });
 }
 
+$('kback').href = '/home/kitchen/phone/?' + (PREVIEW ? 'preview=1' : 'k=' + encodeURIComponent(KEY));
 if (!KEY && !PREVIEW) { $('main').innerHTML = '<div class="gate">Open this from your own link.</div>'; $('fab').style.display = 'none'; }
 else { load(); setInterval(function () { if (!busy && !document.hidden && !$('sheet').classList.contains('on')) load(); }, 20000); }
 document.addEventListener('visibilitychange', function () { if (!document.hidden && KEY) load(); });
