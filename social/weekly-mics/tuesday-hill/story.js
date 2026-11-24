@@ -115,22 +115,26 @@ const THEMES = {
   slate: { bg: BRAND.B, band: '#2b2929', rule: '#ffffff', word: '#ffffff', inline: '#a9c3d8', man: '#ffffff', far: '#c4d3df', rock: '#2b3a47', rockLit: '#34485a', head: '#ffffff', sub: '#ffffff', dim: '#d5e0e9', accent: '#ffffff', stand: '#ffffff' },
 };
 
-// opt: {theme, w, h, when: 'TONIGHT' | 'EVERY TUESDAY'}
+// opt: {theme, w, h (1920 story, 1350 feed), under: the line under the band, sticker: leave the web address off,
+//       seal: false to leave the barrel off, fy: where the sign-up line sits, state: where he is in the moving version}
+const scaleFor = H => H > 1500 ? 13.6 : 11.0;   // how big the man and boulder are drawn
 function hill(opt) {
   const T = THEMES[opt.theme], W = opt.w, H = opt.h, story = H > 1500;
-  const cx = W / 2, cy = story ? 1085 : 760, t = story ? 350 : 290, gap = t * 0.045, rule = t * 0.05;
+  const cx = W / 2, cy = story ? 1085 : 800, t = story ? 350 : 290, gap = t * 0.045, rule = t * 0.05;
   const y = bandY(cx, cy), ground = x => y(x) - t / 2 - gap - rule;
-  const k = story ? 13.6 : 9.6, x0 = story ? 752 : 760;
+  const k = scaleFor(H), x0 = 752;
   const st = opt.state || {}, mx = st.x0 === undefined ? x0 : st.x0;
   const man = pusher([mx, ground(mx)], A, k, T, st.gait);
   const rot = (st.rot || 0), spots = [[-0.42, -0.1, 0.2], [0.3, 0.38, 0.15], [0.22, -0.48, 0.11], [-0.2, 0.52, 0.09]];
-  const sx = story ? 1000 : 1000, standH = story ? 300 : 250;
-  const top = story ? 278 : 96;
+  const sx = 1000, standH = story ? 300 : 255;
+  // opt.top moves the kicker and headline down: the ad versions need it so the
+  // words clear Instagram's covered strip (9:16) and a square crop (4:5).
+  const top = opt.top || (story ? 278 : 92);
   const hs = story ? 92 : 84;
   const lines = opt.headline || ['EVERY TUESDAY.', 'FOREVER.'];
   const under = opt.under || 'TONIGHT · 7 PM · FREE';
   const uy = cy + t / 2 + gap + rule + (story ? 96 : 84);
-  const fy = story ? 1508 : 1200;
+  const fy = opt.fy || (story ? 1508 : 1190);
   const seal = pieces('barrelmark', ['arcTop', 'barrel', 'hopsL', 'hopsR'], { B: T.accent, W: T.bg, K: T.accent });
   return `<rect width="${W}" height="${H}" fill="${T.bg}"/>
   <text x="84" y="${top}" ${MONT} font-weight="800" font-size="${story ? 27 : 24}" letter-spacing="${story ? 7.5 : 6.5}" fill="${T.accent}">SISYPHUS COMEDY CLUB</text>
@@ -148,16 +152,19 @@ function hill(opt) {
   ${inlineWord('OPEN MIC', cx + t * 0.03, cy + t * 0.275, t * 0.75, { fill: T.word, inline: T.inline, track: 0.08 })}
   <text transform="translate(${cx},${uy}) skewY(-8.046)" text-anchor="middle" ${MONT} font-weight="900" font-size="${story ? 62 : 56}" letter-spacing="${story ? 7 : 6}" fill="${T.head}">${under}</text>
   <text x="${cx}" y="${fy}" text-anchor="middle" ${MONT} font-weight="800" font-size="${story ? 33 : 27}" letter-spacing="5" fill="${T.accent}">COMICS: SIGN UP BY 6:30 PM</text>
-  ${opt.sticker ? '' : `<text x="${cx}" y="${fy + (story ? 52 : 46)}" text-anchor="middle" ${MONT} font-weight="700" font-size="${story ? 33 : 27}" letter-spacing="1.2" fill="${T.sub}">sisyphusbrewing.com/pages/open-mic</text>`}
-  ${story ? place(seal, cx, fy + (opt.sticker ? 205 : 150), { height: opt.sticker ? 104 : 118 }) : ''}`;
+  ${opt.sticker ? '' : `<text x="${cx}" y="${fy + (story ? 52 : 50)}" text-anchor="middle" ${MONT} font-weight="700" font-size="${story ? 33 : 27}" letter-spacing="1.2" fill="${T.sub}">sisyphusbrewing.com/pages/open-mic</text>`}
+  ${story && opt.seal !== false ? place(seal, cx, fy + (opt.sticker ? 205 : 150), { height: opt.sticker ? 104 : 118 }) : ''}`;
 }
 
 const VARIANTS = {
   'hill-dark': { fn: hill, theme: 'dark', w: 1080, h: 1920 },
   'hill-light': { fn: hill, theme: 'light', w: 1080, h: 1920 },
   'hill-slate': { fn: hill, theme: 'slate', w: 1080, h: 1920 },
+  // The every-week versions for the always-on ad: feed (4:5) and stories/reels (9:16, nothing important in the bottom fifth).
+  'ad-feed': { fn: hill, theme: 'slate', w: 1080, h: 1350, under: 'TUESDAYS · 7 PM · FREE', top: 128, spots: true },
+  'ad-story': { fn: hill, theme: 'slate', w: 1080, h: 1920, under: 'TUESDAYS · 7 PM · FREE', seal: false, top: 306, fy: 1482, spots: true },
 };
-module.exports = { VARIANTS, hill, pusher, pieces, place, inlineWord, strip, bandY, micStand, THEMES, BRAND, FONTS, MONT, A, TAN, DEG };
+module.exports = { VARIANTS, hill, scaleFor, pusher, pieces, place, inlineWord, strip, bandY, micStand, THEMES, BRAND, FONTS, MONT, A, TAN, DEG };
 
 if (require.main === module) (async () => {
   const out = process.argv[2], want = process.argv.slice(3);
