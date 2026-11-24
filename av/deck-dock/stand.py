@@ -55,7 +55,8 @@ SCREW_SPAN = 83.01                 # between the two stand screws (Sam's caliper
 SEAT_Y = 6.0                       # screw line, from the base's front edge
 SEAT_H = 7.0                       # seat top above the table
 SEAT_D = 8.5                       # a little smaller than the deck's ~9.5 mm bosses
-UNDER_HEAD = 3.6                   # plastic between screw head and deck: an M3 x 8 bites 4.4 mm
+UNDER_HEAD = 3.0                   # plastic between screw head and deck. Sam measured ~5 mm of thread
+                                   # sticking out of Elgato's stand (Nov 23 2026), so this gives the same bite
 FLOOR = 4.0
 FRONT_T = 3.2                      # thinner strip at the front, under the deck's lower bevel
 WALL = 3.0
