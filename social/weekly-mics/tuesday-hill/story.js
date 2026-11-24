@@ -148,8 +148,8 @@ function hill(opt) {
   ${inlineWord('OPEN MIC', cx + t * 0.03, cy + t * 0.275, t * 0.75, { fill: T.word, inline: T.inline, track: 0.08 })}
   <text transform="translate(${cx},${uy}) skewY(-8.046)" text-anchor="middle" ${MONT} font-weight="900" font-size="${story ? 62 : 56}" letter-spacing="${story ? 7 : 6}" fill="${T.head}">${under}</text>
   <text x="${cx}" y="${fy}" text-anchor="middle" ${MONT} font-weight="800" font-size="${story ? 33 : 27}" letter-spacing="5" fill="${T.accent}">COMICS: SIGN UP BY 6:30 PM</text>
-  <text x="${cx}" y="${fy + (story ? 52 : 46)}" text-anchor="middle" ${MONT} font-weight="700" font-size="${story ? 33 : 27}" letter-spacing="1.2" fill="${T.sub}">sisyphusbrewing.com/pages/open-mic</text>
-  ${story ? place(seal, cx, fy + 150, { height: 118 }) : ''}`;
+  ${opt.sticker ? '' : `<text x="${cx}" y="${fy + (story ? 52 : 46)}" text-anchor="middle" ${MONT} font-weight="700" font-size="${story ? 33 : 27}" letter-spacing="1.2" fill="${T.sub}">sisyphusbrewing.com/pages/open-mic</text>`}
+  ${story ? place(seal, cx, fy + (opt.sticker ? 205 : 150), { height: opt.sticker ? 104 : 118 }) : ''}`;
 }
 
 const VARIANTS = {
