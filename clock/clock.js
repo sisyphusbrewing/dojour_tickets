@@ -465,7 +465,9 @@ async function loadCash() {
   if (st) drawCash();
 }
 function drawCash() {
-  var on = !!(cash && st && st.on_schedule);
+  // Managers see it too, even a login that doesn't take shifts (Sam's), so
+  // they can count or check the drawer themselves (Sam, Nov 24 2026).
+  var on = !!(cash && st && (st.on_schedule || isMgr));
   $('cashSection').classList.toggle('hidden', !on);
   if (!on) return;
   function line(c, label) {
@@ -563,7 +565,9 @@ async function loadCashDays(start, thru) {
   var r;
   try { r = await sb.rpc('cash_days', { p_from: start, p_thru: thru }); } catch (e) { r = { error: e }; }
   var days = r.error ? [] : (r.data || []);
-  $('cashFold').classList.toggle('hidden', !days.length);
+  // Shown even before the first count, so it is clear where the counts will land.
+  $('cashFold').classList.toggle('hidden', !!r.error);
+  if (!days.length) { $('cashDays').innerHTML = '<div class="row"><div>No drawer counts in this pay period yet.<small>They start with the first clock-in of a day, on the Clock tab.</small></div></div>'; return; }
   $('cashDays').innerHTML = days.map(function (d) {
     var bits = [];
     bits.push(d.open_total != null ? 'Opened ' + money(d.open_total) + ' (' + escapeHtml(first(d.open_by)) + ')' : 'No opening count');
