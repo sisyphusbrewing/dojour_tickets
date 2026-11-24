@@ -228,11 +228,17 @@ function shiftHtml(s, today) {
 function showsHtml(day) {
   var by = {}, order = [], n = needs[day];
   var list = n && n.events && n.events.length ? n.events : (showsByDay[day] || []);
+  // Events from the events@ calendar that the website doesn't sell (a private
+  // party, a rental): their own line, with the time when there is one (Sam,
+  // Nov 24 2026: "can we pull those events from the calendar?").
+  var cal = list.filter(function (x) { return x.cal; });
+  list = list.filter(function (x) { return !x.cal; });
   list.forEach(function (x) {
     if (!by[x.title]) { by[x.title] = []; order.push(x.title); }
     by[x.title].push(escapeHtml(x.time) + (x.free ? ', free' : ', ' + x.sold + ' sold'));
   });
-  return order.map(function (t) { return '<div class="dshow"><b>' + escapeHtml(t) + '</b> ' + by[t].join(' · ') + '</div>'; }).join('');
+  return order.map(function (t) { return '<div class="dshow"><b>' + escapeHtml(t) + '</b> ' + by[t].join(' · ') + '</div>'; }).join('') +
+    cal.map(function (x) { return '<div class="dshow dcal"><b>' + escapeHtml(x.title) + '</b> ' + (x.time ? escapeHtml(x.time) + ', ' : '') + 'on the events calendar</div>'; }).join('');
 }
 
 // ---------- Managers: how many people a day needs ----------

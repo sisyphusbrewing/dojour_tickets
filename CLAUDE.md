@@ -179,6 +179,20 @@ Dojour gotchas, learned the hard way:
   Christmas Day, New Year's Day. Rules in
   `supabase/migrations/20261124190000_closed_days.sql`, checks in
   `supabase/tests/closed_days/`.
+- **The events@ calendar on the Schedule** (Sam, Nov 24 2026: "can we pull
+  those events from the calendar?" ... "the google calendar for
+  events@sisyphusbrewing.com"). That Google Calendar holds everything: the
+  shows, and what the website never sells (private parties, rentals, groups).
+  `venue_calendar.py` (workflow "Venue calendar", hourly) reads it through its
+  secret iCal address, kept only in `venue_calendar_feed` (service key), and
+  saves title, day and times (never descriptions or guests) to
+  `venue_calendar`; holds ("HOLD ...", "Possible ...") are left off. Every
+  staff login sees an event on its day unless the website sells a show by that
+  name that day; one with a start time counts like a free event toward the
+  day's number, and a shift on a phone calendar says what else is on. Rules in
+  `supabase/migrations/20261124200000_venue_calendar.sql`, checks in
+  `supabase/tests/venue_calendar/` and `test_venue_calendar.py`. If Google's
+  secret address is reset, save the new one in `venue_calendar_feed`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones").
   All staff use it since Nov 17 2026 (Sam: "they will be tracking their tips
@@ -467,7 +481,8 @@ up) `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Never print or com
    in dry-run mode if it has one, open the page in Playwright on desktop and
    phone width, or query the data that should have changed. Say what you
    checked. "Should work" is not done.
-3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_deck_recording test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_comic_ads_refresh test_inbox_trash test_recording_mail test_ticket_fee test_walkon`.
+3. **Tests:** `python -m unittest test_exchange_ticket test_settlement_draft test_sync_inventory test_dojour_refund test_split_and_share test_advance_auto test_voice_notes test_sales_by_day test_door_list_keep test_agent_reports test_dojour_holds test_door_count test_deck_music test_deck_lineup test_deck_recording test_schedule_notify test_booking_inbox test_events_inbox test_shopify_pages test_pay_request_notify test_supply_orders test_safety_notify test_comic_ads_refresh test_inbox_trash test_recording_mail test_ticket_fee test_walkon test_venue_calendar`
+   (`pip install requests icalendar recurring-ical-events` first).
    They also run on every pull request. Tests must not depend on today's date;
    build show dates relative to now. Never skip or delete a test to go green.
    Money math, ticket counts and anything that emails customers deserve a test.

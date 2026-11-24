@@ -270,6 +270,9 @@
         // A day we're closed (a holiday): Tonight says so (Sam, Nov 24 2026).
         if (d.closed && d.day === from) closedToday = d.closed;
         (d.events || []).forEach(function (e) {
+          // Tonight and Coming up are shows with tickets; events@ calendar
+          // events (a private party) are on the Schedule instead.
+          if (e.cal) return;
           var tm = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(e.time || ''), p = String(d.day).split('-');
           if (!tm || p.length !== 3) return;
           var at = new Date(+p[0], +p[1] - 1, +p[2], (+tm[1] % 12) + (/pm/i.test(tm[3]) ? 12 : 0), +tm[2]);
