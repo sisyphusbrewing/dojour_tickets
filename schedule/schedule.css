@@ -36,6 +36,8 @@ section { margin-top: 14px; }
 .day-h small { color: var(--gray); font-size: 15px; margin-left: auto; }
 .dshow { color: var(--muted); font-size: 15px; line-height: 1.35; margin-bottom: 6px; overflow-wrap: anywhere; }
 .dshow b { color: var(--white); font-weight: 600; }
+/* An event from the events@ calendar the website doesn't sell (a private party). */
+.dcal { padding-left: 10px; border-left: 3px solid var(--slate-light); }
 .doff { color: #f0d9a8; font-size: 15px; margin-bottom: 6px; }
 .doff.ask { color: var(--gray); font-style: italic; }
 /* Managers: "Needs 3 people, 1 scheduled" and why. Amber while the day is short. */

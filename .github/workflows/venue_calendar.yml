@@ -1,0 +1,43 @@
+name: Venue calendar
+
+# Copies the events@ Google Calendar (private parties, rentals, groups, the
+# shows) onto the staff Schedule. See venue_calendar.py. (Sam, Nov 24 2026:
+# "can we pull those events from the calendar?" ... "the google calendar for
+# events@sisyphusbrewing.com")
+#
+# The calendar's private address is kept in the database
+# (venue_calendar_feed), never here. This repo's logs are public: the script
+# prints counts only, never event titles.
+
+on:
+  schedule:
+    # Every hour at :23, 6 AM to midnight Central (12:23 to 06:23 UTC in
+    # winter; an hour later by the clock in summer)
+    - cron: '23 0-6,12-23 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: count what it would save, save nothing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: venue-calendar
+  cancel-in-progress: false
+
+jobs:
+  calendar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests icalendar==7.3.2 recurring-ical-events==3.8.2
+      - name: Copy the events@ calendar onto the Schedule
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          SUPABASE_URL: "https://idsdwkubqnavkazlteis.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python venue_calendar.py

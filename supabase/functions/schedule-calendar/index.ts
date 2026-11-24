@@ -38,7 +38,7 @@ const ZONE = [
 
 type Shift = {
   id: number; position: string; note: string; up_for_grabs: boolean; until_close: boolean;
-  starts: string; ends: string; updated: string; with: string[];
+  starts: string; ends: string; updated: string; with: string[]; events?: string[];
 };
 
 type Closed = { day: string; next: string; note: string; updated: string };
@@ -83,6 +83,8 @@ export function buildCalendar(shifts: Shift[], now = new Date(), closed: Closed[
     if (s.until_close) about.push("Until close.");
     if (s.note) about.push(s.note);
     if (s.with && s.with.length) about.push(`Also on: ${s.with.join(", ")}`);
+    // What else is on the events@ calendar that day (a private party, a rental).
+    if (s.events && s.events.length) about.push(`On the calendar: ${s.events.join("; ")}`);
     about.push(`Swap or give it up: ${SITE}`);
     lines.push(
       "BEGIN:VEVENT",
