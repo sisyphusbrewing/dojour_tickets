@@ -1,7 +1,9 @@
 // Sisyphus - one person's shifts as a calendar their phone subscribes to.
 //
 // GET ?t=<private code>   returns an .ics calendar of that person's posted
-//                         shifts (Apple Calendar, Google Calendar, Outlook).
+//                         shifts (Apple Calendar, Google Calendar, Outlook),
+//                         plus the days we're closed as all-day days (Sam,
+//                         Nov 24 2026: closed Christmas and New Year's Day).
 //
 // A staff member asked (Nov 23 2026) to "sync our schedule from the staff
 // portal to our iCal or Google Calendar". The Schedule's My settings tab hands
@@ -39,6 +41,8 @@ type Shift = {
   starts: string; ends: string; updated: string; with: string[];
 };
 
+type Closed = { day: string; next: string; note: string; updated: string };
+
 // Calendar text: commas, semicolons, backslashes and line breaks are escaped.
 function esc(s: string) {
   return String(s ?? "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
@@ -59,7 +63,7 @@ function fold(line: string) {
   return out.join("\r\n ");
 }
 
-export function buildCalendar(shifts: Shift[], now = new Date()) {
+export function buildCalendar(shifts: Shift[], now = new Date(), closed: Closed[] = []) {
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
   const lines = [
     "BEGIN:VCALENDAR",
@@ -94,6 +98,22 @@ export function buildCalendar(shifts: Shift[], now = new Date()) {
       "END:VEVENT",
     );
   }
+  // A day we're closed: all day, shown as free time, so it never looks like a shift.
+  for (const c of closed) {
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:closed-${c.day}@staff.sisyphusbrewing.com`,
+      `DTSTAMP:${stamp}`,
+      `LAST-MODIFIED:${c.updated}`,
+      `DTSTART;VALUE=DATE:${c.day}`,
+      `DTEND;VALUE=DATE:${c.next}`,
+      `SUMMARY:${esc(`Sisyphus: ${c.note}`)}`,
+      "TRANSP:TRANSPARENT",
+      `DESCRIPTION:${esc(`We're closed. No shifts this day.\n${SITE}`)}`,
+      `URL:${SITE}`,
+      "END:VEVENT",
+    );
+  }
   lines.push("END:VCALENDAR");
   return lines.map(fold).join("\r\n") + "\r\n";
 }
@@ -117,7 +137,7 @@ Deno.serve(async (req) => {
   const cal = await r.json();
   if (!cal) return new Response("This calendar link has been switched off", { status: 404 });
 
-  return new Response(buildCalendar(cal.shifts ?? []), {
+  return new Response(buildCalendar(cal.shifts ?? [], new Date(), cal.closed ?? []), {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'inline; filename="sisyphus-shifts.ics"',

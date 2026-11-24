@@ -169,6 +169,16 @@ Dojour gotchas, learned the hard way:
   `is_manager()`. Rules in
   `supabase/migrations/20261118060000_schedule_builder.sql`, checks in
   `supabase/tests/schedule_builder/`.
+- **Days we're closed** (Sam, Nov 24 2026: "mark on employee schedule we
+  will be closed Christmas Day and New Year's Day"). `staffing_days.closed`
+  marks a holiday: it needs nobody, every staff login sees its note on the
+  Schedule (and the staff home's Tonight box), a rule on `shifts` refuses any
+  shift on it, and each person's phone calendar shows it as an all-day
+  "Sisyphus: Closed for ..." day. Whoever builds the schedule ticks "We're
+  closed this day" in a day's People needed box. Closed now: Thanksgiving,
+  Christmas Day, New Year's Day. Rules in
+  `supabase/migrations/20261124190000_closed_days.sql`, checks in
+  `supabase/tests/closed_days/`.
 - **`clock/`** is the time clock (Sam, Nov 16 2026: "people enter their shifts
   tied to the scheduler" and "clock in and out via tap with their phones").
   All staff use it since Nov 17 2026 (Sam: "they will be tracking their tips

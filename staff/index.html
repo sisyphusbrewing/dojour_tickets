@@ -251,6 +251,7 @@
     //    Dojour holds (no buyer email) because those aren't sales. Sold means
     //    website + Dojour together; comps are counted apart.
     // A show on both lists is one show, with its ticket total.
+    var closedToday = null;   // the note when we're closed today ("Closed for Christmas Day")
     var CAL_DAYS = 62;         // how far ahead the calendar is read (the most the database hands over at once)
     var KEEP_MS = 3 * 60 * 60 * 1000;     // a show stays listed for 3 hours after it starts
 
@@ -266,6 +267,8 @@
       if (r.error || !r.data) return null;
       var out = [];
       (r.data.days || []).forEach(function (d) {
+        // A day we're closed (a holiday): Tonight says so (Sam, Nov 24 2026).
+        if (d.closed && d.day === from) closedToday = d.closed;
         (d.events || []).forEach(function (e) {
           var tm = /(\d{1,2}):(\d{2})\s*(AM|PM)/i.exec(e.time || ''), p = String(d.day).split('-');
           if (!tm || p.length !== 3) return;
@@ -346,7 +349,8 @@
       }
       var next = shows[0];
       $('tonight').className = 'tonight dark';
-      $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div><div class="night-t">' + (calendar ? 'No show tonight.' : 'No ticketed show tonight.') + '</div>' +
+      $('tonight').innerHTML = '<div class="tn-lbl">Tonight</div><div class="night-t">' +
+        (closedToday ? escapeHtml(closedToday) + '.' : calendar ? 'No show tonight.' : 'No ticketed show tonight.') + '</div>' +
         (next ? '<div class="tn-next">Next up: <b>' + escapeHtml(next.show_title) + '</b>, ' + escapeHtml(next.show_date.replace(' • ', ' at ')) +
           ' · ' + (noTickets(next) ? 'free' : next.sold + ' sold') + '</div>'
               : '<div class="tn-next">Nothing on sale right now.</div>');
