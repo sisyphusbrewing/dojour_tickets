@@ -1,0 +1,45 @@
+/* Help page: the chat, Tell Sam and Sam's list. Built on staff/look.css. */
+.look main { padding-bottom: 60px; }
+.look .lead { font-size: 18px; line-height: 1.45; margin: 18px 0 14px; }
+.look .small { font-size: 14px; }
+.look .err { color: #f0b7ac; margin: 8px 0; }
+
+.chat { display: flex; flex-direction: column; gap: 14px; margin: 6px 0 14px; }
+.turn { display: flex; flex-direction: column; gap: 8px; }
+.bubble { max-width: 92%; padding: 12px 15px; border-radius: 16px; line-height: 1.45; font-size: 17px; overflow-wrap: anywhere; }
+.bubble.q { align-self: flex-end; background: var(--slate); color: #fff; border-bottom-right-radius: 5px; }
+.bubble.a { align-self: flex-start; background: var(--card); border-bottom-left-radius: 5px; }
+.bubble.a.pending { color: var(--gray); font-style: italic; }
+.bubble.a.bad { background: #4a2f2b; color: #f0d0c8; }
+.escalate { align-self: flex-start; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; background: #3a3628; color: #f0d9a8; border-radius: 12px; padding: 10px 14px; }
+.sent { align-self: flex-start; color: #b9d8a8; font-size: 15px; font-weight: 600; }
+.turn .btn-link { align-self: flex-start; padding: 0; }
+
+.starters { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.ask { margin: 8px 0 14px; }
+.ask textarea { font-size: 17px; resize: vertical; }
+.ask-acts { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.ask-acts .btn-big { flex: 1 1 auto; }
+
+.fold { margin-top: 22px; }
+.fold summary { cursor: pointer; color: var(--slate-light); font-weight: 700; padding: 8px 0; }
+.knows { margin: 6px 0 0 20px; padding: 0; line-height: 1.6; color: var(--muted); }
+
+.tell .kinds { display: flex; flex-wrap: wrap; gap: 8px; }
+.tell textarea { font-size: 17px; }
+.tell .field { margin-top: 12px; }
+.tell .check { margin-top: 12px; }
+.tell .btn-big { width: 100%; margin-top: 14px; }
+
+.item .item-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.item .body { margin-top: 8px; line-height: 1.45; overflow-wrap: anywhere; }
+.item .answer { margin-top: 10px; padding: 10px 12px; background: #2f3a44; border-radius: 10px; line-height: 1.45; }
+.item .answer .lbl { margin-bottom: 2px; color: var(--slate-light); }
+.item.done { opacity: .7; }
+.item .reply { margin-top: 12px; }
+.item .reply .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.look .tag.new { background: #c9a35a; color: #2b2929; border-color: transparent; }
+.look .tag.ok { background: #3e5a3a; color: #d7ecd0; border-color: transparent; }
+.look .tag.dim { color: var(--gray); }
+.due { color: #f0d9a8; }
+.look #qFold .list { margin-top: 8px; }
