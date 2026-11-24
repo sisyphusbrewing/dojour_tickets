@@ -261,6 +261,7 @@ function needWhy(n) {
 // to set that one day by hand. Only managers, only days still to come.
 function needHtml(day) {
   var n = needs[day];
+  if (n && n.closed) return '';      // closedHtml() says it
   if (!isMgr || view !== 'all' || !n || n.people == null) return '';
   var on = onDay(day);
   if (!n.people && !on && !n.set) return '';
@@ -272,6 +273,18 @@ function needHtml(day) {
   return '<button type="button" class="dneed ' + (short ? 'short' : 'ok') + '" onclick="openNeed(\'' + day + '\')"><b>' + head + '</b>' +
     '<span>' + escapeHtml(needWhy(n)) + '</span></button>';
 }
+// A day we're closed (a holiday): a plain line everyone sees (Sam, Nov 24
+// 2026: "mark on employee schedule we will be closed Christmas Day and New
+// Year's Day"). No shift can go on it; whoever builds the schedule taps it to
+// open the day again.
+function closedHtml(day) {
+  var n = needs[day];
+  if (!n || !n.closed) return '';
+  var canOpen = isMgr && view === 'all' && day >= todayIso() && n.people != null;
+  return canOpen
+    ? '<button type="button" class="dclosed" onclick="openNeed(\'' + day + '\')"><b>' + escapeHtml(n.closed) + '</b><span>No shifts this day. Tap to change.</span></button>'
+    : '<div class="dclosed"><b>' + escapeHtml(n.closed) + '</b><span>No shifts this day.</span></div>';
+}
 function openNeed(day) {
   var n = needs[day];
   if (!n) return;
@@ -281,21 +294,34 @@ function openNeed(day) {
     : (n.rule_people ? 'The usual: ' + needWhy(n) + '.' : 'Nothing is on and we’re closed, so the usual is nobody.');
   $('needPeople').value = n.people;
   $('needNote').value = n.set ? n.set.note : '';
+  $('needClosed').checked = !!(n.set && n.set.closed);
+  needClosedChanged();
   $('needUsual').classList.toggle('hidden', !n.set);
   $('needDialog').showModal();
   $('needPeople').select();
 }
+// "We're closed this day": the number is nobody, and the note says why.
+function needClosedChanged() {
+  var c = $('needClosed').checked;
+  $('needPeople').disabled = c;
+  if (c) $('needPeople').value = 0;
+  $('needNote').placeholder = c ? 'Closed for Christmas Day' : 'Private party in the back room';
+}
+$('needClosed').addEventListener('change', needClosedChanged);
 async function saveNeed(people) {
+  var closed = people !== null && $('needClosed').checked;
   $('needSave').disabled = true;
-  var r = await sb.rpc('schedule_need_set', { p_day: needDay, p_people: people, p_note: people === null ? '' : $('needNote').value.trim() });
+  var r = closed ? await sb.rpc('schedule_day_close', { p_day: needDay, p_note: $('needNote').value.trim() })
+    : await sb.rpc('schedule_need_set', { p_day: needDay, p_people: people, p_note: people === null ? '' : $('needNote').value.trim() });
   $('needSave').disabled = false;
   if (r.error) return fail(r);
   $('needDialog').close();
-  toast(people === null ? 'Back to the usual.' : 'Saved for ' + niceDay(needDay) + '.');
+  toast(people === null ? 'Back to the usual.' : closed ? 'Marked closed ' + niceDay(needDay) + '.' : 'Saved for ' + niceDay(needDay) + '.');
   await loadNeeds(); drawWeek();
 }
 $('needForm').addEventListener('submit', function (e) {
   e.preventDefault();
+  if ($('needClosed').checked) return saveNeed(0);
   var v = parseInt($('needPeople').value, 10);
   if (isNaN(v) || v < 0 || v > 40) return toast('Type a number from 0 to 40.', true);
   saveNeed(v);
@@ -350,7 +376,7 @@ function drawWeek() {
 
   var pastDays = 0, html = '', listed = 0;
   for (var i = 0; i < 7; i++) {
-    var d = addDays(weekStart, i), day = iso(d), dow = d.getDay(), hrs = OPEN[dow];
+    var d = addDays(weekStart, i), day = iso(d), dow = d.getDay(), shut = !!(needs[day] && needs[day].closed), hrs = shut ? null : OPEN[dow];
     var list = shifts.filter(function (s) { return s.work_date === day; }).filter(function (s) {
       return view === 'mine' ? s.user_id === me.id : view === 'grabs' ? grabs.indexOf(s) !== -1 : true;
     });
@@ -364,10 +390,10 @@ function drawWeek() {
     html += '<div class="day' + (day === today ? ' today' : '') + (past ? ' past' : '') + (hrs ? '' : ' closed') + (list.length ? '' : ' bare') + '">' +
       '<div class="day-h"><b>' + DAY_LONG[dow] + '</b><span>' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span>' +
       (day === today ? '<em>Today</em>' : '') + (hrs ? '' : '<small>Closed</small>') + '</div>' +
-      showsHtml(day) + off + needHtml(day) +
+      closedHtml(day) + showsHtml(day) + off + needHtml(day) +
       (list.length ? '<div class="shifts">' + list.map(function (s) { return shiftHtml(s, today); }).join('') + '</div>'
                    : '<div class="none">' + (view === 'mine' ? 'Not working' : view === 'grabs' ? 'Nothing' : hrs ? 'Nobody yet' : '') + '</div>') +
-      (isMgr ? '<button class="add" onclick="openShift(null, \'' + day + '\')">+ Add a shift</button>' : '') + '</div>';
+      (isMgr && !shut ? '<button class="add" onclick="openShift(null, \'' + day + '\')">+ Add a shift</button>' : '') + '</div>';
   }
   // "Just me" and "Up for grabs" only list the days that have something (on a
   // phone), so a week with nothing says so in a sentence instead.

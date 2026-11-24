@@ -44,6 +44,10 @@ section { margin-top: 14px; }
 .dneed.short { border-color: #8a6d2f; background: rgba(240, 217, 168, .07); }
 .dneed.short b { color: #f0d9a8; }
 .dneed:hover { border-color: var(--slate-light); }
+/* A day we're closed (a holiday): everyone sees it. */
+.dclosed { display: block; width: 100%; text-align: left; background: rgba(240, 217, 168, .07); border: 1px solid #8a6d2f; border-radius: 10px; padding: 8px 10px; margin: 2px 0 8px; color: var(--muted); font: inherit; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+button.dclosed { cursor: pointer; }
+.dclosed b { display: block; color: #f0d9a8; font-weight: 700; font-size: 17px; }
 .dneed + .shifts, .dneed + .none { margin-top: 10px; }
 .dshow + .shifts, .doff + .shifts, .dshow + .none, .doff + .none { margin-top: 10px; }
 .none { color: var(--gray); }
