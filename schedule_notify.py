@@ -28,6 +28,10 @@ picked "text" gets the same notice by email instead.
 
 Several notices for one person go out as one email, not five.
 
+Notes staff send Sam from the Help page (help/, Nov 24 2026) are emailed
+to him here too, one email each, and his answers ride the outbox back
+(kind "help_answer").
+
 It also watches the office PC (Sam, Nov 18 2026: the PC is the nightly
 backup and the offline fallback until a NAS arrives). The PC checks in every
 10 minutes; device_check() in the database says when it has gone quiet for
@@ -64,6 +68,7 @@ TWILIO_FROM = (os.environ.get("TWILIO_FROM") or "").strip()
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
 PAGE_URL = "https://staff.sisyphusbrewing.com/schedule/"
 CLOCK_URL = "https://staff.sisyphusbrewing.com/clock/"
+HELP_URL = "https://staff.sisyphusbrewing.com/help/?tell"
 AUTH = {"apikey": SERVICE_KEY, "Authorization": f"Bearer {SERVICE_KEY}", "Content-Type": "application/json"}
 CENTRAL = ZoneInfo("America/Chicago")
 
@@ -92,6 +97,8 @@ SUBJECTS = {
     "clock_typed": "Hours were typed in by hand",
     "clock_fixed": "Your hours were changed",
     "clock_open": "Did you forget to clock out?",
+    # Help (help/, Nov 24 2026): Sam answered a note someone sent him.
+    "help_answer": "Sam answered your note",
 }
 
 
@@ -187,6 +194,66 @@ def check_alerts(rows):
     return out
 
 
+HELP_LIST = "https://staff.sisyphusbrewing.com/help/#sam"
+HELP_KINDS = {
+    "idea": "Idea",
+    "need": "Needs you",
+    "broken": "Something's broken",
+    "fyi": "FYI",
+    "help": "The helper couldn't solve it",
+}
+
+
+def help_alerts(rows):
+    """Turn help_alerts() rows into emails for Sam: [(subject, body)].
+    Staff send Sam ideas, requests, problems and FYIs from /help/ (Sam, Nov 24
+    2026: "One that allows Grace to submit things to me more directly", "one
+    that allows staff to submit suggestions or thoughts directly"), and the
+    staff helper hands over what it couldn't solve. One email per note, the
+    whole note in it, so Sam can read it on his phone without opening the page.
+    Pure, so the tests can check the wording."""
+    out = []
+    for r in rows or []:
+        kind = HELP_KINDS.get(r.get("kind"), "Note")
+        who = (r.get("from_name") or "").strip() or "Someone (no name)"
+        body = (r.get("body") or "").strip()
+        first_line = " ".join(body.split())
+        short = first_line[:60] + ("..." if len(first_line) > 60 else "")
+        subject = f"{kind} from {who.split(' ')[0] if r.get('from_name') else 'staff'}: {short}"
+        lines = [f"{who} sent you this from the staff site."]
+        if r.get("need_by"):
+            lines.append(f"Needed by: {r['need_by']}")
+        lines += ["", body]
+        if r.get("question") and r.get("kind") != "help":
+            lines += ["", f"They had asked the helper: {r['question']}"]
+        lines += ["", f"Answer or mark it done: {HELP_LIST}"]
+        if not r.get("from_name"):
+            lines += ["", "It was sent without a name, so there's no one to answer; mark it done when you've read it."]
+        out.append((subject, "\n".join(lines)))
+    return out
+
+
+def send_help_alerts():
+    """Ask the database for new notes to Sam and email each one to him."""
+    alerts = help_alerts(rpc("help_alerts", optional=True))
+    if not alerts:
+        return 0
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"{len(alerts)} note(s) to Sam not emailed: SMTP credentials missing. They wait on the Help page.")
+        return 0
+    with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=30) as server:
+        server.login(SMTP_USER, SMTP_PASS)
+        for subject, body in alerts:
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = f"Sisyphus Staff <{FROM_EMAIL}>"
+            msg["To"] = OWNER_EMAIL
+            msg.set_content(body + "\n\nSisyphus")
+            server.send_message(msg)
+    print(f"Emailed Sam {len(alerts)} note(s) from staff.")
+    return len(alerts)
+
+
 def send_check_alerts():
     """Ask the database what changed with printed checks and email Sam."""
     alerts = check_alerts(rpc("check_alerts", optional=True))
@@ -279,7 +346,9 @@ def plan(rows, can_text, now):
             lines.append("")
             if any(k.startswith("clock_") for k in kinds):
                 lines.append(f"The clock: {CLOCK_URL}")
-            if any(not k.startswith("clock_") for k in kinds):
+            if any(k.startswith("help_") for k in kinds):
+                lines.append(f"Your notes to Sam: {HELP_URL}")
+            if any(not k.startswith(("clock_", "help_")) for k in kinds):
                 lines.append(f"The schedule: {PAGE_URL}")
             lines += ["", "To get these by text instead, or to stop them, open the schedule and look under "
                           f"\"How to reach me\": {PAGE_URL}",
@@ -354,6 +423,11 @@ def main(quietly=False):
             send_check_alerts()
         except (requests.RequestException, smtplib.SMTPException, OSError) as err:
             print(f"Check alerts failed ({type(err).__name__}); trying again next look.")
+        # Notes staff sent Sam from the Help page.
+        try:
+            send_help_alerts()
+        except (requests.RequestException, smtplib.SMTPException, OSError) as err:
+            print(f"Help notes failed ({type(err).__name__}); trying again next look.")
 
     rows = rpc("schedule_outbox_pending")
     if not rows:

@@ -416,6 +416,20 @@ Dojour gotchas, learned the hard way:
   casting (a launchd job, `home/kitchen/cast/`), only when the Hub is idle.
   Rules in `supabase/migrations/20261123030000_home_kitchen.sql`, checks in
   `supabase/tests/home_kitchen/`.
+- **`help/`** is Help (Sam, Nov 24 2026: "one that allows Staff to have that
+  resource", and ways for Grace and staff to reach him directly). Ask: a chat
+  helper, the Edge Function `staff-help`, that answers only from the staff
+  handbook. The handbook lives in the database (`help_handbook`, one row per
+  section with the lowest login that may read it), never in this repo, since
+  the repo is public; its source text is kept in project files
+  (`staff-help/handbook.md`). The helper has no tools: it can't see money,
+  inboxes or anyone's details. Tell Sam: an idea, something needed from Sam
+  (with a date), something broken, or an FYI (ideas and FYIs can go without a
+  name); `schedule_notify.py` emails sam@ and Sam answers on the page's
+  "Sam's list" (owner only), which tells the sender the way they picked on
+  the Schedule. Nothing is kept on the phone. Rules in
+  `supabase/migrations/20261124060000_staff_help.sql`, checks in
+  `supabase/tests/staff_help/`.
 - The door page (`index.html`) keeps working with no internet (Nov 18 2026):
   it saves tonight's lists on the phone, queues check-ins and sends them when
   the connection is back; `door-sw.js` keeps the page opening offline.

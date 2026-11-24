@@ -65,6 +65,14 @@ var STAFF_TOOLS = [
   // Nov 16 to 29 has its first days on the old clock and the rest here.
   { id: 'clock', group: 'you', min: 'staff', ico: '⏱️', href: '/clock/', title: 'Clock',
     desc: 'Clock in and out with a tap at the bar. Add your tips, see your hours for the pay period.', find: 'clock in out punch hours tips tip tracker payroll timesheet time when i work gotab nfc tap' },
+  // Help (Sam, Nov 24 2026): ask the staff helper how to do anything at work
+  // (Claude, answering only from the staff handbook), or send Sam an idea, a
+  // request, something broken or an FYI. Owner only until Sam has looked over
+  // the handbook's contents; then min becomes staff for both tiles.
+  { id: 'help', group: 'you', min: 'owner', ico: '💬', href: '/help/', title: 'Ask for help', short: 'Ask for help',
+    desc: 'Ask how to do anything at work: the clock, the deck, GoTab, gift cards, printers. If it can’t solve it, one tap sends it to Sam.', find: 'help question how do i tech support broken stuck ai assistant handbook' },
+  { id: 'tellsam', group: 'you', min: 'owner', ico: '📮', href: '/help/?tell', title: 'Tell Sam',
+    desc: 'An idea, something you need from Sam, something broken, or just so you know. Ideas can go without your name.', find: 'suggestion idea feedback request ask sam need approval broken report thoughts' },
   { id: 'voice', group: 'you', min: 'door', ico: '🎙️', href: '/voice/', title: 'Voice notes', flag: 'voice',
     desc: 'Record a meeting or a thought. Claude emails you the summary and to-dos.', find: 'record meeting memo' },
 

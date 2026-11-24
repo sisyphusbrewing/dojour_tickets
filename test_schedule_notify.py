@@ -83,6 +83,12 @@ class PlanTest(unittest.TestCase):
         self.assertIn("The schedule: " + sn.PAGE_URL, deliveries[0]["body"])
         self.assertNotIn("The clock: ", deliveries[0]["body"])
 
+    def test_help_answer_links_to_the_help_page_not_the_schedule(self):
+        deliveries, _ = sn.plan([notice(1, kind="help_answer")], can_text=False, now=NOW)
+        self.assertEqual(deliveries[0]["subject"], "Sam answered your note")
+        self.assertIn("Your notes to Sam: " + sn.HELP_URL, deliveries[0]["body"])
+        self.assertNotIn("The schedule: ", deliveries[0]["body"])
+
     def test_mixed_notices_link_to_both_pages(self):
         deliveries, _ = sn.plan([notice(1, kind="clock_fixed"), notice(2, kind="shift_changed")],
                                 can_text=False, now=NOW)
@@ -270,3 +276,45 @@ class CheckAlertTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HelpAlertTest(unittest.TestCase):
+    """Notes staff send Sam from the Help page (Nov 24 2026)."""
+    def test_a_request_with_a_date(self):
+        [(subject, body)] = sn.help_alerts([{"kind": "need", "body": "Please sign the W-9 for Friday's feature",
+                                             "need_by": "2026-11-27", "from_name": "Gee Example"}])
+        self.assertEqual(subject, "Needs you from Gee: Please sign the W-9 for Friday's feature")
+        self.assertIn("Needed by: 2026-11-27", body)
+        self.assertIn("Please sign the W-9", body)
+        self.assertIn(sn.HELP_LIST, body)
+
+    def test_an_idea_without_a_name(self):
+        [(subject, body)] = sn.help_alerts([{"kind": "idea", "body": "Popcorn machine", "from_name": None}])
+        self.assertEqual(subject, "Idea from staff: Popcorn machine")
+        self.assertIn("Someone (no name)", body)
+        self.assertIn("no one to answer", body)
+
+    def test_the_helper_hands_over_a_question(self):
+        [(subject, body)] = sn.help_alerts([{"kind": "help", "body": "I asked the helper: printer?\n\nIt said: no idea",
+                                             "from_name": "Pat Example", "question": "printer?", "helper_answer": "no idea"}])
+        self.assertTrue(subject.startswith("The helper couldn't solve it from Pat: I asked the helper"))
+        self.assertEqual(body.count("printer?"), 1)
+
+    def test_a_long_note_has_a_short_subject_and_the_whole_body(self):
+        long = "word " * 100
+        [(subject, body)] = sn.help_alerts([{"kind": "fyi", "body": long, "from_name": "Pat Example"}])
+        self.assertLess(len(subject), 90)
+        self.assertTrue(subject.endswith("..."))
+        self.assertIn(long.strip(), body)
+
+    def test_nothing_to_say(self):
+        self.assertEqual(sn.help_alerts(None), [])
+
+    def test_a_look_survives_a_help_alert_failure(self):
+        with mock.patch.object(sn, "rpc", side_effect=lambda name, optional=False: []), \
+             mock.patch.object(sn, "send_device_alerts"), \
+             mock.patch.object(sn, "send_check_alerts"), \
+             mock.patch.object(sn, "send_help_alerts", side_effect=requests.ConnectionError()) as alerts, \
+             mock.patch.object(sn, "DRY_RUN", False):
+            sn.main(quietly=True)
+        alerts.assert_called_once()

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sisyphus Help</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#2b2929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Help">
+  <link rel="icon" type="image/png" href="../brewing/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="../brewing/icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../staff.css">
+  <link rel="stylesheet" href="../staff/look.css">
+  <link rel="stylesheet" href="help.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../staff.js"></script>
+  <script src="../staff/nav.js"></script>
+</head>
+<body class="look">
+  <!-- Help (Sam, Nov 24 2026). Three things on one page:
+         Ask      the staff helper: Claude answers from the staff handbook only
+                  (the Edge Function staff-help). It has no tools and can't
+                  see money, inboxes or anyone's private details.
+         Tell Sam an idea or suggestion, something someone needs from Sam
+                  (Sam: "allows Grace to submit things to me more directly"),
+                  something broken, or just so you know. Ideas and FYIs can go
+                  without a name. Sam is emailed and answers here.
+         Sam      (owner login only) everything sent to Sam, and what staff
+                  asked the helper, so the handbook can fill its gaps.
+       The rules live in supabase/migrations/20261124060000_staff_help.sql.
+       Nothing is kept on the phone: the chat is gone when the page closes,
+       since the desk computer is shared. -->
+  <div id="lock" class="hidden"><div class="card"><h1>Help</h1></div></div>
+
+  <header>
+    <div class="wrap">
+      <div class="hdr">
+        <a class="hdr-brand" href="../staff/">
+          <img src="../posters/assets/sisyphus-badge-dark-bg.png" alt="Sisyphus">
+          <div class="hdr-title">Help</div>
+        </a>
+      </div>
+      <nav class="tabs3 hidden" id="tabs" aria-label="Parts of Help">
+        <a href="#ask" data-tab="ask" class="on">Ask</a>
+        <a href="#tell" data-tab="tell">Tell Sam</a>
+        <a href="#sam" data-tab="sam" class="hidden" id="samTab">Sam’s list<i class="hidden" id="samBadge"></i></a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap" id="main">
+    <div class="empty hidden" id="notManager"></div>
+
+    <!-- Ask -->
+    <section id="view-ask" class="hidden">
+      <p class="lead">Ask how to do anything at work. The clock, the schedule, the Stream Deck, GoTab, gift cards, printers, what to do when something breaks.</p>
+
+      <div id="chat" class="chat" aria-live="polite"></div>
+
+      <div class="starters" id="starters">
+        <button class="chip" type="button">How do I clock in?</button>
+        <button class="chip" type="button">The Stream Deck is frozen</button>
+        <button class="chip" type="button">How do I sell a gift card?</button>
+        <button class="chip" type="button">A guest bought the wrong night</button>
+      </div>
+
+      <form id="askForm" class="ask">
+        <label class="lbl" for="q">Your question</label>
+        <textarea class="input" id="q" rows="3" maxlength="2000" placeholder="Type it like you'd text it."></textarea>
+        <div class="ask-acts">
+          <button class="btn btn-primary btn-big" id="askBtn" type="submit">Ask</button>
+          <button class="btn btn-ghost btn-sm hidden" id="newChat" type="button">Start over</button>
+        </div>
+      </form>
+
+      <p class="quiet small">The helper only knows the staff handbook. It can be wrong, so if something doesn’t look right, tell Sam. In danger? Call 911. Someone made you feel unsafe? <a href="/safe/">Say something</a>.</p>
+
+      <details class="fold" id="knowsFold">
+        <summary>What the helper knows about</summary>
+        <ul id="knows" class="knows"></ul>
+      </details>
+    </section>
+
+    <!-- Tell Sam -->
+    <section id="view-tell" class="hidden">
+      <p class="lead">Straight to Sam. He gets an email and answers here.</p>
+      <form id="tellForm" class="list tell" novalidate>
+        <div>
+          <div class="lbl">What is it?</div>
+          <div class="kinds" id="kinds" role="radiogroup" aria-label="What is it?">
+            <button class="chip" type="button" data-kind="idea" role="radio">💡 An idea or suggestion</button>
+            <button class="chip" type="button" data-kind="need" role="radio">🙋 Something I need from Sam</button>
+            <button class="chip" type="button" data-kind="broken" role="radio">🔧 Something’s broken</button>
+            <button class="chip" type="button" data-kind="fyi" role="radio">📌 Just so you know</button>
+          </div>
+        </div>
+        <div>
+          <label class="lbl" for="tellBody" id="tellLabel">Tell Sam</label>
+          <textarea class="input" id="tellBody" rows="6" maxlength="6000"></textarea>
+          <div class="field hidden" id="needByRow">
+            <label class="lbl" for="needBy">Need it by (if it matters)</label>
+            <input class="input" id="needBy" type="date">
+          </div>
+          <label class="check hidden" id="anonRow"><input type="checkbox" id="anon"> Leave my name off</label>
+          <p class="quiet small hidden" id="anonNote">Sam won’t know it was you, and his answer won’t show up for you here.</p>
+          <div class="err hidden" id="tellErr" role="alert"></div>
+          <button class="btn btn-primary btn-big" id="tellBtn" type="submit">Send to Sam</button>
+        </div>
+      </form>
+
+      <div class="band-row"><span class="band">What you’ve sent</span></div>
+      <div id="mine" class="list"></div>
+    </section>
+
+    <!-- Sam's list (owner) -->
+    <section id="view-sam" class="hidden">
+      <p class="lead">What staff sent you, open ones first. Answer, and they see it here and get it the way they picked on the Schedule.</p>
+      <div id="inbox" class="list"></div>
+      <details class="fold" id="qFold">
+        <summary>What staff asked the helper</summary>
+        <div id="questions" class="list"></div>
+      </details>
+    </section>
+  </main>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="help.js"></script>
+</body>
+</html>
