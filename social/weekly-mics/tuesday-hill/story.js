@@ -31,7 +31,7 @@ function place(p, x, y, opt = {}) {
 
 // The business card's little man, pushing. Laid out on the card's 14 degree hill
 // (business-card/source/card.py), then set down on whatever slope we give him.
-function pusher(P0, slope, k, col) {
+function pusher(P0, slope, k, col, gait) {
   const S = 14 * DEG, R = 12.5, g = x => 50 - Math.tan(S) * x, c0 = [72, g(72)];
   const uc = [Math.cos(S), -Math.sin(S)], nc = [-Math.sin(S), -Math.cos(S)];
   const u = [Math.cos(slope), -Math.sin(slope)], n = [-Math.sin(slope), -Math.cos(slope)];
@@ -47,16 +47,29 @@ function pusher(P0, slope, k, col) {
   const C = [72 - R * Math.sin(S), g(72) - R * Math.cos(S)];
   const onRock = deg => [C[0] + (R + 0.55) * Math.cos(deg * DEG), C[1] - (R + 0.55) * Math.sin(deg * DEG)];
   const fwd = (a, b) => a[0] > b[0] ? a : b, low = (a, b) => a[1] > b[1] ? a : b;
-  const foot = (heel, c) => limb(heel, 0.75, [heel[0] + 2.7 * Math.cos(S), heel[1] - 2.7 * Math.sin(S)], 0.55, c);
-  const hip = [40.2, 31.2], sh = [hip[0] + 9.6 * Math.cos(30 * DEG), hip[1] - 9.6 * Math.sin(30 * DEG)];
-  const hand = onRock(186), hand2 = onRock(199), back = [29.8, g(29.8) - 0.75], front = [44.6, g(44.6) - 0.75];
+  const foot = (heel, c, tilt = 0) => limb(heel, 0.75, [heel[0] + 2.7 * Math.cos(-S + tilt * DEG), heel[1] + 2.7 * Math.sin(-S + tilt * DEG)], 0.55, c);
+  // Walking, for the moving version: each foot is planted while the body passes
+  // over it, then lifts and swings forward. phase runs 0 to 1 per full stride.
+  const sfp = (s, lift) => [c0[0] + s * uc[0] + (0.75 + lift) * nc[0], c0[1] + s * uc[1] + (0.75 + lift) * nc[1]];
+  const STANCE = 0.62, SF = -27.0, STRIDE = 16.5;
+  const footAt = phi => {
+    phi = ((phi % 1) + 1) % 1;
+    if (phi < STANCE) return { p: sfp(SF - (phi / STANCE) * STRIDE, 0), tilt: 0 };
+    const q = (phi - STANCE) / (1 - STANCE), e = q * q * (3 - 2 * q);
+    return { p: sfp(SF - STRIDE + STRIDE * e, Math.sin(Math.PI * q) * 1.7), tilt: Math.sin(Math.PI * q) * 24 * (1 - q * 0.5) };
+  };
+  const bob = gait ? 1.3 + 1.5 * Math.cos(4 * Math.PI * (gait.phase - 0.31)) : 0;  // the hips rise as each leg swings through
+  const hip = [40.2 + bob * nc[0], 31.2 + bob * nc[1]], sh = [40.2 + 9.6 * Math.cos(30 * DEG) + bob * 0.25 * nc[0], 31.2 - 9.6 * Math.sin(30 * DEG) + bob * 0.25 * nc[1]];
+  const hand = onRock(186), hand2 = onRock(199);
+  const fa = gait ? footAt(gait.phase) : { p: [29.8, g(29.8) - 0.75], tilt: 0 }, fb = gait ? footAt(gait.phase + 0.5) : { p: [44.6, g(44.6) - 0.75], tilt: 0 };
+  const back = fa.p, front = fb.p;
   let o = '';
   const k2 = joint(hip, front, 8, 8, fwd);
-  o += limb(hip, 1.55, k2, 1.15, col.far) + limb(k2, 1.15, front, 0.75, col.far) + foot(front, col.far);
+  o += limb(hip, 1.55, k2, 1.15, col.far) + limb(k2, 1.15, front, 0.75, col.far) + foot(front, col.far, fb.tilt);
   const e2 = joint(sh, hand2, 4.7, 4.5, low);
   o += limb(sh, 1.05, e2, 0.8, col.far) + limb(e2, 0.8, hand2, 0.6, col.far);
   const k1 = joint(hip, back, 8, 8, fwd);
-  o += limb(hip, 1.65, k1, 1.2, col.man) + limb(k1, 1.2, back, 0.75, col.man) + foot(back, col.man);
+  o += limb(hip, 1.65, k1, 1.2, col.man) + limb(k1, 1.2, back, 0.75, col.man) + foot(back, col.man, fa.tilt);
   o += limb(hip, 1.7, sh, 2.45, col.man);
   const head = [sh[0] + 3.4 * Math.cos(12 * DEG), sh[1] + 3.4 * Math.sin(12 * DEG)];
   o += limb(sh, 1.0, head, 0.9, col.man);
@@ -108,7 +121,9 @@ function hill(opt) {
   const cx = W / 2, cy = story ? 1085 : 760, t = story ? 350 : 290, gap = t * 0.045, rule = t * 0.05;
   const y = bandY(cx, cy), ground = x => y(x) - t / 2 - gap - rule;
   const k = story ? 13.6 : 9.6, x0 = story ? 752 : 760;
-  const man = pusher([x0, ground(x0)], A, k, T);
+  const st = opt.state || {}, mx = st.x0 === undefined ? x0 : st.x0;
+  const man = pusher([mx, ground(mx)], A, k, T, st.gait);
+  const rot = (st.rot || 0), spots = [[-0.42, -0.1, 0.2], [0.3, 0.38, 0.15], [0.22, -0.48, 0.11], [-0.2, 0.52, 0.09]];
   const sx = story ? 1000 : 1000, standH = story ? 300 : 250;
   const top = story ? 278 : 96;
   const hs = story ? 92 : 84;
@@ -119,12 +134,13 @@ function hill(opt) {
   const seal = pieces('barrelmark', ['arcTop', 'barrel', 'hopsL', 'hopsR'], { B: T.accent, W: T.bg, K: T.accent });
   return `<rect width="${W}" height="${H}" fill="${T.bg}"/>
   <text x="84" y="${top}" ${MONT} font-weight="800" font-size="${story ? 27 : 24}" letter-spacing="${story ? 7.5 : 6.5}" fill="${T.accent}">SISYPHUS COMEDY CLUB</text>
-  ${lines.map((l, i) => `<text x="80" y="${top + (story ? 122 : 104) + i * hs * 1.1}" ${MONT} font-weight="900" font-size="${hs}" letter-spacing="1" fill="${T.head}">${l}</text>`).join('')}
+  ${lines.map((l, i) => (i === 1 && st.forever === false) ? '' : `<text x="80" y="${top + (story ? 122 : 104) + i * hs * 1.1}" ${MONT} font-weight="900" font-size="${hs}" letter-spacing="1" fill="${T.head}">${l}</text>`).join('')}
   ${opt.spot === false ? '' : `<defs><linearGradient id="sp" x1="1" y1="0" x2="0.55" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${T.spot || 0.2}"/><stop offset="1" stop-color="#fff" stop-opacity="0.02"/></linearGradient></defs><polygon points="${W + 10},${top - 330} ${W + 10},${top - 60} ${sx + standH * 0.42},${ground(sx + standH * 0.42)} ${sx - standH * 0.75},${ground(sx - standH * 0.75)}" fill="url(#sp)"/>`}
   ${micStand(sx, ground(sx) + 2, standH, T.stand)}
   <clipPath id="rk"><circle cx="${man.rock.cx}" cy="${man.rock.cy}" r="${man.rock.r}"/></clipPath>
   <circle cx="${man.rock.cx}" cy="${man.rock.cy}" r="${man.rock.r}" fill="${T.rock}"/>
   <circle clip-path="url(#rk)" cx="${man.rock.cx + man.rock.r * 0.2}" cy="${man.rock.cy - man.rock.r * 0.2}" r="${man.rock.r * 0.92}" fill="${T.rockLit}"/>
+  ${opt.spots ? `<g clip-path="url(#rk)"><g transform="rotate(${rot} ${man.rock.cx} ${man.rock.cy})">${spots.map(p => `<circle cx="${man.rock.cx + p[0] * man.rock.r}" cy="${man.rock.cy + p[1] * man.rock.r}" r="${p[2] * man.rock.r}" fill="${T.rock}" fill-opacity=".38"/>`).join('')}</g></g>` : ''}
   ${man.svg}
   ${strip(W, y, -t / 2 - gap - rule, -t / 2 - gap, T.rule)}
   ${strip(W, y, -t / 2, t / 2, T.band)}
