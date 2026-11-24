@@ -22,16 +22,16 @@ select case when d ->> 'closed' = 'Closed for Christmas Day' and not (d ? 'peopl
 select case when d -> 'closed' = 'null'::jsonb then 'ok' else 'FAIL' end as christmas_eve_open
   from jsonb_array_elements(schedule_needs('2026-12-24', '2026-12-26') -> 'days') d where d ->> 'day' = '2026-12-24';
 \echo (expect ERROR: Managers only, a plain staff login closing a day)
-select schedule_need_set(:'d1', 0, 'Closed', true);
+select schedule_day_close(:'d1', 'Closed');
 
 \echo == the schedule builder marks a day closed; the number is nobody and the note says why
 select set_config('request.jwt.claim.sub', :'bld', false);
-select schedule_need_set(:'d1', 3, 'Closed for a flood', true);
+select schedule_day_close(:'d1', 'Closed for a flood');
 select case when (d ->> 'people')::int = 0 and d ->> 'closed' = 'Closed for a flood' and (d -> 'set' ->> 'closed')::boolean
             then 'ok' else 'FAIL' end as builder_closes
   from jsonb_array_elements(schedule_needs(:'d1', :'d1') -> 'days') d;
 \echo == closed with no note says "Closed"
-select schedule_need_set(:'d3', null, '', true);
+select schedule_day_close(:'d3', '');
 select case when d ->> 'closed' = 'Closed' then 'ok' else 'FAIL' end as plain_closed
   from jsonb_array_elements(schedule_needs(:'d3', :'d3') -> 'days') d;
 
@@ -44,7 +44,7 @@ update shifts set work_date = :'d1' where work_date = :'d2';
 update shifts set note = 'Two shows' where work_date = :'d2';
 select case when count(*) = 1 then 'ok' else 'FAIL' end as open_day_ok from shifts where work_date = :'d2' and note = 'Two shows';
 \echo (expect ERROR: Move or remove it first, closing a day that has a shift)
-select schedule_need_set(:'d2', 0, 'Closed', true);
+select schedule_day_close(:'d2', 'Closed');
 reset role;
 select case when not exists (select 1 from staffing_days where day = :'d2' and closed) then 'ok' else 'FAIL' end as not_closed_with_shift;
 set role authenticated;
@@ -61,7 +61,7 @@ select case when d -> 'closed' = 'null'::jsonb and (d ->> 'people')::int = 0 the
   from jsonb_array_elements(schedule_needs(:'d3', :'d3') -> 'days') d;
 
 \echo == the phone calendar carries the closed days as all-day days, with the shifts
-select schedule_need_set(:'d3', 0, 'Closed for a party', true);
+select schedule_day_close(:'d3', 'Closed for a party');
 select set_config('request.jwt.claim.sub', :'dee', false);
 select my_calendar_feed() as tok \gset
 reset role; set role service_role;

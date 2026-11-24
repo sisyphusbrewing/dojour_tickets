@@ -13,10 +13,11 @@
 --   schedule_needs()       tells everyone with a staff login which days are
 --                          closed (the "closed" note on that day), so the
 --                          Schedule and the staff home page can say so.
---   schedule_need_set()    takes p_closed. Whoever builds the schedule can
---                          mark a day closed from the day's "People needed"
---                          box. A day with shifts on it can't be closed until
---                          they are moved or removed.
+--   schedule_day_close()   whoever builds the schedule marks a day closed,
+--                          from the day's "People needed" box. A day with
+--                          shifts on it can't be closed until they are moved
+--                          or removed. schedule_need_set() (a number by hand,
+--                          or back to the usual) opens the day again.
 --   a rule on shifts       no shift can be added to a closed day or moved
 --                          onto one, by anyone, the usual week included.
 --   schedule_calendar()    hands the closed days to each person's calendar
@@ -27,7 +28,6 @@
 -- and New Year's Day (Fri Jan 1 2027).
 
 alter table public.staffing_days add column if not exists closed boolean not null default false;
-alter table public.staffing_days drop constraint if exists staffing_days_closed_nobody;
 alter table public.staffing_days add constraint staffing_days_closed_nobody check (not closed or people = 0);
 
 insert into public.staffing_days (day, people, note, closed, set_by, set_at) values
@@ -49,38 +49,45 @@ begin
   end if;
   return new;
 end $$;
-drop trigger if exists shifts_not_on_closed_days on public.shifts;
 create trigger shifts_not_on_closed_days before insert or update of work_date on public.shifts
   for each row execute function public.shifts_not_on_closed_days();
 
--- Set one day's number by hand, mark it closed, or (p_people empty) go back
--- to what the rules say for it. Replaces the three-argument version.
-drop function if exists public.schedule_need_set(date, int, text);
-create or replace function public.schedule_need_set(p_day date, p_people int, p_note text default '', p_closed boolean default false)
+-- Set one day's number by hand, or (p_people empty) go back to what the
+-- rules say for it, as before. Either one opens a closed day again.
+create or replace function public.schedule_need_set(p_day date, p_people int, p_note text default '')
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.can_schedule() then raise exception 'Managers only.'; end if;
+  if p_day is null then raise exception 'Which day?'; end if;
+  if p_people is not null and p_people not between 0 and 40 then
+    raise exception 'That number is out of range (0 to 40).'; end if;
+  insert into public.staffing_days (day, people, note, closed, set_by, set_at)
+  values (p_day, p_people, case when p_people is null then '' else left(trim(coalesce(p_note, '')), 120) end,
+          false, public.schedule_name(auth.uid()), now())
+  on conflict (day) do update set people = excluded.people, note = excluded.note, closed = false,
+                                  set_by = excluded.set_by, set_at = now();
+end $$;
+
+-- Mark a day closed: nobody needed, the note says why ("Closed" if empty).
+create or replace function public.schedule_day_close(p_day date, p_note text default '')
 returns void language plpgsql security definer set search_path = public as $$
 declare v_n int;
 begin
   if not public.can_schedule() then raise exception 'Managers only.'; end if;
   if p_day is null then raise exception 'Which day?'; end if;
-  if coalesce(p_closed, false) then
-    select count(*) into v_n from public.shifts where work_date = p_day;
-    if v_n > 0 then
-      raise exception 'That day has % shift%. Move or remove % first, then mark it closed.',
-        v_n, case when v_n = 1 then '' else 's' end, case when v_n = 1 then 'it' else 'them' end;
-    end if;
-    p_people := 0;
-    p_note := coalesce(nullif(trim(coalesce(p_note, '')), ''), 'Closed');
+  select count(*) into v_n from public.shifts where work_date = p_day;
+  if v_n > 0 then
+    raise exception 'That day has % shift%. Move or remove % first, then mark it closed.',
+      v_n, case when v_n = 1 then '' else 's' end, case when v_n = 1 then 'it' else 'them' end;
   end if;
-  if p_people is not null and p_people not between 0 and 40 then
-    raise exception 'That number is out of range (0 to 40).'; end if;
   insert into public.staffing_days (day, people, note, closed, set_by, set_at)
-  values (p_day, p_people, case when p_people is null then '' else left(trim(coalesce(p_note, '')), 120) end,
-          coalesce(p_closed, false) and p_people is not null, public.schedule_name(auth.uid()), now())
-  on conflict (day) do update set people = excluded.people, note = excluded.note, closed = excluded.closed,
+  values (p_day, 0, left(coalesce(nullif(trim(coalesce(p_note, '')), ''), 'Closed'), 120), true,
+          public.schedule_name(auth.uid()), now())
+  on conflict (day) do update set people = 0, note = excluded.note, closed = true,
                                   set_by = excluded.set_by, set_at = now();
 end $$;
-revoke all on function public.schedule_need_set(date, int, text, boolean) from public, anon, authenticated;
-grant execute on function public.schedule_need_set(date, int, text, boolean) to authenticated;
+revoke all on function public.schedule_day_close(date, text) from public, anon, authenticated;
+grant execute on function public.schedule_day_close(date, text) to authenticated;
 
 -- schedule_needs(), as in 20261117230000_early_show_start.sql (asking
 -- can_schedule(), as 20261118060000_schedule_builder.sql made it), plus

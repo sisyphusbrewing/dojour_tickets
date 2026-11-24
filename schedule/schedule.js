@@ -311,8 +311,8 @@ $('needClosed').addEventListener('change', needClosedChanged);
 async function saveNeed(people) {
   var closed = people !== null && $('needClosed').checked;
   $('needSave').disabled = true;
-  var r = await sb.rpc('schedule_need_set', { p_day: needDay, p_people: closed ? 0 : people,
-    p_note: people === null ? '' : $('needNote').value.trim(), p_closed: closed });
+  var r = closed ? await sb.rpc('schedule_day_close', { p_day: needDay, p_note: $('needNote').value.trim() })
+    : await sb.rpc('schedule_need_set', { p_day: needDay, p_people: people, p_note: people === null ? '' : $('needNote').value.trim() });
   $('needSave').disabled = false;
   if (r.error) return fail(r);
   $('needDialog').close();
