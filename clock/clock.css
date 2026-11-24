@@ -58,3 +58,19 @@
 .punch-news { color: var(--muted); font-size: 15px; line-height: 1.4; margin: 12px 0 0; }
 .news-body { margin: 0; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
 #newsDialog .sheet-acts .btn-primary { flex: 1 1 auto; min-height: 56px; font-size: 19px; }
+
+/* ---------- The cash drawer: one row per bill, a − and + either side ---------- */
+.cash-rows { display: grid; gap: 8px; }
+.cash-row { display: grid; grid-template-columns: 64px 44px minmax(0, 1fr) 44px 86px; gap: 6px; align-items: center; }
+.cash-row > label, .cash-row > b { font-size: 19px; font-weight: 700; }
+.cash-row .btn { min-height: 44px; padding: 0; font-size: 22px; }
+.cash-row .input { text-align: center; font-size: 20px; font-weight: 700; min-width: 0; }
+.cash-row .cash-coins { grid-column: 2 / 5; }
+.cash-line { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cash-total { font-size: 22px; margin: 4px 0 0; text-align: right; }
+.cash-total b { font-size: 30px; margin-left: 8px; font-variant-numeric: tabular-nums; }
+#cashOff { color: #f0d9a8; text-align: right; }
+.cash-diff.short { color: #f0b3a8; }
+.cash-diff.over { color: #f0d9a8; }
+.cash-diff.even { color: var(--ok); }
+#cashDialog .sheet-acts .btn-primary { flex: 1 1 auto; min-height: 56px; font-size: 19px; }

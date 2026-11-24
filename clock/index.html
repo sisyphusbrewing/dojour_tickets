@@ -93,6 +93,13 @@
         <button class="btn-link" id="otherBtn" type="button"></button>
       </section>
 
+      <!-- The cash drawer (Sam, Nov 24 2026: count it "when the first person of
+           the day clocks in" and again "at the end of the night"). -->
+      <section id="cashSection" class="hidden">
+        <h2 class="sub">The cash drawer</h2>
+        <div class="list" id="cashList"></div>
+      </section>
+
       <!-- Finished shifts that still need their tips typed in. -->
       <section id="tipsSection" class="hidden">
         <h2 class="sub">Tips to add</h2>
@@ -143,6 +150,10 @@
       </section>
 
       <details class="fold" id="nightFold"><summary>Tips by night, to check against GoTab</summary><div class="list" id="nightList"></div></details>
+      <details class="fold hidden" id="cashFold"><summary>Cash drawer, to check against GoTab</summary>
+        <p class="help">Each day: the count when the first person clocked in, the count at close, the cash that came in between, and what GoTab says it took in cash.</p>
+        <div class="list" id="cashDays"></div>
+      </details>
       <details class="fold" id="shiftFold"><summary>Every shift</summary><div id="shiftList"></div></details>
       <details class="fold" id="stickerFold"><summary>The tag at the bar</summary>
         <p class="help">Staff hold their phone to this tag and they’re clocked in or out, marked “at the bar”.</p>
@@ -213,6 +224,26 @@
         <button class="btn btn-primary" type="submit" id="sfSave">Save</button>
         <button class="btn btn-danger hidden" type="button" id="sfRemove">Remove</button>
         <button class="btn btn-ghost" type="button" id="sfCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <!-- Counting the drawer: how many of each bill, the coins as one amount. -->
+  <dialog id="cashDialog" class="sheet">
+    <form id="cashForm" class="stack" method="dialog">
+      <h2 id="cashTitle">Count the drawer</h2>
+      <p class="help" id="cashHelp" style="margin:0"></p>
+      <div class="cash-rows" id="cashRows"></div>
+      <div class="cash-row">
+        <label for="cashCoins">Coins</label>
+        <input class="input cash-coins" id="cashCoins" inputmode="decimal" autocomplete="off" placeholder="0.00">
+        <span class="cash-line" id="cashCoinsLine">$0.00</span>
+      </div>
+      <p class="cash-total">Total <b id="cashTotal">$0.00</b></p>
+      <p class="help hidden" id="cashOff" style="margin:0"></p>
+      <div class="field"><label for="cashNote">Note (optional)</label><input class="input" id="cashNote" maxlength="300" placeholder="Anything a manager should know"></div>
+      <div class="sheet-acts">
+        <button class="btn btn-primary" type="submit" id="cashSave">Save the count</button>
+        <button class="btn btn-ghost" type="button" id="cashLater">Later</button>
       </div>
     </form>
   </dialog>

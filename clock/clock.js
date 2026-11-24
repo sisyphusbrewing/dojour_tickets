@@ -119,7 +119,7 @@ setupSignIn(async function (r) {
   $('page').classList.remove('hidden');
   $('tabs').classList.remove('hidden');
   // The updates get four seconds at most: slow wifi mustn't keep a tap from clocking in.
-  await Promise.all([loadPeople(), loadStatus(), within(loadUnread(), 4000)]);
+  await Promise.all([loadPeople(), loadStatus(), within(loadUnread(), 4000), within(loadCash(), 4000)]);
   var tap = tapped && !!freshCode();
   tapped = false;
   // A manager login that doesn't take shifts (Sam's) has nothing to clock, so it opens on Payroll.
@@ -152,7 +152,7 @@ window.addEventListener('hashchange', function () { if (me) { showTab(); window.
 // Come back to the page after a while and it's fresh.
 document.addEventListener('visibilitychange', function () {
   if (document.hidden || !me || document.querySelector('dialog[open]')) return;
-  loadStatus(); loadUnread(); if (tabNow() === 'hours') loadMine(); if (tabNow() === 'payroll') loadPayroll();
+  loadStatus(); loadUnread(); loadCash(); if (tabNow() === 'hours') loadMine(); if (tabNow() === 'payroll') loadPayroll();
 });
 // The "2 h 10 min" under the button, and the Undo that turns into Clock out.
 setInterval(function () { if (st && st.open && !document.hidden) drawClock(); }, 20000);
@@ -254,6 +254,7 @@ function drawClock() {
     return '<div class="row"><div><b>' + niceDay(p.work_date) + '</b><small>Clocked in at ' + timeOf(p.clock_in) + '</small></div>' +
       '<div class="row-r"><button class="btn btn-sm btn-primary" onclick="openLeft(' + p.id + ')">When did you leave?</button></div></div>';
   }).join('');
+  drawCash();
 }
 
 // Clock in if I'm out, out if I'm in (the database decides which). Used by
@@ -291,7 +292,7 @@ async function punch(byTap) {
   setTimeout(function () { busy = false; btn.disabled = false; }, 1500);
   // When the two minutes to undo are up, the Clock out button comes back.
   if (st.did === 'in') setTimeout(drawClock, UNDO_MS);
-  if (st.did === 'out' && st.last) openTips(st.last.id);
+  afterPunch(st.did);
 }
 $('punchBtn').addEventListener('click', function () {
   if (tapDue) return stopTap();
@@ -441,6 +442,142 @@ async function checkSticker() {
   if (r.error || !barCode) return;
   stickerOk = r.data === barCode;
   drawClock();
+}
+
+// ---------- The cash drawer ----------
+// Sam, Nov 24 2026: "the employees could count the cash and put that into the
+// portal when the first person of the day clocks in" ... "Then they can count
+// at the end of the night ... and we can compare later". So:
+//   - Clocking in when nobody has counted the drawer today opens the count.
+//   - Clocking out when nobody else is on the clock (the last one out) opens
+//     the closing count, before the tips.
+//   - "Later" is always allowed: nobody is kept off or on the clock for it.
+//     The Clock tab keeps saying the drawer hasn't been counted until it is.
+// The database works out the totals and which day a count belongs to
+// (supabase/migrations/20261124220000_cash_drawer.sql); the page only asks.
+var BILLS = [100, 50, 20, 10, 5, 1];
+var cash = null, cashKind = 'open', cashThenTips = null;
+async function loadCash() {
+  try {
+    var r = await sb.rpc('cash_status');
+    cash = r.error ? null : r.data;      // null until the database has this part
+  } catch (e) { cash = null; }
+  if (st) drawCash();
+}
+function drawCash() {
+  var on = !!(cash && st && st.on_schedule);
+  $('cashSection').classList.toggle('hidden', !on);
+  if (!on) return;
+  function line(c, label) {
+    return c ? money(c.total) + '<small>' + label + ' at ' + timeOf(c.at) + ' by ' + escapeHtml(first(c.by)) + '</small>'
+             : 'Not counted yet<small>' + label + '</small>';
+  }
+  var rows = '<div class="row"><div><b>' + line(cash.open, 'Opening count') + '</b></div>' +
+    (cash.open_due ? '<div class="row-r"><button class="btn btn-sm btn-primary" onclick="openCash(\'open\')">Count it</button></div>' : '') + '</div>';
+  if (cash.open || cash.close || (st && st.open)) {
+    rows += '<div class="row"><div><b>' + line(cash.close, 'Closing count') + '</b></div>' +
+      '<div class="row-r"><button class="btn btn-sm' + (cash.close ? '' : ' btn-primary') + '" onclick="openCash(\'close\')">' + (cash.close ? 'Count again' : 'Count at close') + '</button></div></div>';
+  }
+  $('cashList').innerHTML = rows;
+}
+// After the button or a tap has clocked someone in or out.
+async function afterPunch(did) {
+  if (did !== 'in' && did !== 'out') return;
+  await within(loadCash(), 3000);
+  if (did === 'in' && cash && cash.open_due) { setTimeout(function () { openCash('open'); }, 600); return; }
+  if (did === 'out') {
+    var tipsId = st && st.last ? st.last.id : null;
+    if (cash && cash.close_due) { cashThenTips = tipsId; openCash('close'); return; }
+    if (tipsId) openTips(tipsId);
+  }
+}
+function openCash(kind) {
+  if (!cash) return toast('The cash drawer part isn’t switched on yet.', true);
+  cashKind = kind;
+  $('cashTitle').textContent = kind === 'open' ? 'Count the drawer' : 'Closing count';
+  // Opening: it should match the starting cash. Closing: a plain count, no
+  // number to aim for, so it is what is really there.
+  $('cashHelp').textContent = kind === 'open'
+    ? 'Before the first sale. It should come to ' + money(cash.start) + '.'
+    : 'Count everything in the drawer, before anything comes out of it.';
+  $('cashRows').innerHTML = BILLS.map(function (b) {
+    return '<div class="cash-row"><b>$' + b + '</b>' +
+      '<button class="btn" type="button" aria-label="One fewer $' + b + '" onclick="bump(' + b + ',-1)">−</button>' +
+      '<input class="input" id="bill' + b + '" inputmode="numeric" autocomplete="off" value="0" aria-label="How many $' + b + ' bills" oninput="cashSum()">' +
+      '<button class="btn" type="button" aria-label="One more $' + b + '" onclick="bump(' + b + ',1)">+</button>' +
+      '<span class="cash-line" id="line' + b + '">$0.00</span></div>';
+  }).join('');
+  $('cashCoins').value = '';
+  $('cashNote').value = '';
+  $('cashSave').disabled = false;
+  cashSum();
+  $('cashDialog').showModal();
+  $('cashDialog').scrollTop = 0;
+}
+function billCount(b) { var v = String($('bill' + b).value).trim(); return /^\d{1,4}$/.test(v) ? Number(v) : (v === '' ? 0 : NaN); }
+function bump(b, n) { var c = billCount(b); $('bill' + b).value = Math.max(0, (isNaN(c) ? 0 : c) + n); cashSum(); }
+function cashSum() {
+  var total = 0, bad = false;
+  BILLS.forEach(function (b) {
+    var c = billCount(b);
+    if (isNaN(c)) { bad = true; $('line' + b).textContent = '?'; return; }
+    total += c * b;
+    $('line' + b).textContent = money(c * b);
+  });
+  var coins = parseMoney($('cashCoins').value);
+  if (coins !== null && isNaN(coins)) { bad = true; $('cashCoinsLine').textContent = '?'; }
+  else { total += coins || 0; $('cashCoinsLine').textContent = money(coins || 0); }
+  $('cashTotal').textContent = bad ? '?' : money(total);
+  var off = cashKind === 'open' && !bad ? Math.round((total - Number(cash.start)) * 100) / 100 : 0;
+  $('cashOff').classList.toggle('hidden', !off);
+  if (off) $('cashOff').textContent = money(Math.abs(off)) + (off < 0 ? ' short of ' : ' over ') + money(cash.start) + '. Count again, or save it and add a note.';
+  return bad ? NaN : total;
+}
+$('cashCoins').addEventListener('input', cashSum);
+$('cashForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  var total = cashSum();
+  if (isNaN(total)) return toast('Each bill is a whole number, and the coins are a dollar amount like 4.35.', true);
+  var bills = {};
+  BILLS.forEach(function (b) { bills[String(b)] = billCount(b); });
+  $('cashSave').disabled = true;
+  var r = await sb.rpc('cash_count_save', { p_kind: cashKind, p_bills: bills, p_coins: parseMoney($('cashCoins').value) || 0, p_note: $('cashNote').value });
+  $('cashSave').disabled = false;
+  if (r.error) return fail(r);
+  cash = r.data;
+  $('cashDialog').close();
+  toast('Drawer counted: ' + money(total) + '. Thank you.');
+  drawCash();
+  cashDone();
+});
+// Closed with "Later" or Escape: nothing saved. The Clock tab keeps the reminder.
+function cashDone() {
+  var t = cashThenTips; cashThenTips = null;
+  if (t) openTips(t);
+}
+$('cashLater').addEventListener('click', function () { $('cashDialog').close(); drawCash(); cashDone(); });
+$('cashDialog').addEventListener('cancel', function (e) { e.preventDefault(); $('cashDialog').close(); cashDone(); });
+
+// For managers, on the Payroll tab: each day's counts next to GoTab's cash.
+async function loadCashDays(start, thru) {
+  var r;
+  try { r = await sb.rpc('cash_days', { p_from: start, p_thru: thru }); } catch (e) { r = { error: e }; }
+  var days = r.error ? [] : (r.data || []);
+  $('cashFold').classList.toggle('hidden', !days.length);
+  $('cashDays').innerHTML = days.map(function (d) {
+    var bits = [];
+    bits.push(d.open_total != null ? 'Opened ' + money(d.open_total) + ' (' + escapeHtml(first(d.open_by)) + ')' : 'No opening count');
+    bits.push(d.close_total != null ? 'closed ' + money(d.close_total) + ' (' + escapeHtml(first(d.close_by)) + ')' : 'no closing count');
+    if (d.counts > 2) bits.push(d.counts + ' counts');
+    var right = '';
+    if (d.came_in != null) right += 'Came in ' + money(d.came_in);
+    if (d.gotab_cash != null) right += (right ? '<small>' : '') + 'GoTab ' + money(d.gotab_cash) + (right ? '</small>' : '');
+    if (d.difference != null) {
+      var diff = Number(d.difference), cls = Math.abs(diff) < 0.005 ? 'even' : diff < 0 ? 'short' : 'over';
+      right += '<small class="cash-diff ' + cls + '">' + (cls === 'even' ? 'Matches' : money(Math.abs(diff)) + (diff < 0 ? ' short' : ' over')) + '</small>';
+    }
+    return '<div class="row"><div><b>' + niceDay(d.cash_day) + '</b><small>' + bits.join(' · ') + '</small></div><div class="row-r">' + right + '</div></div>';
+  }).join('');
 }
 
 // ---------- Credit tips for one shift ----------
@@ -632,6 +769,7 @@ async function loadPayroll() {
                : ((p.clock_out && !p.hours_run) || (p.tips != null && !p.tips_run));
   });
   drawPayroll(start, thru);
+  loadCashDays(start, thru);
 }
 function drawPayroll(start, thru) {
   var over = thru < today();
