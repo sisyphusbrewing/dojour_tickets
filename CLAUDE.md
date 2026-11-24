@@ -229,6 +229,20 @@ Dojour gotchas, learned the hard way:
   Clocking out never waits on it. Its notices ride the schedule's
   outbox (kinds starting `clock_`). Check rule changes with
   `supabase/tests/time_clock/` before applying them.
+- **The cash drawer is counted on the Clock page** (Sam, Nov 24 2026: count
+  it "when the first person of the day clocks in" and "at the end of the
+  night ... and we can compare later"). The bar started taking cash that day.
+  GoTab keeps one cash account per register that never closes (its "Require
+  Reconciliation After Day" setting is off: it greyed the Cash buttons
+  whenever a day was left open), so never close those accounts in GoTab.
+  The first clock-in of the day opens "Count the drawer" (it starts at $300,
+  `cash_settings`), the last clock-out opens the closing count; "Later" is
+  always allowed. Counts are never changed or deleted (`cash_counts`, a
+  recount is a new row). `cash_gotab` holds what GoTab says came in as cash
+  each day, and Payroll's "Cash drawer" fold shows the counts beside it. The
+  one drawer is on the Taproom receipt printer. Rules in
+  `supabase/migrations/20261124220000_cash_drawer.sql`, checks in
+  `supabase/tests/cash_drawer/`.
 - **`doorshift/`** is the "I worked the door" form (Sam, Nov 17 2026: "We
   need a seperate form where people can submit if they worked the door"). The
   people at the door are mostly comics, not on the time clock or the payroll,
