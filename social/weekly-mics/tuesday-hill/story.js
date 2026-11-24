@@ -163,6 +163,9 @@ const VARIANTS = {
   // The every-week versions for the always-on ad: feed (4:5) and stories/reels (9:16, nothing important in the bottom fifth).
   'ad-feed': { fn: hill, theme: 'slate', w: 1080, h: 1350, under: 'TUESDAYS · 7 PM · FREE', top: 128, spots: true },
   'ad-story': { fn: hill, theme: 'slate', w: 1080, h: 1920, under: 'TUESDAYS · 7 PM · FREE', seal: false, top: 306, fy: 1482, spots: true },
+  // The website listing: no web address (it is the website), and the bottom strip is left
+  // clear because the home page's show card lays its date chip over that corner.
+  'listing': { fn: hill, theme: 'slate', w: 1080, h: 1350, under: 'TUESDAYS · 7 PM · FREE', top: 128, fy: 1200, sticker: true, spots: true },
 };
 module.exports = { VARIANTS, hill, scaleFor, pusher, pieces, place, inlineWord, strip, bandY, micStand, THEMES, BRAND, FONTS, MONT, A, TAN, DEG };
 
