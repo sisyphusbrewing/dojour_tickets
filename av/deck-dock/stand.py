@@ -15,8 +15,9 @@ at the deck's bottom (knob) end. Sam's calipers: the screws are 83.01 mm apart, 
 
 So this base copies that: two round seats at the front, the same two screws from underneath.
 The seats stand alone and nothing else comes near the deck, so the fit depends only on the
-83.01 mm spacing. The seats are 7 mm tall (Elgato's are about 5), so the deck's rubber feet end up
-a millimetre or two off the table instead of pressing on it.
+83.01 mm spacing. The seats are 6.5 mm tall (Elgato's are about 5), so the deck's rubber feet end up
+a millimetre or so off the table instead of pressing on it. Sam also measured Elgato's stand:
+114 mm front to back, and about 5 mm of screw thread sticking out of its top.
 
 Behind the seats is the Pi's place. The clear acrylic plate from the Waveshare kit comes off and
 this floor takes its place: the same four screws go up into the same four brass standoffs (the
@@ -53,7 +54,7 @@ STRAIGHT = "--straight-cable" in sys.argv
 W = 140.2                          # deck width (Sam's calipers)
 SCREW_SPAN = 83.01                 # between the two stand screws (Sam's calipers)
 SEAT_Y = 6.0                       # screw line, from the base's front edge
-SEAT_H = 7.0                       # seat top above the table
+SEAT_H = 6.5                       # seat top above the table (Elgato's is about 5: 3 mm of plastic plus the head's recess)
 SEAT_D = 8.5                       # a little smaller than the deck's ~9.5 mm bosses
 UNDER_HEAD = 3.0                   # plastic between screw head and deck. Sam measured ~5 mm of thread
                                    # sticking out of Elgato's stand (Nov 23 2026), so this gives the same bite
