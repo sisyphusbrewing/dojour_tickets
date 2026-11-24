@@ -101,3 +101,47 @@ select case when (mic_draw(today + 14, p_by_hand => true)->>'drawn')::int = 8 th
 reset request.jwt.claim.role;
 select case when count(*) filter (where women_spot) >= 3 and count(*) = 8 then 'ok' else 'FAIL' end as "women: at least 30% (3 of 8)"
   from mic_signups, t_ctx where mic_date = today + 14 and status = 'drawn';
+
+-- Drawn last week = half a ticket in the hat this week, never zero (Sam, Nov
+-- 24 2026: "less likely to get drawn 2 weeks in a row").
+insert into mic_signups (mic_date, name, email, status) select today + 21, 'Repeat Rae', 'rae@x.co', 'drawn' from t_ctx;
+insert into mic_signups (mic_date, name, email, status) select today + 21, 'Sat Out Sid', 'sid@x.co', 'not_drawn' from t_ctx;
+insert into mic_signups (mic_date, name, email, status) select today + 21, 'Same Name', 'old@x.co', 'drawn' from t_ctx;
+select case when mic_draw_weight(today + 28, 'Someone Else', ' RAE@x.co') = 0.5
+             and mic_draw_weight(today + 28, 'same name', 'new@x.co') = 0.5
+             and mic_draw_weight(today + 28, 'Sat Out Sid', 'sid@x.co') = 1
+             and mic_draw_weight(today + 28, 'New Person', 'new2@x.co') = 1
+             and mic_draw_weight(today + 35, 'Repeat Rae', 'rae@x.co') = 1
+             and mic_draw_weight(today + 28, '', '') = 1
+        then 'ok' else 'FAIL' end as "repeat odds: half only for last week's drawn (email or name)" from t_ctx;
+-- Never zero: a hat of only last week's comics still fills every spot.
+insert into mic_signups (mic_date, name, email, status) select today + 28, 'Repeat Rae', 'rae@x.co', 'hat' from t_ctx;
+insert into mic_signups (mic_date, name, email, status) select today + 28, 'Same Name', 'other@x.co', 'hat' from t_ctx;
+set request.jwt.claim.role = 'authenticated';
+select case when (mic_draw(today + 28, 8, true)->>'drawn')::int = 2 then 'ok' else 'FAIL' end as "repeat odds: never zero" from t_ctx;
+reset request.jwt.claim.role;
+-- Over many tries, half a ticket beats a whole one about 1 time in 3.
+select case when avg(case when random() ^ (1.0 / 0.5::numeric) > random() ^ (1.0 / 1::numeric) then 1 else 0 end) between 0.25 and 0.42
+        then 'ok' else 'FAIL' end as "repeat odds: roughly a third as often first" from generate_series(1, 4000);
+-- Real draws: 4 repeaters among 16, 4 spots, 300 times. Each repeater should
+-- get up less often than a newcomer, but not never.
+do $$
+declare d date; k int; rep int := 0; fresh int := 0;
+begin
+  for k in 1..300 loop
+    d := date '2031-01-07' + k * 14;
+    insert into mic_signups (mic_date, name, email, status)
+      select d - 7, 'R' || g, 'r' || g || '@x.co', 'drawn' from generate_series(1, 4) g;
+    insert into mic_signups (mic_date, name, email, status)
+      select d, 'R' || g, 'r' || g || '@x.co', 'hat' from generate_series(1, 4) g;
+    insert into mic_signups (mic_date, name, email, status)
+      select d, 'F' || g, 'f' || g || '@x.co', 'hat' from generate_series(1, 12) g;
+    perform set_config('request.jwt.claim.role', 'authenticated', true);
+    perform mic_draw(d, 4, true);
+    rep := rep + (select count(*) from mic_signups where mic_date = d and status = 'drawn' and name like 'R%');
+    fresh := fresh + (select count(*) from mic_signups where mic_date = d and status = 'drawn' and name like 'F%');
+  end loop;
+  create temp table t_rep as select rep / 4.0 / 300 as rep_rate, fresh / 12.0 / 300 as fresh_rate;
+end $$;
+select case when rep_rate > 0.05 and rep_rate < fresh_rate * 0.8 then 'ok' else 'FAIL ' || rep_rate || ' vs ' || fresh_rate end
+  as "repeat odds: real draws favor newcomers, repeaters still get up" from t_rep;
