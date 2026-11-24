@@ -71,6 +71,19 @@
         <p id="todayLabel">&nbsp;</p>
       </section>
 
+      <!-- A new hire whose login was made before we had their email (Sam,
+           Nov 24 2026: "we can get his e-mail when he logs in"). Shows only
+           for someone on the schedule with no email yet, and goes away once
+           it is saved. Same save as My settings on the Schedule. -->
+      <section id="emailSection" class="hidden">
+        <div class="band-row"><span class="band">Add your email</span></div>
+        <form id="emailForm" class="list stack" style="padding:14px">
+          <p style="margin:0">So you get your shifts and schedule changes. Only managers see it.</p>
+          <input class="input" id="myEmail" type="email" required autocomplete="email" autocapitalize="none" autocorrect="off" placeholder="you@example.com" aria-label="Your email">
+          <button class="btn btn-primary" id="emailBtn" type="submit">Save my email</button>
+        </form>
+      </section>
+
       <!-- Tonight: the shows on today, free ones too, how many tickets each
            has sold, and the door list one tap away. -->
       <section id="tonightSection">
@@ -391,6 +404,7 @@
       var row = me.data && me.data[0];
       if (me.error || !row) return;
       if (row.name) setAccount(row.name, username);
+      $('emailSection').classList.toggle('hidden', !(row.on_schedule && !row.notify_email));
       if (!can('schedule')) return;
       var today = isoDay(new Date());
       var res = await sb.from('shifts').select('id,work_date,start_time,end_time,position,user_id,up_for_grabs')
@@ -417,6 +431,16 @@
       $('shiftSection').classList.remove('hidden');
       if (row.on_schedule && can('clock')) loadClock();
     }
+
+    $('emailForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      $('emailBtn').disabled = true;
+      var r = await sb.rpc('schedule_save_me', { p_notify_by: 'email', p_email: $('myEmail').value, p_phone: '' });
+      $('emailBtn').disabled = false;
+      if (r.error) { toast(r.error.message || 'Could not save it. Try again.', true); return; }
+      $('emailSection').classList.add('hidden');
+      toast('Saved. Your schedule will come to that email.');
+    });
 
     // ---------- The time clock row ----------
     // One line under the shift: "Clock in", or since when you have been on
