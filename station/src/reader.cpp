@@ -9,31 +9,41 @@
 // here and a card made by hand read the same.
 #include "reader.h"
 #include "config.h"
-#include <Adafruit_PN532.h>
+#include "pn532.h"
 
-static Adafruit_PN532 nfc(READER_RESET, &Serial1);
 static uint8_t lastUid[7];
 static uint8_t lastLen = 0;
 static uint32_t lastSeen = 0;
 
-bool reader_begin() {
-  Serial1.begin(115200, SERIAL_8N1, READER_RX, READER_TX);
-  nfc.begin();
-  if (!nfc.getFirmwareVersion()) return false;
-  nfc.SAMConfig();
-  return true;
+bool reader_begin() { return pn_begin(); }
+
+// Has the reader gone quiet since the last time this was asked? True when
+// questions went out and not one was acknowledged (a wire came loose).
+bool reader_went_quiet() {
+  static uint32_t sent = 0, acked = 0;
+  const PnCounts &c = pn_counts();
+  bool quiet = c.sent - sent >= 5 && c.acked == acked;
+  sent = c.sent;
+  acked = c.acked;
+  return quiet;
+}
+
+String reader_report() {
+  const PnCounts &c = pn_counts();
+  char b[96];
+  snprintf(b, sizeof b, "reader: %lu asked, %lu acknowledged, %lu answered, %lu cards seen",
+           (unsigned long)c.sent, (unsigned long)c.acked, (unsigned long)c.answered, (unsigned long)c.cards);
+  return b;
 }
 
 static bool read_page(uint8_t page, uint8_t out[4]) {
   for (int tries = 0; tries < 3; tries++)
-    if (nfc.ntag2xx_ReadPage(page, out)) return true;
+    if (pn_read(page, out)) return true;
   return false;
 }
 static bool write_page(uint8_t page, const uint8_t in[4]) {
-  uint8_t b[4];
-  memcpy(b, in, 4);
   for (int tries = 0; tries < 3; tries++)
-    if (nfc.ntag2xx_WritePage(page, b)) return true;
+    if (pn_write(page, in)) return true;
   return false;
 }
 
@@ -90,7 +100,7 @@ static void classify(Tag &t) {
 
 bool reader_poll(Tag &t) {
   uint8_t uid[7], len = 0;
-  if (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &len, 120)) return false;
+  if (!pn_find(uid, len)) return false;
   bool same = len == lastLen && memcmp(uid, lastUid, len) == 0;
   bool fresh = !same || millis() - lastSeen > 1500;   // the same card, lifted and set down again
   lastSeen = millis();
@@ -105,7 +115,7 @@ bool reader_poll(Tag &t) {
 
 bool reader_still_there() {
   uint8_t uid[7], len = 0;
-  if (!nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &len, 120)) return millis() - lastSeen < 1500;
+  if (!pn_find(uid, len)) return millis() - lastSeen < 1500;
   if (len == lastLen && memcmp(uid, lastUid, len) == 0) lastSeen = millis();
   return millis() - lastSeen < 1500;
 }

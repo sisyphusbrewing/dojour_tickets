@@ -1,6 +1,6 @@
 #include "reader.h"
 #include <cassert>
-HardwareSerial Serial1; uint8_t mem[135][4];
+HardwareSerial Serial1; extern uint8_t mem[135][4];
 int main(){
   // blank NTAG215 as shipped
   uint8_t cc[4]={0xE1,0x10,0x3E,0x00}; memcpy(mem[3],cc,4); mem[4][0]=0x03; mem[4][1]=0; mem[4][2]=0xFE;

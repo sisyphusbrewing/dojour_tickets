@@ -83,10 +83,22 @@ board with its USB-C sockets on the left.
 nobody can change its link with a phone. Locking can't be undone. Set it to 0
 only while trying things on a spare blank, and back to 1 before real cards.
 
-## Checking the card writing without the hardware
+## Checking the card code without the hardware
 
-`test/host/` runs the card code (`src/reader.cpp`) on a computer against a
-pretend card: blank card found, link written, read back, locked, read as
-ours, a locked card refused, someone else's card refused.
+`test/host/` runs the card code on a computer:
 
-    g++ -std=c++17 -Itest/host -Iinclude -Isrc test/host/reader_test.cpp src/reader.cpp -o /tmp/reader_test && /tmp/reader_test
+- `reader_test.cpp` runs `src/reader.cpp` against a pretend card: blank card
+  found, link written, read back, locked, read as ours, a locked card
+  refused, someone else's card refused.
+- `pn532_test.cpp` runs `src/pn532.cpp` (how the station talks to the reader
+  over its two serial wires) against a pretend reader chip: old bytes left in
+  the line, an answer that never comes, a garbled answer, a reader that isn't
+  there.
+
+      g++ -std=c++17 -Itest/host -Iinclude -Isrc test/host/reader_test.cpp test/host/pn532_fake.cpp src/reader.cpp -o /tmp/reader_test && /tmp/reader_test
+      g++ -std=c++17 -Itest/host -Iinclude -Isrc test/host/pn532_test.cpp src/pn532.cpp -o /tmp/pn532_test && /tmp/pn532_test
+
+While it runs, the station prints one line every five seconds out of the UART
+socket (`reader: 120 asked, 120 acknowledged, 120 answered, 2 cards seen`)
+and a line for each card set down (`card: a blank one`), never what is on a
+card.

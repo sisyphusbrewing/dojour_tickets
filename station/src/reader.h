@@ -17,6 +17,8 @@ struct Tag {
 };
 
 bool reader_begin();                    // false if the reader doesn't answer
+bool reader_went_quiet();               // it has stopped answering since the last time this was asked
+String reader_report();                 // one line of counts for the start-up messages (no card details)
 bool reader_poll(Tag &t);               // true when a card has just been set down
 bool reader_still_there();              // the last card is still on the reader
 // Write the link for `code` on the card that is on the reader now, read it
