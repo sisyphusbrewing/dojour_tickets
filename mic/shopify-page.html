@@ -5,6 +5,7 @@
 
 <h3>Tuesdays: Open Mic</h3>
 <p><strong>Every Tuesday at 7:00 PM in the comedy club. Starts November 17.</strong></p>
+<p class="sb-host" id="sbHostTue" style="display:none;font-size:1.15em;margin:4px 0 10px;"></p>
 <ul>
 <li><strong>Cost:</strong> Free, no tickets needed</li>
 <li><strong>For comics:</strong> Sign up online below. A few spots are booked ahead and the rest are drawn at random from the sign-ups before the mic starts.</li>
@@ -25,9 +26,33 @@
     });
   })();
 </script>
+<script>
+  /* "Tonight's host is: ..." (Sam, Nov 24 2026). The names come from the
+     week-by-week host list on staff.sisyphusbrewing.com/mic/hosts.html, so
+     this changes by itself every week. No name saved = no line. */
+  (function () {
+    var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc2R3a3VicW5hdmthemx0ZWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwOTA2MTMsImV4cCI6MjEwNTY2NjYxM30.EUnNEOHYlNup7nBFvs--pCiyis-NYPiL_TeoiMEjDRQ';
+    function put(id, x, day) {
+      var el = document.getElementById(id);
+      if (!el || !x || !x.host) return;
+      var b = document.createElement('strong'); b.textContent = x.host;
+      el.textContent = x.tonight ? "Tonight's host is: " : 'This ' + day + "'s host is: ";
+      el.appendChild(b);
+      el.style.display = '';
+    }
+    fetch('https://idsdwkubqnavkazlteis.supabase.co/rest/v1/rpc/mic_week_hosts', {
+      method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' }, body: '{}'
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d) return;
+      put('sbHostTue', d.tuesday, 'Tuesday');
+      put('sbHostThu', d.thursday, 'Thursday');
+    }).catch(function () {});
+  })();
+</script>
 
 <h3>Thursdays: Free Showcase</h3>
 <p><strong>Every Thursday at 8:00 PM in the comedy club.</strong></p>
+<p class="sb-host" id="sbHostThu" style="display:none;font-size:1.15em;margin:4px 0 10px;"></p>
 <ul>
 <li><strong>Cost:</strong> Free, no tickets needed, no drink minimums</li>
 <li><strong>How it works:</strong> Each week one comic curates the night. They book three comics for ten minutes each: maybe a friend, someone they think is super funny, someone they think deserves a shot. One of the three closes, and each of those spots pays $20.</li>

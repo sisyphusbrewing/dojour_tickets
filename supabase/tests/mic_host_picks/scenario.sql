@@ -145,3 +145,11 @@ begin
 end $$;
 select case when rep_rate > 0.05 and rep_rate < fresh_rate * 0.8 then 'ok' else 'FAIL ' || rep_rate || ' vs ' || fresh_rate end
   as "repeat odds: real draws favor newcomers, repeaters still get up" from t_rep;
+
+-- "Tonight's host is" on the website: tonight's host by name, no link (Sam, Nov 24 2026).
+set role anon;
+select case when (mic_week_hosts()->'tuesday'->>'date')::date - today between 0 and 7
+             and mic_week_hosts()::text not like '%tok_%'
+             and ((mic_week_hosts()->'tuesday'->>'tonight')::boolean is false or mic_week_hosts()->'tuesday'->>'host' = 'Test Host')
+        then 'ok' else 'FAIL' end as "week hosts: names only, this week's Tuesday" from t_ctx;
+reset role;
