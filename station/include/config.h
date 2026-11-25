@@ -1,13 +1,13 @@
 // The Boulder's wiring and settings, in one place.
 //
 // Screen board: Waveshare ESP32-S3-Touch-LCD-4.3. Pin numbers below are from
-// Waveshare's wiki and schematic (read Nov 18 2026).
+// Waveshare's wiki and schematic (read Nov 18 and Nov 23 2026).
 //
 // THE CARD READER IS NOT ON THE I2C PLUG. The PN532 answers I2C address 0x24,
 // and so does the board's own CH422G chip (it runs the backlight and the touch
 // reset), so they can't share the I2C plug. The PN532 is wired in serial mode
 // instead (its two DIP switches: HSU, both off). Which pins: see READER_RX/TX.
-// Check them on the real board before soldering; see README.md.
+// The wiring is drawn out in README.md.
 #pragma once
 
 // ---- Supabase (the same database the staff site uses) ----
@@ -55,21 +55,37 @@
 #define GT911_ADDR 0x5D
 
 // CH422G outputs (EXIO pins): bit 1 touch reset, bit 2 backlight, bit 4 SD
-// card select (kept high = off), bit 5 USB select (low = USB to the ESP32).
+// card select (kept high = off), bit 5 says where the USB socket's two data
+// lines go: low = to GPIO19/20 (what the card reader needs), high = to the
+// board's CAN chip. We never set bit 5, so it stays low.
 #define EXIO_TP_RST (1 << 1)
 #define EXIO_BACKLIGHT (1 << 2)
 #define EXIO_SD_CS (1 << 4)
 
+// The Boulder holds the screen turned half way round, so both USB-C sockets
+// face the roomy inside of the hill. 1 turns the picture and the touch back
+// the right way up. 0 is for a board lying on the bench with its sockets on
+// the right.
+#define SCREEN_TURNED 1
+
 // ---- Card reader (PN532, serial mode) ----
-// GPIO43/44 are the board's UART pins. They also run to the USB-to-serial
-// chip on the "UART" USB-C port, so power the station from the OTHER USB-C
-// port (marked USB) and leave the UART port empty. To be confirmed on the
-// real board.
-#define READER_RX 44   // ESP32 receives here: wire to the PN532's TX
-#define READER_TX 43   // wire to the PN532's RX
+// This board has no plain serial pins. GPIO43/44 run only to the
+// USB-to-serial chip behind the USB-C socket marked UART, with nowhere to
+// hook a wire. So the reader talks on GPIO19/20 instead: the two data lines
+// of the OTHER USB-C socket (marked USB), reached with a USB-C plug that has
+// screw terminals, or a cut USB cable (white is D-, green is D+). The station
+// is powered through the UART socket. Worked out from Waveshare's schematic
+// on Nov 23 2026; first tried on the real board when Sam wires it.
+#define READER_RX 19   // USB D- (white): the ESP32 listens here. Wire to the PN532's TX
+#define READER_TX 20   // USB D+ (green): wire to the PN532's RX
 #define READER_RESET -1
 
-// ---- Lights and buzzer (not wired yet: -1 means none) ----
-#define LED_PIN -1          // the LED Arc (WS2812) around the boulder
-#define LED_COUNT 10          // MonkMakes NeoPixel LED Arc
-#define BUZZER_PIN -1       // a passive buzzer
+// ---- Lights and buzzer (-1 means none) ----
+// The LED bar is the footlight in the road under the little man. Its data
+// wire goes to GPIO6, the signal pin of the board's 3-pin "Sensor" plug.
+#define LED_PIN 6
+#define LED_COUNT 10          // MonkMakes NeoPixel LED bar
+#define LED_BRIGHTNESS 60     // out of 255. Low on purpose: the bar runs off the board's own supply
+// No pin is left for the buzzer once the reader and the lights are on. The
+// lights do the telling.
+#define BUZZER_PIN -1

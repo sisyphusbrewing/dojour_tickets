@@ -27,7 +27,7 @@ static void fill(uint32_t c) {
 void fx_begin() {
 #if LED_PIN >= 0
   strip.begin();
-  strip.setBrightness(90);
+  strip.setBrightness(LED_BRIGHTNESS);
 #endif
   fill(0);
 }
@@ -46,7 +46,7 @@ void fx_tick() {
     if ((int32_t)(millis() - flashUntil) > 0) mode = IDLE;
     return;
   }
-  // A slow slate-blue wave going round the boulder.
+  // A slow slate-blue wave running along the footlight.
   float t = millis() / 1000.0f;
   for (int i = 0; i < LED_COUNT; i++) {
     float w = 0.5f + 0.5f * sinf(t * 1.4f + i * 6.283f / LED_COUNT);

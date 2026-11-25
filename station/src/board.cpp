@@ -12,6 +12,7 @@
 #include <esp_heap_caps.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_rgb.h>
+#include <soc/usb_serial_jtag_reg.h>
 
 static esp_lcd_panel_handle_t panel = nullptr;
 static uint8_t exio = EXIO_SD_CS;   // what the CH422G outputs are set to
@@ -114,7 +115,17 @@ static void lcd_begin() {
   ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
 }
 
+// GPIO19/20 start out belonging to the chip's built-in USB. The card reader
+// uses them as plain serial pins, so switch the built-in USB off them (and
+// its pull-up on GPIO20) before the reader is started.
+static void free_usb_pins() {
+#if READER_RX == 19 || READER_RX == 20 || READER_TX == 19 || READER_TX == 20
+  CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE | USB_SERIAL_JTAG_DP_PULLUP);
+#endif
+}
+
 void board_begin() {
+  free_usb_pins();
   Wire.begin(I2C_SDA, I2C_SCL, 400000);
   ch422_write(0x24, 0x01);           // 0x24: IO0-IO7 are outputs
   ch422_write(0x38, exio);
@@ -135,6 +146,12 @@ void board_begin() {
   disp.ver_res = LCD_H;
   disp.flush_cb = flush;
   disp.draw_buf = &draw;
+#if SCREEN_TURNED
+  // The screen sits half way round in the Boulder. LVGL turns each piece of
+  // the picture before it is drawn, and turns the touch points to match.
+  disp.sw_rotate = 1;
+  disp.rotated = LV_DISP_ROT_180;
+#endif
   lv_disp_drv_register(&disp);
 
   static lv_indev_drv_t touch;
