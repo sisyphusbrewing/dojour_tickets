@@ -59,6 +59,7 @@ static intptr_t actArg = 0;
 // Signing in.
 static lv_obj_t *taUser = nullptr, *taPass = nullptr;
 static lv_obj_t *amountLabel = nullptr;
+static lv_obj_t *signinStatus = nullptr;   // the "Wifi ... Card reader ..." line on the sign-in screen
 static String signinErr;
 
 // ---------- money as text ----------
@@ -82,6 +83,7 @@ static void on_click(lv_event_t *e) {
 }
 
 static lv_obj_t *new_screen() {
+  signinStatus = nullptr;   // it belonged to the screen being replaced
   lv_obj_t *s = lv_obj_create(NULL);
   lv_obj_set_style_bg_color(s, INK, 0);
   lv_obj_set_style_text_color(s, lv_color_white(), 0);
@@ -234,6 +236,23 @@ static void show_done(const String &big, const String &todo) {
   show(s, S_DONE);
 }
 
+// Is the wifi up, is the card reader answering: said on the sign-in screen and
+// in the start-up messages, so whoever wires or moves the station knows before
+// there is a login to sign in with (Sam at the bench, Nov 25 2026: screen and
+// reader hooked up, and no way to tell if the reader's wires were right).
+static bool wifi_up() { return WiFi.status() == WL_CONNECTED; }
+static void paint_status() {
+  if (!signinStatus) return;
+  static String shown;
+  String now = String("Wifi: ") + (wifi_up() ? "connected" : "NOT connected") +
+               "      Card reader: " + (readerOk ? "answering" : "NOT answering");
+  if (now == shown && lv_obj_get_user_data(signinStatus)) return;
+  shown = now;
+  lv_obj_set_user_data(signinStatus, (void *)1);   // this label has been filled in
+  lv_label_set_text(signinStatus, now.c_str());
+  lv_obj_set_style_text_color(signinStatus, lv_color_hex(wifi_up() && readerOk ? 0x9BE7A5 : 0xFFD180), 0);
+}
+
 static void show_signin() {
   lv_obj_t *s = new_screen();
   label(s, "Sign the station in (managers, once)", &lv_font_montserrat_28, LV_ALIGN_TOP_LEFT, 24, 16);
@@ -257,8 +276,10 @@ static void show_signin() {
   lv_obj_add_event_cb(taPass, focus, LV_EVENT_FOCUSED, kb);
   lv_obj_add_event_cb(kb, [](lv_event_t *) { act = A_SIGNIN; }, LV_EVENT_READY, nullptr);
   button(s, "Sign in", A_SIGNIN, GOOD, 200, 50, LV_ALIGN_TOP_RIGHT, -24, 140);
+  signinStatus = label(s, "", &lv_font_montserrat_20, LV_ALIGN_TOP_LEFT, 24, 124);
+  paint_status();
   if (signinErr.length()) {
-    lv_obj_t *e = label(s, signinErr, &lv_font_montserrat_20, LV_ALIGN_TOP_LEFT, 24, 150);
+    lv_obj_t *e = label(s, signinErr, &lv_font_montserrat_20, LV_ALIGN_TOP_LEFT, 24, 156);
     lv_obj_set_style_text_color(e, lv_color_hex(0xFF8A80), 0);
   }
   show(s, S_SIGNIN);
@@ -399,6 +420,7 @@ static void on_tag(const Tag &t) {
 // ---------- start ----------
 void setup() {
   Serial.begin(115200);
+  Serial.println("\nBoulder station starting");
   board_begin();
   fx_begin();
   busy("Starting...");
@@ -406,7 +428,12 @@ void setup() {
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) delay(250);
+  // Start-up messages (out of the socket marked UART, 115200). Never the wifi
+  // name or password, only whether each thing is working.
+  Serial.println(wifi_up() ? "wifi: connected" : "wifi: NOT connected (it keeps trying)");
   readerOk = reader_begin();
+  Serial.println(readerOk ? "reader: answering" : "reader: NOT answering");
+  Serial.println(supa_signed_in() ? "station: signed in" : "station: waiting for a manager to sign it in");
   if (supa_signed_in()) show_home();
   else show_signin();
 }
@@ -439,12 +466,24 @@ void loop() {
 
   // No reader at start-up (a loose wire, or it was plugged in afterwards):
   // look again every ten seconds while the home screen is up, so nobody has
-  // to restart the station.
+  // to restart the station. On the sign-in screen too, but only when nobody
+  // has touched it for three seconds: a look holds the screen for a moment,
+  // which would drop letters while someone types.
   static uint32_t lastLook = 0;
-  if (!readerOk && screen == S_HOME && millis() - lastLook > 10000) {
+  bool quiet = screen == S_HOME || (screen == S_SIGNIN && lv_disp_get_inactive_time(NULL) > 3000);
+  if (!readerOk && quiet && millis() - lastLook > 10000) {
     lastLook = millis();
     readerOk = reader_begin();
-    if (readerOk) show_home();
+    if (readerOk) {
+      Serial.println("reader: answering");
+      if (screen == S_HOME) show_home();
+    }
+  }
+  // Keep the sign-in screen's wifi and reader line true.
+  static uint32_t lastStatus = 0;
+  if (screen == S_SIGNIN && millis() - lastStatus > 1000) {
+    lastStatus = millis();
+    paint_status();
   }
 
   // Watch the reader, except while signing in or typing an amount.
