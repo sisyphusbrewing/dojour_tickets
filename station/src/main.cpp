@@ -387,6 +387,10 @@ static void undo() {
 
 // A card was set down.
 static void on_tag(const Tag &t) {
+  // For whoever is watching the start-up messages: what kind of card, never what is on it.
+  Serial.print(t.kind == TAG_BLANK ? "card: a blank one (" : t.kind == TAG_OURS ? "card: one of our gift cards (" : "card: some other card (");
+  Serial.print(reader_card_note());
+  Serial.println(")");
   fx_card();
   String err;
   if (screen == S_WAIT_BLANK) {
@@ -476,6 +480,19 @@ void loop() {
     readerOk = reader_begin();
     if (readerOk) {
       Serial.println("reader: answering");
+      if (screen == S_HOME) show_home();
+    }
+  }
+  // Every five seconds: one line of counts in the start-up messages, and a
+  // check that the reader still answers. If it has gone quiet (a wire came
+  // loose), say so on the home screen and go back to looking for it.
+  static uint32_t lastReport = 0;
+  if (millis() - lastReport > 5000) {
+    lastReport = millis();
+    if (readerOk) Serial.println(reader_report());
+    if (readerOk && reader_went_quiet()) {
+      readerOk = false;
+      Serial.println("reader: stopped answering");
       if (screen == S_HOME) show_home();
     }
   }
