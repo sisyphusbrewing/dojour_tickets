@@ -127,7 +127,7 @@ static void busy(const String &t) {
 static void show_home() {
   lv_obj_t *s = new_screen();
   label(s, "SISYPHUS GIFT CARDS", &lv_font_montserrat_20, LV_ALIGN_TOP_MID, 0, 26);
-  label(s, readerOk ? "Set a card on the boulder" : "The card reader isn't answering.\nCheck its wires, then restart.",
+  label(s, readerOk ? "Set a card on the boulder" : "The card reader isn't answering.\nCheck its wires.",
         &lv_font_montserrat_48, LV_ALIGN_CENTER, 0, -40);
   label(s, "to see what's on it", &lv_font_montserrat_28, LV_ALIGN_CENTER, 0, 30);
   button(s, "New card", A_NEW, SLATE, 340, 90, LV_ALIGN_BOTTOM_MID, 0, -36);
@@ -435,6 +435,16 @@ void loop() {
       break;
     }
     default: break;
+  }
+
+  // No reader at start-up (a loose wire, or it was plugged in afterwards):
+  // look again every ten seconds while the home screen is up, so nobody has
+  // to restart the station.
+  static uint32_t lastLook = 0;
+  if (!readerOk && screen == S_HOME && millis() - lastLook > 10000) {
+    lastLook = millis();
+    readerOk = reader_begin();
+    if (readerOk) show_home();
   }
 
   // Watch the reader, except while signing in or typing an amount.

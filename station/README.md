@@ -19,36 +19,57 @@ The database rules are the same ones the phone page follows
 - Waveshare ESP32-S3-Touch-LCD-4.3 (the screen and the brains)
 - PN532 card reader, **set to serial mode** (HSU: both DIP switches off)
 - NTAG215 blank white cards
-- Optional: the MonkMakes LED Arc (10 WS2812 LEDs) and a buzzer (pins in `include/config.h`)
+- MonkMakes NeoPixel LED bar (10 LEDs), the footlight under the little man
+- A USB-C plug with screw terminals (or a spare USB cable, cut), for the
+  reader's two data wires
+- No buzzer: the board has no pin left for one (see `include/config.h`)
 
-## Wiring the card reader
+## Wiring
 
-The PN532 can't go on the board's I2C plug: it answers at address 0x24, the
-same as the board's own CH422G chip (backlight and touch reset), and the two
-would talk over each other. So it uses serial:
+**Worked out from Waveshare's schematic on Nov 23 2026 and not yet tried on
+the real board.** Try it loose on the bench before anything goes in the box.
 
-| PN532 | Screen board |
-|-------|--------------|
-| VCC   | 3.3 V (check the plug's voltage with a meter first) |
-| GND   | GND |
-| TX    | GPIO44 (RXD) |
-| RX    | GPIO43 (TXD) |
+The screen board has two USB-C sockets on one edge. Power goes in the one
+marked **UART**. The one marked **USB** carries the card reader's wires.
 
-GPIO43/44 also run to the USB-to-serial chip behind the USB-C port marked
-UART. Power the station from the other USB-C port and leave the UART port
-empty. **To check on the real board before soldering:** where 43/44 come out,
-and that the native USB port powers the board on its own. If either is wrong,
-change `READER_RX`/`READER_TX` in `include/config.h`.
+Why so roundabout: the reader can't go on the board's I2C plug (it answers at
+address 0x24, the same as the board's own CH422G chip, which runs the
+backlight and the touch reset), and the board's serial pins (GPIO43/44) only
+go to the chip behind the UART socket, with nowhere to hook a wire. The two
+data lines of the USB socket are GPIO19 and GPIO20, and the station doesn't
+need them for USB, so the reader talks there.
+
+| From | To |
+|------|----|
+| USB socket, D- (white wire in a USB cable), GPIO19 | reader TXD |
+| USB socket, D+ (green wire), GPIO20 | reader RXD |
+| USB socket, GND (black wire) | reader GND |
+| USB socket, 5 V (red wire) | nothing: cap it or tape it off, it is live |
+| Sensor plug, 3.3 V | reader VCC, and the LED bar's power |
+| Sensor plug, GND | LED bar GND |
+| Sensor plug, signal (GPIO6) | LED bar data in |
+
+The reader gets 3.3 V, not 5 V, on purpose: its serial lines then stay at
+3.3 V, which is all the screen board's pins take. The LED bar runs off the
+same 3.3 V and is kept dim (`LED_BRIGHTNESS`) so it doesn't load the board.
+
+If the reader isn't answering, the home screen says so and the station looks
+for it again every ten seconds.
 
 ## Flashing it
 
 1. Install PlatformIO (`pip install platformio`).
 2. Copy `include/secrets.example.h` to `include/secrets.h` and put in the
    club wifi. `secrets.h` is gitignored; never commit it (this repo is public).
-3. Plug the board in by USB and run `pio run -t upload` in this folder.
+3. Plug the board's **UART** socket into the computer with a USB-C cable that
+   carries data, and run `pio run -t upload` in this folder.
 4. On first start the screen asks a manager to sign the station in. Use the
    station's own staff login. The station keeps only a sign-in token, not the
    password. To end it, change that login's password.
+
+The picture is turned half way round (`SCREEN_TURNED` in `include/config.h`)
+because that is how the screen sits in the Boulder: on the bench, stand the
+board with its USB-C sockets on the left.
 
 ## Testing on a spare card
 
