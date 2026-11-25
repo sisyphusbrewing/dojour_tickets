@@ -67,6 +67,12 @@ for it again every ten seconds.
    station's own staff login. The station keeps only a sign-in token, not the
    password. To end it, change that login's password.
 
+The sign-in screen has a line that says whether the wifi is connected and
+whether the card reader is answering, so the wiring can be checked before the
+station has a login. The same comes out of the UART socket as start-up
+messages (115200 baud: `wifi: ...`, `reader: ...`, `station: ...`), never the
+wifi name or password.
+
 The picture is turned half way round (`SCREEN_TURNED` in `include/config.h`)
 because that is how the screen sits in the Boulder: on the bench, stand the
 board with its USB-C sockets on the left.
