@@ -1,12 +1,14 @@
 // Talking to the PN532 card reader over its two serial wires ("HSU" mode).
 //
 // Why this is our own and not a library (Sam at the bench, Nov 25 2026: the
-// reader answered at start-up, but a card set on it did nothing): the library
-// we used read a fixed number of bytes for each answer. Over serial wires the
-// reader's answers come in different lengths, so after the first card the two
-// sides were out of step and every later answer was read from the wrong
-// place. Here every answer is read as a whole frame, checked by its own
-// checksum, and anything left over from before is thrown away first.
+// reader answered at start-up, but a card set on it did nothing, and nothing
+// said why): the library we used reads a fixed number of bytes for each
+// answer and keeps no record of what went wrong, so there was no telling a
+// bad wire from a card the reader couldn't sense. Here every answer is read
+// as a whole frame, checked by its own checksum, anything left over from
+// before is thrown away first, and everything is counted. The counts are
+// what found the real cause that night: the reader was lying on a steel
+// table, and steel under its antenna stops it sensing a card at all.
 #pragma once
 #include <Arduino.h>
 

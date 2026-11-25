@@ -98,7 +98,28 @@ only while trying things on a spare blank, and back to 1 before real cards.
       g++ -std=c++17 -Itest/host -Iinclude -Isrc test/host/reader_test.cpp test/host/pn532_fake.cpp src/reader.cpp -o /tmp/reader_test && /tmp/reader_test
       g++ -std=c++17 -Itest/host -Iinclude -Isrc test/host/pn532_test.cpp src/pn532.cpp -o /tmp/pn532_test && /tmp/pn532_test
 
+## When a card does nothing
+
 While it runs, the station prints one line every five seconds out of the UART
-socket (`reader: 120 asked, 120 acknowledged, 120 answered, 2 cards seen`)
-and a line for each card set down (`card: a blank one`), never what is on a
-card.
+socket (115200), and a line for each card set down. Never what is on a card.
+
+    reader: 120 asked, 120 acknowledged, 120 answered, 31 pages, 0 refused, 2 cards seen
+    card: a blank one (chip 0044/00, 7-byte id)
+    card: some other card (chip 0004/08, 4-byte id; couldn't read it (reader code 14))
+
+How to read the counts:
+
+- **asked climbs alone:** the reader isn't hearing the station. A plug or a
+  wire (the screen says "The card reader isn't answering" too).
+- **asked, acknowledged and answered climb together, cards seen stays 0 with a
+  card on it:** the wires are fine and the reader can't sense the card. Look
+  for metal first. On Sam's bench (Nov 25 2026) the reader lay on a thin mat
+  on a steel table and saw nothing; on a book, clear of the steel, it read
+  every page first try. Keep the reader a couple of inches from any sheet of
+  metal, in the Boulder and on the bench.
+- **cards seen climbs but the card is turned away:** the words in brackets say
+  why. Chip 0044/00 with a 7-byte id is the kind our cards are; 0004/08 is the
+  white card that comes in the bag with the reader, which can't be a gift
+  card. "refused" counts pages the card didn't give up; a few now and then
+  are retried without anyone noticing, a lot means the card is too far away
+  or moving.
