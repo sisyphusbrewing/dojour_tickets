@@ -64,6 +64,7 @@ int main() {
   // a card, with rubbish already sitting in the line from before
   for (uint8_t junk : {0x13, 0x00, 0xFF, 0x00, 0x00}) Serial1.rx.push_back(junk);
   assert(pn_find(uid, len) && len == 7 && uid[0] == 0x04 && uid[6] == 0xF6);
+  assert(pn_last().type[0] == 0x00 && pn_last().type[1] == 0x44 && pn_last().kind == 0x00 && pn_last().idLen == 7);
 
   // its pages: read, write, read back
   assert(pn_read(3, got) && !memcmp(got, cc, 4));
@@ -82,7 +83,9 @@ int main() {
 
   // no card: a clean "none"; and a card that has gone: read and write both say no
   card = false;
+  uint32_t refusedBefore = pn_counts().refused;
   assert(!pn_find(uid, len) && !pn_read(3, got) && !pn_write(4, w));
+  assert(pn_counts().refused == refusedBefore + 2 && pn_last().why == 0x01);   // and the reader's reason is kept
 
   // the chip still looking when we give up: we tell it to stop, and the next question works
   silentFind = true; int before = aborts;

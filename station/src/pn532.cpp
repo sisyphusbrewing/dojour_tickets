@@ -9,6 +9,8 @@
 
 static PnCounts counts;
 const PnCounts &pn_counts() { return counts; }
+static PnLast last;
+const PnLast &pn_last() { return last; }
 
 static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
@@ -122,15 +124,24 @@ bool pn_find(uint8_t uid[7], uint8_t &len) {
   len = out[5] > 7 ? 7 : out[5];
   if (m < 6 + len) return false;
   memcpy(uid, out + 6, len);
+  last.type[0] = out[2]; last.type[1] = out[3]; last.kind = out[4]; last.idLen = out[5];
   counts.cards++;
   return true;
+}
+
+// A page didn't go through: count it and keep the reader's reason.
+static bool refused(int m, const uint8_t *out) {
+  counts.refused++;
+  last.why = m >= 1 ? out[0] : -1;
+  return false;
 }
 
 bool pn_read(uint8_t page, uint8_t out4[4]) {
   const uint8_t cmd[] = {0x40, 0x01, 0x30, page};           // to card 1: READ from this page (16 bytes come back)
   uint8_t out[20];
+  counts.pages++;
   int m = ask(cmd, sizeof cmd, out, sizeof out, 120);
-  if (m < 5 || out[0] != 0x00) return false;                // first byte 00 = the card answered
+  if (m < 5 || out[0] != 0x00) return refused(m, out);      // first byte 00 = the card answered
   memcpy(out4, out + 1, 4);
   return true;
 }
@@ -138,6 +149,8 @@ bool pn_read(uint8_t page, uint8_t out4[4]) {
 bool pn_write(uint8_t page, const uint8_t in[4]) {
   const uint8_t cmd[] = {0x40, 0x01, 0xA2, page, in[0], in[1], in[2], in[3]};   // to card 1: WRITE this page
   uint8_t out[4];
+  counts.pages++;
   int m = ask(cmd, sizeof cmd, out, sizeof out, 120);
-  return m >= 1 && out[0] == 0x00;
+  if (m < 1 || out[0] != 0x00) return refused(m, out);
+  return true;
 }

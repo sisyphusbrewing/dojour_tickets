@@ -30,20 +30,45 @@ bool reader_went_quiet() {
 
 String reader_report() {
   const PnCounts &c = pn_counts();
-  char b[96];
-  snprintf(b, sizeof b, "reader: %lu asked, %lu acknowledged, %lu answered, %lu cards seen",
-           (unsigned long)c.sent, (unsigned long)c.acked, (unsigned long)c.answered, (unsigned long)c.cards);
+  char b[160];
+  snprintf(b, sizeof b, "reader: %lu asked, %lu acknowledged, %lu answered, %lu pages, %lu refused, %lu cards seen",
+           (unsigned long)c.sent, (unsigned long)c.acked, (unsigned long)c.answered,
+           (unsigned long)c.pages, (unsigned long)c.refused, (unsigned long)c.cards);
   return b;
 }
 
-static bool read_page(uint8_t page, uint8_t out[4]) {
+// Why the last card was sorted the way it was, for the start-up messages:
+// the kind of chip and where reading stopped. Never what is on the card.
+static char why[96];
+String reader_card_note() {
+  const PnLast &l = pn_last();
+  char b[160];
+  snprintf(b, sizeof b, "chip %02X%02X/%02X, %u-byte id%s%s", l.type[0], l.type[1], l.kind, l.idLen, why[0] ? "; " : "", why);
+  return b;
+}
+
+// After a page fails the card has usually let go of the conversation (it was
+// nudged, or the signal dipped), and asking again gets nothing until the
+// reader finds it afresh. So: find it again, make sure it is the same card,
+// then ask again. A different card in its place stops the job at once.
+static bool same_card_again() {
+  uint8_t uid[7], len = 0;
   for (int tries = 0; tries < 3; tries++)
+    if (pn_find(uid, len)) return len == lastLen && memcmp(uid, lastUid, len) == 0;
+  return true;   // not found this time: let the next try at the page decide
+}
+static bool read_page(uint8_t page, uint8_t out[4]) {
+  for (int tries = 0; tries < 4; tries++) {
     if (pn_read(page, out)) return true;
+    if (!same_card_again()) return false;
+  }
   return false;
 }
 static bool write_page(uint8_t page, const uint8_t in[4]) {
-  for (int tries = 0; tries < 3; tries++)
+  for (int tries = 0; tries < 4; tries++) {
     if (pn_write(page, in)) return true;
+    if (!same_card_again()) return false;
+  }
   return false;
 }
 
@@ -51,21 +76,30 @@ static bool write_page(uint8_t page, const uint8_t in[4]) {
 static void classify(Tag &t) {
   t.kind = TAG_OTHER;
   t.code[0] = 0;
+  why[0] = 0;
   uint8_t cc[4];
-  if (!read_page(3, cc)) return;
+  if (!read_page(3, cc)) { snprintf(why, sizeof why, "couldn't read it (reader code %02X)", pn_last().why & 0xFF); return; }
   bool unformatted = !cc[0] && !cc[1] && !cc[2] && !cc[3];
-  if (!unformatted && (cc[0] != 0xE1 || cc[2] < 0x3E)) return;   // not NDEF, or too small
+  if (!unformatted && (cc[0] != 0xE1 || cc[2] < 0x3E)) {   // not NDEF, or too small
+    snprintf(why, sizeof why, "not the kind of card ours are (its label page says %02X %02X %02X %02X)", cc[0], cc[1], cc[2], cc[3]);
+    return;
+  }
   bool writable = unformatted || cc[3] == 0x00;
 
   uint8_t buf[120];
   for (int p = 0; p < 30; p++)
-    if (!read_page(4 + p, buf + p * 4)) return;
+    if (!read_page(4 + p, buf + p * 4)) {
+      snprintf(why, sizeof why, "reading stopped at page %d (reader code %02X)", 4 + p, pn_last().why & 0xFF);
+      return;
+    }
+  snprintf(why, sizeof why, "it holds something that isn't our link");
 
   size_t i = 0;
   while (i < sizeof buf && (buf[i] == 0x01 || buf[i] == 0x02)) i += 2 + buf[i + 1];   // lock/memory TLVs
   if (i >= sizeof buf) return;
   if (buf[i] == 0x00 || buf[i] == 0xFE || (buf[i] == 0x03 && buf[i + 1] == 0x00)) {
-    if (writable) t.kind = TAG_BLANK;
+    if (writable) { t.kind = TAG_BLANK; why[0] = 0; }
+    else snprintf(why, sizeof why, "empty, but locked");
     return;
   }
   if (buf[i] != 0x03) return;
@@ -96,6 +130,7 @@ static void classify(Tag &t) {
   }
   t.code[32] = 0;
   t.kind = TAG_OURS;
+  why[0] = 0;
 }
 
 bool reader_poll(Tag &t) {

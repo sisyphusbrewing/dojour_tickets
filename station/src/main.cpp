@@ -388,7 +388,9 @@ static void undo() {
 // A card was set down.
 static void on_tag(const Tag &t) {
   // For whoever is watching the start-up messages: what kind of card, never what is on it.
-  Serial.println(t.kind == TAG_BLANK ? "card: a blank one" : t.kind == TAG_OURS ? "card: one of our gift cards" : "card: some other card");
+  Serial.print(t.kind == TAG_BLANK ? "card: a blank one (" : t.kind == TAG_OURS ? "card: one of our gift cards (" : "card: some other card (");
+  Serial.print(reader_card_note());
+  Serial.println(")");
   fx_card();
   String err;
   if (screen == S_WAIT_BLANK) {
