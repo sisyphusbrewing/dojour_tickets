@@ -396,6 +396,7 @@ TINY = {  # a 3x5 font for words inside the cartoons
     "T": "111010010010010", "Y": "101101010010010", "U": "101101101101111",
     "!": "010010010000010",
     "B": "110101110101110", "R": "110101110101101",
+    "L": "100100100100111",
 }
 
 
@@ -1037,6 +1038,82 @@ def art_margarita(d, t, name):  # Margarita: a lime sips the slushie and gets BR
         tiny_text(d, "BRR", 1, 0, "#8fd2f0")
 
 
+# Tilt Warning's ball: (seconds, x, y) stops along its way, and when it hits what.
+TILT_PATH = (
+    (0.0, 27, 25), (0.8, 27, 4), (1.2, 23, 3), (1.6, 22, 4), (2.1, 15, 3), (2.6, 10, 4),
+    (3.1, 15, 10), (3.6, 21, 11), (4.2, 12, 20), (4.8, 12, 25), (5.4, 19, 17), (5.9, 26, 20),
+    (6.5, 20, 25), (7.2, 10, 12), (7.8, 14, 18), (8.1, 14, 18), (9.3, 15.5, 26), (10.2, 15.5, 34),
+    (12.0, 15.5, 34),
+)
+TILT_BUMPERS = ((9, 8, "#e23b3b", (2.6, 7.2)), (22, 8, "#f5c62a", (1.6, 3.6)), (16, 14, "#3aa0f0", (3.1, 5.4)))
+TILT_FLIPS = (4.8, 6.5)  # when the left flipper fires, then the right
+
+
+def art_tilt(d, t, name):  # Tilt Warning: a pinball game, a shove too many, and TILT (Sam, Nov 25 2026: "Make it pinball based")
+    p = t % 12
+    tilted = p >= 8.1
+    ox = (1 if int(p * 9) % 2 else -1) if 6.9 <= p < 8.1 else 0  # somebody is shoving the machine
+
+    def px(x, y, col):
+        d.px(x + ox, y, col)
+
+    def rect(x, y, w, h, col):
+        d.rect(x + ox, y, w, h, col)
+
+    def disc(x, y, r, col):
+        d.disc(x + ox, y, r, col)
+
+    def line(x0, y0, x1, y1, col):
+        d.line(x0 + ox, y0, x1 + ox, y1, col)
+
+    rect(1, 0, 30, 32, "#0a1230" if tilted else "#12245c")  # the playfield
+    rect(1, 0, 1, 32, "#9aa3ad")
+    rect(30, 0, 1, 32, "#9aa3ad")
+    rect(1, 0, 30, 1, "#9aa3ad")
+    px(2, 1, "#9aa3ad")
+    px(29, 1, "#9aa3ad")
+    for k, (x, y) in enumerate(((5, 17), (26, 15), (16, 21), (9, 20), (22, 21), (16, 4))):  # the little lights
+        lit = not tilted and int(p * 3 + k * 1.7) % 3 == 0
+        px(x, y, "#ffd94a" if lit else "#3a3f5a")
+    for bx, by, col, hits in TILT_BUMPERS:
+        hit = not tilted and any(0 <= p - h < 0.3 for h in hits)
+        disc(bx, by, 3, "#ffffff" if hit else ("#3a3f4a" if tilted else col))
+        disc(bx, by, 1, col if hit else ("#22262e" if tilted else "#f4f1e4"))
+    line(2, 22, 7, 27, "#9aa3ad")  # the guides down to the flippers
+    line(29, 22, 24, 27, "#9aa3ad")
+    for side, fire in enumerate(TILT_FLIPS):
+        up = not tilted and 0 <= p - fire < 0.25
+        x0, x1 = (8, 13) if side == 0 else (23, 18)
+        y1 = 25 if up else 30
+        for w in (0, 1):
+            line(x0, 27 + w, x1, y1 + w, "#6a7078" if tilted else "#ff6a3a")
+        px(x0, 27, "#f4f1e4")
+    for k in range(len(TILT_PATH) - 1):  # the ball
+        (t0, x0, y0), (t1, x1, y1) = TILT_PATH[k], TILT_PATH[k + 1]
+        if t0 <= p < t1:
+            f = (p - t0) / (t1 - t0)
+            if tilted:
+                f *= f  # it just rolls down the middle, nothing you can do
+            bx, by = x0 + (x1 - x0) * f, y0 + (y1 - y0) * f
+            disc(bx, by, 1, "#d8dde2")
+            px(bx - 1, by - 1, "#ffffff")
+            break
+    if 6.9 <= p < 8.1 and int(p * 5) % 2:  # the warning
+        rect(13, 26, 6, 5, "#000000")
+        px(15, 26, "#ffd94a")
+        px(16, 26, "#ffd94a")
+        rect(15, 27, 2, 2, "#ffd94a")
+        rect(15, 30, 2, 1, "#ffd94a")
+    if tilted and int(p * 3) % 3:  # TILT, twice the size of the tiny letters
+        d.rect(0, 9, 32, 14, "#000000")
+        col = "#ff3030" if int(p * 3) % 2 else "#ffffff"
+        for n, ch in enumerate("TILT"):
+            g = TINY[ch]
+            for k in range(15):
+                if g[k] == "1":
+                    d.rect(1 + n * 8 + (k % 3) * 2, 11 + (k // 3) * 2, 2, 2, col)
+
+
 def art_glass(d, t, name):  # anything new: a pint in a color from its name
     h = 0
     for ch in name:
@@ -1052,7 +1129,7 @@ CARTOONS = [  # first match on the beer's name wins; anything else gets a glass
     (r"apple|cider", art_apple), (r"sparkle", art_sparkle), (r"gobstop|wonka", art_gobstopper), (r"samm|lager", art_lager), (r"kentucky", art_kentucky),
     (r"gold", art_gold), (r"sisyfest|oktober", art_sisyfest), (r"holy|grail", art_grail),
     (r"comet", art_comet), (r"scoop", art_scoop), (r"bobby|nitro|stout", art_nitro),
-    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita", art_margarita), (r"spice|dune", art_spice), (r"slush", art_slushie),
+    (r"peanut|jackpot", art_jackpot), (r"colada", art_colada), (r"margarita", art_margarita), (r"spice|dune", art_spice), (r"slush", art_slushie), (r"tilt", art_tilt),
 ]
 
 
