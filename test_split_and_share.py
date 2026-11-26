@@ -116,6 +116,23 @@ class Cleanup(unittest.TestCase):
             self.assertTrue(new.exists())
 
 
+
+class RenamedRecording(unittest.TestCase):
+    """A handled recording that someone renamed must not be cut again (Nov 25 2026: the 4 AM run
+    re-cut four renamed Gabby Bryan recordings over clips whose sound had been fixed by hand)."""
+    DONE = {"2026-11-13 20-10-31.mp4": "2026-11-18T05:35:00+00:00"}
+    SIZES = {"1116776481": "2026-11-13 20-10-31.mp4"}
+
+    def test_same_size_under_a_new_name_is_the_old_recording(self):
+        self.assertEqual(sas.renamed_copy("2026-11-13 Early.mp4", 1116776481, self.DONE, self.SIZES),
+                         "2026-11-13 20-10-31.mp4")
+
+    def test_a_new_recording_is_not_mistaken_for_an_old_one(self):
+        self.assertIsNone(sas.renamed_copy("2026-11-20 19-58-02.mp4", 1066438181, self.DONE, self.SIZES))
+
+    def test_the_original_name_is_not_called_renamed(self):
+        self.assertIsNone(sas.renamed_copy("2026-11-13 20-10-31.mp4", 1116776481, self.DONE, self.SIZES))
+
 if __name__ == "__main__":
     unittest.main()
 

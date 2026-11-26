@@ -60,6 +60,11 @@ KEEP_LOCAL_DAYS = 7
 HOME = Path(os.environ.get("USERPROFILE") or Path.home())
 STATE_DIR = HOME / ".sisyphus"
 DONE_FILE = STATE_DIR / "recordings-done.json"
+# The size in bytes of every recording already handled, so a recording that was only RENAMED is not
+# taken for a new one. On Nov 25 2026 the four Gabby Bryan recordings (Nov 13-14) had been renamed
+# ("2026-11-13 Early.mp4"...); the 4 AM run cut them again from scratch and uploaded the clips over
+# the ones whose sound had been lined up by hand, and Gabby got out-of-sync videos a second time.
+SIZES_FILE = STATE_DIR / "recordings-done-sizes.json"
 STAGE_REF = STATE_DIR / "stage-reference.png"  # a good stage frame, 320x180 gray
 COMICS_FILE = STATE_DIR / "comics.txt"          # comics who play here, one per line, to fix Whisper's spelling
 OUT_DIR = HOME / "Videos" / "Sisyphus clips"
@@ -439,6 +444,15 @@ def handle(h, src):
     return True
 
 
+def renamed_copy(name, size, done, sizes):
+    """The earlier name of a recording that was handled already and has since been renamed, or None.
+    Two different show recordings are a gigabyte or so each and never the same size to the byte."""
+    old = sizes.get(str(size))
+    if old and old != name and name not in done:
+        return old
+    return None
+
+
 def cleanup(done):
     if DRY:
         return
@@ -465,14 +479,26 @@ def main():
     load_env()
     STATE_DIR.mkdir(exist_ok=True)
     done = json.loads(DONE_FILE.read_text()) if DONE_FILE.exists() else {}
+    sizes = json.loads(SIZES_FILE.read_text()) if SIZES_FILE.exists() else {}
     h = sign_in()
     obs = Path(os.environ.get("OBS_DIR") or HOME / "Videos")
+    # Note the size of every handled recording that is still here (also those handled before Nov 26 2026).
+    for p in obs.iterdir():
+        if p.name in done and p.suffix.lower() in VIDEO:
+            sizes[str(p.stat().st_size)] = p.name
     # Skip a file OBS may still be writing (changed in the last 10 minutes).
     fresh = datetime.now().timestamp() - 600
     for src in sorted(p for p in obs.iterdir() if p.suffix.lower() in VIDEO):
         if REDO and src.name not in REDO:
             continue
         if (src.name in done and src.name not in REDO) or src.stat().st_mtime > fresh:
+            continue
+        if src.name not in REDO and renamed_copy(src.name, src.stat().st_size, done, sizes):
+            # Handled already under another name: remember the new name and leave its clips alone.
+            print(f"{src.name}: handled before under another name; not cutting it again.")
+            if not DRY:
+                done[src.name] = datetime.now(timezone.utc).isoformat()
+                DONE_FILE.write_text(json.dumps(done, indent=1))
             continue
         try:
             # A fresh sign-in for every file: the login lasts an hour and one show's transcript can take
@@ -481,8 +507,11 @@ def main():
             if handle(h, src) and not DRY:
                 done[src.name] = datetime.now(timezone.utc).isoformat()
                 DONE_FILE.write_text(json.dumps(done, indent=1))
+                sizes[str(src.stat().st_size)] = src.name
         except Exception as ex:  # one bad file must not stop the rest
             print(f"{src.name}: FAILED {ex}")
+    if not DRY:
+        SIZES_FILE.write_text(json.dumps(sizes, indent=1))
     cleanup(done)
 
 
